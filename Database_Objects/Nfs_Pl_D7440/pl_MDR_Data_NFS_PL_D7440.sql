@@ -1,0 +1,233 @@
+alter table epr.MDR_Data_NFS_PL_D7440
+add "Document Closed\Open" varchar(200) NULL
+
+
+alter table epr.MDR_Data_NFS_PL_D7440
+add  "Document With Contractor" varchar(200) NULL,
+"Contractor Due Date" varchar(200) NULL,
+"Contractor Days Overdue" varchar(200) NULL,
+"Document With Company" varchar(200) NULL,
+"Company Due Date" varchar(200) NULL,
+"Company Days Overdue" varchar(200) NULL,
+"Published" varchar(200) NULL,
+"Gray Check Not Published" varchar(200) NULL,
+"New Rev not Distributed" varchar(200) NULL,
+"Expediting Open Latest Rev" varchar(200) NULL
+
+alter table epr.MDR_Data_NFS_PL_D7440
+add "CWA/CWP" varchar(200),"CWA No" varchar(200),"Last TR Distributed Name" varchar(200)
+
+truncate table epr.MDR_Data_NFS_PL_D7440
+alter table epr.MDR_Data_NFS_PL_D7440
+drop column "Subject to IVB (TIV or MSW) Approval"
+alter table epr.MDR_Data_NFS_PL_D7440
+add "Prev Rev Review Return Code" varchar(200)
+
+alter table epr.MDR_Data_NFS_PL_D7440
+add "SD_3rd Party Company" varchar(200)
+
+alter table epr.MDR_Data_Nfs_Pl_D7440
+add "FD ID" varchar(200)
+alter table [epr].[MDR_Data_Nfs_Pl_D7440]
+drop column STP
+alter table [epr].[MDR_Data_Nfs_Pl_D7440]
+add [Sub Function Code] varchar(200);
+
+create table epr.MDR_Data_Nfs_Pl_D7440
+(
+[RNDN Number]   varchar(200) NULL,
+[Working Copy Number]   varchar(200) NULL,
+[Final Deliverables]   varchar(4000) NULL,
+[Unique ID]   varchar(200) NULL,
+[Name]   varchar(200) NULL,
+[Deliverable Type]   varchar(200) NULL,
+[Company Document Number]   varchar(200) NULL,
+[Revision]   varchar(200) NULL,
+[Revision Date]   varchar(200) NULL,
+[Title]   varchar(200) NULL,
+[Deliverable]   varchar(200) NULL,
+[File Name]   varchar(200) NULL,
+[Project Facility]   varchar(200) NULL,
+[Early Deliverables]   varchar(200) NULL,
+[Document Type]   varchar(4000) NULL,
+[Sub Doc. Type Code & Description ]   varchar(200) NULL,
+[Discipline]   varchar(4000) NULL,
+[Sub Discipline Code & Description]   varchar(200) NULL,
+[Location]   varchar(200) NULL,
+[Facility (PIMS)]   varchar(200) NULL,
+[Asset]   varchar(200) NULL,
+[Train/Area]   varchar(200) NULL,
+[System Number]   varchar(200) NULL,
+[System No.(PIMS)]   varchar(200) NULL,
+[Unit Number]   varchar(4000) NULL,
+[Unit/Wellhead Descr(PIMS)]   varchar(4000) NULL,
+[Contractor]   varchar(4000) NULL,
+[Document Group]   varchar(4000) NULL,
+[Document Class]   varchar(4000) NULL,
+[Office Location]   varchar(4000) NULL,
+[New/Existing]   varchar(4000) NULL,
+[Scope of Work]   varchar(4000) NULL,
+[Subject to IVB (TIV or MSW) Approval]   varchar(4000) NULL,
+[Subject to Interface Review]   varchar(4000) NULL,
+[Document Status]   varchar(4000) NULL,
+[Transmittal Number]   varchar(4000) NULL,
+[Transmittal Date]   varchar(4000) NULL,
+[Company Transmittal Number]   varchar(4000) NULL,
+[Company Return Date]   varchar(4000) NULL,
+[Review Return Code]   varchar(4000) NULL,
+[CRS No.]   varchar(4000) NULL,
+[Native file req for Handover]   varchar(4000) NULL,
+[Integrity Critical]   varchar(4000) NULL,
+[Start-up critical]   varchar(4000) NULL,
+[Handover Area]   varchar(4000) NULL,
+[GTA4: Gate 4 Deliverables]   varchar(4000) NULL,
+[GTA5: Gate 5 Deliverables]   varchar(4000) NULL,
+[Originator]   varchar(4000) NULL,
+[30-60-90 Days]   varchar(4000) NULL,
+[Profile Type]   varchar(4000) NULL,
+[Total (Current) Progress]   varchar(4000) NULL,
+[GPCA Cost Code]   varchar(4000) NULL,
+[GPCA Cost Code Description]   varchar(4000) NULL,
+[GPCA Prime Description]   varchar(4000) NULL,
+[GPCA Sub Prime Description]   varchar(4000) NULL,
+[Progress Crtieria]   varchar(4000) NULL,
+[SD_Budget-Progress Base]   varchar(4000) NULL,
+[SD_Budget-Original]   varchar(4000) NULL,
+[SD_Budget-Forecast]   varchar(4000) NULL,
+[SD_Budget-Revised]   varchar(4000) NULL,
+[Start Activity Id]   varchar(4000) NULL,
+[IDC Activity Id]   varchar(4000) NULL,
+[IFR Activity ID]   varchar(4000) NULL,
+[IFA Activity ID]   varchar(4000) NULL,
+[IFH Activity ID]   varchar(4000) NULL,
+[IFI Activity ID]   varchar(4000) NULL,
+[AFCH Activity ID]   varchar(4000) NULL,
+[AFC Activity ID]   varchar(4000) NULL,
+[As-Built/Final Issue Activity ID]   varchar(4000) NULL,
+[Start Original]   varchar(4000) NULL,
+[Start Plan]   varchar(4000) NULL,
+[Start Forecast]   varchar(4000) NULL,
+[Start Actual]   varchar(4000) NULL,
+[IDC/SDC Original]   varchar(4000) NULL,
+[IDC/SDC Plan]   varchar(4000) NULL,
+[IDC/SDC Forecast]   varchar(4000) NULL,
+[IDC/SDC Actual]   varchar(4000) NULL,
+[IDC/SDC Complete Original]   varchar(4000) NULL,
+[IDC/SDC Complete Plan]   varchar(4000) NULL,
+[IDC/SDC Complete Forecast]   varchar(4000) NULL,
+[IDC/SDC Complete Actual]   varchar(4000) NULL,
+[IFR Original]   varchar(4000) NULL,
+[IFR Plan]   varchar(4000) NULL,
+[IFR Forecast]   varchar(4000) NULL,
+[IFR Actual]   varchar(4000) NULL,
+[IFR Approval Original]   varchar(4000) NULL,
+[IFR Approval Plan]   varchar(4000) NULL,
+[IFR Approval Forecast]   varchar(4000) NULL,
+[IFR Approval Actual(Code-C)]   varchar(4000) NULL,
+[IFR Approval Actual(Code-A/B)]   varchar(4000) NULL,
+[IFH Original]   varchar(4000) NULL,
+[IFH Plan]   varchar(4000) NULL,
+[IFH Forecast]   varchar(4000) NULL,
+[IFH Actual]   varchar(4000) NULL,
+[IFA Original]   varchar(4000) NULL,
+[IFA Plan]   varchar(4000) NULL,
+[IFA Forecast]   varchar(4000) NULL,
+[IFA Actual]   varchar(4000) NULL,
+[IFA Approval Original]   varchar(4000) NULL,
+[IFA Approval Plan]   varchar(4000) NULL,
+[IFA Approval Forecast]   varchar(4000) NULL,
+[IFA Approval Actual(Code-C)]   varchar(4000) NULL,
+[IFA Approval Actual (Code-A/B)]   varchar(4000) NULL,
+[AFC With HOLD Original]   varchar(4000) NULL,
+[AFC With HOLD Plan]   varchar(4000) NULL,
+[AFC With HOLD Forecast]   varchar(4000) NULL,
+[AFC With HOLD Actual]   varchar(4000) NULL,
+[AFC Original]   varchar(4000) NULL,
+[AFC Plan]   varchar(4000) NULL,
+[AFC Forecast]   varchar(4000) NULL,
+[AFC Actual]   varchar(4000) NULL,
+[AFC Approval Original]   varchar(4000) NULL,
+[AFC Approval Plan]   varchar(4000) NULL,
+[AFC Approval Forecast]   varchar(4000) NULL,
+[AFC Approval Actual (Code B)]   varchar(4000) NULL,
+[AFC Approval Actual (Code A)]   varchar(4000) NULL,
+[IFI Original]   varchar(4000) NULL,
+[IFI Plan]   varchar(4000) NULL,
+[IFI Forecast]   varchar(4000) NULL,
+[IFI Actual]   varchar(4000) NULL,
+[As-Built/Final Issue Original]   varchar(4000) NULL,
+[As-Built/Final Issue Plan]   varchar(4000) NULL,
+[As-Built/Final Issue Forecast]   varchar(4000) NULL,
+[As-Built/Final Issue Actual]   varchar(4000) NULL,
+[As-Built/Final Approval Original]   varchar(4000) NULL,
+[As-Built/Final Approval Plan]   varchar(4000) NULL,
+[As-Built/Final Approval Forecast]   varchar(4000) NULL,
+[As-Built/Final Approval Actual (Code-B)]   varchar(4000) NULL,
+[As-Built/Final Approval Actual (Code-A)]   varchar(4000) NULL,
+[Internal Transmittal No.]   varchar(4000) NULL,
+[Internal Transmittal Date]   varchar(4000) NULL,
+[Expeditor Comments]   varchar(4000) NULL,
+[Discipline (Folder)]   varchar(4000) NULL,
+[Discipline (Folder) Override]   varchar(4000) NULL,
+[Remarks]   varchar(4000) NULL,
+[Document Title - OLD For back-up]   varchar(4000) NULL,
+[Old Doc No.]   varchar(4000) NULL,
+[Deliverables from SP Tools]   varchar(4000) NULL,
+[Third Party Review]   varchar(4000) NULL,
+[AsBuiltRequired]   varchar(4000) NULL,
+[Activity_ID_IFR Appvl]   varchar(4000) NULL,
+[Activity_ID_IFA Appvl]   varchar(4000) NULL,
+[Activity_ID_IFH]   varchar(4000) NULL,
+[Activity_ID_IFD]   varchar(4000) NULL,
+[Activity_ID_IFP]   varchar(4000) NULL,
+[Activity_ID_IFC(H)]   varchar(4000) NULL,
+[Activity_ID_IFC]   varchar(4000) NULL,
+[Activity_ID_As-Built/Final]   varchar(4000) NULL,
+[Superseded ByC]   varchar(4000) NULL,
+[Tag/Equipment Number]   varchar(4000) NULL,
+[WBS]   varchar(4000) NULL,
+[Category]   varchar(4000) NULL,
+[Change Number]   varchar(4000) NULL,
+[Change Source]   varchar(4000) NULL,
+[Expected Completion Date]   varchar(4000) NULL,
+[3rd Party Crossing Review]   varchar(4000) NULL,
+[Regulatory Review]   varchar(4000) NULL,
+[STP]   varchar(4000) NULL,
+[Vendor Discipline]   varchar(4000) NULL,
+[Fab Yard]   varchar(4000) NULL,
+[Job Number]   varchar(4000) NULL,
+[Contract Number]   varchar(4000) NULL,
+[PIH Flag]   varchar(4000) NULL,
+[SPMAT-MR No.]   varchar(4000) NULL,
+[project_number] [varchar](200) NULL,
+[CreatedDateTime] [varchar](200) NULL,
+[file_name] [varchar](200) NULL
+)
+WITH
+(
+	DISTRIBUTION = ROUND_ROBIN,
+	HEAP
+)
+GO
+
+
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) values ('pl_MDR_Data_NFS_PL_D7440','NetworkFolder','start_date','1','start_date','IN','NULL','1','sundararaju.batta@mcdermott.com','2025-03-06 10:26:55.957')
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) values ('pl_MDR_Data_NFS_PL_D7440','NetworkFolder','end_date','2','end_date','IN','NULL','1','sundararaju.batta@mcdermott.com','2025-03-06 10:26:55.957')
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) values ('pl_MDR_Data_NFS_PL_D7440','NetworkFolder','source_directory','3','source_directory','IN','NULL','1','sundararaju.batta@mcdermott.com','2025-03-06 10:26:55.957')
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) values ('pl_MDR_Data_NFS_PL_D7440','NetworkFolder','table_name','4','table_name','IN','NULL','1','sundararaju.batta@mcdermott.com','2025-03-06 10:26:55.957')
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) values ('pl_MDR_Data_NFS_PL_D7440','NetworkFolder','logicapp_url','5','logicapp_url','IN','NULL','1','sundararaju.batta@mcdermott.com','2025-03-06 10:26:55.957')
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) values ('pl_MDR_Data_NFS_PL_D7440','NetworkFolder','file_name','6','file_name','IN','NULL','1','sundararaju.batta@mcdermott.com','2025-03-06 10:26:55.957')
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) values ('pl_MDR_Data_NFS_PL_D7440','NetworkFolder','project_number','7','project_number','IN','NULL','1','sundararaju.batta@mcdermott.com','2025-03-06 10:26:55.957')
+
+
+
+insert into [dbo].[plp_parameter_value] (parameter_code,parameter_value,active,touched_by,touched_dtm,pipeline_code,pipeline_sub_code) values ('table_name','MDR_Data_Nfs_Pl_D7440','1','sundararaju.batta@mcdermott.com','2025-03-06 10:26:55.957','pl_MDR_Data_NFS_PL_D7440','NetworkFolder')
+insert into [dbo].[plp_parameter_value] (parameter_code,parameter_value,active,touched_by,touched_dtm,pipeline_code,pipeline_sub_code) values ('logicapp_url','https://prod-56.eastus.logic.azure.com:443/workflows/3cff41a53ba14a82a9b7cc8d6d2bfe56/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=c7BCbv69x4tk7w5oqGQNOPlpIXvqBQi_Zwm8wkww0WQ','1','sundararaju.batta@mcdermott.com','2025-03-06 10:26:55.957','pl_MDR_Data_NFS_PL_D7440','NetworkFolder')
+insert into [dbo].[plp_parameter_value] (parameter_code,parameter_value,active,touched_by,touched_dtm,pipeline_code,pipeline_sub_code) values ('end_date','currdate','1','sundararaju.batta@mcdermott.com','2025-03-06 10:26:55.957','pl_MDR_Data_NFS_PL_D7440','NetworkFolder')
+insert into [dbo].[plp_parameter_value] (parameter_code,parameter_value,active,touched_by,touched_dtm,pipeline_code,pipeline_sub_code) values ('source_directory','08. D7440 NFS PL\01. MDR','1','sundararaju.batta@mcdermott.com','2025-03-06 10:26:55.957','pl_MDR_Data_NFS_PL_D7440','NetworkFolder')
+insert into [dbo].[plp_parameter_value] (parameter_code,parameter_value,active,touched_by,touched_dtm,pipeline_code,pipeline_sub_code) values ('project_number','D7440','1','sundararaju.batta@mcdermott.com','2025-03-06 10:26:55.957','pl_MDR_Data_NFS_PL_D7440','NetworkFolder')
+insert into [dbo].[plp_parameter_value] (parameter_code,parameter_value,active,touched_by,touched_dtm,pipeline_code,pipeline_sub_code) values ('start_date','2025-01-01 11:23:20','1','sundararaju.batta@mcdermott.com','2025-03-06 10:26:55.957','pl_MDR_Data_NFS_PL_D7440','NetworkFolder')
+insert into [dbo].[plp_parameter_value] (parameter_code,parameter_value,active,touched_by,touched_dtm,pipeline_code,pipeline_sub_code) values ('file_name','P10 - MDR Data Export.CSV','1','sundararaju.batta@mcdermott.com','2025-03-06 10:26:55.957','pl_MDR_Data_NFS_PL_D7440','NetworkFolder')
+
+
+insert into plp_pipeline (pipeline_code,subject_area_code,description,comment,active,touched_by,touched_dtm,sec_sa_id) Values('pl_MDR_Data_NFS_PL_D7440','NCSA','Manual Excel File Direct Source To Synapse',NULL,'1','sundararaju.batta@mcdermott.com','2025-03-06 10:26:55.957',9)

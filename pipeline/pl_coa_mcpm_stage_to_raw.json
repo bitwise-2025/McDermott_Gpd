@@ -1,0 +1,285 @@
+{
+	"name": "pl_coa_mcpm_stage_to_raw",
+	"properties": {
+		"activities": [
+			{
+				"name": "Check File Exists",
+				"type": "GetMetadata",
+				"dependsOn": [
+					{
+						"activity": "Set filename",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set folderpath",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_CoA_staging",
+						"type": "DatasetReference"
+					},
+					"fieldList": [
+						"childItems"
+					],
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true
+					},
+					"formatSettings": {
+						"type": "DelimitedTextReadSettings"
+					}
+				}
+			},
+			{
+				"name": "Set_File_Exists_status",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Check File Exists",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "p_pl_fileexists",
+					"value": {
+						"value": "@greaterOrEquals(indexof(string(activity('Check File Exists').output.childItems),'CoA_MCPM'),0)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Run Data Flow if File Exists",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Set_File_Exists_status",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@variables('p_pl_fileexists')",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "df_CoA_Stage_To_Raw",
+							"type": "ExecuteDataFlow",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.02:00:00",
+								"retry": 1,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataflow": {
+									"referenceName": "df_CoA_Stage_To_Raw",
+									"type": "DataFlowReference",
+									"parameters": {
+										"WildPath": {
+											"value": "'@{concat(activity('lk_get_pipeline_parameters').output.firstRow.folder_path, '/')}'",
+											"type": "Expression"
+										},
+										"FileName": {
+											"value": "'@{activity('lk_get_pipeline_parameters').output.firstRow.file_name}'",
+											"type": "Expression"
+										}
+									}
+								},
+								"integrationRuntime": {
+									"referenceName": "integrationRuntimeEast2",
+									"type": "IntegrationRuntimeReference"
+								},
+								"traceLevel": "Fine"
+							}
+						},
+						{
+							"name": "sp_Update_Parameter",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "df_CoA_Stage_To_Raw",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+								"storedProcedureParameters": {
+									"pParameterValue": {
+										"value": {
+											"value": "@formatDateTime(utcnow(),'yyyy-MM-dd HH:mm:ss.fff')",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"pPipelineCode": {
+										"value": {
+											"value": "@pipeline().Pipeline",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"pPipelineSubCode": {
+										"value": "Sitepro",
+										"type": "String"
+									},
+									"pParameterCode": {
+										"value": "start_date",
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "AzureSynapseDB_DEV",
+								"type": "LinkedServiceReference"
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "lk_get_pipeline_parameters",
+				"description": "Lookup the parameters required for this pipeline:\nfile_name\nfolder_path",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.01:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "MCPM"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Set filename",
+				"description": "Set the variable v_filename either from the lookupoutput or direct string assignment.",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_filename",
+					"value": {
+						"value": "@activity('lk_get_pipeline_parameters').output.firstRow.file_name",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set folderpath",
+				"description": "Set the variable v_folderpath either from the lookupoutput or direct string assignment.",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_folderpath",
+					"value": {
+						"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"variables": {
+			"p_pl_fileexists": {
+				"type": "Boolean"
+			},
+			"v_filename": {
+				"type": "String"
+			},
+			"v_folderpath": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/NCSA/20. CoA"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-04-14T14:06:18Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

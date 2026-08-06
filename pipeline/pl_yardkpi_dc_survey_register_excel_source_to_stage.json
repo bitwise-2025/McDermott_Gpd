@@ -1,0 +1,287 @@
+{
+	"name": "pl_yardkpi_dc_survey_register_excel_source_to_stage",
+	"properties": {
+		"activities": [
+			{
+				"name": "ForEach_DC File",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Set last_run_start_date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Filter DC FileName').output.Value",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Execute Source sheet Extract",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "pl_yardkpi_dc_survey_register_excel_source_sheet_extract",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"last_modified_date": {
+										"value": "@activity('lk_get_pipeline_parameters').output.firstRow.last_run_start_date",
+										"type": "Expression"
+									},
+									"input_file_name": {
+										"value": "@item().name",
+										"type": "Expression"
+									},
+									"input_folder_path": {
+										"value": "@activity('lk_get_pipeline_parameters').output.firstRow.source_directory",
+										"type": "Expression"
+									},
+									"input_sheet_names": {
+										"value": "@activity('lk_get_pipeline_parameters').output.firstRow.sheet_names",
+										"type": "Expression"
+									},
+									"output_folder_path": {
+										"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+										"type": "Expression"
+									},
+									"output_file_name": {
+										"value": "@split(item().name,'_')[0]",
+										"type": "Expression"
+									},
+									"output_file_system": {
+										"value": "@activity('lk_get_pipeline_parameters').output.firstRow.output_file_system",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "lk_get_pipeline_parameters",
+				"description": "Get the parameters to be used in this pipeline",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": {
+									"value": "NetworkFolder",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Set last_run_start_date",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Filter DC FileName",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_dc_src_start_time",
+					"value": {
+						"value": "@formatDateTime(utcNow(),'yyyy-MM-dd HH:mm:ss')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "sp_Update_Parameter",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "ForEach_DC File",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": {
+						"value": "[dbo].[updateIncrementPipelineParameterValue]",
+						"type": "Expression"
+					},
+					"storedProcedureParameters": {
+						"pParameterCode": {
+							"value": {
+								"value": "last_run_start_date",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pParameterValue": {
+							"value": {
+								"value": "@variables('v_dc_src_start_time')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": {
+								"value": "NetworkFolder",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseAnalytics",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Get Flle Names",
+				"type": "GetMetadata",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_fs_yardkpi_excel_dimensional_control_source",
+						"type": "DatasetReference",
+						"parameters": {
+							"sheet_name": {
+								"value": "Fabrication",
+								"type": "Expression"
+							},
+							"folder_path": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.source_directory",
+								"type": "Expression"
+							},
+							"file_name": {
+								"value": "@coalesce('')",
+								"type": "Expression"
+							}
+						}
+					},
+					"fieldList": [
+						"childItems"
+					],
+					"storeSettings": {
+						"type": "FileServerReadSettings",
+						"recursive": true,
+						"modifiedDatetimeStart": {
+							"value": "@activity('lk_get_pipeline_parameters').output.firstRow.last_run_start_date",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Filter DC FileName",
+				"description": "Check for project folders with proper naming convention",
+				"type": "Filter",
+				"dependsOn": [
+					{
+						"activity": "Get Flle Names",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get Flle Names').output.childItems",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@and(endswith(item().name,activity('lk_get_pipeline_parameters').output.firstRow.input_file_name),equals(item().type,'File'))",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"variables": {
+			"v_dc_src_start_time": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/YARD KPI/DC Survey Register/Excel"
+		},
+		"annotations": [],
+		"lastPublishTime": "2024-03-06T11:58:34Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

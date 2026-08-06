@@ -1,0 +1,431 @@
+{
+	"name": "pl_master_risk_opportunity_dimension_fact_load",
+	"properties": {
+		"activities": [
+			{
+				"name": "sp_update_dimension_keys_for_promt_risk",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "pl_master_risk_opportunity_dimension_load",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[promt].[sp_update_dimension_keys_for_promt_datalake_export_risk]"
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "sp_update_dimension_keys_for_promt_opportunity",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "sp_fact_load_promt_risk",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[promt].[sp_update_dimension_keys_for_promt_datalake_export_opportunity]"
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "sp_validate_for_promt_datalake_export_risk",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "sp_update_dimension_keys_for_promt_risk",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[promt].[sp_validate_for_promt_datalake_export_risk]"
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "sp_fact_load_promt_risk",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "sp_validate_for_promt_datalake_export_risk",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[promt].[sp_fact_load_promt_risk]"
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "sp_validate_for_promt_datalake_export_opportunity",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "sp_update_dimension_keys_for_promt_opportunity",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[promt].[sp_validate_for_promt_datalake_export_opportunity]"
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "sp_fact_load_promt_opportunity",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "sp_validate_for_promt_datalake_export_opportunity",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[promt].[sp_fact_load_promt_opportunity]"
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "pl_master_risk_opportunity_dimension_load",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters_2",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_master_risk_opportunity_dimension_load",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "sp_update_dimension_keys_for_risk_snapshot",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "sp_fact_load_promt_opportunity",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[promt].[sp_update_dimension_keys_for_promt_datalake_export_risk_snapshot]"
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "sp_validate_for_promt_datalake_export_risk_snapshot",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "sp_update_dimension_keys_for_risk_snapshot",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[promt].[sp_validate_for_promt_datalake_export_risk_snapshot]"
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "sp_fact_load_promt_risk_snapshot",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "sp_validate_for_promt_datalake_export_risk_snapshot",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[promt].[sp_fact_load_promt_risk_snapshot]"
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "sp_update_dimension_keys_opportunity_snapshot",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "sp_fact_load_promt_risk_snapshot",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[promt].[sp_update_dimension_keys_for_promt_datalake_export_opportunity_snapshot]"
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "sp_validate_for_promt_datalake_opportunity_snapshot",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "sp_update_dimension_keys_opportunity_snapshot",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[promt].[sp_validate_for_promt_datalake_export_opportunity_snapshot]"
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "sp_fact_load_promt_opportunity_snapshot",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "sp_validate_for_promt_datalake_opportunity_snapshot",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[promt].[sp_fact_load_promt_opportunity_snapshot]"
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Send Email On Failure",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "sp_fact_load_promt_opportunity_snapshot",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "POST",
+					"headers": {
+						"Content-Type": "application/json"
+					},
+					"url": "https://prod-31.eastus.logic.azure.com:443/workflows/03d7da5abbab4215a05aeaceae3b96fa/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=asuyutHtoSxGFURsj1-A6AKRiNLdXZ4mTnZvZ17_8hI",
+					"connectVia": {
+						"referenceName": "integrationRuntimeEast2",
+						"type": "IntegrationRuntimeReference"
+					},
+					"body": {
+						"value": "{\n    \"DataFactoryName\": \"@{pipeline().DataFactory}\",\n    \"PipelineName\": \"@{pipeline().Pipeline}\",\n    \"ErrorMessage\": \"PROMT FACT Load Pipeline Failed\",\n    \"EmailTo\": \"@{activity('lk_get_pipeline_parameters_2').output.firstRow.ncsa_master_pipeline_email_to}\",\n    \"Activity\":  \"pl_master_risk_opportunity_dimension_fact_load\"\n}",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "lk_get_pipeline_parameters_2",
+				"description": "Get the parameters to be used in this pipeline",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": "pl_ncsa_master_pipelines"
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "EMAIL"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			}
+		],
+		"folder": {
+			"name": "Projects/PROMT/Risk Opportunity Dimension Fact Loads"
+		},
+		"annotations": [],
+		"lastPublishTime": "2024-04-09T06:13:43Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

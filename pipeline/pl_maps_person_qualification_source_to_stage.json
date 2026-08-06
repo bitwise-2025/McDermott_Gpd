@@ -1,0 +1,244 @@
+{
+	"name": "pl_maps_person_qualification_source_to_stage",
+	"properties": {
+		"activities": [
+			{
+				"name": "cp_get_maps_person_qualification",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"sqlReaderQuery": {
+							"value": "select a.*,b.Requirement_Name as Mandatory from ql_Person_Qualification a,\n (Select pers.Id_Number,\n\t\t\t\t\trqc.ql_Qualification_Id\n\t\t\t\t\t,rqp.Requirement_Name\n \n \n\tFrom Person pers\n\tLeft Join Posting posti on pers.Id_Number=posti.Id_Number\n        Left Join Grade g on g.Grade_sht_Title=pers.Grade_sht_Title \n\tLeft Join Post on posti.Post_Id=Post.Post_Id\n \n\t\n\tjoin Role on g.Spare_Char_1_255 =Role.Role_id\n\tJoin  ql_Requirement_Structure rqp on rqp.Parent_Key=Role.Role_id\n\tLeft Join ql_Requirement_Structure rqc on rqp.ql_req_struct_Id = rqc.Parent_ql_struct_Id\n\twhere rqp.Parent_Key IS NOT NULL\n\tAnd Role.Role_Name NOT LIKE '%!Closed%'\n\tAnd pers.Date_Leaving>Getdate()\n\t\n\tAnd (posti.Posting_sDate=(Select max(posti2.Posting_sDate) from Posting posti2 where posti.Id_Number=posti2.Id_number and posti2.Posting_sDate<=GetDate()) OR posti.Posting_sDate IS NULL)\n\t) b \n\t\n\nwhere a.Id_Number=b.Id_Number\nand a.ql_Qualification_Id=b.ql_Qualification_Id\nand a.Date_Last_mod > '@{activity('lk_get_pipeline_parameters').output.firstRow.start_date}'",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_maps_person_qualification_source",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_generic",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_ds_filesystem": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.file_system",
+								"type": "Expression"
+							},
+							"p_ds_directory": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+								"type": "Expression"
+							},
+							"p_ds_filename": {
+								"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+								"type": "Expression"
+							},
+							"p_ds_first_row_header": true
+						}
+					}
+				]
+			},
+			{
+				"name": "lk_get_pipeline_parameters",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "[dbo].[getPipelineParametersValues]",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "NetworkFolder"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Set data pull date time",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lk_get_max_Date_Last_mod",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_run_start",
+					"value": {
+						"value": "@activity('lk_get_max_Date_Last_mod').output.firstRow.Date_Last_mod",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "sp_Update_Parameter",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Set data pull date time",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+					"storedProcedureParameters": {
+						"pParameterCode": {
+							"value": {
+								"value": "start_date",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pParameterValue": {
+							"value": {
+								"value": "@variables('v_run_start')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": "NetworkFolder",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseDB_DEV",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "lk_get_max_Date_Last_mod",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "cp_get_maps_person_qualification",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"sqlReaderQuery": "select max(Date_Last_mod) as Date_Last_mod from ql_Person_Qualification",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_maps_person_qualification_source",
+						"type": "DatasetReference"
+					}
+				}
+			}
+		],
+		"variables": {
+			"v_run_start": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/NCSA/FAB Automation/MAPS/Person Qualification"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-11-17T05:35:47Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

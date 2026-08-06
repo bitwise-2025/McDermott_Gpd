@@ -1,0 +1,73 @@
+/****** Object:  UserDefinedFunction [dbo].[isNumericCustom]    Script Date: 11/28/2022 4:52:31 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER FUNCTION [dbo].[isNumericCustom] (@p_data [VARCHAR](MAX), @p_data_family varchar(10)) RETURNS int
+AS
+BEGIN
+	-- anything not equal to 1: error
+	-- 1: not an error
+
+	if @p_data is null
+	begin
+		return 1;
+	end;
+
+	if ltrim(rtrim(@p_data)) = ''
+	begin
+		return 1;
+	end;
+
+	declare @data varchar(max)= @p_data;
+	-- negative sign must exist in the first position, if exists and only one
+	if charindex('-', @p_data, 2) > 0
+	begin
+		--select 0, 'error: negative';
+		return 10;
+	end;
+	set @data = replace(@data, '-', '');
+
+	-- period can occur anywhere but once
+	if @p_data_family = 'N'
+	begin
+		if charindex('.', @p_data, charindex('.', @p_data)+1) > 0
+		begin
+			-- error
+			-- select 0, 'error: period';
+			return 20;
+		end;
+	end;
+
+	if @p_data_family = 'NI'
+	begin
+		if charindex('.', @p_data) > 0
+		begin
+			-- error
+			-- integers should not have decimals
+			return 201;
+		end;
+	end;
+
+	set @data = replace(@data, '.', '');
+
+	set @data = replace(@data, ' ', 'x');
+	set @data = replace(@data, '0', '');
+	set @data = replace(@data, '1', '');
+	set @data = replace(@data, '2', '');
+	set @data = replace(@data, '3', '');
+	set @data = replace(@data, '4', '');
+	set @data = replace(@data, '5', '');
+	set @data = replace(@data, '6', '');
+	set @data = replace(@data, '7', '');
+	set @data = replace(@data, '8', '');
+	set @data = replace(@data, '9', '');
+
+	if len(@data) != 0
+	begin 
+		-- select 0, 'error: other characters';
+		return 30;
+	end;
+	return 1;
+	-- select 1, 'ok';
+END

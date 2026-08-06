@@ -1,0 +1,335 @@
+{
+	"name": "pl_master_pipeline_sitepro_dimension",
+	"properties": {
+		"activities": [
+			{
+				"name": "lk_get_pipeline_parameters_ncsaprojects",
+				"description": "Get the ncsa project parameters to be used in this pipeline",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": "pl_ncsa_project_list"
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "Sitepro"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "ForEachSiteproDimensions",
+				"description": "This component will load all data in site-pro dimensions for each project.",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters_ncsaprojects",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@json(activity('lk_get_pipeline_parameters_ncsaprojects').output.firstRow.projectdetail_json)",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "pl_phase_sitepro_master_pipeline",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "pl_phase_master_pipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"p_mpl_dbname": {
+										"value": "@concat(item().dbName)",
+										"type": "Expression"
+									},
+									"p_mpl_projectid": {
+										"value": "@concat(item().projectId)",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "pl_unit_sitepro_master_pipeline",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "pl_phase_sitepro_master_pipeline",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "pl_unit_master_pipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"p_mpl_dbname": {
+										"value": "@concat(item().dbName)",
+										"type": "Expression"
+									},
+									"p_mpl_projectid": {
+										"value": "@concat(item().projectId)",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "pl_WA_sitepro_master_pipeline",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "pl_unit_sitepro_master_pipeline",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "pl_wa_master_pipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"p_mpl_dbname": {
+										"value": "@concat(item().dbName)",
+										"type": "Expression"
+									},
+									"p_mpl_projectid": {
+										"value": "@concat(item().projectId)",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "pl_SR_master_pipeline",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "pl_phase_sitepro_master_pipeline",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "pl_sr_master_pipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"p_mpl_dbname": {
+										"value": "@concat(item().dbName)",
+										"type": "Expression"
+									},
+									"p_mpl_projectid": {
+										"value": "@concat(item().projectId)",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "pl_activity_master_pipeline",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "pl_WA_sitepro_master_pipeline",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "pl_SR_master_pipeline",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "pl_activity_master_pipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"p_mpl_dbname": {
+										"value": "@concat(item().dbName)",
+										"type": "Expression"
+									},
+									"p_mpl_projectid": {
+										"value": "@concat(item().projectId)",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "pl_IWP_master_pipeline",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "pl_activity_master_pipeline",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "pl_iwp_master_pipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"p_mpl_dbname": {
+										"value": "@concat(item().dbName)",
+										"type": "Expression"
+									},
+									"p_mpl_projectid": {
+										"value": "@concat(item().projectId)",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "pl_ROC_master_pipeline",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "pl_SR_master_pipeline",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "pl_roc_master_pipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"p_mpl_dbname": {
+										"value": "@concat(item().dbName)",
+										"type": "Expression"
+									},
+									"p_mpl_projectid": {
+										"value": "@concat(item().projectId)",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "pl_Employee_Sitepro_master_pipeline",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "pl_phase_sitepro_master_pipeline",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "pl_Employee_Sitepro_master_pipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"p_mpl_dbname": {
+										"value": "@concat(item().dbName)",
+										"type": "Expression"
+									},
+									"p_mpl_projectid": {
+										"value": "@concat(item().projectId)",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"folder": {
+			"name": "Projects/NCSA/Master Pipeline"
+		},
+		"annotations": [],
+		"lastPublishTime": "2021-12-15T07:13:52Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

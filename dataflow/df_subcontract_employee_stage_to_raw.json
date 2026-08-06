@@ -1,0 +1,33 @@
+{
+	"name": "df_subcontract_employee_stage_to_raw",
+	"properties": {
+		"description": "df_project_milestones_stage_to_raw",
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_subcontract_employee_stage",
+						"type": "DatasetReference"
+					},
+					"name": "srcdfSubcontractEmployeeStage"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_subcontract_employee_raw",
+						"type": "DatasetReference"
+					},
+					"name": "snkSubcontractEmployeeRaw"
+				}
+			],
+			"transformations": [
+				{
+					"name": "setFileName"
+				}
+			],
+			"script": "source(output(\n\t\tEmplId as string,\n\t\tName as string,\n\t\tCompanyCode as string,\n\t\tCompanyName as string,\n\t\tJobClass as string,\n\t\tWorkDate as string,\n\t\tDailyHours as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\trowUrlColumn: 'FileName',\n\twildcardPaths:['Project_Data/NCSA/Subcontract_Employee/subcontract_employee*.csv']) ~> srcdfSubcontractEmployeeStage\nsrcdfSubcontractEmployeeStage derive(FileName = concat( 'Project_Data/NCSA/Subcontract_Employee/',        substring(toString(currentTimestamp()),1,4),        '/',substring(toString(currentTimestamp()),6,2),        '/',substring(toString(currentTimestamp()),9,2),        '/',        'subcontract_employee_',        replace(replace(toString(currentTimestamp()),'.',''),':',''),        '.csv')) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tinput(\n\t\tEmplId as string,\n\t\tName as string,\n\t\tCompanyCode as string,\n\t\tCompanyName as string,\n\t\tJobClass as string,\n\t\tWorkDate as string,\n\t\tDailyHours as string\n\t),\n\trowUrlColumn:'FileName',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> snkSubcontractEmployeeRaw"
+		}
+	}
+}

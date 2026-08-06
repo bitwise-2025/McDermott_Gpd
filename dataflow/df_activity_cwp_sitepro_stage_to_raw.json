@@ -1,0 +1,32 @@
+{
+	"name": "df_activity_cwp_sitepro_stage_to_raw",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_sitepro_cwp_stage",
+						"type": "DatasetReference"
+					},
+					"name": "sourceCWPSiteproStage"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_cwp_sitepro_raw",
+						"type": "DatasetReference"
+					},
+					"name": "snkCWPSiteproRaw"
+				}
+			],
+			"transformations": [
+				{
+					"name": "setFileName"
+				}
+			],
+			"script": "source(output(\n\t\tstage_ncsa_activity_id as string,\n\t\tProjectID as string,\n\t\tProject as string,\n\t\tProjectDescription as string,\n\t\tActivity as string,\n\t\tDescription as string,\n\t\tScheduleUnit as string,\n\t\tScheduleResource as string,\n\t\tActivityStatus as string,\n\t\tOriginalDuration as string,\n\t\tRemainingDuration as string,\n\t\tActualStart as date,\n\t\tActualFinish as date,\n\t\tBudgetLaborUnit as string,\n\t\tPercentCompleteType as string,\n\t\tExecutedByType as string,\n\t\tPrime as string,\n\t\tSubPrime as string,\n\t\tScheduleWorkArea as string,\n\t\tExecutedBy as string,\n\t\tEarlyStartDate as string,\n\t\tEarlyFinishDate as string,\n\t\tIsOnCriticalPath as boolean,\n\t\tTotalFloat as string,\n\t\tStagingReference as string,\n\t\tCWP as string,\n\t\tCWPDescription as string,\n\t\tEWP as string,\n\t\tEWPDescription as string,\n\t\tdim_entp_project_nk as string,\n\t\tS_WorkArea as string,\n\t\tPlannedStart as string,\n\t\tPlannedFinish as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\twildcardPaths:['Project_Data/NCSA/SitePro/CWP/sitepro_cwp.csv']) ~> sourceCWPSiteproStage\nsourceCWPSiteproStage derive(FileName = concat( 'Project_Data/NCSA/SitePro/CWP/',        substring(toString(currentTimestamp()),1,4),        '/',substring(toString(currentTimestamp()),6,2),        '/',substring(toString(currentTimestamp()),9,2),        '/',        'sitepro_cwp_',        replace(replace(toString(currentTimestamp()),'.',''),':',''),        '.csv')) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\trowUrlColumn:'FileName',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tmapColumn(\n\t\tstage_ncsa_activity_id,\n\t\tProjectID,\n\t\tProject,\n\t\tProjectDescription,\n\t\tActivity,\n\t\tDescription,\n\t\tScheduleUnit,\n\t\tScheduleResource,\n\t\tActivityStatus,\n\t\tOriginalDuration,\n\t\tRemainingDuration,\n\t\tActualStart,\n\t\tActualFinish,\n\t\tBudgetLaborUnit,\n\t\tPercentCompleteType,\n\t\tExecutedByType,\n\t\tPrime,\n\t\tSubPrime,\n\t\tScheduleWorkArea,\n\t\tExecutedBy,\n\t\tEarlyStartDate,\n\t\tEarlyFinishDate,\n\t\tIsOnCriticalPath,\n\t\tTotalFloat,\n\t\tStagingReference,\n\t\tCWP,\n\t\tCWPDescription,\n\t\tEWP,\n\t\tEWPDescription,\n\t\tdim_entp_project_nk,\n\t\tS_WorkArea,\n\t\tPlannedStart,\n\t\tPlannedFinish,\n\t\tFileName\n\t)) ~> snkCWPSiteproRaw"
+		}
+	}
+}

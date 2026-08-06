@@ -1,0 +1,35 @@
+{
+	"name": "df_phases_mcpm_stage_to_raw",
+	"properties": {
+		"folder": {
+			"name": "Projects/NCSA/Phases"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_MCPM_Phases_Stage",
+						"type": "DatasetReference"
+					},
+					"name": "srcStage"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_phases_mcpm_raw",
+						"type": "DatasetReference"
+					},
+					"name": "snkRaw"
+				}
+			],
+			"transformations": [
+				{
+					"name": "setFileName"
+				}
+			],
+			"script": "source(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\trowUrlColumn: 'FileName',\n\twildcardPaths:['Project_Data/NCSA/MCPM/Phases/phase_mcpm.csv']) ~> srcStage\nsrcStage derive(FileName = concat('Project_Data/NCSA/MCPM/Phases/',substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/','Phases_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv')) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tinput(\n\t\tproject_id as string,\n\t\tPhase as string,\n\t\tTitle as string\n\t),\n\trowUrlColumn:'FileName',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> snkRaw"
+		}
+	}
+}

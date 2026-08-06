@@ -1,0 +1,9 @@
+DBCC CHECKIDENT([dbo.dim_entp_activity],RESEED, 48776);
+DBCC CHECKIDENT([dbo.dim_entp_cwp],RESEED, 46856);
+DBCC CHECKIDENT([dbo.dim_entp_iwp],RESEED, 91076);
+DBCC CHECKIDENT([dbo.dim_entp_phase],RESEED, 1111);
+DBCC CHECKIDENT([dbo.dim_entp_pim],RESEED, 741427);
+DBCC CHECKIDENT([dbo.dim_entp_roc],RESEED, 35216);
+DBCC CHECKIDENT([dbo.dim_entp_schedule_resource],RESEED, 36236);
+DBCC CHECKIDENT([dbo.dim_entp_work_area],RESEED, 454616);
+DBCC CHECKIDENT([dbo.dim_entp_work_unit],RESEED, 36236);

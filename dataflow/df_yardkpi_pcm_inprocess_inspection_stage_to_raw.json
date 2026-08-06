@@ -1,0 +1,35 @@
+{
+	"name": "df_yardkpi_pcm_inprocess_inspection_stage_to_raw",
+	"properties": {
+		"folder": {
+			"name": "Projects/YARD KPI/PCM"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adgl2_yardkpi_pcm_inprocess_inpsection_source",
+						"type": "DatasetReference"
+					},
+					"name": "PCMStage"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_yardkpi_pcm_default",
+						"type": "DatasetReference"
+					},
+					"name": "PCMRaw"
+				}
+			],
+			"transformations": [
+				{
+					"name": "SetFileName"
+				}
+			],
+			"script": "parameters{\n\tWildPath as string,\n\tFileName as string\n}\nsource(output(\n\t\ttrans_date as string,\n\t\ttrans_type as string,\n\t\tfab_code as string,\n\t\tcontract as string,\n\t\tcontract_title as string,\n\t\tjob as string,\n\t\tjob_title as string,\n\t\titem as string,\n\t\titem_title as string,\n\t\tndt_drawing as string,\n\t\tndt_drawing_desc as string,\n\t\twctrl as string,\n\t\tweld_suffix as string,\n\t\tstress_relief as string,\n\t\tweld_repair_ref as string,\n\t\tdiscipline as string,\n\t\tweld as string,\n\t\tactivity_type as string,\n\t\treport_type as string,\n\t\treport_num as string,\n\t\tinspector as string,\n\t\tremarks as string,\n\t\tactivity_done_by as string,\n\t\tactivity_done_on as string,\n\t\taction_taken as string,\n\t\taction_taken_on as string,\n\t\tother_remarks as string,\n\t\tinclude_in_rr_calc as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: true,\n\tpurgeFiles: true,\n\trowUrlColumn: 'File_Path',\n\tmultiLineRow: true,\n\twildcardPaths:[($WildPath+'/'+$FileName+'_*_*.csv')]) ~> PCMStage\nPCMStage derive(File_Path = concat(concat(trim(substringIndex(File_Path,'/',5),'/'),'/'),substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',substringIndex(split(substringIndex(File_Path,'/',-1),'.')[1],'_',3),'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv'),\n\t\ttrans_date = trim(replace(replace(replace(replace(replace(replace(replace(trans_date,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),\n\t\ttrans_type = trim(replace(replace(replace(replace(replace(replace(replace(trans_type,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),\n\t\tfab_code = trim(replace(replace(replace(replace(replace(replace(replace(fab_code,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),\n\t\tcontract = trim(replace(replace(replace(replace(replace(replace(replace(contract,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),\n\t\tcontract_title = trim(replace(replace(replace(replace(replace(replace(replace(contract_title,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),\n\t\tjob = trim(replace(replace(replace(replace(replace(replace(replace(job,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),\n\t\tjob_title = trim(replace(replace(replace(replace(replace(replace(replace(job_title,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),\n\t\titem = trim(replace(replace(replace(replace(replace(replace(replace(item,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),\n\t\titem_title = trim(replace(replace(replace(replace(replace(replace(replace(item_title,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),\n\t\tndt_drawing = trim(replace(replace(replace(replace(replace(replace(replace(ndt_drawing,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),\n\t\tndt_drawing_desc = trim(replace(replace(replace(replace(replace(replace(replace(ndt_drawing_desc,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),\n\t\tdiscipline = trim(replace(replace(replace(replace(replace(replace(replace(discipline,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),\n\t\tinspector = trim(replace(replace(replace(replace(replace(replace(replace(inspector,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),\n\t\tinclude_in_rr_calc = trim(replace(replace(replace(replace(replace(replace(replace(include_in_rr_calc,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' '))) ~> SetFileName\nSetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\trowUrlColumn:'File_Path',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> PCMRaw"
+		}
+	}
+}

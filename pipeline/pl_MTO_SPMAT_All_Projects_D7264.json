@@ -1,0 +1,3544 @@
+{
+	"name": "pl_MTO_SPMAT_All_Projects_D7264",
+	"properties": {
+		"activities": [
+			{
+				"name": "lk_get_pipeline_parameters",
+				"description": "Get the parameters to be used in this pipeline",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": "pl_ncsa_master_pipelines"
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "EMAIL"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "lk_get_pipeline_parameters_2",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "NetworkFolder"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "cp_Structural_00",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Update_Week_end_date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "OracleSource",
+						"additionalColumns": [
+							{
+								"name": "Discipline_description",
+								"value": "Structural"
+							},
+							{
+								"name": "created_date_time",
+								"value": {
+									"value": "@addHours(utcNow(),4)",
+									"type": "Expression"
+								}
+							}
+						],
+						"oracleReaderQuery": {
+							"value": "select LP_ID,\nLN_ID,\nLST_ID,\nSTAT_ID,\nIDENT,\nDP_ID,\nPROJ_ID,\nLIST_STATUS,\nISSUE_STATUS,\nPOS,\nIDENT_CODE,\nTAG_NUMBER,\nIDENT_DESCRIPTION,\nQUANTITY,\nQTY_UNIT,\nITEM_TYPE,\nCG_GROUP_CODE,\nPART_CODE,\nCOMMODITY_CODE,\nSIZE1,\nSIZE2,\nSIZE3,\nPOS_TAG_LO,\nPOS_TAG_SH,\nUNIT_WGHT,\nDWG_DESCRIPTION,\nBOM_CNTNO,\nSTRUCTURE_CODE,\nACTIVITY_CODE,\nSTR_ACTIVITY_DESC,\nBID_ELEMENT,\nLEVEL_,\nMEMBER_DESC,\nLOCATION,\nMATL_CLASSIFICATION,\nPIECE_MARK,\nNO_PC_REQD,\nDIM1,\nDIM2,\nROLL_PLATE_Y_N,\nMATL_STATUS,\nDIM_X,\nDIM_Y,\nBOM_SFI,\nBOM_FIM,\nBOM_HOLD,\nUNIT_WGHT_UOM,\nMTO_WEIGHT_MT,\nUNIT_PA,\nTOTAL_PA,\nREMARKS,\nMP_REQ_NO,\nMP_SEQ_NO,\nXS_COMPONENT,\nXS_VENDOR_NAME,\nXS_ORDERING_OPTION,\nMP_SELECT_PRIO,\nMP_DELV_DESIG,\nMP_SELECT_CWP,\nMP_ROS_DATE,\nMP_FAB_LOCATION,\nMP_DRWG_NAME,\nMP_SERVICE,\nMP_SFI,\nMP_CATEGORY,\nMP_WEIGHT,\nXS_STRUC_CODE,\nPOS_ITR,\nDISCIPLINE,\nMTO_TYPE,\nUNIT,\nAREA_CWA,\nXS_ACTIVITY_CODE,\nGROUP_NAME,\nBOM_SHAPE_SPOOL,\nm_sys.m_pck_bom.list_path_to_root (ln_id, '/') bom_path -- added latter\n from MDR_CUST.MDR_M_EPI_010_REP_NEW where proj_id = '@{pipeline().parameters.proj_id}'\n  and MTO_TYPE = '30-AFC'\n and LIST_STATUS = '30-AFC'\n and ISSUE_STATUS like 'AFC00%'",
+							"type": "Expression"
+						},
+						"partitionOption": "None",
+						"convertDecimalToInteger": false,
+						"queryTimeout": "04:00:00"
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"allowCopyCommand": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ADLSG2 TimeAnalytics DEV",
+							"type": "LinkedServiceReference"
+						},
+						"path": "mdr-staging-data/Ruya11"
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_smat_11_extracts",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_excel_loads_AzureSynapseAnalytics",
+						"type": "DatasetReference",
+						"parameters": {
+							"TableName": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.table_name1",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "Send Email On Failure",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "cp_Electrical_and_instrument",
+						"dependencyConditions": [
+							"Failed"
+						]
+					},
+					{
+						"activity": "cp_Subsea",
+						"dependencyConditions": [
+							"Failed"
+						]
+					},
+					{
+						"activity": "cp_Mechanical",
+						"dependencyConditions": [
+							"Failed"
+						]
+					},
+					{
+						"activity": "cp_Piping",
+						"dependencyConditions": [
+							"Failed"
+						]
+					},
+					{
+						"activity": "cp_Structural_31",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "POST",
+					"headers": {
+						"Content-Type": "application/json"
+					},
+					"url": "https://prod-31.eastus.logic.azure.com:443/workflows/03d7da5abbab4215a05aeaceae3b96fa/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=asuyutHtoSxGFURsj1-A6AKRiNLdXZ4mTnZvZ17_8hI",
+					"connectVia": {
+						"referenceName": "integrationRuntimeEast2",
+						"type": "IntegrationRuntimeReference"
+					},
+					"body": {
+						"value": "{\n    \"DataFactoryName\": \"@{pipeline().DataFactory}\",\n    \"PipelineName\": \"@{pipeline().Pipeline}\",\n    \"ErrorMessage\": \"Pipeline Failed\",\n    \"EmailTo\": \"@{activity('lk_get_pipeline_parameters').output.firstRow.ncsa_master_pipeline_email_to}\",\n    \"Activity\":  \"pl_planning_milestone_Ruya11_D7507\"\n}",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "cp_Electrical_and_instrument",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Update_Week_end_date_copy1",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "OracleSource",
+						"additionalColumns": [
+							{
+								"name": "Discipline_description",
+								"value": "Electrical and instrument"
+							},
+							{
+								"name": "created_date_time",
+								"value": {
+									"value": "@addHours(utcNow(),4)",
+									"type": "Expression"
+								}
+							}
+						],
+						"oracleReaderQuery": {
+							"value": "select m.*\n, MDR_CUST.MDR_REPORT_CUSTOM.GET_DYNAMIC_MAX_NODE_INFO(m.ln_id,'MTO_TYPE') mto_type \n, m_sys.m_pck_bom.list_path_to_root (ln_id, '/') bom_path -- added latter\nfrom MDR_CUST.MDR_M_EPI_011_REP_NEW m where m.proj_id = '@{pipeline().parameters.proj_id}'",
+							"type": "Expression"
+						},
+						"partitionOption": "None",
+						"convertDecimalToInteger": false,
+						"queryTimeout": "04:00:00"
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"allowCopyCommand": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ADLSG2 TimeAnalytics DEV",
+							"type": "LinkedServiceReference"
+						},
+						"path": "mdr-staging-data/Ruya11"
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_smat_11_extracts",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_excel_loads_AzureSynapseAnalytics",
+						"type": "DatasetReference",
+						"parameters": {
+							"TableName": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.table_name2",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "cp_Subsea",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Update_Week_end_date_copy2",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "OracleSource",
+						"additionalColumns": [
+							{
+								"name": "Discipline_description",
+								"value": "Subsea"
+							},
+							{
+								"name": "created_date_time",
+								"value": {
+									"value": "@addHours(utcNow(),4)",
+									"type": "Expression"
+								}
+							}
+						],
+						"oracleReaderQuery": {
+							"value": "select m.*\n, MDR_CUST.MDR_REPORT_CUSTOM.GET_DYNAMIC_MAX_NODE_INFO(m.ln_id,'MTO_TYPE') mto_type \n, m_sys.m_pck_bom.list_path_to_root (ln_id, '/') bom_path -- added latter\nfrom MDR_CUST.MDR_M_EPI_012_REP_NEW m where m.proj_id = '@{pipeline().parameters.proj_id}'",
+							"type": "Expression"
+						},
+						"partitionOption": "None",
+						"convertDecimalToInteger": false,
+						"queryTimeout": "04:00:00"
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"allowCopyCommand": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ADLSG2 TimeAnalytics DEV",
+							"type": "LinkedServiceReference"
+						},
+						"path": "mdr-staging-data/Ruya11"
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_smat_11_extracts",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_excel_loads_AzureSynapseAnalytics",
+						"type": "DatasetReference",
+						"parameters": {
+							"TableName": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.table_name3",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "cp_Mechanical",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Update_Week_end_date_copy3",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "OracleSource",
+						"additionalColumns": [
+							{
+								"name": "Discipline_description",
+								"value": "Mechanical"
+							},
+							{
+								"name": "created_date_time",
+								"value": {
+									"value": "@addHours(utcNow(),4)",
+									"type": "Expression"
+								}
+							}
+						],
+						"oracleReaderQuery": {
+							"value": "select m.*\n, MDR_CUST.MDR_REPORT_CUSTOM.GET_DYNAMIC_MAX_NODE_INFO(m.ln_id,'MTO_TYPE') mto_type \n, m_sys.m_pck_bom.list_path_to_root (ln_id, '/') bom_path -- added latter\nfrom MDR_CUST.MDR_M_EPI_013_REP_NEW m where m.proj_id  = '@{pipeline().parameters.proj_id}'",
+							"type": "Expression"
+						},
+						"partitionOption": "None",
+						"convertDecimalToInteger": false,
+						"queryTimeout": "04:00:00"
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"allowCopyCommand": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ADLSG2 TimeAnalytics DEV",
+							"type": "LinkedServiceReference"
+						},
+						"path": "mdr-staging-data/Ruya11"
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_smat_11_extracts",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_excel_loads_AzureSynapseAnalytics",
+						"type": "DatasetReference",
+						"parameters": {
+							"TableName": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.table_name4",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "cp_Piping",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Update_Week_end_date_copy4",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "OracleSource",
+						"additionalColumns": [
+							{
+								"name": "Discipline_description",
+								"value": "Piping"
+							},
+							{
+								"name": "created_date_time",
+								"value": {
+									"value": "@addHours(utcNow(),4)",
+									"type": "Expression"
+								}
+							}
+						],
+						"oracleReaderQuery": {
+							"value": "SELECT o1.\"LP_ID\",o1.\"LST_ID\",o1.\"STAT_ID\",o1.\"IDENT\",o1.\"DP_ID\",o1.\"LN_ID\",o1.\"SPEC_HEADER_ID\",o1.\"PROJ_ID\",o1.\"LIST_STATUS\",o1.\"ISSUE_STATUS\",o1.\"POS\",o1.\"IDENT_CODE\",o1.\"TAG_NUMBER\",o1.\"IDENT_DESCRIPTION\",o1.\"QUANTITY\",o1.\"SHORT_CODE\",o1.\"OPTION_CODE\",o1.\"SPEC_CODE\",o1.\"SIZE1\",o1.\"SIZE2\",o1.\"SIZE3\",o1.\"UNIT\",o1.\"UNIT_WGHT\",o1.\"BOM_CNTNO\",o1.\"BOM_SFI\",o1.\"BOM_HOLD\",o1.\"BOM_PRESERVATION\",o1.\"BOM_CLIMATE_CONTROL\",o1.\"CLIENT_PRICE_BREAKDOWN\",o1.\"UNIT_WGHT_UOM\",o1.\"REMARKS\",o1.\"XS_TYPE\",o1.\"ITEM_TYPE\",o1.\"MP_SIZE1\",o1.\"MP_SIZE2\",o1.\"MP_SIZE3\",o1.\"MP_SIZE4\",o1.\"MP_SIZE5\",o1.\"XS_ACTIVITY_CODE\",o1.\"XS_ACTIVITY_DESC\",o1.\"MP_SELECT_PRIO\",o1.\"MP_DELV_DESIG\",o1.\"MP_ROS_DATE\",o1.\"MP_FAB_LOCATION\",o1.\"MP_SELECT_CWA\",o1.\"MP_SELECT_CWP\",o1.\"MP_SELECT_WBS\",o1.\"MP_SELECT_IWP\",o1.\"MP_PROCESS_LINE\",o1.\"XS_DRAWING_NUMBER\",o1.\"MP_DRWG_NAME\",o1.\"DRAWING_REV\",o1.\"MP_SEQ_NO\",o1.\"POS_ITR\",o1.\"MAIN_CONN_NUM\",o1.\"MAIN_CONN_TYPE\",o1.\"MAIN_CONN_LOC\",o1.\"REDUCED_CONN_NUM\",o1.\"REDUCED_CONN_TYPE\",o1.\"REDUCED_CONN_LOC\",o1.\"COMMODITY\",o1.\"PAINT_CODE\",o1.\"RTRREQ\",o1.\"LPIREQ\",o1.\"MPIREQ\",o1.\"PWHT\",\ndiscipline, type, Unit_module_group, Area_cwa_deck, Element,Bom_drawing_no,\nMDR_CUST.MDR_REPORT_CUSTOM.GET_DYNAMIC_MAX_NODE_INFO(o1.ln_id,'MTO_TYPE') mto_type,\nbom_path -- added latter\nFROM\n    (SELECT lp.lp_id, lp.lst_id, lp.stat_id, lp.ident, lp.dp_id,\n      lp.ln_id, lp.spec_header_id,\n      lp.proj_id,\n      lst_code list_status,\n      ms.status issue_status,\n      lp.lp_pos pos,\n      ident_code,\n      lp.tag_number,\n      m_sys.m_pck_std_custom.ident_desc(lp.ident, 1) ident_description,\n      lp.quantity,\n      lp.short_code,\n      lp.option_code,\n      (SELECT sh.spec_code FROM  m_sys.m_spec_headers sh WHERE lp.spec_header_id = sh.spec_header_id) spec_code,\n      lp.input_1 size1,\n      lp.input_2 size2,\n      lp.input_3 size3,\n      (SELECT unit_code FROM m_sys.m_units un WHERE un.unit_id=lp.unit_id) unit,\n\t        (SELECT ity_code FROM m_sys.m_item_types WHERE ity_id=lp.ity_id) ITEM_TYPE, --added later\n      DECODE((SELECT cg_group_code\n          FROM m_sys.M_COMMODITY_GROUPS g,m_sys.m_commodity_codes c,m_sys.m_idents i\n          WHERE g.group_id = c.group_id\n          AND c.commodity_id = i.commodity_id\n          AND i.ident=lp.ident),'TP',\n         (SELECT attr_value\n          FROM m_sys.M_IDENT_VALUES iv,m_sys.m_attrs a\n          WHERE iv.ident =lp.ident\n          AND a.attr_id=iv.attr_id\n          AND attr_code='WEIGHT_UNIT'\n          AND rownum=1),\n     (SELECT  gd.output_1\n      FROM m_sys.m_geom_details gd,m_sys.m_commodity_geometric_relation gr, m_sys.m_idents i\n         WHERE gr.commodity_id =i.commodity_id\n         AND i.ident =lp.ident\n         AND gr.gn_id IN (SELECT gn_id FROM m_sys.m_geom_names WHERE gn_code LIKE '%WGHT%')\n         AND gd.gn_id = gr.gn_id AND i.commodity_id =gr.commodity_id AND i.input_1 = gd.input_1\n         AND  i.input_2 = gd.input_2 AND  i.input_3 = gd.input_3 AND  i.input_4 = gd.input_4\n         AND  i.input_5 = gd.input_5 AND ROWNUM=1)) unit_wght,\n      MDR_CUST.MDR_REPORT_CUSTOM.GET_LP_ATTR_VALUE(lp.lp_id,'BOM_CNTNO') bom_cntno,\n      MDR_CUST.MDR_REPORT_CUSTOM.GET_LP_ATTR_VALUE(lp.lp_id,'BOM_SFI') bom_sfi,\n      MDR_CUST.MDR_REPORT_CUSTOM.GET_LP_ATTR_VALUE(lp.lp_id,'BOM_HOLD') bom_hold,\n      MDR_CUST.MDR_REPORT_CUSTOM.GET_LP_ATTR_VALUE(lp.lp_id,'BOM_PRESERVATION') bom_preservation,\n      MDR_CUST.MDR_REPORT_CUSTOM.GET_LP_ATTR_VALUE(lp.lp_id,'BOM_CLIM_CONT_STOR') bom_climate_control,\n      MDR_CUST.MDR_REPORT_CUSTOM.GET_LP_ATTR_VALUE(lp.lp_id,'CLIENT_PRICE_BREAKDOWN') client_price_breakdown,\n      MDR_CUST.MDR_REPORT_CUSTOM.GET_IDENT_CMS_ATTR_VAL(lp.ident,'XS_WEIGHT_UNIT','N') unit_wght_uom,\n      MDR_CUST.MDR_REPORT_CUSTOM.GET_LP_ATTR_VALUE(lp.lp_id,'REMARKS') remarks,\n      MDR_CUST.MDR_REPORT_CUSTOM.GET_LP_ATTR_VALUE(lp.lp_id,'XS_TYPE') XS_TYPE,\n      MDR_CUST.MDR_REPORT_CUSTOM.GET_LP_ATTR_VALUE(lp.lp_id,'MP_SIZE1') MP_SIZE1,\n      MDR_CUST.MDR_REPORT_CUSTOM.GET_LP_ATTR_VALUE(lp.lp_id,'MP_SIZE2') MP_SIZE2,\n      MDR_CUST.MDR_REPORT_CUSTOM.GET_LP_ATTR_VALUE(lp.lp_id,'MP_SIZE3') MP_SIZE3,\n      MDR_CUST.MDR_REPORT_CUSTOM.GET_LP_ATTR_VALUE(lp.lp_id,'MP_SIZE4') MP_SIZE4,\n      MDR_CUST.MDR_REPORT_CUSTOM.GET_LP_ATTR_VALUE(lp.lp_id,'MP_SIZE5') MP_SIZE5,\n      MDR_CUST.MDR_REPORT_CUSTOM.GET_LP_ATTR_VALUE(lp.lp_id,'XS_ACTIVITY_CODE') XS_ACTIVITY_CODE,\n      MDR_CUST.MDR_REPORT_CUSTOM.GET_LP_ATTR_VALUE(lp.lp_id,'XS_ACTIVITY_DESC') XS_ACTIVITY_DESC,\n      MDR_CUST.MDR_REPORT_CUSTOM.GET_LP_ATTR_VALUE(lp.lp_id,'MP_SELECT_PRIO') MP_SELECT_PRIO,\n      MDR_CUST.MDR_REPORT_CUSTOM.GET_LP_ATTR_VALUE(lp.lp_id,'MP_DELV_DESIG') MP_DELV_DESIG,\n      MDR_CUST.MDR_REPORT_CUSTOM.GET_LP_ATTR_VALUE(lp.lp_id,'MP_ROS_DATE') MP_ROS_DATE,\n      MDR_CUST.MDR_REPORT_CUSTOM.GET_LP_ATTR_VALUE(lp.lp_id,'MP_FAB_LOCATION') MP_FAB_LOCATION,\n      MDR_CUST.MDR_REPORT_CUSTOM.GET_LP_ATTR_VALUE(lp.lp_id,'MP_SELECT_CWA') MP_SELECT_CWA,\n      MDR_CUST.MDR_REPORT_CUSTOM.GET_LP_ATTR_VALUE(lp.lp_id,'MP_SELECT_CWP') MP_SELECT_CWP,\n      MDR_CUST.MDR_REPORT_CUSTOM.GET_LP_ATTR_VALUE(lp.lp_id,'MP_SELECT_WBS') MP_SELECT_WBS,\n      MDR_CUST.MDR_REPORT_CUSTOM.GET_LP_ATTR_VALUE(lp.lp_id,'MP_SELECT_IWP') MP_SELECT_IWP,\n      MDR_CUST.MDR_REPORT_CUSTOM.GET_LP_ATTR_VALUE(lp.lp_id,'MP_PROCESS_LINE') MP_PROCESS_LINE,\n      MDR_CUST.MDR_REPORT_CUSTOM.GET_LP_ATTR_VALUE(lp.lp_id,'XS_DRAWING_NUMBER') XS_DRAWING_NUMBER,\n      MDR_CUST.MDR_REPORT_CUSTOM.GET_LP_ATTR_VALUE(lp.lp_id,'MP_DRWG_NAME') MP_DRWG_NAME,\n      MDR_CUST.MDR_REPORT_CUSTOM.GET_LP_ATTR_VALUE(lp.lp_id,'DRAWING REV') DRAWING_REV,\n      MDR_CUST.MDR_REPORT_CUSTOM.GET_LP_ATTR_VALUE(lp.lp_id,'MP_SEQ') MP_SEQ_NO,\n     m_sys.m_pck_bom.list_path_to_root (ln.ln_id, '/') bom_path, -- added latter\n\t --below added later\n\t  MDR_CUST.MDR_REPORT_CUSTOM.GET_LP_ATTR_VALUE(lp.lp_id,'ITEM_TYPE') POS_ITR,\n      MDR_CUST.MDR_REPORT_CUSTOM.GET_LP_ATTR_VALUE(lp.lp_id,'MAIN_CONN_NUM') MAIN_CONN_NUM,\n      MDR_CUST.MDR_REPORT_CUSTOM.GET_LP_ATTR_VALUE(lp.lp_id,'MAIN_CONN_TYPE') MAIN_CONN_TYPE,\n      MDR_CUST.MDR_REPORT_CUSTOM.GET_LP_ATTR_VALUE(lp.lp_id,'MAIN_CONN_LOC') MAIN_CONN_LOC,\n      MDR_CUST.MDR_REPORT_CUSTOM.GET_LP_ATTR_VALUE(lp.lp_id,'RED_CONN_NUM') REDUCED_CONN_NUM,\n      MDR_CUST.MDR_REPORT_CUSTOM.GET_LP_ATTR_VALUE(lp.lp_id,'RED_CONN_TYPE') REDUCED_CONN_TYPE,\n      MDR_CUST.MDR_REPORT_CUSTOM.GET_LP_ATTR_VALUE(lp.lp_id,'RED_CONN_LOC') REDUCED_CONN_LOC,\n      MDR_CUST.MDR_REPORT_CUSTOM.GET_LP_ATTR_VALUE(lp.lp_id,'COMMODITY') COMMODITY,\n      MDR_CUST.MDR_REPORT_CUSTOM.GET_LP_ATTR_VALUE(lp.lp_id,'PAINT CODE') PAINT_CODE,\n      MDR_CUST.MDR_REPORT_CUSTOM.GET_LP_ATTR_VALUE(lp.lp_id,'RTRREQ') RTRREQ,\n      MDR_CUST.MDR_REPORT_CUSTOM.GET_LP_ATTR_VALUE(lp.lp_id,'LPIREQ') LPIREQ,\n      MDR_CUST.MDR_REPORT_CUSTOM.GET_LP_ATTR_VALUE(lp.lp_id,'MPIREQ') MPIREQ,\n      MDR_CUST.MDR_REPORT_CUSTOM.GET_LP_ATTR_VALUE(lp.lp_id,'PWHT') PWHT   \n    FROM m_sys.m_list_nodes ln, m_sys.m_list_pos lp, m_sys.m_status ms, m_sys.m_idents inn, m_sys.m_list_status lst, m_sys.m_spec_headers sh\n    WHERE lp.dp_id    = (SELECT dp_id FROM m_sys.m_disciplines WHERE dp_code = 'PIPING')\n    AND   ln.proj_id  = lp.proj_id\n    AND   ln.ln_id    = lp.ln_id\n    AND   lp.stat_id  = ms.stat_id\n    AND   lp.ident    = inn.ident\n    AND   lp.lst_id   = lst.lst_id\n    AND   lp.spec_header_id = sh.spec_header_id(+)\n    AND (sh.spr_id = (SELECT MAX(spr_id)\n                      FROM m_sys.m_spec_headers sh2\n                      WHERE sh2.proj_id = lp.proj_id\n                      AND  sh.spec_code  = sh2.spec_code) OR sh.spr_id is NULL)\n   AND ln.proj_id = '@{pipeline().parameters.proj_id}') o1,\n    (SELECT *\n     FROM (\n         SELECT ln.ln_id, ln.proj_id,\n                MDR_CUST.MDR_REPORT_CUSTOM.GET_DYNAMIC_MAX_NODE_INFO(ln.ln_id,'DISCIPLINE') discipline,\n                MDR_CUST.MDR_REPORT_CUSTOM.GET_DYNAMIC_MAX_NODE_INFO(ln.ln_id,'TYPE') Type,\n                (Case When MDR_CUST.MDR_REPORT_CUSTOM.GET_DYNAMIC_MAX_NODE_INFO(ln.ln_id,'UNIT') is not null then MDR_CUST.MDR_REPORT_CUSTOM.GET_DYNAMIC_MAX_NODE_INFO(ln.ln_id,'UNIT')\n                When MDR_CUST.MDR_REPORT_CUSTOM.GET_DYNAMIC_MAX_NODE_INFO(ln.ln_id,'MODULE') is not null then MDR_CUST.MDR_REPORT_CUSTOM.GET_DYNAMIC_MAX_NODE_INFO(ln.ln_id,'MODULE')\n                When MDR_CUST.MDR_REPORT_CUSTOM.GET_DYNAMIC_MAX_NODE_INFO(ln.ln_id,'GROUP') is not null then MDR_CUST.MDR_REPORT_CUSTOM.GET_DYNAMIC_MAX_NODE_INFO(ln.ln_id,'GROUP')\n                else '' END) Unit_module_group,\n                (Case When MDR_CUST.MDR_REPORT_CUSTOM.GET_DYNAMIC_MAX_NODE_INFO(ln.ln_id,'AREA') is not null then MDR_CUST.MDR_REPORT_CUSTOM.GET_DYNAMIC_MAX_NODE_INFO(ln.ln_id,'AREA')\n                When MDR_CUST.MDR_REPORT_CUSTOM.GET_DYNAMIC_MAX_NODE_INFO(ln.ln_id,'CWA') is not null then MDR_CUST.MDR_REPORT_CUSTOM.GET_DYNAMIC_MAX_NODE_INFO(ln.ln_id,'CWA')\n                When MDR_CUST.MDR_REPORT_CUSTOM.GET_DYNAMIC_MAX_NODE_INFO(ln.ln_id,'DECK') is not null then MDR_CUST.MDR_REPORT_CUSTOM.GET_DYNAMIC_MAX_NODE_INFO(ln.ln_id,'DECk')\n                else '' END) Area_cwa_deck,\n               -- MDR_CUST.MDR_REPORT_CUSTOM.GET_DYNAMIC_MAX_NODE_INFO(ln.ln_id,'ELEMENT') Element,\n\t\t\t   (Case When MDR_CUST.MDR_REPORT_CUSTOM.GET_DYNAMIC_MAX_NODE_INFO(ln.ln_id,'ELEMENT')is not null then MDR_CUST.MDR_REPORT_CUSTOM.GET_DYNAMIC_MAX_NODE_INFO(ln.ln_id,'ELEMENT')\n                      When MDR_CUST.MDR_REPORT_CUSTOM.GET_DYNAMIC_MAX_NODE_INFO(ln.ln_id,'P_LINE')is not null then MDR_CUST.MDR_REPORT_CUSTOM.GET_DYNAMIC_MAX_NODE_INFO(ln.ln_id,'P_LINE')\n                 ELSE '' END) Element,\n                (Case When MDR_CUST.MDR_REPORT_CUSTOM.GET_DYNAMIC_MAX_NODE_INFO(ln.ln_id,'BOM')is not null then MDR_CUST.MDR_REPORT_CUSTOM.GET_DYNAMIC_MAX_NODE_INFO(ln.ln_id,'BOM')\n                      When MDR_CUST.MDR_REPORT_CUSTOM.GET_DYNAMIC_MAX_NODE_INFO(ln.ln_id,'DRAWING_NO') is not null then MDR_CUST.MDR_REPORT_CUSTOM.GET_DYNAMIC_MAX_NODE_INFO(ln.ln_id,'DRAWING_NO')\n\t\t\t\t\t  When MDR_CUST.MDR_REPORT_CUSTOM.GET_DYNAMIC_MAX_NODE_INFO(ln.ln_id,'SPOOL') is not null then MDR_CUST.MDR_REPORT_CUSTOM.GET_DYNAMIC_MAX_NODE_INFO(ln.ln_id,'SPOOL')\n                ELSE '' END) Bom_drawing_no\n         FROM m_sys.m_list_nodes ln\n         WHERE 1=1\n         AND ln.proj_id = '@{pipeline().parameters.proj_id}'\n         AND ln.ln_id IN (SELECT DISTINCT ln_id FROM m_sys.m_list_pos lp1 WHERE lp1.dp_id IN (SELECT dp_id FROM m_sys.m_disciplines WHERE dp_code IN ('PIPING')))\n         )\n    ) o2\nWHERE o1.ln_id   = o2.ln_id\nAND   o1.proj_id = o2.proj_id\nAND   o1.stat_id  = MDR_CUST.MDR_REPORT_CUSTOM.GET_BEST_QUANTITY(o1.proj_id,o1.dp_id, o1.ln_id) -- filter by Best Quantity\nORDER BY discipline, type, Unit_module_group, Area_cwa_deck, Element,Bom_drawing_no, TO_NUMBER(pos)",
+							"type": "Expression"
+						},
+						"partitionOption": "None",
+						"convertDecimalToInteger": false,
+						"queryTimeout": "04:00:00"
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"allowCopyCommand": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ADLSG2 TimeAnalytics DEV",
+							"type": "LinkedServiceReference"
+						},
+						"path": "mdr-staging-data/Ruya11"
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_smat_11_extracts",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_excel_loads_AzureSynapseAnalytics",
+						"type": "DatasetReference",
+						"parameters": {
+							"TableName": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.table_name5",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "Update_Month_end_date_structural",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "cp_Structural_31",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseAnalytics",
+					"type": "LinkedServiceReference"
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": {
+								"value": "@concat('update [epr].[',activity('lk_get_pipeline_parameters_2').output.firstRow.table_name1,']','\nset month_end_date = EOMONTH (getdate() , 0 )\nwhere month_end_date is null')",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "Update_Month_end_date_Elect",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "cp_Electrical_and_instrument",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseAnalytics",
+					"type": "LinkedServiceReference"
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": {
+								"value": "@concat('update [epr].[',activity('lk_get_pipeline_parameters_2').output.firstRow.table_name2,']','\nset month_end_date = EOMONTH (getdate() , 0 )\nwhere month_end_date is null')",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "Update_Month_end_date_Mech",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "cp_Mechanical",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseAnalytics",
+					"type": "LinkedServiceReference"
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": {
+								"value": "@concat('update [epr].[',activity('lk_get_pipeline_parameters_2').output.firstRow.table_name4,']','\nset month_end_date = EOMONTH (getdate() , 0 )\nwhere month_end_date is null')",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "Update_Month_end_date_subsea",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "cp_Subsea",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseAnalytics",
+					"type": "LinkedServiceReference"
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": {
+								"value": "@concat('update [epr].[',activity('lk_get_pipeline_parameters_2').output.firstRow.table_name3,']','\nset month_end_date = EOMONTH (getdate() , 0 )\nwhere month_end_date is null')",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "Update_Month_end_date_piping",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "cp_Piping",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseAnalytics",
+					"type": "LinkedServiceReference"
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": {
+								"value": "@concat('update [epr].[',activity('lk_get_pipeline_parameters_2').output.firstRow.table_name5,']','\nset month_end_date = EOMONTH (getdate() , 0 )\nwhere month_end_date is null')",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "Update_Month_end_date_structural_copy1",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "Update_Month_end_date_structural",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseAnalytics",
+					"type": "LinkedServiceReference"
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": {
+								"value": "@concat('delete from [epr].[',activity('lk_get_pipeline_parameters_2').output.firstRow.table_name1,']',' where PROJ_ID = ''',pipeline().parameters.proj_id,''' and LIST_STATUS = ''','10-EST',''' and month_end_date <> (select min(month_end_date) from [epr].[',activity('lk_get_pipeline_parameters_2').output.firstRow.table_name1,'] where PROJ_ID = ','''',pipeline().parameters.proj_id,''')')",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "Update_Month_end_date_Elect_copy1",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "Update_Month_end_date_Elect",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseAnalytics",
+					"type": "LinkedServiceReference"
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"parameters": [
+								{
+									"name": "proj_id",
+									"type": "String",
+									"value": {
+										"value": "@pipeline().parameters.proj_id",
+										"type": "Expression"
+									},
+									"direction": "Input"
+								}
+							],
+							"type": "Query",
+							"text": {
+								"value": "@concat('delete from [epr].[',activity('lk_get_pipeline_parameters_2').output.firstRow.table_name2,']',' where PROJ_ID = ','''',pipeline().parameters.proj_id,'''',\n' and month_end_date <> (select min(month_end_date) from [epr].[',activity('lk_get_pipeline_parameters_2').output.firstRow.table_name2,'] where PROJ_ID = ','''',pipeline().parameters.proj_id,''')')",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "Update_Month_end_date_subsea_copy1",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "Update_Month_end_date_subsea",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseAnalytics",
+					"type": "LinkedServiceReference"
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"parameters": [
+								{
+									"name": "proj_id",
+									"type": "String",
+									"value": {
+										"value": "@pipeline().parameters.proj_id",
+										"type": "Expression"
+									},
+									"direction": "Input"
+								}
+							],
+							"type": "Query",
+							"text": {
+								"value": "@concat('delete from [epr].[',activity('lk_get_pipeline_parameters_2').output.firstRow.table_name3,']',' where PROJ_ID = ','''',pipeline().parameters.proj_id,'''',\n' and LIST_STATUS = ', '''','10-EST','''', \n' and month_end_date <> (select min(month_end_date) from [epr].[',activity('lk_get_pipeline_parameters_2').output.firstRow.table_name3,'] where PROJ_ID = ','''',pipeline().parameters.proj_id,''')')",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "Update_Month_end_date_Mech_copy1",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "Update_Month_end_date_Mech",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseAnalytics",
+					"type": "LinkedServiceReference"
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"parameters": [
+								{
+									"name": "proj_id",
+									"type": "String",
+									"value": {
+										"value": "@pipeline().parameters.proj_id",
+										"type": "Expression"
+									},
+									"direction": "Input"
+								}
+							],
+							"type": "Query",
+							"text": {
+								"value": "@concat('delete from [epr].[',activity('lk_get_pipeline_parameters_2').output.firstRow.table_name4,']',' where PROJ_ID = ','''',pipeline().parameters.proj_id,'''',\n' and LIST_STATUS = ', '''','10-EST','''', \n' and month_end_date <> (select min(month_end_date) from [epr].[',activity('lk_get_pipeline_parameters_2').output.firstRow.table_name4,'] where PROJ_ID = ','''',pipeline().parameters.proj_id,''')')",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "Update_Month_end_date_piping_copy1",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "Update_Month_end_date_piping",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseAnalytics",
+					"type": "LinkedServiceReference"
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"parameters": [
+								{
+									"name": "proj_id",
+									"type": "String",
+									"value": {
+										"value": "@pipeline().parameters.proj_id",
+										"type": "Expression"
+									},
+									"direction": "Input"
+								}
+							],
+							"type": "Query",
+							"text": {
+								"value": "@concat('delete from [epr].[',activity('lk_get_pipeline_parameters_2').output.firstRow.table_name5,']',' where PROJ_ID = ','''',pipeline().parameters.proj_id,'''',\n' and LIST_STATUS = ', '''','10-EST','''', \n' and month_end_date <> (select min(month_end_date) from [epr].[',activity('lk_get_pipeline_parameters_2').output.firstRow.table_name5,'] where PROJ_ID = ','''',pipeline().parameters.proj_id,''')')",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "Update_Week_end_date",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "lk_get_pipeline_parameters_2",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseAnalytics",
+					"type": "LinkedServiceReference"
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"parameters": [
+								{
+									"name": "proj_id",
+									"type": "String",
+									"value": {
+										"value": "@pipeline().parameters.proj_id",
+										"type": "Expression"
+									},
+									"direction": "Input"
+								}
+							],
+							"type": "Query",
+							"text": {
+								"value": "@concat('delete from [epr].[',activity('lk_get_pipeline_parameters_2').output.firstRow.table_name1,']','\nwhere month_end_date = EOMONTH (getdate() , 0 )\nand PROJ_ID = ','''',pipeline().parameters.proj_id,'''')",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "Update_Week_end_date_copy1",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "cp_Structural_31",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseAnalytics",
+					"type": "LinkedServiceReference"
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"parameters": [
+								{
+									"name": "proj_id",
+									"type": "String",
+									"value": {
+										"value": "@pipeline().parameters.proj_id",
+										"type": "Expression"
+									},
+									"direction": "Input"
+								}
+							],
+							"type": "Query",
+							"text": {
+								"value": "@concat('delete from [epr].[',activity('lk_get_pipeline_parameters_2').output.firstRow.table_name2,']','\nwhere month_end_date = EOMONTH (getdate() , 0 )\nand PROJ_ID = ','''',pipeline().parameters.proj_id,'''')",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "Update_Week_end_date_copy2",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "cp_Electrical_and_instrument",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseAnalytics",
+					"type": "LinkedServiceReference"
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"parameters": [
+								{
+									"name": "proj_id",
+									"type": "String",
+									"value": {
+										"value": "@pipeline().parameters.proj_id",
+										"type": "Expression"
+									},
+									"direction": "Input"
+								}
+							],
+							"type": "Query",
+							"text": {
+								"value": "@concat('delete from [epr].[',activity('lk_get_pipeline_parameters_2').output.firstRow.table_name3,']','\nwhere month_end_date = EOMONTH (getdate() , 0 )\nand PROJ_ID = ','''',pipeline().parameters.proj_id,'''')",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "Update_Week_end_date_copy3",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "cp_Subsea",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseAnalytics",
+					"type": "LinkedServiceReference"
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"parameters": [
+								{
+									"name": "proj_id",
+									"type": "String",
+									"value": {
+										"value": "@pipeline().parameters.proj_id",
+										"type": "Expression"
+									},
+									"direction": "Input"
+								}
+							],
+							"type": "Query",
+							"text": {
+								"value": "@concat('delete from [epr].[',activity('lk_get_pipeline_parameters_2').output.firstRow.table_name4,']','\nwhere month_end_date = EOMONTH (getdate() , 0 )\nand PROJ_ID = ','''',pipeline().parameters.proj_id,'''')",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "Update_Week_end_date_copy4",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "cp_Mechanical",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseAnalytics",
+					"type": "LinkedServiceReference"
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"parameters": [
+								{
+									"name": "proj_id",
+									"type": "String",
+									"value": {
+										"value": "@pipeline().parameters.proj_id",
+										"type": "Expression"
+									},
+									"direction": "Input"
+								}
+							],
+							"type": "Query",
+							"text": {
+								"value": "@concat('delete from [epr].[',activity('lk_get_pipeline_parameters_2').output.firstRow.table_name5,']','\nwhere month_end_date = EOMONTH (getdate() , 0 )\nand PROJ_ID = ','''',pipeline().parameters.proj_id,'''')",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "cp_Structural_02",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "cp_Structural_01",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "OracleSource",
+						"additionalColumns": [
+							{
+								"name": "Discipline_description",
+								"value": "Structural"
+							},
+							{
+								"name": "created_date_time",
+								"value": {
+									"value": "@addHours(utcNow(),4)",
+									"type": "Expression"
+								}
+							}
+						],
+						"oracleReaderQuery": {
+							"value": "select LP_ID,\nLN_ID,\nLST_ID,\nSTAT_ID,\nIDENT,\nDP_ID,\nPROJ_ID,\nLIST_STATUS,\nISSUE_STATUS,\nPOS,\nIDENT_CODE,\nTAG_NUMBER,\nIDENT_DESCRIPTION,\nQUANTITY,\nQTY_UNIT,\nITEM_TYPE,\nCG_GROUP_CODE,\nPART_CODE,\nCOMMODITY_CODE,\nSIZE1,\nSIZE2,\nSIZE3,\nPOS_TAG_LO,\nPOS_TAG_SH,\nUNIT_WGHT,\nDWG_DESCRIPTION,\nBOM_CNTNO,\nSTRUCTURE_CODE,\nACTIVITY_CODE,\nSTR_ACTIVITY_DESC,\nBID_ELEMENT,\nLEVEL_,\nMEMBER_DESC,\nLOCATION,\nMATL_CLASSIFICATION,\nPIECE_MARK,\nNO_PC_REQD,\nDIM1,\nDIM2,\nROLL_PLATE_Y_N,\nMATL_STATUS,\nDIM_X,\nDIM_Y,\nBOM_SFI,\nBOM_FIM,\nBOM_HOLD,\nUNIT_WGHT_UOM,\nMTO_WEIGHT_MT,\nUNIT_PA,\nTOTAL_PA,\nREMARKS,\nMP_REQ_NO,\nMP_SEQ_NO,\nXS_COMPONENT,\nXS_VENDOR_NAME,\nXS_ORDERING_OPTION,\nMP_SELECT_PRIO,\nMP_DELV_DESIG,\nMP_SELECT_CWP,\nMP_ROS_DATE,\nMP_FAB_LOCATION,\nMP_DRWG_NAME,\nMP_SERVICE,\nMP_SFI,\nMP_CATEGORY,\nMP_WEIGHT,\nXS_STRUC_CODE,\nPOS_ITR,\nDISCIPLINE,\nMTO_TYPE,\nUNIT,\nAREA_CWA,\nXS_ACTIVITY_CODE,\nGROUP_NAME,\nBOM_SHAPE_SPOOL,\nm_sys.m_pck_bom.list_path_to_root (ln_id, '/') bom_path -- added latter\n from MDR_CUST.MDR_M_EPI_010_REP_NEW where proj_id = '@{pipeline().parameters.proj_id}'\n   and MTO_TYPE = '30-AFC'\n and LIST_STATUS = '30-AFC'\n and ISSUE_STATUS like 'AFC02%'",
+							"type": "Expression"
+						},
+						"partitionOption": "None",
+						"convertDecimalToInteger": false,
+						"queryTimeout": "04:00:00"
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"allowCopyCommand": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ADLSG2 TimeAnalytics DEV",
+							"type": "LinkedServiceReference"
+						},
+						"path": "mdr-staging-data/Ruya11"
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_smat_11_extracts",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_excel_loads_AzureSynapseAnalytics",
+						"type": "DatasetReference",
+						"parameters": {
+							"TableName": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.table_name1",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "cp_Structural_03",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "cp_Structural_02",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "OracleSource",
+						"additionalColumns": [
+							{
+								"name": "Discipline_description",
+								"value": "Structural"
+							},
+							{
+								"name": "created_date_time",
+								"value": {
+									"value": "@addHours(utcNow(),4)",
+									"type": "Expression"
+								}
+							}
+						],
+						"oracleReaderQuery": {
+							"value": "select LP_ID,\nLN_ID,\nLST_ID,\nSTAT_ID,\nIDENT,\nDP_ID,\nPROJ_ID,\nLIST_STATUS,\nISSUE_STATUS,\nPOS,\nIDENT_CODE,\nTAG_NUMBER,\nIDENT_DESCRIPTION,\nQUANTITY,\nQTY_UNIT,\nITEM_TYPE,\nCG_GROUP_CODE,\nPART_CODE,\nCOMMODITY_CODE,\nSIZE1,\nSIZE2,\nSIZE3,\nPOS_TAG_LO,\nPOS_TAG_SH,\nUNIT_WGHT,\nDWG_DESCRIPTION,\nBOM_CNTNO,\nSTRUCTURE_CODE,\nACTIVITY_CODE,\nSTR_ACTIVITY_DESC,\nBID_ELEMENT,\nLEVEL_,\nMEMBER_DESC,\nLOCATION,\nMATL_CLASSIFICATION,\nPIECE_MARK,\nNO_PC_REQD,\nDIM1,\nDIM2,\nROLL_PLATE_Y_N,\nMATL_STATUS,\nDIM_X,\nDIM_Y,\nBOM_SFI,\nBOM_FIM,\nBOM_HOLD,\nUNIT_WGHT_UOM,\nMTO_WEIGHT_MT,\nUNIT_PA,\nTOTAL_PA,\nREMARKS,\nMP_REQ_NO,\nMP_SEQ_NO,\nXS_COMPONENT,\nXS_VENDOR_NAME,\nXS_ORDERING_OPTION,\nMP_SELECT_PRIO,\nMP_DELV_DESIG,\nMP_SELECT_CWP,\nMP_ROS_DATE,\nMP_FAB_LOCATION,\nMP_DRWG_NAME,\nMP_SERVICE,\nMP_SFI,\nMP_CATEGORY,\nMP_WEIGHT,\nXS_STRUC_CODE,\nPOS_ITR,\nDISCIPLINE,\nMTO_TYPE,\nUNIT,\nAREA_CWA,\nXS_ACTIVITY_CODE,\nGROUP_NAME,\nBOM_SHAPE_SPOOL,\nm_sys.m_pck_bom.list_path_to_root (ln_id, '/') bom_path -- added latter\n from MDR_CUST.MDR_M_EPI_010_REP_NEW where proj_id = '@{pipeline().parameters.proj_id}'\n   and MTO_TYPE = '30-AFC'\n and LIST_STATUS = '30-AFC'\n and ISSUE_STATUS like 'AFC03%'",
+							"type": "Expression"
+						},
+						"partitionOption": "None",
+						"convertDecimalToInteger": false,
+						"queryTimeout": "04:00:00"
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"allowCopyCommand": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ADLSG2 TimeAnalytics DEV",
+							"type": "LinkedServiceReference"
+						},
+						"path": "mdr-staging-data/Ruya11"
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_smat_11_extracts",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_excel_loads_AzureSynapseAnalytics",
+						"type": "DatasetReference",
+						"parameters": {
+							"TableName": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.table_name1",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "cp_Structural_04",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "cp_Structural_03",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "OracleSource",
+						"additionalColumns": [
+							{
+								"name": "Discipline_description",
+								"value": "Structural"
+							},
+							{
+								"name": "created_date_time",
+								"value": {
+									"value": "@addHours(utcNow(),4)",
+									"type": "Expression"
+								}
+							}
+						],
+						"oracleReaderQuery": {
+							"value": "select LP_ID,\nLN_ID,\nLST_ID,\nSTAT_ID,\nIDENT,\nDP_ID,\nPROJ_ID,\nLIST_STATUS,\nISSUE_STATUS,\nPOS,\nIDENT_CODE,\nTAG_NUMBER,\nIDENT_DESCRIPTION,\nQUANTITY,\nQTY_UNIT,\nITEM_TYPE,\nCG_GROUP_CODE,\nPART_CODE,\nCOMMODITY_CODE,\nSIZE1,\nSIZE2,\nSIZE3,\nPOS_TAG_LO,\nPOS_TAG_SH,\nUNIT_WGHT,\nDWG_DESCRIPTION,\nBOM_CNTNO,\nSTRUCTURE_CODE,\nACTIVITY_CODE,\nSTR_ACTIVITY_DESC,\nBID_ELEMENT,\nLEVEL_,\nMEMBER_DESC,\nLOCATION,\nMATL_CLASSIFICATION,\nPIECE_MARK,\nNO_PC_REQD,\nDIM1,\nDIM2,\nROLL_PLATE_Y_N,\nMATL_STATUS,\nDIM_X,\nDIM_Y,\nBOM_SFI,\nBOM_FIM,\nBOM_HOLD,\nUNIT_WGHT_UOM,\nMTO_WEIGHT_MT,\nUNIT_PA,\nTOTAL_PA,\nREMARKS,\nMP_REQ_NO,\nMP_SEQ_NO,\nXS_COMPONENT,\nXS_VENDOR_NAME,\nXS_ORDERING_OPTION,\nMP_SELECT_PRIO,\nMP_DELV_DESIG,\nMP_SELECT_CWP,\nMP_ROS_DATE,\nMP_FAB_LOCATION,\nMP_DRWG_NAME,\nMP_SERVICE,\nMP_SFI,\nMP_CATEGORY,\nMP_WEIGHT,\nXS_STRUC_CODE,\nPOS_ITR,\nDISCIPLINE,\nMTO_TYPE,\nUNIT,\nAREA_CWA,\nXS_ACTIVITY_CODE,\nGROUP_NAME,\nBOM_SHAPE_SPOOL,\nm_sys.m_pck_bom.list_path_to_root (ln_id, '/') bom_path -- added latter\n from MDR_CUST.MDR_M_EPI_010_REP_NEW where proj_id = '@{pipeline().parameters.proj_id}'\n   and MTO_TYPE = '30-AFC'\n and LIST_STATUS = '30-AFC'\n and ISSUE_STATUS like 'AFC04%'",
+							"type": "Expression"
+						},
+						"partitionOption": "None",
+						"convertDecimalToInteger": false,
+						"queryTimeout": "04:00:00"
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"allowCopyCommand": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ADLSG2 TimeAnalytics DEV",
+							"type": "LinkedServiceReference"
+						},
+						"path": "mdr-staging-data/Ruya11"
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_smat_11_extracts",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_excel_loads_AzureSynapseAnalytics",
+						"type": "DatasetReference",
+						"parameters": {
+							"TableName": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.table_name1",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "cp_Structural_05",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "cp_Structural_04",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "OracleSource",
+						"additionalColumns": [
+							{
+								"name": "Discipline_description",
+								"value": "Structural"
+							},
+							{
+								"name": "created_date_time",
+								"value": {
+									"value": "@addHours(utcNow(),4)",
+									"type": "Expression"
+								}
+							}
+						],
+						"oracleReaderQuery": {
+							"value": "select LP_ID,\nLN_ID,\nLST_ID,\nSTAT_ID,\nIDENT,\nDP_ID,\nPROJ_ID,\nLIST_STATUS,\nISSUE_STATUS,\nPOS,\nIDENT_CODE,\nTAG_NUMBER,\nIDENT_DESCRIPTION,\nQUANTITY,\nQTY_UNIT,\nITEM_TYPE,\nCG_GROUP_CODE,\nPART_CODE,\nCOMMODITY_CODE,\nSIZE1,\nSIZE2,\nSIZE3,\nPOS_TAG_LO,\nPOS_TAG_SH,\nUNIT_WGHT,\nDWG_DESCRIPTION,\nBOM_CNTNO,\nSTRUCTURE_CODE,\nACTIVITY_CODE,\nSTR_ACTIVITY_DESC,\nBID_ELEMENT,\nLEVEL_,\nMEMBER_DESC,\nLOCATION,\nMATL_CLASSIFICATION,\nPIECE_MARK,\nNO_PC_REQD,\nDIM1,\nDIM2,\nROLL_PLATE_Y_N,\nMATL_STATUS,\nDIM_X,\nDIM_Y,\nBOM_SFI,\nBOM_FIM,\nBOM_HOLD,\nUNIT_WGHT_UOM,\nMTO_WEIGHT_MT,\nUNIT_PA,\nTOTAL_PA,\nREMARKS,\nMP_REQ_NO,\nMP_SEQ_NO,\nXS_COMPONENT,\nXS_VENDOR_NAME,\nXS_ORDERING_OPTION,\nMP_SELECT_PRIO,\nMP_DELV_DESIG,\nMP_SELECT_CWP,\nMP_ROS_DATE,\nMP_FAB_LOCATION,\nMP_DRWG_NAME,\nMP_SERVICE,\nMP_SFI,\nMP_CATEGORY,\nMP_WEIGHT,\nXS_STRUC_CODE,\nPOS_ITR,\nDISCIPLINE,\nMTO_TYPE,\nUNIT,\nAREA_CWA,\nXS_ACTIVITY_CODE,\nGROUP_NAME,\nBOM_SHAPE_SPOOL,\nm_sys.m_pck_bom.list_path_to_root (ln_id, '/') bom_path -- added latter\n from MDR_CUST.MDR_M_EPI_010_REP_NEW where proj_id = '@{pipeline().parameters.proj_id}'\n   and MTO_TYPE = '30-AFC'\n and LIST_STATUS = '30-AFC'\n and ISSUE_STATUS like 'AFC05%'",
+							"type": "Expression"
+						},
+						"partitionOption": "None",
+						"convertDecimalToInteger": false,
+						"queryTimeout": "04:00:00"
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"allowCopyCommand": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ADLSG2 TimeAnalytics DEV",
+							"type": "LinkedServiceReference"
+						},
+						"path": "mdr-staging-data/Ruya11"
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_smat_11_extracts",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_excel_loads_AzureSynapseAnalytics",
+						"type": "DatasetReference",
+						"parameters": {
+							"TableName": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.table_name1",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "cp_Structural_06",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "cp_Structural_05",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "OracleSource",
+						"additionalColumns": [
+							{
+								"name": "Discipline_description",
+								"value": "Structural"
+							},
+							{
+								"name": "created_date_time",
+								"value": {
+									"value": "@addHours(utcNow(),4)",
+									"type": "Expression"
+								}
+							}
+						],
+						"oracleReaderQuery": {
+							"value": "select LP_ID,\nLN_ID,\nLST_ID,\nSTAT_ID,\nIDENT,\nDP_ID,\nPROJ_ID,\nLIST_STATUS,\nISSUE_STATUS,\nPOS,\nIDENT_CODE,\nTAG_NUMBER,\nIDENT_DESCRIPTION,\nQUANTITY,\nQTY_UNIT,\nITEM_TYPE,\nCG_GROUP_CODE,\nPART_CODE,\nCOMMODITY_CODE,\nSIZE1,\nSIZE2,\nSIZE3,\nPOS_TAG_LO,\nPOS_TAG_SH,\nUNIT_WGHT,\nDWG_DESCRIPTION,\nBOM_CNTNO,\nSTRUCTURE_CODE,\nACTIVITY_CODE,\nSTR_ACTIVITY_DESC,\nBID_ELEMENT,\nLEVEL_,\nMEMBER_DESC,\nLOCATION,\nMATL_CLASSIFICATION,\nPIECE_MARK,\nNO_PC_REQD,\nDIM1,\nDIM2,\nROLL_PLATE_Y_N,\nMATL_STATUS,\nDIM_X,\nDIM_Y,\nBOM_SFI,\nBOM_FIM,\nBOM_HOLD,\nUNIT_WGHT_UOM,\nMTO_WEIGHT_MT,\nUNIT_PA,\nTOTAL_PA,\nREMARKS,\nMP_REQ_NO,\nMP_SEQ_NO,\nXS_COMPONENT,\nXS_VENDOR_NAME,\nXS_ORDERING_OPTION,\nMP_SELECT_PRIO,\nMP_DELV_DESIG,\nMP_SELECT_CWP,\nMP_ROS_DATE,\nMP_FAB_LOCATION,\nMP_DRWG_NAME,\nMP_SERVICE,\nMP_SFI,\nMP_CATEGORY,\nMP_WEIGHT,\nXS_STRUC_CODE,\nPOS_ITR,\nDISCIPLINE,\nMTO_TYPE,\nUNIT,\nAREA_CWA,\nXS_ACTIVITY_CODE,\nGROUP_NAME,\nBOM_SHAPE_SPOOL,\nm_sys.m_pck_bom.list_path_to_root (ln_id, '/') bom_path -- added latter\n from MDR_CUST.MDR_M_EPI_010_REP_NEW where proj_id = '@{pipeline().parameters.proj_id}'\n   and MTO_TYPE = '30-AFC'\n and LIST_STATUS = '30-AFC'\n and ISSUE_STATUS like 'AFC06%'",
+							"type": "Expression"
+						},
+						"partitionOption": "None",
+						"convertDecimalToInteger": false,
+						"queryTimeout": "04:00:00"
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"allowCopyCommand": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ADLSG2 TimeAnalytics DEV",
+							"type": "LinkedServiceReference"
+						},
+						"path": "mdr-staging-data/Ruya11"
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_smat_11_extracts",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_excel_loads_AzureSynapseAnalytics",
+						"type": "DatasetReference",
+						"parameters": {
+							"TableName": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.table_name1",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "cp_Structural_07",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "cp_Structural_06",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "OracleSource",
+						"additionalColumns": [
+							{
+								"name": "Discipline_description",
+								"value": "Structural"
+							},
+							{
+								"name": "created_date_time",
+								"value": {
+									"value": "@addHours(utcNow(),4)",
+									"type": "Expression"
+								}
+							}
+						],
+						"oracleReaderQuery": {
+							"value": "select LP_ID,\nLN_ID,\nLST_ID,\nSTAT_ID,\nIDENT,\nDP_ID,\nPROJ_ID,\nLIST_STATUS,\nISSUE_STATUS,\nPOS,\nIDENT_CODE,\nTAG_NUMBER,\nIDENT_DESCRIPTION,\nQUANTITY,\nQTY_UNIT,\nITEM_TYPE,\nCG_GROUP_CODE,\nPART_CODE,\nCOMMODITY_CODE,\nSIZE1,\nSIZE2,\nSIZE3,\nPOS_TAG_LO,\nPOS_TAG_SH,\nUNIT_WGHT,\nDWG_DESCRIPTION,\nBOM_CNTNO,\nSTRUCTURE_CODE,\nACTIVITY_CODE,\nSTR_ACTIVITY_DESC,\nBID_ELEMENT,\nLEVEL_,\nMEMBER_DESC,\nLOCATION,\nMATL_CLASSIFICATION,\nPIECE_MARK,\nNO_PC_REQD,\nDIM1,\nDIM2,\nROLL_PLATE_Y_N,\nMATL_STATUS,\nDIM_X,\nDIM_Y,\nBOM_SFI,\nBOM_FIM,\nBOM_HOLD,\nUNIT_WGHT_UOM,\nMTO_WEIGHT_MT,\nUNIT_PA,\nTOTAL_PA,\nREMARKS,\nMP_REQ_NO,\nMP_SEQ_NO,\nXS_COMPONENT,\nXS_VENDOR_NAME,\nXS_ORDERING_OPTION,\nMP_SELECT_PRIO,\nMP_DELV_DESIG,\nMP_SELECT_CWP,\nMP_ROS_DATE,\nMP_FAB_LOCATION,\nMP_DRWG_NAME,\nMP_SERVICE,\nMP_SFI,\nMP_CATEGORY,\nMP_WEIGHT,\nXS_STRUC_CODE,\nPOS_ITR,\nDISCIPLINE,\nMTO_TYPE,\nUNIT,\nAREA_CWA,\nXS_ACTIVITY_CODE,\nGROUP_NAME,\nBOM_SHAPE_SPOOL,\nm_sys.m_pck_bom.list_path_to_root (ln_id, '/') bom_path -- added latter\n from MDR_CUST.MDR_M_EPI_010_REP_NEW where proj_id = '@{pipeline().parameters.proj_id}'\n   and MTO_TYPE = '30-AFC'\n and LIST_STATUS = '30-AFC'\n and ISSUE_STATUS like 'AFC07%'",
+							"type": "Expression"
+						},
+						"partitionOption": "None",
+						"convertDecimalToInteger": false,
+						"queryTimeout": "04:00:00"
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"allowCopyCommand": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ADLSG2 TimeAnalytics DEV",
+							"type": "LinkedServiceReference"
+						},
+						"path": "mdr-staging-data/Ruya11"
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_smat_11_extracts",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_excel_loads_AzureSynapseAnalytics",
+						"type": "DatasetReference",
+						"parameters": {
+							"TableName": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.table_name1",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "cp_Structural_08",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "cp_Structural_07",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "OracleSource",
+						"additionalColumns": [
+							{
+								"name": "Discipline_description",
+								"value": "Structural"
+							},
+							{
+								"name": "created_date_time",
+								"value": {
+									"value": "@addHours(utcNow(),4)",
+									"type": "Expression"
+								}
+							}
+						],
+						"oracleReaderQuery": {
+							"value": "select LP_ID,\nLN_ID,\nLST_ID,\nSTAT_ID,\nIDENT,\nDP_ID,\nPROJ_ID,\nLIST_STATUS,\nISSUE_STATUS,\nPOS,\nIDENT_CODE,\nTAG_NUMBER,\nIDENT_DESCRIPTION,\nQUANTITY,\nQTY_UNIT,\nITEM_TYPE,\nCG_GROUP_CODE,\nPART_CODE,\nCOMMODITY_CODE,\nSIZE1,\nSIZE2,\nSIZE3,\nPOS_TAG_LO,\nPOS_TAG_SH,\nUNIT_WGHT,\nDWG_DESCRIPTION,\nBOM_CNTNO,\nSTRUCTURE_CODE,\nACTIVITY_CODE,\nSTR_ACTIVITY_DESC,\nBID_ELEMENT,\nLEVEL_,\nMEMBER_DESC,\nLOCATION,\nMATL_CLASSIFICATION,\nPIECE_MARK,\nNO_PC_REQD,\nDIM1,\nDIM2,\nROLL_PLATE_Y_N,\nMATL_STATUS,\nDIM_X,\nDIM_Y,\nBOM_SFI,\nBOM_FIM,\nBOM_HOLD,\nUNIT_WGHT_UOM,\nMTO_WEIGHT_MT,\nUNIT_PA,\nTOTAL_PA,\nREMARKS,\nMP_REQ_NO,\nMP_SEQ_NO,\nXS_COMPONENT,\nXS_VENDOR_NAME,\nXS_ORDERING_OPTION,\nMP_SELECT_PRIO,\nMP_DELV_DESIG,\nMP_SELECT_CWP,\nMP_ROS_DATE,\nMP_FAB_LOCATION,\nMP_DRWG_NAME,\nMP_SERVICE,\nMP_SFI,\nMP_CATEGORY,\nMP_WEIGHT,\nXS_STRUC_CODE,\nPOS_ITR,\nDISCIPLINE,\nMTO_TYPE,\nUNIT,\nAREA_CWA,\nXS_ACTIVITY_CODE,\nGROUP_NAME,\nBOM_SHAPE_SPOOL,\nm_sys.m_pck_bom.list_path_to_root (ln_id, '/') bom_path -- added latter\n from MDR_CUST.MDR_M_EPI_010_REP_NEW where proj_id = '@{pipeline().parameters.proj_id}'\n   and MTO_TYPE = '30-AFC'\n and LIST_STATUS = '30-AFC'\n and ISSUE_STATUS like 'AFC08%'",
+							"type": "Expression"
+						},
+						"partitionOption": "None",
+						"convertDecimalToInteger": false,
+						"queryTimeout": "04:00:00"
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"allowCopyCommand": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ADLSG2 TimeAnalytics DEV",
+							"type": "LinkedServiceReference"
+						},
+						"path": "mdr-staging-data/Ruya11"
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_smat_11_extracts",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_excel_loads_AzureSynapseAnalytics",
+						"type": "DatasetReference",
+						"parameters": {
+							"TableName": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.table_name1",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "cp_Structural_09",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "cp_Structural_08",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "OracleSource",
+						"additionalColumns": [
+							{
+								"name": "Discipline_description",
+								"value": "Structural"
+							},
+							{
+								"name": "created_date_time",
+								"value": {
+									"value": "@addHours(utcNow(),4)",
+									"type": "Expression"
+								}
+							}
+						],
+						"oracleReaderQuery": {
+							"value": "select LP_ID,\nLN_ID,\nLST_ID,\nSTAT_ID,\nIDENT,\nDP_ID,\nPROJ_ID,\nLIST_STATUS,\nISSUE_STATUS,\nPOS,\nIDENT_CODE,\nTAG_NUMBER,\nIDENT_DESCRIPTION,\nQUANTITY,\nQTY_UNIT,\nITEM_TYPE,\nCG_GROUP_CODE,\nPART_CODE,\nCOMMODITY_CODE,\nSIZE1,\nSIZE2,\nSIZE3,\nPOS_TAG_LO,\nPOS_TAG_SH,\nUNIT_WGHT,\nDWG_DESCRIPTION,\nBOM_CNTNO,\nSTRUCTURE_CODE,\nACTIVITY_CODE,\nSTR_ACTIVITY_DESC,\nBID_ELEMENT,\nLEVEL_,\nMEMBER_DESC,\nLOCATION,\nMATL_CLASSIFICATION,\nPIECE_MARK,\nNO_PC_REQD,\nDIM1,\nDIM2,\nROLL_PLATE_Y_N,\nMATL_STATUS,\nDIM_X,\nDIM_Y,\nBOM_SFI,\nBOM_FIM,\nBOM_HOLD,\nUNIT_WGHT_UOM,\nMTO_WEIGHT_MT,\nUNIT_PA,\nTOTAL_PA,\nREMARKS,\nMP_REQ_NO,\nMP_SEQ_NO,\nXS_COMPONENT,\nXS_VENDOR_NAME,\nXS_ORDERING_OPTION,\nMP_SELECT_PRIO,\nMP_DELV_DESIG,\nMP_SELECT_CWP,\nMP_ROS_DATE,\nMP_FAB_LOCATION,\nMP_DRWG_NAME,\nMP_SERVICE,\nMP_SFI,\nMP_CATEGORY,\nMP_WEIGHT,\nXS_STRUC_CODE,\nPOS_ITR,\nDISCIPLINE,\nMTO_TYPE,\nUNIT,\nAREA_CWA,\nXS_ACTIVITY_CODE,\nGROUP_NAME,\nBOM_SHAPE_SPOOL,\nm_sys.m_pck_bom.list_path_to_root (ln_id, '/') bom_path -- added latter\n from MDR_CUST.MDR_M_EPI_010_REP_NEW where proj_id = '@{pipeline().parameters.proj_id}'\n   and MTO_TYPE = '30-AFC'\n and LIST_STATUS = '30-AFC'\n and ISSUE_STATUS like 'AFC09%'",
+							"type": "Expression"
+						},
+						"partitionOption": "None",
+						"convertDecimalToInteger": false,
+						"queryTimeout": "04:00:00"
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"allowCopyCommand": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ADLSG2 TimeAnalytics DEV",
+							"type": "LinkedServiceReference"
+						},
+						"path": "mdr-staging-data/Ruya11"
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_smat_11_extracts",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_excel_loads_AzureSynapseAnalytics",
+						"type": "DatasetReference",
+						"parameters": {
+							"TableName": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.table_name1",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "cp_Structural_10",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "cp_Structural_09",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "OracleSource",
+						"additionalColumns": [
+							{
+								"name": "Discipline_description",
+								"value": "Structural"
+							},
+							{
+								"name": "created_date_time",
+								"value": {
+									"value": "@addHours(utcNow(),4)",
+									"type": "Expression"
+								}
+							}
+						],
+						"oracleReaderQuery": {
+							"value": "select LP_ID,\nLN_ID,\nLST_ID,\nSTAT_ID,\nIDENT,\nDP_ID,\nPROJ_ID,\nLIST_STATUS,\nISSUE_STATUS,\nPOS,\nIDENT_CODE,\nTAG_NUMBER,\nIDENT_DESCRIPTION,\nQUANTITY,\nQTY_UNIT,\nITEM_TYPE,\nCG_GROUP_CODE,\nPART_CODE,\nCOMMODITY_CODE,\nSIZE1,\nSIZE2,\nSIZE3,\nPOS_TAG_LO,\nPOS_TAG_SH,\nUNIT_WGHT,\nDWG_DESCRIPTION,\nBOM_CNTNO,\nSTRUCTURE_CODE,\nACTIVITY_CODE,\nSTR_ACTIVITY_DESC,\nBID_ELEMENT,\nLEVEL_,\nMEMBER_DESC,\nLOCATION,\nMATL_CLASSIFICATION,\nPIECE_MARK,\nNO_PC_REQD,\nDIM1,\nDIM2,\nROLL_PLATE_Y_N,\nMATL_STATUS,\nDIM_X,\nDIM_Y,\nBOM_SFI,\nBOM_FIM,\nBOM_HOLD,\nUNIT_WGHT_UOM,\nMTO_WEIGHT_MT,\nUNIT_PA,\nTOTAL_PA,\nREMARKS,\nMP_REQ_NO,\nMP_SEQ_NO,\nXS_COMPONENT,\nXS_VENDOR_NAME,\nXS_ORDERING_OPTION,\nMP_SELECT_PRIO,\nMP_DELV_DESIG,\nMP_SELECT_CWP,\nMP_ROS_DATE,\nMP_FAB_LOCATION,\nMP_DRWG_NAME,\nMP_SERVICE,\nMP_SFI,\nMP_CATEGORY,\nMP_WEIGHT,\nXS_STRUC_CODE,\nPOS_ITR,\nDISCIPLINE,\nMTO_TYPE,\nUNIT,\nAREA_CWA,\nXS_ACTIVITY_CODE,\nGROUP_NAME,\nBOM_SHAPE_SPOOL,\nm_sys.m_pck_bom.list_path_to_root (ln_id, '/') bom_path -- added latter\n from MDR_CUST.MDR_M_EPI_010_REP_NEW where proj_id = '@{pipeline().parameters.proj_id}'\n   and MTO_TYPE = '30-AFC'\n and LIST_STATUS = '30-AFC'\n and ISSUE_STATUS like 'AFC10%'",
+							"type": "Expression"
+						},
+						"partitionOption": "None",
+						"convertDecimalToInteger": false,
+						"queryTimeout": "04:00:00"
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"allowCopyCommand": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ADLSG2 TimeAnalytics DEV",
+							"type": "LinkedServiceReference"
+						},
+						"path": "mdr-staging-data/Ruya11"
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_smat_11_extracts",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_excel_loads_AzureSynapseAnalytics",
+						"type": "DatasetReference",
+						"parameters": {
+							"TableName": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.table_name1",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "cp_Structural_11",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "cp_Structural_10",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "OracleSource",
+						"additionalColumns": [
+							{
+								"name": "Discipline_description",
+								"value": "Structural"
+							},
+							{
+								"name": "created_date_time",
+								"value": {
+									"value": "@addHours(utcNow(),4)",
+									"type": "Expression"
+								}
+							}
+						],
+						"oracleReaderQuery": {
+							"value": "select LP_ID,\nLN_ID,\nLST_ID,\nSTAT_ID,\nIDENT,\nDP_ID,\nPROJ_ID,\nLIST_STATUS,\nISSUE_STATUS,\nPOS,\nIDENT_CODE,\nTAG_NUMBER,\nIDENT_DESCRIPTION,\nQUANTITY,\nQTY_UNIT,\nITEM_TYPE,\nCG_GROUP_CODE,\nPART_CODE,\nCOMMODITY_CODE,\nSIZE1,\nSIZE2,\nSIZE3,\nPOS_TAG_LO,\nPOS_TAG_SH,\nUNIT_WGHT,\nDWG_DESCRIPTION,\nBOM_CNTNO,\nSTRUCTURE_CODE,\nACTIVITY_CODE,\nSTR_ACTIVITY_DESC,\nBID_ELEMENT,\nLEVEL_,\nMEMBER_DESC,\nLOCATION,\nMATL_CLASSIFICATION,\nPIECE_MARK,\nNO_PC_REQD,\nDIM1,\nDIM2,\nROLL_PLATE_Y_N,\nMATL_STATUS,\nDIM_X,\nDIM_Y,\nBOM_SFI,\nBOM_FIM,\nBOM_HOLD,\nUNIT_WGHT_UOM,\nMTO_WEIGHT_MT,\nUNIT_PA,\nTOTAL_PA,\nREMARKS,\nMP_REQ_NO,\nMP_SEQ_NO,\nXS_COMPONENT,\nXS_VENDOR_NAME,\nXS_ORDERING_OPTION,\nMP_SELECT_PRIO,\nMP_DELV_DESIG,\nMP_SELECT_CWP,\nMP_ROS_DATE,\nMP_FAB_LOCATION,\nMP_DRWG_NAME,\nMP_SERVICE,\nMP_SFI,\nMP_CATEGORY,\nMP_WEIGHT,\nXS_STRUC_CODE,\nPOS_ITR,\nDISCIPLINE,\nMTO_TYPE,\nUNIT,\nAREA_CWA,\nXS_ACTIVITY_CODE,\nGROUP_NAME,\nBOM_SHAPE_SPOOL,\nm_sys.m_pck_bom.list_path_to_root (ln_id, '/') bom_path -- added latter\n from MDR_CUST.MDR_M_EPI_010_REP_NEW where proj_id = '@{pipeline().parameters.proj_id}'\n   and MTO_TYPE = '30-AFC'\n and LIST_STATUS = '30-AFC'\n and ISSUE_STATUS like 'AFC11%'",
+							"type": "Expression"
+						},
+						"partitionOption": "None",
+						"convertDecimalToInteger": false,
+						"queryTimeout": "04:00:00"
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"allowCopyCommand": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ADLSG2 TimeAnalytics DEV",
+							"type": "LinkedServiceReference"
+						},
+						"path": "mdr-staging-data/Ruya11"
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_smat_11_extracts",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_excel_loads_AzureSynapseAnalytics",
+						"type": "DatasetReference",
+						"parameters": {
+							"TableName": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.table_name1",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "cp_Structural_12",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "cp_Structural_11",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "OracleSource",
+						"additionalColumns": [
+							{
+								"name": "Discipline_description",
+								"value": "Structural"
+							},
+							{
+								"name": "created_date_time",
+								"value": {
+									"value": "@addHours(utcNow(),4)",
+									"type": "Expression"
+								}
+							}
+						],
+						"oracleReaderQuery": {
+							"value": "select LP_ID,\nLN_ID,\nLST_ID,\nSTAT_ID,\nIDENT,\nDP_ID,\nPROJ_ID,\nLIST_STATUS,\nISSUE_STATUS,\nPOS,\nIDENT_CODE,\nTAG_NUMBER,\nIDENT_DESCRIPTION,\nQUANTITY,\nQTY_UNIT,\nITEM_TYPE,\nCG_GROUP_CODE,\nPART_CODE,\nCOMMODITY_CODE,\nSIZE1,\nSIZE2,\nSIZE3,\nPOS_TAG_LO,\nPOS_TAG_SH,\nUNIT_WGHT,\nDWG_DESCRIPTION,\nBOM_CNTNO,\nSTRUCTURE_CODE,\nACTIVITY_CODE,\nSTR_ACTIVITY_DESC,\nBID_ELEMENT,\nLEVEL_,\nMEMBER_DESC,\nLOCATION,\nMATL_CLASSIFICATION,\nPIECE_MARK,\nNO_PC_REQD,\nDIM1,\nDIM2,\nROLL_PLATE_Y_N,\nMATL_STATUS,\nDIM_X,\nDIM_Y,\nBOM_SFI,\nBOM_FIM,\nBOM_HOLD,\nUNIT_WGHT_UOM,\nMTO_WEIGHT_MT,\nUNIT_PA,\nTOTAL_PA,\nREMARKS,\nMP_REQ_NO,\nMP_SEQ_NO,\nXS_COMPONENT,\nXS_VENDOR_NAME,\nXS_ORDERING_OPTION,\nMP_SELECT_PRIO,\nMP_DELV_DESIG,\nMP_SELECT_CWP,\nMP_ROS_DATE,\nMP_FAB_LOCATION,\nMP_DRWG_NAME,\nMP_SERVICE,\nMP_SFI,\nMP_CATEGORY,\nMP_WEIGHT,\nXS_STRUC_CODE,\nPOS_ITR,\nDISCIPLINE,\nMTO_TYPE,\nUNIT,\nAREA_CWA,\nXS_ACTIVITY_CODE,\nGROUP_NAME,\nBOM_SHAPE_SPOOL,\nm_sys.m_pck_bom.list_path_to_root (ln_id, '/') bom_path -- added latter\n from MDR_CUST.MDR_M_EPI_010_REP_NEW where proj_id = '@{pipeline().parameters.proj_id}'\n   and MTO_TYPE = '30-AFC'\n and LIST_STATUS = '30-AFC'\n and ISSUE_STATUS like 'AFC12%'",
+							"type": "Expression"
+						},
+						"partitionOption": "None",
+						"convertDecimalToInteger": false,
+						"queryTimeout": "04:00:00"
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"allowCopyCommand": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ADLSG2 TimeAnalytics DEV",
+							"type": "LinkedServiceReference"
+						},
+						"path": "mdr-staging-data/Ruya11"
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_smat_11_extracts",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_excel_loads_AzureSynapseAnalytics",
+						"type": "DatasetReference",
+						"parameters": {
+							"TableName": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.table_name1",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "cp_Structural_13",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "cp_Structural_12",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "OracleSource",
+						"additionalColumns": [
+							{
+								"name": "Discipline_description",
+								"value": "Structural"
+							},
+							{
+								"name": "created_date_time",
+								"value": {
+									"value": "@addHours(utcNow(),4)",
+									"type": "Expression"
+								}
+							}
+						],
+						"oracleReaderQuery": {
+							"value": "select LP_ID,\nLN_ID,\nLST_ID,\nSTAT_ID,\nIDENT,\nDP_ID,\nPROJ_ID,\nLIST_STATUS,\nISSUE_STATUS,\nPOS,\nIDENT_CODE,\nTAG_NUMBER,\nIDENT_DESCRIPTION,\nQUANTITY,\nQTY_UNIT,\nITEM_TYPE,\nCG_GROUP_CODE,\nPART_CODE,\nCOMMODITY_CODE,\nSIZE1,\nSIZE2,\nSIZE3,\nPOS_TAG_LO,\nPOS_TAG_SH,\nUNIT_WGHT,\nDWG_DESCRIPTION,\nBOM_CNTNO,\nSTRUCTURE_CODE,\nACTIVITY_CODE,\nSTR_ACTIVITY_DESC,\nBID_ELEMENT,\nLEVEL_,\nMEMBER_DESC,\nLOCATION,\nMATL_CLASSIFICATION,\nPIECE_MARK,\nNO_PC_REQD,\nDIM1,\nDIM2,\nROLL_PLATE_Y_N,\nMATL_STATUS,\nDIM_X,\nDIM_Y,\nBOM_SFI,\nBOM_FIM,\nBOM_HOLD,\nUNIT_WGHT_UOM,\nMTO_WEIGHT_MT,\nUNIT_PA,\nTOTAL_PA,\nREMARKS,\nMP_REQ_NO,\nMP_SEQ_NO,\nXS_COMPONENT,\nXS_VENDOR_NAME,\nXS_ORDERING_OPTION,\nMP_SELECT_PRIO,\nMP_DELV_DESIG,\nMP_SELECT_CWP,\nMP_ROS_DATE,\nMP_FAB_LOCATION,\nMP_DRWG_NAME,\nMP_SERVICE,\nMP_SFI,\nMP_CATEGORY,\nMP_WEIGHT,\nXS_STRUC_CODE,\nPOS_ITR,\nDISCIPLINE,\nMTO_TYPE,\nUNIT,\nAREA_CWA,\nXS_ACTIVITY_CODE,\nGROUP_NAME,\nBOM_SHAPE_SPOOL,\nm_sys.m_pck_bom.list_path_to_root (ln_id, '/') bom_path -- added latter\n from MDR_CUST.MDR_M_EPI_010_REP_NEW where proj_id = '@{pipeline().parameters.proj_id}'\n   and MTO_TYPE = '30-AFC'\n and LIST_STATUS = '30-AFC'\n and ISSUE_STATUS like 'AFC13%'",
+							"type": "Expression"
+						},
+						"partitionOption": "None",
+						"convertDecimalToInteger": false,
+						"queryTimeout": "04:00:00"
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"allowCopyCommand": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ADLSG2 TimeAnalytics DEV",
+							"type": "LinkedServiceReference"
+						},
+						"path": "mdr-staging-data/Ruya11"
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_smat_11_extracts",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_excel_loads_AzureSynapseAnalytics",
+						"type": "DatasetReference",
+						"parameters": {
+							"TableName": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.table_name1",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "cp_Structural_14",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "cp_Structural_13",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "OracleSource",
+						"additionalColumns": [
+							{
+								"name": "Discipline_description",
+								"value": "Structural"
+							},
+							{
+								"name": "created_date_time",
+								"value": {
+									"value": "@addHours(utcNow(),4)",
+									"type": "Expression"
+								}
+							}
+						],
+						"oracleReaderQuery": {
+							"value": "select LP_ID,\nLN_ID,\nLST_ID,\nSTAT_ID,\nIDENT,\nDP_ID,\nPROJ_ID,\nLIST_STATUS,\nISSUE_STATUS,\nPOS,\nIDENT_CODE,\nTAG_NUMBER,\nIDENT_DESCRIPTION,\nQUANTITY,\nQTY_UNIT,\nITEM_TYPE,\nCG_GROUP_CODE,\nPART_CODE,\nCOMMODITY_CODE,\nSIZE1,\nSIZE2,\nSIZE3,\nPOS_TAG_LO,\nPOS_TAG_SH,\nUNIT_WGHT,\nDWG_DESCRIPTION,\nBOM_CNTNO,\nSTRUCTURE_CODE,\nACTIVITY_CODE,\nSTR_ACTIVITY_DESC,\nBID_ELEMENT,\nLEVEL_,\nMEMBER_DESC,\nLOCATION,\nMATL_CLASSIFICATION,\nPIECE_MARK,\nNO_PC_REQD,\nDIM1,\nDIM2,\nROLL_PLATE_Y_N,\nMATL_STATUS,\nDIM_X,\nDIM_Y,\nBOM_SFI,\nBOM_FIM,\nBOM_HOLD,\nUNIT_WGHT_UOM,\nMTO_WEIGHT_MT,\nUNIT_PA,\nTOTAL_PA,\nREMARKS,\nMP_REQ_NO,\nMP_SEQ_NO,\nXS_COMPONENT,\nXS_VENDOR_NAME,\nXS_ORDERING_OPTION,\nMP_SELECT_PRIO,\nMP_DELV_DESIG,\nMP_SELECT_CWP,\nMP_ROS_DATE,\nMP_FAB_LOCATION,\nMP_DRWG_NAME,\nMP_SERVICE,\nMP_SFI,\nMP_CATEGORY,\nMP_WEIGHT,\nXS_STRUC_CODE,\nPOS_ITR,\nDISCIPLINE,\nMTO_TYPE,\nUNIT,\nAREA_CWA,\nXS_ACTIVITY_CODE,\nGROUP_NAME,\nBOM_SHAPE_SPOOL,\nm_sys.m_pck_bom.list_path_to_root (ln_id, '/') bom_path -- added latter\n from MDR_CUST.MDR_M_EPI_010_REP_NEW where proj_id = '@{pipeline().parameters.proj_id}'\n   and MTO_TYPE = '30-AFC'\n and LIST_STATUS = '30-AFC'\n and ISSUE_STATUS like 'AFC14%'",
+							"type": "Expression"
+						},
+						"partitionOption": "None",
+						"convertDecimalToInteger": false,
+						"queryTimeout": "04:00:00"
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"allowCopyCommand": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ADLSG2 TimeAnalytics DEV",
+							"type": "LinkedServiceReference"
+						},
+						"path": "mdr-staging-data/Ruya11"
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_smat_11_extracts",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_excel_loads_AzureSynapseAnalytics",
+						"type": "DatasetReference",
+						"parameters": {
+							"TableName": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.table_name1",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "cp_Structural_15",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "cp_Structural_14",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "OracleSource",
+						"additionalColumns": [
+							{
+								"name": "Discipline_description",
+								"value": "Structural"
+							},
+							{
+								"name": "created_date_time",
+								"value": {
+									"value": "@addHours(utcNow(),4)",
+									"type": "Expression"
+								}
+							}
+						],
+						"oracleReaderQuery": {
+							"value": "select LP_ID,\nLN_ID,\nLST_ID,\nSTAT_ID,\nIDENT,\nDP_ID,\nPROJ_ID,\nLIST_STATUS,\nISSUE_STATUS,\nPOS,\nIDENT_CODE,\nTAG_NUMBER,\nIDENT_DESCRIPTION,\nQUANTITY,\nQTY_UNIT,\nITEM_TYPE,\nCG_GROUP_CODE,\nPART_CODE,\nCOMMODITY_CODE,\nSIZE1,\nSIZE2,\nSIZE3,\nPOS_TAG_LO,\nPOS_TAG_SH,\nUNIT_WGHT,\nDWG_DESCRIPTION,\nBOM_CNTNO,\nSTRUCTURE_CODE,\nACTIVITY_CODE,\nSTR_ACTIVITY_DESC,\nBID_ELEMENT,\nLEVEL_,\nMEMBER_DESC,\nLOCATION,\nMATL_CLASSIFICATION,\nPIECE_MARK,\nNO_PC_REQD,\nDIM1,\nDIM2,\nROLL_PLATE_Y_N,\nMATL_STATUS,\nDIM_X,\nDIM_Y,\nBOM_SFI,\nBOM_FIM,\nBOM_HOLD,\nUNIT_WGHT_UOM,\nMTO_WEIGHT_MT,\nUNIT_PA,\nTOTAL_PA,\nREMARKS,\nMP_REQ_NO,\nMP_SEQ_NO,\nXS_COMPONENT,\nXS_VENDOR_NAME,\nXS_ORDERING_OPTION,\nMP_SELECT_PRIO,\nMP_DELV_DESIG,\nMP_SELECT_CWP,\nMP_ROS_DATE,\nMP_FAB_LOCATION,\nMP_DRWG_NAME,\nMP_SERVICE,\nMP_SFI,\nMP_CATEGORY,\nMP_WEIGHT,\nXS_STRUC_CODE,\nPOS_ITR,\nDISCIPLINE,\nMTO_TYPE,\nUNIT,\nAREA_CWA,\nXS_ACTIVITY_CODE,\nGROUP_NAME,\nBOM_SHAPE_SPOOL,\nm_sys.m_pck_bom.list_path_to_root (ln_id, '/') bom_path -- added latter\n from MDR_CUST.MDR_M_EPI_010_REP_NEW where proj_id = '@{pipeline().parameters.proj_id}'\n   and MTO_TYPE = '30-AFC'\n and LIST_STATUS = '30-AFC'\n and ISSUE_STATUS like 'AFC15%'",
+							"type": "Expression"
+						},
+						"partitionOption": "None",
+						"convertDecimalToInteger": false,
+						"queryTimeout": "04:00:00"
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"allowCopyCommand": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ADLSG2 TimeAnalytics DEV",
+							"type": "LinkedServiceReference"
+						},
+						"path": "mdr-staging-data/Ruya11"
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_smat_11_extracts",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_excel_loads_AzureSynapseAnalytics",
+						"type": "DatasetReference",
+						"parameters": {
+							"TableName": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.table_name1",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "cp_Structural_16",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "cp_Structural_15",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "OracleSource",
+						"additionalColumns": [
+							{
+								"name": "Discipline_description",
+								"value": "Structural"
+							},
+							{
+								"name": "created_date_time",
+								"value": {
+									"value": "@addHours(utcNow(),4)",
+									"type": "Expression"
+								}
+							}
+						],
+						"oracleReaderQuery": {
+							"value": "select LP_ID,\nLN_ID,\nLST_ID,\nSTAT_ID,\nIDENT,\nDP_ID,\nPROJ_ID,\nLIST_STATUS,\nISSUE_STATUS,\nPOS,\nIDENT_CODE,\nTAG_NUMBER,\nIDENT_DESCRIPTION,\nQUANTITY,\nQTY_UNIT,\nITEM_TYPE,\nCG_GROUP_CODE,\nPART_CODE,\nCOMMODITY_CODE,\nSIZE1,\nSIZE2,\nSIZE3,\nPOS_TAG_LO,\nPOS_TAG_SH,\nUNIT_WGHT,\nDWG_DESCRIPTION,\nBOM_CNTNO,\nSTRUCTURE_CODE,\nACTIVITY_CODE,\nSTR_ACTIVITY_DESC,\nBID_ELEMENT,\nLEVEL_,\nMEMBER_DESC,\nLOCATION,\nMATL_CLASSIFICATION,\nPIECE_MARK,\nNO_PC_REQD,\nDIM1,\nDIM2,\nROLL_PLATE_Y_N,\nMATL_STATUS,\nDIM_X,\nDIM_Y,\nBOM_SFI,\nBOM_FIM,\nBOM_HOLD,\nUNIT_WGHT_UOM,\nMTO_WEIGHT_MT,\nUNIT_PA,\nTOTAL_PA,\nREMARKS,\nMP_REQ_NO,\nMP_SEQ_NO,\nXS_COMPONENT,\nXS_VENDOR_NAME,\nXS_ORDERING_OPTION,\nMP_SELECT_PRIO,\nMP_DELV_DESIG,\nMP_SELECT_CWP,\nMP_ROS_DATE,\nMP_FAB_LOCATION,\nMP_DRWG_NAME,\nMP_SERVICE,\nMP_SFI,\nMP_CATEGORY,\nMP_WEIGHT,\nXS_STRUC_CODE,\nPOS_ITR,\nDISCIPLINE,\nMTO_TYPE,\nUNIT,\nAREA_CWA,\nXS_ACTIVITY_CODE,\nGROUP_NAME,\nBOM_SHAPE_SPOOL,\nm_sys.m_pck_bom.list_path_to_root (ln_id, '/') bom_path -- added latter\n from MDR_CUST.MDR_M_EPI_010_REP_NEW where proj_id = '@{pipeline().parameters.proj_id}'\n   and MTO_TYPE = '30-AFC'\n and LIST_STATUS = '30-AFC'\n and ISSUE_STATUS like 'AFC16%'",
+							"type": "Expression"
+						},
+						"partitionOption": "None",
+						"convertDecimalToInteger": false,
+						"queryTimeout": "04:00:00"
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"allowCopyCommand": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ADLSG2 TimeAnalytics DEV",
+							"type": "LinkedServiceReference"
+						},
+						"path": "mdr-staging-data/Ruya11"
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_smat_11_extracts",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_excel_loads_AzureSynapseAnalytics",
+						"type": "DatasetReference",
+						"parameters": {
+							"TableName": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.table_name1",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "cp_Structural_17",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "cp_Structural_16",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "OracleSource",
+						"additionalColumns": [
+							{
+								"name": "Discipline_description",
+								"value": "Structural"
+							},
+							{
+								"name": "created_date_time",
+								"value": {
+									"value": "@addHours(utcNow(),4)",
+									"type": "Expression"
+								}
+							}
+						],
+						"oracleReaderQuery": {
+							"value": "select LP_ID,\nLN_ID,\nLST_ID,\nSTAT_ID,\nIDENT,\nDP_ID,\nPROJ_ID,\nLIST_STATUS,\nISSUE_STATUS,\nPOS,\nIDENT_CODE,\nTAG_NUMBER,\nIDENT_DESCRIPTION,\nQUANTITY,\nQTY_UNIT,\nITEM_TYPE,\nCG_GROUP_CODE,\nPART_CODE,\nCOMMODITY_CODE,\nSIZE1,\nSIZE2,\nSIZE3,\nPOS_TAG_LO,\nPOS_TAG_SH,\nUNIT_WGHT,\nDWG_DESCRIPTION,\nBOM_CNTNO,\nSTRUCTURE_CODE,\nACTIVITY_CODE,\nSTR_ACTIVITY_DESC,\nBID_ELEMENT,\nLEVEL_,\nMEMBER_DESC,\nLOCATION,\nMATL_CLASSIFICATION,\nPIECE_MARK,\nNO_PC_REQD,\nDIM1,\nDIM2,\nROLL_PLATE_Y_N,\nMATL_STATUS,\nDIM_X,\nDIM_Y,\nBOM_SFI,\nBOM_FIM,\nBOM_HOLD,\nUNIT_WGHT_UOM,\nMTO_WEIGHT_MT,\nUNIT_PA,\nTOTAL_PA,\nREMARKS,\nMP_REQ_NO,\nMP_SEQ_NO,\nXS_COMPONENT,\nXS_VENDOR_NAME,\nXS_ORDERING_OPTION,\nMP_SELECT_PRIO,\nMP_DELV_DESIG,\nMP_SELECT_CWP,\nMP_ROS_DATE,\nMP_FAB_LOCATION,\nMP_DRWG_NAME,\nMP_SERVICE,\nMP_SFI,\nMP_CATEGORY,\nMP_WEIGHT,\nXS_STRUC_CODE,\nPOS_ITR,\nDISCIPLINE,\nMTO_TYPE,\nUNIT,\nAREA_CWA,\nXS_ACTIVITY_CODE,\nGROUP_NAME,\nBOM_SHAPE_SPOOL,\nm_sys.m_pck_bom.list_path_to_root (ln_id, '/') bom_path -- added latter\n from MDR_CUST.MDR_M_EPI_010_REP_NEW where proj_id = '@{pipeline().parameters.proj_id}'\n   and MTO_TYPE = '30-AFC'\n and LIST_STATUS = '30-AFC'\n and ISSUE_STATUS like 'AFC17%'",
+							"type": "Expression"
+						},
+						"partitionOption": "None",
+						"convertDecimalToInteger": false,
+						"queryTimeout": "04:00:00"
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"allowCopyCommand": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ADLSG2 TimeAnalytics DEV",
+							"type": "LinkedServiceReference"
+						},
+						"path": "mdr-staging-data/Ruya11"
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_smat_11_extracts",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_excel_loads_AzureSynapseAnalytics",
+						"type": "DatasetReference",
+						"parameters": {
+							"TableName": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.table_name1",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "cp_Structural_18",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "cp_Structural_17",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "OracleSource",
+						"additionalColumns": [
+							{
+								"name": "Discipline_description",
+								"value": "Structural"
+							},
+							{
+								"name": "created_date_time",
+								"value": {
+									"value": "@addHours(utcNow(),4)",
+									"type": "Expression"
+								}
+							}
+						],
+						"oracleReaderQuery": {
+							"value": "select LP_ID,\nLN_ID,\nLST_ID,\nSTAT_ID,\nIDENT,\nDP_ID,\nPROJ_ID,\nLIST_STATUS,\nISSUE_STATUS,\nPOS,\nIDENT_CODE,\nTAG_NUMBER,\nIDENT_DESCRIPTION,\nQUANTITY,\nQTY_UNIT,\nITEM_TYPE,\nCG_GROUP_CODE,\nPART_CODE,\nCOMMODITY_CODE,\nSIZE1,\nSIZE2,\nSIZE3,\nPOS_TAG_LO,\nPOS_TAG_SH,\nUNIT_WGHT,\nDWG_DESCRIPTION,\nBOM_CNTNO,\nSTRUCTURE_CODE,\nACTIVITY_CODE,\nSTR_ACTIVITY_DESC,\nBID_ELEMENT,\nLEVEL_,\nMEMBER_DESC,\nLOCATION,\nMATL_CLASSIFICATION,\nPIECE_MARK,\nNO_PC_REQD,\nDIM1,\nDIM2,\nROLL_PLATE_Y_N,\nMATL_STATUS,\nDIM_X,\nDIM_Y,\nBOM_SFI,\nBOM_FIM,\nBOM_HOLD,\nUNIT_WGHT_UOM,\nMTO_WEIGHT_MT,\nUNIT_PA,\nTOTAL_PA,\nREMARKS,\nMP_REQ_NO,\nMP_SEQ_NO,\nXS_COMPONENT,\nXS_VENDOR_NAME,\nXS_ORDERING_OPTION,\nMP_SELECT_PRIO,\nMP_DELV_DESIG,\nMP_SELECT_CWP,\nMP_ROS_DATE,\nMP_FAB_LOCATION,\nMP_DRWG_NAME,\nMP_SERVICE,\nMP_SFI,\nMP_CATEGORY,\nMP_WEIGHT,\nXS_STRUC_CODE,\nPOS_ITR,\nDISCIPLINE,\nMTO_TYPE,\nUNIT,\nAREA_CWA,\nXS_ACTIVITY_CODE,\nGROUP_NAME,\nBOM_SHAPE_SPOOL,\nm_sys.m_pck_bom.list_path_to_root (ln_id, '/') bom_path -- added latter\n from MDR_CUST.MDR_M_EPI_010_REP_NEW where proj_id = '@{pipeline().parameters.proj_id}'\n   and MTO_TYPE = '30-AFC'\n and LIST_STATUS = '30-AFC'\n and ISSUE_STATUS like 'AFC18%'",
+							"type": "Expression"
+						},
+						"partitionOption": "None",
+						"convertDecimalToInteger": false,
+						"queryTimeout": "04:00:00"
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"allowCopyCommand": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ADLSG2 TimeAnalytics DEV",
+							"type": "LinkedServiceReference"
+						},
+						"path": "mdr-staging-data/Ruya11"
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_smat_11_extracts",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_excel_loads_AzureSynapseAnalytics",
+						"type": "DatasetReference",
+						"parameters": {
+							"TableName": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.table_name1",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "cp_Structural_19",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "cp_Structural_18",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "OracleSource",
+						"additionalColumns": [
+							{
+								"name": "Discipline_description",
+								"value": "Structural"
+							},
+							{
+								"name": "created_date_time",
+								"value": {
+									"value": "@addHours(utcNow(),4)",
+									"type": "Expression"
+								}
+							}
+						],
+						"oracleReaderQuery": {
+							"value": "select LP_ID,\nLN_ID,\nLST_ID,\nSTAT_ID,\nIDENT,\nDP_ID,\nPROJ_ID,\nLIST_STATUS,\nISSUE_STATUS,\nPOS,\nIDENT_CODE,\nTAG_NUMBER,\nIDENT_DESCRIPTION,\nQUANTITY,\nQTY_UNIT,\nITEM_TYPE,\nCG_GROUP_CODE,\nPART_CODE,\nCOMMODITY_CODE,\nSIZE1,\nSIZE2,\nSIZE3,\nPOS_TAG_LO,\nPOS_TAG_SH,\nUNIT_WGHT,\nDWG_DESCRIPTION,\nBOM_CNTNO,\nSTRUCTURE_CODE,\nACTIVITY_CODE,\nSTR_ACTIVITY_DESC,\nBID_ELEMENT,\nLEVEL_,\nMEMBER_DESC,\nLOCATION,\nMATL_CLASSIFICATION,\nPIECE_MARK,\nNO_PC_REQD,\nDIM1,\nDIM2,\nROLL_PLATE_Y_N,\nMATL_STATUS,\nDIM_X,\nDIM_Y,\nBOM_SFI,\nBOM_FIM,\nBOM_HOLD,\nUNIT_WGHT_UOM,\nMTO_WEIGHT_MT,\nUNIT_PA,\nTOTAL_PA,\nREMARKS,\nMP_REQ_NO,\nMP_SEQ_NO,\nXS_COMPONENT,\nXS_VENDOR_NAME,\nXS_ORDERING_OPTION,\nMP_SELECT_PRIO,\nMP_DELV_DESIG,\nMP_SELECT_CWP,\nMP_ROS_DATE,\nMP_FAB_LOCATION,\nMP_DRWG_NAME,\nMP_SERVICE,\nMP_SFI,\nMP_CATEGORY,\nMP_WEIGHT,\nXS_STRUC_CODE,\nPOS_ITR,\nDISCIPLINE,\nMTO_TYPE,\nUNIT,\nAREA_CWA,\nXS_ACTIVITY_CODE,\nGROUP_NAME,\nBOM_SHAPE_SPOOL,\nm_sys.m_pck_bom.list_path_to_root (ln_id, '/') bom_path -- added latter\n from MDR_CUST.MDR_M_EPI_010_REP_NEW where proj_id = '@{pipeline().parameters.proj_id}'\n   and MTO_TYPE = '30-AFC'\n and LIST_STATUS = '30-AFC'\n and ISSUE_STATUS like 'AFC19%'",
+							"type": "Expression"
+						},
+						"partitionOption": "None",
+						"convertDecimalToInteger": false,
+						"queryTimeout": "04:00:00"
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"allowCopyCommand": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ADLSG2 TimeAnalytics DEV",
+							"type": "LinkedServiceReference"
+						},
+						"path": "mdr-staging-data/Ruya11"
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_smat_11_extracts",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_excel_loads_AzureSynapseAnalytics",
+						"type": "DatasetReference",
+						"parameters": {
+							"TableName": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.table_name1",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "cp_Structural_20",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "cp_Structural_19",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "OracleSource",
+						"additionalColumns": [
+							{
+								"name": "Discipline_description",
+								"value": "Structural"
+							},
+							{
+								"name": "created_date_time",
+								"value": {
+									"value": "@addHours(utcNow(),4)",
+									"type": "Expression"
+								}
+							}
+						],
+						"oracleReaderQuery": {
+							"value": "select LP_ID,\nLN_ID,\nLST_ID,\nSTAT_ID,\nIDENT,\nDP_ID,\nPROJ_ID,\nLIST_STATUS,\nISSUE_STATUS,\nPOS,\nIDENT_CODE,\nTAG_NUMBER,\nIDENT_DESCRIPTION,\nQUANTITY,\nQTY_UNIT,\nITEM_TYPE,\nCG_GROUP_CODE,\nPART_CODE,\nCOMMODITY_CODE,\nSIZE1,\nSIZE2,\nSIZE3,\nPOS_TAG_LO,\nPOS_TAG_SH,\nUNIT_WGHT,\nDWG_DESCRIPTION,\nBOM_CNTNO,\nSTRUCTURE_CODE,\nACTIVITY_CODE,\nSTR_ACTIVITY_DESC,\nBID_ELEMENT,\nLEVEL_,\nMEMBER_DESC,\nLOCATION,\nMATL_CLASSIFICATION,\nPIECE_MARK,\nNO_PC_REQD,\nDIM1,\nDIM2,\nROLL_PLATE_Y_N,\nMATL_STATUS,\nDIM_X,\nDIM_Y,\nBOM_SFI,\nBOM_FIM,\nBOM_HOLD,\nUNIT_WGHT_UOM,\nMTO_WEIGHT_MT,\nUNIT_PA,\nTOTAL_PA,\nREMARKS,\nMP_REQ_NO,\nMP_SEQ_NO,\nXS_COMPONENT,\nXS_VENDOR_NAME,\nXS_ORDERING_OPTION,\nMP_SELECT_PRIO,\nMP_DELV_DESIG,\nMP_SELECT_CWP,\nMP_ROS_DATE,\nMP_FAB_LOCATION,\nMP_DRWG_NAME,\nMP_SERVICE,\nMP_SFI,\nMP_CATEGORY,\nMP_WEIGHT,\nXS_STRUC_CODE,\nPOS_ITR,\nDISCIPLINE,\nMTO_TYPE,\nUNIT,\nAREA_CWA,\nXS_ACTIVITY_CODE,\nGROUP_NAME,\nBOM_SHAPE_SPOOL,\nm_sys.m_pck_bom.list_path_to_root (ln_id, '/') bom_path -- added latter\n from MDR_CUST.MDR_M_EPI_010_REP_NEW where proj_id = '@{pipeline().parameters.proj_id}'\n   and MTO_TYPE = '30-AFC'\n and LIST_STATUS = '30-AFC'\n and ISSUE_STATUS like 'AFC20%'",
+							"type": "Expression"
+						},
+						"partitionOption": "None",
+						"convertDecimalToInteger": false,
+						"queryTimeout": "04:00:00"
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"allowCopyCommand": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ADLSG2 TimeAnalytics DEV",
+							"type": "LinkedServiceReference"
+						},
+						"path": "mdr-staging-data/Ruya11"
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_smat_11_extracts",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_excel_loads_AzureSynapseAnalytics",
+						"type": "DatasetReference",
+						"parameters": {
+							"TableName": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.table_name1",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "cp_Structural_21",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "cp_Structural_20",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "OracleSource",
+						"additionalColumns": [
+							{
+								"name": "Discipline_description",
+								"value": "Structural"
+							},
+							{
+								"name": "created_date_time",
+								"value": {
+									"value": "@addHours(utcNow(),4)",
+									"type": "Expression"
+								}
+							}
+						],
+						"oracleReaderQuery": {
+							"value": "select LP_ID,\nLN_ID,\nLST_ID,\nSTAT_ID,\nIDENT,\nDP_ID,\nPROJ_ID,\nLIST_STATUS,\nISSUE_STATUS,\nPOS,\nIDENT_CODE,\nTAG_NUMBER,\nIDENT_DESCRIPTION,\nQUANTITY,\nQTY_UNIT,\nITEM_TYPE,\nCG_GROUP_CODE,\nPART_CODE,\nCOMMODITY_CODE,\nSIZE1,\nSIZE2,\nSIZE3,\nPOS_TAG_LO,\nPOS_TAG_SH,\nUNIT_WGHT,\nDWG_DESCRIPTION,\nBOM_CNTNO,\nSTRUCTURE_CODE,\nACTIVITY_CODE,\nSTR_ACTIVITY_DESC,\nBID_ELEMENT,\nLEVEL_,\nMEMBER_DESC,\nLOCATION,\nMATL_CLASSIFICATION,\nPIECE_MARK,\nNO_PC_REQD,\nDIM1,\nDIM2,\nROLL_PLATE_Y_N,\nMATL_STATUS,\nDIM_X,\nDIM_Y,\nBOM_SFI,\nBOM_FIM,\nBOM_HOLD,\nUNIT_WGHT_UOM,\nMTO_WEIGHT_MT,\nUNIT_PA,\nTOTAL_PA,\nREMARKS,\nMP_REQ_NO,\nMP_SEQ_NO,\nXS_COMPONENT,\nXS_VENDOR_NAME,\nXS_ORDERING_OPTION,\nMP_SELECT_PRIO,\nMP_DELV_DESIG,\nMP_SELECT_CWP,\nMP_ROS_DATE,\nMP_FAB_LOCATION,\nMP_DRWG_NAME,\nMP_SERVICE,\nMP_SFI,\nMP_CATEGORY,\nMP_WEIGHT,\nXS_STRUC_CODE,\nPOS_ITR,\nDISCIPLINE,\nMTO_TYPE,\nUNIT,\nAREA_CWA,\nXS_ACTIVITY_CODE,\nGROUP_NAME,\nBOM_SHAPE_SPOOL,\nm_sys.m_pck_bom.list_path_to_root (ln_id, '/') bom_path -- added latter\n from MDR_CUST.MDR_M_EPI_010_REP_NEW where proj_id = '@{pipeline().parameters.proj_id}'\n   and MTO_TYPE = '30-AFC'\n and LIST_STATUS = '30-AFC'\n and ISSUE_STATUS like 'AFC21%'",
+							"type": "Expression"
+						},
+						"partitionOption": "None",
+						"convertDecimalToInteger": false,
+						"queryTimeout": "04:00:00"
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"allowCopyCommand": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ADLSG2 TimeAnalytics DEV",
+							"type": "LinkedServiceReference"
+						},
+						"path": "mdr-staging-data/Ruya11"
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_smat_11_extracts",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_excel_loads_AzureSynapseAnalytics",
+						"type": "DatasetReference",
+						"parameters": {
+							"TableName": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.table_name1",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "cp_Structural_22",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "cp_Structural_21",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "OracleSource",
+						"additionalColumns": [
+							{
+								"name": "Discipline_description",
+								"value": "Structural"
+							},
+							{
+								"name": "created_date_time",
+								"value": {
+									"value": "@addHours(utcNow(),4)",
+									"type": "Expression"
+								}
+							}
+						],
+						"oracleReaderQuery": {
+							"value": "select LP_ID,\nLN_ID,\nLST_ID,\nSTAT_ID,\nIDENT,\nDP_ID,\nPROJ_ID,\nLIST_STATUS,\nISSUE_STATUS,\nPOS,\nIDENT_CODE,\nTAG_NUMBER,\nIDENT_DESCRIPTION,\nQUANTITY,\nQTY_UNIT,\nITEM_TYPE,\nCG_GROUP_CODE,\nPART_CODE,\nCOMMODITY_CODE,\nSIZE1,\nSIZE2,\nSIZE3,\nPOS_TAG_LO,\nPOS_TAG_SH,\nUNIT_WGHT,\nDWG_DESCRIPTION,\nBOM_CNTNO,\nSTRUCTURE_CODE,\nACTIVITY_CODE,\nSTR_ACTIVITY_DESC,\nBID_ELEMENT,\nLEVEL_,\nMEMBER_DESC,\nLOCATION,\nMATL_CLASSIFICATION,\nPIECE_MARK,\nNO_PC_REQD,\nDIM1,\nDIM2,\nROLL_PLATE_Y_N,\nMATL_STATUS,\nDIM_X,\nDIM_Y,\nBOM_SFI,\nBOM_FIM,\nBOM_HOLD,\nUNIT_WGHT_UOM,\nMTO_WEIGHT_MT,\nUNIT_PA,\nTOTAL_PA,\nREMARKS,\nMP_REQ_NO,\nMP_SEQ_NO,\nXS_COMPONENT,\nXS_VENDOR_NAME,\nXS_ORDERING_OPTION,\nMP_SELECT_PRIO,\nMP_DELV_DESIG,\nMP_SELECT_CWP,\nMP_ROS_DATE,\nMP_FAB_LOCATION,\nMP_DRWG_NAME,\nMP_SERVICE,\nMP_SFI,\nMP_CATEGORY,\nMP_WEIGHT,\nXS_STRUC_CODE,\nPOS_ITR,\nDISCIPLINE,\nMTO_TYPE,\nUNIT,\nAREA_CWA,\nXS_ACTIVITY_CODE,\nGROUP_NAME,\nBOM_SHAPE_SPOOL,\nm_sys.m_pck_bom.list_path_to_root (ln_id, '/') bom_path -- added latter\n from MDR_CUST.MDR_M_EPI_010_REP_NEW where proj_id = '@{pipeline().parameters.proj_id}'\n   and MTO_TYPE = '30-AFC'\n and LIST_STATUS = '30-AFC'\n and ISSUE_STATUS like 'AFC22%'",
+							"type": "Expression"
+						},
+						"partitionOption": "None",
+						"convertDecimalToInteger": false,
+						"queryTimeout": "04:00:00"
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"allowCopyCommand": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ADLSG2 TimeAnalytics DEV",
+							"type": "LinkedServiceReference"
+						},
+						"path": "mdr-staging-data/Ruya11"
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_smat_11_extracts",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_excel_loads_AzureSynapseAnalytics",
+						"type": "DatasetReference",
+						"parameters": {
+							"TableName": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.table_name1",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "cp_Structural_23",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "cp_Structural_22",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "OracleSource",
+						"additionalColumns": [
+							{
+								"name": "Discipline_description",
+								"value": "Structural"
+							},
+							{
+								"name": "created_date_time",
+								"value": {
+									"value": "@addHours(utcNow(),4)",
+									"type": "Expression"
+								}
+							}
+						],
+						"oracleReaderQuery": {
+							"value": "select LP_ID,\nLN_ID,\nLST_ID,\nSTAT_ID,\nIDENT,\nDP_ID,\nPROJ_ID,\nLIST_STATUS,\nISSUE_STATUS,\nPOS,\nIDENT_CODE,\nTAG_NUMBER,\nIDENT_DESCRIPTION,\nQUANTITY,\nQTY_UNIT,\nITEM_TYPE,\nCG_GROUP_CODE,\nPART_CODE,\nCOMMODITY_CODE,\nSIZE1,\nSIZE2,\nSIZE3,\nPOS_TAG_LO,\nPOS_TAG_SH,\nUNIT_WGHT,\nDWG_DESCRIPTION,\nBOM_CNTNO,\nSTRUCTURE_CODE,\nACTIVITY_CODE,\nSTR_ACTIVITY_DESC,\nBID_ELEMENT,\nLEVEL_,\nMEMBER_DESC,\nLOCATION,\nMATL_CLASSIFICATION,\nPIECE_MARK,\nNO_PC_REQD,\nDIM1,\nDIM2,\nROLL_PLATE_Y_N,\nMATL_STATUS,\nDIM_X,\nDIM_Y,\nBOM_SFI,\nBOM_FIM,\nBOM_HOLD,\nUNIT_WGHT_UOM,\nMTO_WEIGHT_MT,\nUNIT_PA,\nTOTAL_PA,\nREMARKS,\nMP_REQ_NO,\nMP_SEQ_NO,\nXS_COMPONENT,\nXS_VENDOR_NAME,\nXS_ORDERING_OPTION,\nMP_SELECT_PRIO,\nMP_DELV_DESIG,\nMP_SELECT_CWP,\nMP_ROS_DATE,\nMP_FAB_LOCATION,\nMP_DRWG_NAME,\nMP_SERVICE,\nMP_SFI,\nMP_CATEGORY,\nMP_WEIGHT,\nXS_STRUC_CODE,\nPOS_ITR,\nDISCIPLINE,\nMTO_TYPE,\nUNIT,\nAREA_CWA,\nXS_ACTIVITY_CODE,\nGROUP_NAME,\nBOM_SHAPE_SPOOL,\nm_sys.m_pck_bom.list_path_to_root (ln_id, '/') bom_path -- added latter\n from MDR_CUST.MDR_M_EPI_010_REP_NEW where proj_id = '@{pipeline().parameters.proj_id}'\n   and MTO_TYPE = '30-AFC'\n and LIST_STATUS = '30-AFC'\n and ISSUE_STATUS like 'AFC23%'",
+							"type": "Expression"
+						},
+						"partitionOption": "None",
+						"convertDecimalToInteger": false,
+						"queryTimeout": "04:00:00"
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"allowCopyCommand": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ADLSG2 TimeAnalytics DEV",
+							"type": "LinkedServiceReference"
+						},
+						"path": "mdr-staging-data/Ruya11"
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_smat_11_extracts",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_excel_loads_AzureSynapseAnalytics",
+						"type": "DatasetReference",
+						"parameters": {
+							"TableName": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.table_name1",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "cp_Structural_24",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "cp_Structural_23",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "OracleSource",
+						"additionalColumns": [
+							{
+								"name": "Discipline_description",
+								"value": "Structural"
+							},
+							{
+								"name": "created_date_time",
+								"value": {
+									"value": "@addHours(utcNow(),4)",
+									"type": "Expression"
+								}
+							}
+						],
+						"oracleReaderQuery": {
+							"value": "select LP_ID,\nLN_ID,\nLST_ID,\nSTAT_ID,\nIDENT,\nDP_ID,\nPROJ_ID,\nLIST_STATUS,\nISSUE_STATUS,\nPOS,\nIDENT_CODE,\nTAG_NUMBER,\nIDENT_DESCRIPTION,\nQUANTITY,\nQTY_UNIT,\nITEM_TYPE,\nCG_GROUP_CODE,\nPART_CODE,\nCOMMODITY_CODE,\nSIZE1,\nSIZE2,\nSIZE3,\nPOS_TAG_LO,\nPOS_TAG_SH,\nUNIT_WGHT,\nDWG_DESCRIPTION,\nBOM_CNTNO,\nSTRUCTURE_CODE,\nACTIVITY_CODE,\nSTR_ACTIVITY_DESC,\nBID_ELEMENT,\nLEVEL_,\nMEMBER_DESC,\nLOCATION,\nMATL_CLASSIFICATION,\nPIECE_MARK,\nNO_PC_REQD,\nDIM1,\nDIM2,\nROLL_PLATE_Y_N,\nMATL_STATUS,\nDIM_X,\nDIM_Y,\nBOM_SFI,\nBOM_FIM,\nBOM_HOLD,\nUNIT_WGHT_UOM,\nMTO_WEIGHT_MT,\nUNIT_PA,\nTOTAL_PA,\nREMARKS,\nMP_REQ_NO,\nMP_SEQ_NO,\nXS_COMPONENT,\nXS_VENDOR_NAME,\nXS_ORDERING_OPTION,\nMP_SELECT_PRIO,\nMP_DELV_DESIG,\nMP_SELECT_CWP,\nMP_ROS_DATE,\nMP_FAB_LOCATION,\nMP_DRWG_NAME,\nMP_SERVICE,\nMP_SFI,\nMP_CATEGORY,\nMP_WEIGHT,\nXS_STRUC_CODE,\nPOS_ITR,\nDISCIPLINE,\nMTO_TYPE,\nUNIT,\nAREA_CWA,\nXS_ACTIVITY_CODE,\nGROUP_NAME,\nBOM_SHAPE_SPOOL,\nm_sys.m_pck_bom.list_path_to_root (ln_id, '/') bom_path -- added latter\n from MDR_CUST.MDR_M_EPI_010_REP_NEW where proj_id = '@{pipeline().parameters.proj_id}'\n   and MTO_TYPE = '30-AFC'\n and LIST_STATUS = '30-AFC'\n and ISSUE_STATUS like 'AFC24%'",
+							"type": "Expression"
+						},
+						"partitionOption": "None",
+						"convertDecimalToInteger": false,
+						"queryTimeout": "04:00:00"
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"allowCopyCommand": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ADLSG2 TimeAnalytics DEV",
+							"type": "LinkedServiceReference"
+						},
+						"path": "mdr-staging-data/Ruya11"
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_smat_11_extracts",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_excel_loads_AzureSynapseAnalytics",
+						"type": "DatasetReference",
+						"parameters": {
+							"TableName": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.table_name1",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "cp_Structural_25",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "cp_Structural_24",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "OracleSource",
+						"additionalColumns": [
+							{
+								"name": "Discipline_description",
+								"value": "Structural"
+							},
+							{
+								"name": "created_date_time",
+								"value": {
+									"value": "@addHours(utcNow(),4)",
+									"type": "Expression"
+								}
+							}
+						],
+						"oracleReaderQuery": {
+							"value": "select LP_ID,\nLN_ID,\nLST_ID,\nSTAT_ID,\nIDENT,\nDP_ID,\nPROJ_ID,\nLIST_STATUS,\nISSUE_STATUS,\nPOS,\nIDENT_CODE,\nTAG_NUMBER,\nIDENT_DESCRIPTION,\nQUANTITY,\nQTY_UNIT,\nITEM_TYPE,\nCG_GROUP_CODE,\nPART_CODE,\nCOMMODITY_CODE,\nSIZE1,\nSIZE2,\nSIZE3,\nPOS_TAG_LO,\nPOS_TAG_SH,\nUNIT_WGHT,\nDWG_DESCRIPTION,\nBOM_CNTNO,\nSTRUCTURE_CODE,\nACTIVITY_CODE,\nSTR_ACTIVITY_DESC,\nBID_ELEMENT,\nLEVEL_,\nMEMBER_DESC,\nLOCATION,\nMATL_CLASSIFICATION,\nPIECE_MARK,\nNO_PC_REQD,\nDIM1,\nDIM2,\nROLL_PLATE_Y_N,\nMATL_STATUS,\nDIM_X,\nDIM_Y,\nBOM_SFI,\nBOM_FIM,\nBOM_HOLD,\nUNIT_WGHT_UOM,\nMTO_WEIGHT_MT,\nUNIT_PA,\nTOTAL_PA,\nREMARKS,\nMP_REQ_NO,\nMP_SEQ_NO,\nXS_COMPONENT,\nXS_VENDOR_NAME,\nXS_ORDERING_OPTION,\nMP_SELECT_PRIO,\nMP_DELV_DESIG,\nMP_SELECT_CWP,\nMP_ROS_DATE,\nMP_FAB_LOCATION,\nMP_DRWG_NAME,\nMP_SERVICE,\nMP_SFI,\nMP_CATEGORY,\nMP_WEIGHT,\nXS_STRUC_CODE,\nPOS_ITR,\nDISCIPLINE,\nMTO_TYPE,\nUNIT,\nAREA_CWA,\nXS_ACTIVITY_CODE,\nGROUP_NAME,\nBOM_SHAPE_SPOOL,\nm_sys.m_pck_bom.list_path_to_root (ln_id, '/') bom_path -- added latter\n from MDR_CUST.MDR_M_EPI_010_REP_NEW where proj_id = '@{pipeline().parameters.proj_id}'\n   and MTO_TYPE = '30-AFC'\n and LIST_STATUS = '30-AFC'\n and ISSUE_STATUS like 'AFC25%'",
+							"type": "Expression"
+						},
+						"partitionOption": "None",
+						"convertDecimalToInteger": false,
+						"queryTimeout": "04:00:00"
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"allowCopyCommand": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ADLSG2 TimeAnalytics DEV",
+							"type": "LinkedServiceReference"
+						},
+						"path": "mdr-staging-data/Ruya11"
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_smat_11_extracts",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_excel_loads_AzureSynapseAnalytics",
+						"type": "DatasetReference",
+						"parameters": {
+							"TableName": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.table_name1",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "cp_Structural_26",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "cp_Structural_25",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "OracleSource",
+						"additionalColumns": [
+							{
+								"name": "Discipline_description",
+								"value": "Structural"
+							},
+							{
+								"name": "created_date_time",
+								"value": {
+									"value": "@addHours(utcNow(),4)",
+									"type": "Expression"
+								}
+							}
+						],
+						"oracleReaderQuery": {
+							"value": "select LP_ID,\nLN_ID,\nLST_ID,\nSTAT_ID,\nIDENT,\nDP_ID,\nPROJ_ID,\nLIST_STATUS,\nISSUE_STATUS,\nPOS,\nIDENT_CODE,\nTAG_NUMBER,\nIDENT_DESCRIPTION,\nQUANTITY,\nQTY_UNIT,\nITEM_TYPE,\nCG_GROUP_CODE,\nPART_CODE,\nCOMMODITY_CODE,\nSIZE1,\nSIZE2,\nSIZE3,\nPOS_TAG_LO,\nPOS_TAG_SH,\nUNIT_WGHT,\nDWG_DESCRIPTION,\nBOM_CNTNO,\nSTRUCTURE_CODE,\nACTIVITY_CODE,\nSTR_ACTIVITY_DESC,\nBID_ELEMENT,\nLEVEL_,\nMEMBER_DESC,\nLOCATION,\nMATL_CLASSIFICATION,\nPIECE_MARK,\nNO_PC_REQD,\nDIM1,\nDIM2,\nROLL_PLATE_Y_N,\nMATL_STATUS,\nDIM_X,\nDIM_Y,\nBOM_SFI,\nBOM_FIM,\nBOM_HOLD,\nUNIT_WGHT_UOM,\nMTO_WEIGHT_MT,\nUNIT_PA,\nTOTAL_PA,\nREMARKS,\nMP_REQ_NO,\nMP_SEQ_NO,\nXS_COMPONENT,\nXS_VENDOR_NAME,\nXS_ORDERING_OPTION,\nMP_SELECT_PRIO,\nMP_DELV_DESIG,\nMP_SELECT_CWP,\nMP_ROS_DATE,\nMP_FAB_LOCATION,\nMP_DRWG_NAME,\nMP_SERVICE,\nMP_SFI,\nMP_CATEGORY,\nMP_WEIGHT,\nXS_STRUC_CODE,\nPOS_ITR,\nDISCIPLINE,\nMTO_TYPE,\nUNIT,\nAREA_CWA,\nXS_ACTIVITY_CODE,\nGROUP_NAME,\nBOM_SHAPE_SPOOL,\nm_sys.m_pck_bom.list_path_to_root (ln_id, '/') bom_path -- added latter\n from MDR_CUST.MDR_M_EPI_010_REP_NEW where proj_id = '@{pipeline().parameters.proj_id}'\n   and MTO_TYPE = '30-AFC'\n and LIST_STATUS = '30-AFC'\n and ISSUE_STATUS like 'AFC26%'",
+							"type": "Expression"
+						},
+						"partitionOption": "None",
+						"convertDecimalToInteger": false,
+						"queryTimeout": "04:00:00"
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"allowCopyCommand": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ADLSG2 TimeAnalytics DEV",
+							"type": "LinkedServiceReference"
+						},
+						"path": "mdr-staging-data/Ruya11"
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_smat_11_extracts",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_excel_loads_AzureSynapseAnalytics",
+						"type": "DatasetReference",
+						"parameters": {
+							"TableName": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.table_name1",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "cp_Structural_27",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "cp_Structural_26",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "OracleSource",
+						"additionalColumns": [
+							{
+								"name": "Discipline_description",
+								"value": "Structural"
+							},
+							{
+								"name": "created_date_time",
+								"value": {
+									"value": "@addHours(utcNow(),4)",
+									"type": "Expression"
+								}
+							}
+						],
+						"oracleReaderQuery": {
+							"value": "select LP_ID,\nLN_ID,\nLST_ID,\nSTAT_ID,\nIDENT,\nDP_ID,\nPROJ_ID,\nLIST_STATUS,\nISSUE_STATUS,\nPOS,\nIDENT_CODE,\nTAG_NUMBER,\nIDENT_DESCRIPTION,\nQUANTITY,\nQTY_UNIT,\nITEM_TYPE,\nCG_GROUP_CODE,\nPART_CODE,\nCOMMODITY_CODE,\nSIZE1,\nSIZE2,\nSIZE3,\nPOS_TAG_LO,\nPOS_TAG_SH,\nUNIT_WGHT,\nDWG_DESCRIPTION,\nBOM_CNTNO,\nSTRUCTURE_CODE,\nACTIVITY_CODE,\nSTR_ACTIVITY_DESC,\nBID_ELEMENT,\nLEVEL_,\nMEMBER_DESC,\nLOCATION,\nMATL_CLASSIFICATION,\nPIECE_MARK,\nNO_PC_REQD,\nDIM1,\nDIM2,\nROLL_PLATE_Y_N,\nMATL_STATUS,\nDIM_X,\nDIM_Y,\nBOM_SFI,\nBOM_FIM,\nBOM_HOLD,\nUNIT_WGHT_UOM,\nMTO_WEIGHT_MT,\nUNIT_PA,\nTOTAL_PA,\nREMARKS,\nMP_REQ_NO,\nMP_SEQ_NO,\nXS_COMPONENT,\nXS_VENDOR_NAME,\nXS_ORDERING_OPTION,\nMP_SELECT_PRIO,\nMP_DELV_DESIG,\nMP_SELECT_CWP,\nMP_ROS_DATE,\nMP_FAB_LOCATION,\nMP_DRWG_NAME,\nMP_SERVICE,\nMP_SFI,\nMP_CATEGORY,\nMP_WEIGHT,\nXS_STRUC_CODE,\nPOS_ITR,\nDISCIPLINE,\nMTO_TYPE,\nUNIT,\nAREA_CWA,\nXS_ACTIVITY_CODE,\nGROUP_NAME,\nBOM_SHAPE_SPOOL,\nm_sys.m_pck_bom.list_path_to_root (ln_id, '/') bom_path -- added latter\n from MDR_CUST.MDR_M_EPI_010_REP_NEW where proj_id = '@{pipeline().parameters.proj_id}'\n   and MTO_TYPE = '30-AFC'\n and LIST_STATUS = '30-AFC'\n and ISSUE_STATUS like 'AFC27%'",
+							"type": "Expression"
+						},
+						"partitionOption": "None",
+						"convertDecimalToInteger": false,
+						"queryTimeout": "04:00:00"
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"allowCopyCommand": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ADLSG2 TimeAnalytics DEV",
+							"type": "LinkedServiceReference"
+						},
+						"path": "mdr-staging-data/Ruya11"
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_smat_11_extracts",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_excel_loads_AzureSynapseAnalytics",
+						"type": "DatasetReference",
+						"parameters": {
+							"TableName": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.table_name1",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "cp_Structural_28",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "cp_Structural_27",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "OracleSource",
+						"additionalColumns": [
+							{
+								"name": "Discipline_description",
+								"value": "Structural"
+							},
+							{
+								"name": "created_date_time",
+								"value": {
+									"value": "@addHours(utcNow(),4)",
+									"type": "Expression"
+								}
+							}
+						],
+						"oracleReaderQuery": {
+							"value": "select LP_ID,\nLN_ID,\nLST_ID,\nSTAT_ID,\nIDENT,\nDP_ID,\nPROJ_ID,\nLIST_STATUS,\nISSUE_STATUS,\nPOS,\nIDENT_CODE,\nTAG_NUMBER,\nIDENT_DESCRIPTION,\nQUANTITY,\nQTY_UNIT,\nITEM_TYPE,\nCG_GROUP_CODE,\nPART_CODE,\nCOMMODITY_CODE,\nSIZE1,\nSIZE2,\nSIZE3,\nPOS_TAG_LO,\nPOS_TAG_SH,\nUNIT_WGHT,\nDWG_DESCRIPTION,\nBOM_CNTNO,\nSTRUCTURE_CODE,\nACTIVITY_CODE,\nSTR_ACTIVITY_DESC,\nBID_ELEMENT,\nLEVEL_,\nMEMBER_DESC,\nLOCATION,\nMATL_CLASSIFICATION,\nPIECE_MARK,\nNO_PC_REQD,\nDIM1,\nDIM2,\nROLL_PLATE_Y_N,\nMATL_STATUS,\nDIM_X,\nDIM_Y,\nBOM_SFI,\nBOM_FIM,\nBOM_HOLD,\nUNIT_WGHT_UOM,\nMTO_WEIGHT_MT,\nUNIT_PA,\nTOTAL_PA,\nREMARKS,\nMP_REQ_NO,\nMP_SEQ_NO,\nXS_COMPONENT,\nXS_VENDOR_NAME,\nXS_ORDERING_OPTION,\nMP_SELECT_PRIO,\nMP_DELV_DESIG,\nMP_SELECT_CWP,\nMP_ROS_DATE,\nMP_FAB_LOCATION,\nMP_DRWG_NAME,\nMP_SERVICE,\nMP_SFI,\nMP_CATEGORY,\nMP_WEIGHT,\nXS_STRUC_CODE,\nPOS_ITR,\nDISCIPLINE,\nMTO_TYPE,\nUNIT,\nAREA_CWA,\nXS_ACTIVITY_CODE,\nGROUP_NAME,\nBOM_SHAPE_SPOOL,\nm_sys.m_pck_bom.list_path_to_root (ln_id, '/') bom_path -- added latter\n from MDR_CUST.MDR_M_EPI_010_REP_NEW where proj_id = '@{pipeline().parameters.proj_id}'\n   and MTO_TYPE = '30-AFC'\n and LIST_STATUS = '30-AFC'\n and ISSUE_STATUS like 'AFC28%'",
+							"type": "Expression"
+						},
+						"partitionOption": "None",
+						"convertDecimalToInteger": false,
+						"queryTimeout": "04:00:00"
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"allowCopyCommand": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ADLSG2 TimeAnalytics DEV",
+							"type": "LinkedServiceReference"
+						},
+						"path": "mdr-staging-data/Ruya11"
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_smat_11_extracts",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_excel_loads_AzureSynapseAnalytics",
+						"type": "DatasetReference",
+						"parameters": {
+							"TableName": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.table_name1",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "cp_Structural_29",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "cp_Structural_28",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "OracleSource",
+						"additionalColumns": [
+							{
+								"name": "Discipline_description",
+								"value": "Structural"
+							},
+							{
+								"name": "created_date_time",
+								"value": {
+									"value": "@addHours(utcNow(),4)",
+									"type": "Expression"
+								}
+							}
+						],
+						"oracleReaderQuery": {
+							"value": "select LP_ID,\nLN_ID,\nLST_ID,\nSTAT_ID,\nIDENT,\nDP_ID,\nPROJ_ID,\nLIST_STATUS,\nISSUE_STATUS,\nPOS,\nIDENT_CODE,\nTAG_NUMBER,\nIDENT_DESCRIPTION,\nQUANTITY,\nQTY_UNIT,\nITEM_TYPE,\nCG_GROUP_CODE,\nPART_CODE,\nCOMMODITY_CODE,\nSIZE1,\nSIZE2,\nSIZE3,\nPOS_TAG_LO,\nPOS_TAG_SH,\nUNIT_WGHT,\nDWG_DESCRIPTION,\nBOM_CNTNO,\nSTRUCTURE_CODE,\nACTIVITY_CODE,\nSTR_ACTIVITY_DESC,\nBID_ELEMENT,\nLEVEL_,\nMEMBER_DESC,\nLOCATION,\nMATL_CLASSIFICATION,\nPIECE_MARK,\nNO_PC_REQD,\nDIM1,\nDIM2,\nROLL_PLATE_Y_N,\nMATL_STATUS,\nDIM_X,\nDIM_Y,\nBOM_SFI,\nBOM_FIM,\nBOM_HOLD,\nUNIT_WGHT_UOM,\nMTO_WEIGHT_MT,\nUNIT_PA,\nTOTAL_PA,\nREMARKS,\nMP_REQ_NO,\nMP_SEQ_NO,\nXS_COMPONENT,\nXS_VENDOR_NAME,\nXS_ORDERING_OPTION,\nMP_SELECT_PRIO,\nMP_DELV_DESIG,\nMP_SELECT_CWP,\nMP_ROS_DATE,\nMP_FAB_LOCATION,\nMP_DRWG_NAME,\nMP_SERVICE,\nMP_SFI,\nMP_CATEGORY,\nMP_WEIGHT,\nXS_STRUC_CODE,\nPOS_ITR,\nDISCIPLINE,\nMTO_TYPE,\nUNIT,\nAREA_CWA,\nXS_ACTIVITY_CODE,\nGROUP_NAME,\nBOM_SHAPE_SPOOL,\nm_sys.m_pck_bom.list_path_to_root (ln_id, '/') bom_path -- added latter\n from MDR_CUST.MDR_M_EPI_010_REP_NEW where proj_id = '@{pipeline().parameters.proj_id}'\n   and MTO_TYPE = '30-AFC'\n and LIST_STATUS = '30-AFC'\n and ISSUE_STATUS like 'AFC29%'",
+							"type": "Expression"
+						},
+						"partitionOption": "None",
+						"convertDecimalToInteger": false,
+						"queryTimeout": "04:00:00"
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"allowCopyCommand": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ADLSG2 TimeAnalytics DEV",
+							"type": "LinkedServiceReference"
+						},
+						"path": "mdr-staging-data/Ruya11"
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_smat_11_extracts",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_excel_loads_AzureSynapseAnalytics",
+						"type": "DatasetReference",
+						"parameters": {
+							"TableName": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.table_name1",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "cp_Structural_30",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "cp_Structural_29",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "OracleSource",
+						"additionalColumns": [
+							{
+								"name": "Discipline_description",
+								"value": "Structural"
+							},
+							{
+								"name": "created_date_time",
+								"value": {
+									"value": "@addHours(utcNow(),4)",
+									"type": "Expression"
+								}
+							}
+						],
+						"oracleReaderQuery": {
+							"value": "select LP_ID,\nLN_ID,\nLST_ID,\nSTAT_ID,\nIDENT,\nDP_ID,\nPROJ_ID,\nLIST_STATUS,\nISSUE_STATUS,\nPOS,\nIDENT_CODE,\nTAG_NUMBER,\nIDENT_DESCRIPTION,\nQUANTITY,\nQTY_UNIT,\nITEM_TYPE,\nCG_GROUP_CODE,\nPART_CODE,\nCOMMODITY_CODE,\nSIZE1,\nSIZE2,\nSIZE3,\nPOS_TAG_LO,\nPOS_TAG_SH,\nUNIT_WGHT,\nDWG_DESCRIPTION,\nBOM_CNTNO,\nSTRUCTURE_CODE,\nACTIVITY_CODE,\nSTR_ACTIVITY_DESC,\nBID_ELEMENT,\nLEVEL_,\nMEMBER_DESC,\nLOCATION,\nMATL_CLASSIFICATION,\nPIECE_MARK,\nNO_PC_REQD,\nDIM1,\nDIM2,\nROLL_PLATE_Y_N,\nMATL_STATUS,\nDIM_X,\nDIM_Y,\nBOM_SFI,\nBOM_FIM,\nBOM_HOLD,\nUNIT_WGHT_UOM,\nMTO_WEIGHT_MT,\nUNIT_PA,\nTOTAL_PA,\nREMARKS,\nMP_REQ_NO,\nMP_SEQ_NO,\nXS_COMPONENT,\nXS_VENDOR_NAME,\nXS_ORDERING_OPTION,\nMP_SELECT_PRIO,\nMP_DELV_DESIG,\nMP_SELECT_CWP,\nMP_ROS_DATE,\nMP_FAB_LOCATION,\nMP_DRWG_NAME,\nMP_SERVICE,\nMP_SFI,\nMP_CATEGORY,\nMP_WEIGHT,\nXS_STRUC_CODE,\nPOS_ITR,\nDISCIPLINE,\nMTO_TYPE,\nUNIT,\nAREA_CWA,\nXS_ACTIVITY_CODE,\nGROUP_NAME,\nBOM_SHAPE_SPOOL,\nm_sys.m_pck_bom.list_path_to_root (ln_id, '/') bom_path -- added latter\n from MDR_CUST.MDR_M_EPI_010_REP_NEW where proj_id = '@{pipeline().parameters.proj_id}'\n   and MTO_TYPE = '30-AFC'\n and LIST_STATUS = '30-AFC'\n and ISSUE_STATUS like 'AFC30%'",
+							"type": "Expression"
+						},
+						"partitionOption": "None",
+						"convertDecimalToInteger": false,
+						"queryTimeout": "04:00:00"
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"allowCopyCommand": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ADLSG2 TimeAnalytics DEV",
+							"type": "LinkedServiceReference"
+						},
+						"path": "mdr-staging-data/Ruya11"
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_smat_11_extracts",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_excel_loads_AzureSynapseAnalytics",
+						"type": "DatasetReference",
+						"parameters": {
+							"TableName": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.table_name1",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "cp_Structural_01",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "cp_Structural_00",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "OracleSource",
+						"additionalColumns": [
+							{
+								"name": "Discipline_description",
+								"value": "Structural"
+							},
+							{
+								"name": "created_date_time",
+								"value": {
+									"value": "@addHours(utcNow(),4)",
+									"type": "Expression"
+								}
+							}
+						],
+						"oracleReaderQuery": {
+							"value": "select LP_ID,\nLN_ID,\nLST_ID,\nSTAT_ID,\nIDENT,\nDP_ID,\nPROJ_ID,\nLIST_STATUS,\nISSUE_STATUS,\nPOS,\nIDENT_CODE,\nTAG_NUMBER,\nIDENT_DESCRIPTION,\nQUANTITY,\nQTY_UNIT,\nITEM_TYPE,\nCG_GROUP_CODE,\nPART_CODE,\nCOMMODITY_CODE,\nSIZE1,\nSIZE2,\nSIZE3,\nPOS_TAG_LO,\nPOS_TAG_SH,\nUNIT_WGHT,\nDWG_DESCRIPTION,\nBOM_CNTNO,\nSTRUCTURE_CODE,\nACTIVITY_CODE,\nSTR_ACTIVITY_DESC,\nBID_ELEMENT,\nLEVEL_,\nMEMBER_DESC,\nLOCATION,\nMATL_CLASSIFICATION,\nPIECE_MARK,\nNO_PC_REQD,\nDIM1,\nDIM2,\nROLL_PLATE_Y_N,\nMATL_STATUS,\nDIM_X,\nDIM_Y,\nBOM_SFI,\nBOM_FIM,\nBOM_HOLD,\nUNIT_WGHT_UOM,\nMTO_WEIGHT_MT,\nUNIT_PA,\nTOTAL_PA,\nREMARKS,\nMP_REQ_NO,\nMP_SEQ_NO,\nXS_COMPONENT,\nXS_VENDOR_NAME,\nXS_ORDERING_OPTION,\nMP_SELECT_PRIO,\nMP_DELV_DESIG,\nMP_SELECT_CWP,\nMP_ROS_DATE,\nMP_FAB_LOCATION,\nMP_DRWG_NAME,\nMP_SERVICE,\nMP_SFI,\nMP_CATEGORY,\nMP_WEIGHT,\nXS_STRUC_CODE,\nPOS_ITR,\nDISCIPLINE,\nMTO_TYPE,\nUNIT,\nAREA_CWA,\nXS_ACTIVITY_CODE,\nGROUP_NAME,\nBOM_SHAPE_SPOOL,\nm_sys.m_pck_bom.list_path_to_root (ln_id, '/') bom_path -- added latter\n from MDR_CUST.MDR_M_EPI_010_REP_NEW where proj_id = '@{pipeline().parameters.proj_id}'\n  and MTO_TYPE = '30-AFC'\n and LIST_STATUS = '30-AFC'\n and ISSUE_STATUS like 'AFC01%'",
+							"type": "Expression"
+						},
+						"partitionOption": "None",
+						"convertDecimalToInteger": false,
+						"queryTimeout": "04:00:00"
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"allowCopyCommand": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ADLSG2 TimeAnalytics DEV",
+							"type": "LinkedServiceReference"
+						},
+						"path": "mdr-staging-data/Ruya11"
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_smat_11_extracts",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_excel_loads_AzureSynapseAnalytics",
+						"type": "DatasetReference",
+						"parameters": {
+							"TableName": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.table_name1",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "cp_Structural_31",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "cp_Structural_30",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "OracleSource",
+						"additionalColumns": [
+							{
+								"name": "Discipline_description",
+								"value": "Structural"
+							},
+							{
+								"name": "created_date_time",
+								"value": {
+									"value": "@addHours(utcNow(),4)",
+									"type": "Expression"
+								}
+							}
+						],
+						"oracleReaderQuery": {
+							"value": "select LP_ID,\nLN_ID,\nLST_ID,\nSTAT_ID,\nIDENT,\nDP_ID,\nPROJ_ID,\nLIST_STATUS,\nISSUE_STATUS,\nPOS,\nIDENT_CODE,\nTAG_NUMBER,\nIDENT_DESCRIPTION,\nQUANTITY,\nQTY_UNIT,\nITEM_TYPE,\nCG_GROUP_CODE,\nPART_CODE,\nCOMMODITY_CODE,\nSIZE1,\nSIZE2,\nSIZE3,\nPOS_TAG_LO,\nPOS_TAG_SH,\nUNIT_WGHT,\nDWG_DESCRIPTION,\nBOM_CNTNO,\nSTRUCTURE_CODE,\nACTIVITY_CODE,\nSTR_ACTIVITY_DESC,\nBID_ELEMENT,\nLEVEL_,\nMEMBER_DESC,\nLOCATION,\nMATL_CLASSIFICATION,\nPIECE_MARK,\nNO_PC_REQD,\nDIM1,\nDIM2,\nROLL_PLATE_Y_N,\nMATL_STATUS,\nDIM_X,\nDIM_Y,\nBOM_SFI,\nBOM_FIM,\nBOM_HOLD,\nUNIT_WGHT_UOM,\nMTO_WEIGHT_MT,\nUNIT_PA,\nTOTAL_PA,\nREMARKS,\nMP_REQ_NO,\nMP_SEQ_NO,\nXS_COMPONENT,\nXS_VENDOR_NAME,\nXS_ORDERING_OPTION,\nMP_SELECT_PRIO,\nMP_DELV_DESIG,\nMP_SELECT_CWP,\nMP_ROS_DATE,\nMP_FAB_LOCATION,\nMP_DRWG_NAME,\nMP_SERVICE,\nMP_SFI,\nMP_CATEGORY,\nMP_WEIGHT,\nXS_STRUC_CODE,\nPOS_ITR,\nDISCIPLINE,\nMTO_TYPE,\nUNIT,\nAREA_CWA,\nXS_ACTIVITY_CODE,\nGROUP_NAME,\nBOM_SHAPE_SPOOL,\nm_sys.m_pck_bom.list_path_to_root (ln_id, '/') bom_path -- added latter\n from MDR_CUST.MDR_M_EPI_010_REP_NEW where proj_id = '@{pipeline().parameters.proj_id}'\n   and MTO_TYPE = '15-BTM_ ADHOC'",
+							"type": "Expression"
+						},
+						"partitionOption": "None",
+						"convertDecimalToInteger": false,
+						"queryTimeout": "04:00:00"
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"allowCopyCommand": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ADLSG2 TimeAnalytics DEV",
+							"type": "LinkedServiceReference"
+						},
+						"path": "mdr-staging-data/Ruya11"
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_smat_11_extracts",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_excel_loads_AzureSynapseAnalytics",
+						"type": "DatasetReference",
+						"parameters": {
+							"TableName": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.table_name1",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			}
+		],
+		"parameters": {
+			"proj_id": {
+				"type": "string",
+				"defaultValue": "D7264"
+			}
+		},
+		"variables": {
+			"v_error_message": {
+				"type": "Array"
+			},
+			"v_pipelinedetails": {
+				"type": "Array"
+			},
+			"date": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/NCSA/Ruya_D7507"
+		},
+		"annotations": [],
+		"lastPublishTime": "2024-04-30T07:33:42Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

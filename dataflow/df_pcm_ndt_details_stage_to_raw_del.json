@@ -1,0 +1,108 @@
+{
+	"name": "df_pcm_ndt_details_stage_to_raw_del",
+	"properties": {
+		"folder": {
+			"name": "Projects/YARD KPI/PCM"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_pcm_ndt_details_stg_generic",
+						"type": "DatasetReference"
+					},
+					"name": "PCMStage"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_yardkpi_pcm_default",
+						"type": "DatasetReference"
+					},
+					"name": "PCMRaw"
+				}
+			],
+			"transformations": [
+				{
+					"name": "SetFileName"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          trans_date as string,",
+				"          trans_type as string,",
+				"          fab_code as string,",
+				"          contract as string,",
+				"          contract_title as string,",
+				"          job as string,",
+				"          job_title as string,",
+				"          item as string,",
+				"          item_title as string,",
+				"          ndt_drawing as string,",
+				"          ndt_drawing_desc as string,",
+				"          wctrl as string,",
+				"          weld_suffix as string,",
+				"          stress_relief as string,",
+				"          weld_repair_ref as string,",
+				"          ndt_type as string,",
+				"          weldcount as string,",
+				"          spool as string,",
+				"          report_num as string,",
+				"          ndt_procedure as string,",
+				"          ndt_percent as string,",
+				"          test_percent as string,",
+				"          test_date as string,",
+				"          pass_fail as string,",
+				"          narrative as string,",
+				"          inspector as string,",
+				"          insp_name as string,",
+				"          signed as string,",
+				"          sign_override as string,",
+				"          clt_jrm as string,",
+				"          signatory as string,",
+				"          sign_date as string,",
+				"          remarks as string,",
+				"          jrm_signed as string,",
+				"          jrm_sign_date as string,",
+				"          jrm_technician as string,",
+				"          jrm_technician_org as string,",
+				"          ndt_report_format as string,",
+				"          is_approval_required as string,",
+				"          jrm_approver as string,",
+				"          jrm_approver_signed as string,",
+				"          jrm_approver_sign_date as string,",
+				"          defect_type as string,",
+				"          defect_title as string,",
+				"          defect_length as string,",
+				"          include_in_rr_calc as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: true,",
+				"     purgeFiles: true,",
+				"     multiLineRow: true,",
+				"     wildcardPaths:[('Project_Data/YARDKPI/PCM_Del/pcm_ndt_details_del_*_*.csv')]) ~> PCMStage",
+				"PCMStage derive(FileName = concat('Project_Data/YARDKPI/PCM_Del/',substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/','PCM_NDT_DETAILS_DEL_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv'),",
+				"          create_date_time = currentUTC(),",
+				"          narrative = trim(replace(replace(replace(replace(replace(replace(replace(narrative,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),",
+				"          ndt_drawing_desc = trim(replace(replace(replace(replace(replace(replace(replace(ndt_drawing_desc,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),",
+				"          contract_title = trim(replace(replace(replace(replace(replace(replace(replace(contract_title,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),",
+				"          job_title = trim(replace(replace(replace(replace(replace(replace(replace(job_title,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),",
+				"          ndt_drawing = trim(replace(replace(replace(replace(replace(replace(replace(ndt_drawing,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' '))) ~> SetFileName",
+				"SetFileName sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     rowUrlColumn:'FileName',",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     mapColumn(",
+				"          each(match(true()))",
+				"     )) ~> PCMRaw"
+			]
+		}
+	}
+}

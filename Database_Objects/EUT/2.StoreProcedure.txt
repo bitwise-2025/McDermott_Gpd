@@ -1,0 +1,139 @@
+
+Create PROC [EUD].[sp_EUT_Aspentech_exl]
+AS
+BEGIN
+DECLARE @STMT AS NVARCHAR(MAX) ='
+INSERT INTO   EUD.EUT_exl
+SELECT 
+Vendor,[Date],Product,[User],Gross,[Tokens Consumed by License],Duration,usageType,zSourceFileName,zCreatedDateTime   
+FROM [EUD].[EUT_v] where zSourceFileName like ''%Aspentech%'''
+ EXEC sp_executesql @STMT;
+ END
+
+
+Create PROC [EUD].[sp_EUT_Autodesk_exl]
+AS
+BEGIN
+DECLARE @STMT AS NVARCHAR(MAX) ='
+INSERT INTO   EUD.EUT_exl
+SELECT 
+Vendor,usageDate,productName,userName,Gross,tokensConsumed,Duration,usageType,zSourceFileName,zCreatedDateTime   
+FROM [EUD].[EUT_v] where zSourceFileName like ''%Autodesk%'''
+ EXEC sp_executesql @STMT;
+ END
+
+ Create PROC [EUD].[sp_EUT_Bentley_exl]
+AS
+BEGIN
+DECLARE @STMT AS NVARCHAR(MAX) ='
+   INSERT INTO   EUD.EUT_exl
+SELECT 
+Vendor,[Usage Date],Application,Persona,Gross,tokensConsumed,Duration,usageType,zSourceFileName,zCreatedDateTime   
+FROM [EUD].[EUT_v] where zSourceFileName like ''%Bentley%'''
+ EXEC sp_executesql @STMT;
+ END
+
+
+  Create PROC [EUD].[sp_EUT_Hexagon_exl]
+AS
+BEGIN
+DECLARE @STMT AS NVARCHAR(MAX) ='
+INSERT INTO   EUD.EUT_exl
+SELECT 
+Vendor,Start,App,[User],Gross,tokensConsumed,Duration,usageType,zSourceFileName,zCreatedDateTime   
+FROM [EUD].[EUT_v] where zSourceFileName like ''%HEXAGON%'''
+ EXEC sp_executesql @STMT;
+ END
+
+
+Create PROC [eud].[sp_EUT_AVEVA_exl]
+AS
+BEGIN
+DECLARE @STMT AS NVARCHAR(MAX) ='
+DELETE FROM eud.EUT_exl WHERE SourceFileName =(SELECT DISTINCT zSourceFileName FROM [eud].[EUT_v]);
+INSERT INTO   eud.EUT_exl
+SELECT 
+Vendor,[Usage_Date],Usage_Log_App,[User],Gross,[Tokens Consumed by License],Duration,usageType,zSourceFileName,zCreatedDateTime   
+FROM [eud].[EUT_v] where zSourceFileName like ''%AVEVA%'''
+ EXEC sp_executesql @STMT;
+ END
+
+Create PROC [eud].[sp_EUT_Schlumberger_exl]
+AS
+BEGIN
+DECLARE @STMT AS NVARCHAR(MAX) ='
+DELETE FROM eud.EUT_exl WHERE SourceFileName =(SELECT DISTINCT zSourceFileName FROM [eud].[EUT_v]);
+INSERT INTO   eud.EUT_exl
+SELECT 
+Vendor,[Usage_Date],App,[User],Gross,[Tokens Consumed by License],Duration,usageType,zSourceFileName,zCreatedDateTime   
+FROM [eud].[EUT_v] where zSourceFileName like ''%Schlumberger%'''
+ EXEC sp_executesql @STMT;
+ END
+
+Create PROC [eud].[sp_EUT_Ansys_exl]
+AS
+BEGIN
+DECLARE @STMT AS NVARCHAR(MAX) ='
+DELETE FROM eud.EUT_exl WHERE SourceFileName =(SELECT DISTINCT zSourceFileName FROM [eud].[EUT_v]);
+INSERT INTO   eud.EUT_exl
+SELECT 
+Vendor,[Usage_Date],App,[User],Gross,[Tokens Consumed by License],Duration,usageType,zSourceFileName,zCreatedDateTime   
+FROM [eud].[EUT_v] where zSourceFileName like ''%Ansys%'''
+ EXEC sp_executesql @STMT;
+ END
+
+
+
+Create PROC [EUD].[sp_EUT_Vendor_App]
+AS
+BEGIN
+DECLARE @STMT AS NVARCHAR(MAX) ='
+   INSERT INTO   EUD.EUT_Vendor_App
+SELECT 
+Vendor ,application
+FROM [EUD].[EUT_Vendor_app_v]'
+ EXEC sp_executesql @STMT;
+ END
+
+
+
+CREATE PROC exec [eud].[sp_EUT_Cost_Config]
+AS
+BEGIN
+DECLARE @STMT AS NVARCHAR(MAX) ='
+   INSERT INTO   eud.EUT_Cost_Config
+SELECT 
+Vendor,[Start Date],[End Date],App,[Discount %],[Base Fees],License,Cost,Comments
+FROM [eud].[EUT_Cost_Config_v]'
+ EXEC sp_executesql @STMT;
+ END
+
+
+
+
+
+ Create PROC [EUD].[sp_EUT_Vendor]
+AS
+BEGIN
+DECLARE @STMT AS NVARCHAR(MAX) ='
+   INSERT INTO   EUD.EUT_Vendor
+SELECT 
+ID,Vendor 
+FROM [EUD].[EUT_Vendor_v]'
+ EXEC sp_executesql @STMT;
+ END
+
+
+
+
+Create PROC [dbo].[sp_EUT_Aveva_exl]
+AS
+BEGIN
+DECLARE @STMT AS NVARCHAR(MAX) ='
+DELETE FROM dbo.EUT_exl WHERE SourceFileName =(SELECT DISTINCT File_Name FROM [dbo].[EUT_txt_Aveva]);
+INSERT INTO   dbo.EUT_exl
+SELECT 
+Vendor,Usage_DT,Application,User_Name,''0'' As Gross, ''0'' As token ,''0'' As Duration,NULL as usagetype,File_Name,CreatedDateTime 
+FROM [dbo].[EUT_txt_Aveva] where File_Name like ''%Aveva%'''
+ EXEC sp_executesql @STMT;
+ END

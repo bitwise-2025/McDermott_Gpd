@@ -1,0 +1,84 @@
+{
+	"name": "df_supplier_data_flattening",
+	"properties": {
+		"folder": {
+			"name": "Projects/Payment Dashboard/Supplier Data"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_xml_supplier_data_source_stage_decoded_xml",
+						"type": "DatasetReference"
+					},
+					"name": "SrcXMl"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_supplier_data_source_stage_final_csv",
+						"type": "DatasetReference"
+					},
+					"name": "SnkCsv"
+				}
+			],
+			"transformations": [
+				{
+					"name": "XmlToCsvflatten"
+				},
+				{
+					"name": "addLoadDetails"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          DATA_DS as (G_1 as (ADDRESS1 as string, ADDRESS2 as string, ADDRESS3 as string, ADDRESS4 as string, CITY as string, COUNTRY as string, COUNTY as string, EMAIL_ADDRESS as string, LAST_UPDATE_DATE as string, PARTY_ID as string, PARTY_NAME as string, PARTY_NUMBER as string, PARTY_TYPE as string, POSTAL_CODE as string, PRIMARY_PHONE_AREA_CODE as string, PRIMARY_PHONE_COUNTRY_CODE as string, PRIMARY_PHONE_NUMBER as string, PROVINCE as string, STATE as string, STATUS as string)[])",
+				"     ),",
+				"     allowSchemaDrift: false,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     validationMode: 'none',",
+				"     namespaces: true) ~> SrcXMl",
+				"SrcXMl foldDown(unroll(DATA_DS.G_1),",
+				"     mapColumn(",
+				"          ADDRESS1 = DATA_DS.G_1.ADDRESS1,",
+				"          ADDRESS2 = DATA_DS.G_1.ADDRESS2,",
+				"          ADDRESS3 = DATA_DS.G_1.ADDRESS3,",
+				"          ADDRESS4 = DATA_DS.G_1.ADDRESS4,",
+				"          CITY = DATA_DS.G_1.CITY,",
+				"          COUNTRY = DATA_DS.G_1.COUNTRY,",
+				"          COUNTY = DATA_DS.G_1.COUNTY,",
+				"          EMAIL_ADDRESS = DATA_DS.G_1.EMAIL_ADDRESS,",
+				"          LAST_UPDATE_DATE = DATA_DS.G_1.LAST_UPDATE_DATE,",
+				"          PARTY_ID = DATA_DS.G_1.PARTY_ID,",
+				"          PARTY_NAME = DATA_DS.G_1.PARTY_NAME,",
+				"          PARTY_NUMBER = DATA_DS.G_1.PARTY_NUMBER,",
+				"          PARTY_TYPE = DATA_DS.G_1.PARTY_TYPE,",
+				"          POSTAL_CODE = DATA_DS.G_1.POSTAL_CODE,",
+				"          PRIMARY_PHONE_AREA_CODE = DATA_DS.G_1.PRIMARY_PHONE_AREA_CODE,",
+				"          PRIMARY_PHONE_COUNTRY_CODE = DATA_DS.G_1.PRIMARY_PHONE_COUNTRY_CODE,",
+				"          PRIMARY_PHONE_NUMBER = DATA_DS.G_1.PRIMARY_PHONE_NUMBER,",
+				"          PROVINCE = DATA_DS.G_1.PROVINCE,",
+				"          STATE = DATA_DS.G_1.STATE,",
+				"          STATUS = DATA_DS.G_1.STATUS",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> XmlToCsvflatten",
+				"XmlToCsvflatten derive(source_name = 'SYSTEM',",
+				"          sub_source_name = 'R2P',",
+				"          created_date_time = currentUTC()) ~> addLoadDetails",
+				"addLoadDetails sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     partitionFileNames:['Supplier_Data.csv'],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> SnkCsv"
+			]
+		}
+	}
+}

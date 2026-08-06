@@ -1,0 +1,86 @@
+{
+	"name": "df_time_office_supervisor_master",
+	"properties": {
+		"folder": {
+			"name": "Projects/NCSA/FAB Automation/Time Office"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_ncsa_time_office_supervisor_name",
+						"type": "DatasetReference"
+					},
+					"name": "SupervisorName"
+				},
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_ncsa_time_office_supervisor_email",
+						"type": "DatasetReference"
+					},
+					"name": "SupervisorEmail"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_ncsa_time_office_supervisor_master",
+						"type": "DatasetReference"
+					},
+					"name": "FinalSupervisorMasterData"
+				}
+			],
+			"transformations": [
+				{
+					"name": "JoinSupervisorNameSupervisorEmail"
+				},
+				{
+					"name": "RemoveDuplicateColumnSupvID"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          {Supv ID ❿} as string,",
+				"          {Supervisor Name ⓫} as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     multiLineRow: true) ~> SupervisorName",
+				"source(output(",
+				"          {Supv ID ❿} as string,",
+				"          {mail id} as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     multiLineRow: true) ~> SupervisorEmail",
+				"SupervisorName, SupervisorEmail join(SupervisorName@{Supv ID ❿} == SupervisorEmail@{Supv ID ❿},",
+				"     joinType:'left',",
+				"     matchType:'exact',",
+				"     ignoreSpaces: false,",
+				"     broadcast: 'auto')~> JoinSupervisorNameSupervisorEmail",
+				"JoinSupervisorNameSupervisorEmail select(mapColumn(",
+				"          {Supv ID ❿} = SupervisorName@{Supv ID ❿},",
+				"          {Supervisor Name ⓫},",
+				"          {mail id}",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> RemoveDuplicateColumnSupvID",
+				"RemoveDuplicateColumnSupvID sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          {Supv ID ❿} as string,",
+				"          {mail id} as string",
+				"     ),",
+				"     partitionFileNames:['Supervisor_Master.csv'],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> FinalSupervisorMasterData"
+			]
+		}
+	}
+}

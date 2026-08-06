@@ -1,0 +1,194 @@
+{
+	"name": "pl_iwp_sitepro_source_to_stage",
+	"properties": {
+		"activities": [
+			{
+				"name": "lk_get_pipeline_parameters",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "Sitepro"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "CopyIWPSrctoStage",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"sqlReaderQuery": {
+							"value": "select '@{pipeline().parameters.p_pl_projectid}' as project_id, \nisnull((select Activity from PM_Activity where ID = ActivityID),'') Activity_Code,\nisnull((select code from SP_ScheduleResource where ID = ScheduleResourceID),'')   ScheduleResourceID,\n\tisnull(convert(varchar(15),[ID]),'')  ID,\n\tisnull(convert(varchar(15),[ActivityID]),'') ActivityID ,\n\tisnull((select code from  SP_ScheduleResource where ID = ScheduleResourceId),'') Schedule_Resource_Code ,\n\tisnull([Name],'') Name,\n\tisnull(convert(varchar(10),[ScheduleOffset]),'') ScheduleOffset ,\n\tisnull(convert(varchar(15),[ScheduleDuration]),'') ScheduleDuration ,\n\tisnull(convert(varchar(15),[ROCID]),'') ROCID ,\n\tisnull([CostCode],'') CostCode ,\n\tisnull([UOM],'') UOM ,\n\tisnull(replace (replace (replace(replace (replace([Description] , char(10), ''),char(13),'') , ',', ''), '\"',''),'“',''),'') AS Description,\n\tisnull(convert(varchar(15),[PeriodID]),'') PeriodID ,\n\tisnull(convert(varchar(15),[ForemanID]),'') ForemanID,\n\tisnull(replace(replace(notes, CHAR(13),''), CHAR(10),''),'') as Notes,\n\tisnull(convert(varchar(15),[Priority]),'') Priority ,\n\tisnull(convert(varchar(15),[PeriodPriority]),'') PeriodPriority ,\n\tisnull(convert(varchar(15),[IssuedByID]),'') IssuedByID ,\n\tisnull(convert(varchar(30),[IssuedDate]),'') IssuedDate ,\n\tisnull(convert(varchar(15),[ExportedByID]),'') ExportedByID ,\n\tisnull(convert(varchar(30),[ExportedDate]),'') ExportedDate ,\n\tisnull(convert(varchar(15),[CreatedByID]),'') CreatedByID ,\n\tisnull(convert(varchar(30),[CreatedDate]),'') CreatedDate ,\n\tisnull(convert(varchar(15),[ModifiedByID]),'') ModifiedByID ,\n\tisnull(convert(varchar(30),[ModifiedDate]),'') ModifiedDate ,\n\tisnull(convert(varchar(15),[ParentID]),'') ParentID ,\n\tisnull(convert(varchar(15),[DurationInDays]),'') DurationInDays ,\n\tisnull(convert(varchar(30),[CWPStartDate]),'') CWPStartDate,\n\tisnull(convert(varchar(30),[CWPEndDate]),'') CWPEndDate ,\n\tisnull(convert(varchar(15),[PrelimDurationInHours]),'') PrelimDurationInHours ,\n\tisnull(convert(varchar(15),[DurationInWorkDays]),'') DurationInWorkDays ,\n\tisnull(convert(varchar(15),[MatlPercAllocated]),'') MatlPercAllocated ,\n\tisnull(convert(varchar(30),[RestartDate]),'') RestartDate ,\n\tisnull(convert(varchar(15),[RemainingDuration]),'') RemainingDuration ,\n\tisnull(convert(varchar(30),[ModifiedStartDate]),'') ModifiedStartDate ,\n\tisnull(convert(varchar(15),[ModifiedDuration]),'') ModifiedDuration ,\n\tisnull(convert(varchar(15),[RestrictionID]),'') RestrictionID,\n\tisnull(convert(varchar(15),[RestrictionPercentage]),'') RestrictionPercentage ,\n\tisnull([RestrictionNotes],'') RestrictionNotes ,\n\tisnull([Text1],'') Text1 ,\n\tisnull([Text2],'') Text2 ,\n\tisnull([Text3],'') Text3 ,\n\tisnull([Text4],'') Text4 ,\n\tisnull([Text5],'') Text5 ,\n\tisnull(convert(varchar(15),[ConstructionManagerID]),'') ConstructionManagerID ,\n\tisnull(convert(varchar(15),[SuperID]),'') SuperID ,\n\tisnull(convert(varchar(15),[GeneralForemanID]),'') GeneralForemanID ,\n\tisnull(convert(varchar(15),[FieldEngineerID]),'') FieldEngineerID ,\n\tisnull(convert(varchar(15),[CoordinatorID]),'') CoordinatorID ,\n\tisnull([CompletedBy],'') CompletedBy ,\n\tisnull(convert(varchar(30),[CompletedDate]),'') CompletedDate ,\n\tisnull(convert(varchar(15),[IWPStatusID]),'')  IWPStatusID,\n        (select StatusDescription from [dbo].[SP_IWPStatus] a where a.ID = [dbo].[SP_ConstructionWorkPack].IWPStatusID) IWP_Status,\n       (select f.ProgressStatus from [dbo].[v_ConstructionWorkPack] f where f.Name = [dbo].[SP_ConstructionWorkPack].name) Progress_Status,\n\t(select ltrim(rtrim(LastName)) + ' ' + ltrim(rtrim(FirstName))  from [dbo].[TM_Employee] where ID = [SuperID]) Supervisor_Name   ,\n\t(select ltrim(rtrim(LastName)) + ' ' + ltrim(rtrim(FirstName))  from [dbo].[TM_Employee] where ID = ConstructionManagerID) Construction_Manager_Name   ,\n\t(select ltrim(rtrim(LastName)) + ' ' + ltrim(rtrim(FirstName))  from [dbo].[TM_Employee] where ID = [GeneralForemanID]) Foreman_Name ,\n\t(select ltrim(rtrim(LastName)) + ' ' + ltrim(rtrim(FirstName))  from [dbo].[TM_Employee] where ID = [FieldEngineerID]) Field_Engineer_Name ,\n\t(select ltrim(rtrim(LastName)) + ' ' + ltrim(rtrim(FirstName))  from [dbo].[TM_Employee] where ID = [CoordinatorID]) Coordinator_Name \n\tfrom [dbo].[SP_ConstructionWorkPack]\n",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_sitepro_prod",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_ds_dbname": {
+								"value": "@pipeline().parameters.p_pl_dbname",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_generic",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_ds_filesystem": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.file_system",
+								"type": "Expression"
+							},
+							"p_ds_directory": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+								"type": "Expression"
+							},
+							"p_ds_filename": {
+								"value": "@Concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+								"type": "Expression"
+							},
+							"p_ds_first_row_header": true
+						}
+					}
+				]
+			},
+			{
+				"name": "sp_Update_Parameter",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "CopyIWPSrctoStage",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+					"storedProcedureParameters": {
+						"pParameterValue": {
+							"value": {
+								"value": "@formatDateTime(utcnow(),'yyyy-MM-dd HH:mm:ss')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": "Sitepro",
+							"type": "String"
+						},
+						"pParameterCode": {
+							"value": "start_date",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseDB_DEV",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"parameters": {
+			"p_pl_dbname": {
+				"type": "String"
+			},
+			"p_pl_projectid": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "Projects/NCSA/7.IWP"
+		},
+		"annotations": [],
+		"lastPublishTime": "2021-12-15T07:13:48Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

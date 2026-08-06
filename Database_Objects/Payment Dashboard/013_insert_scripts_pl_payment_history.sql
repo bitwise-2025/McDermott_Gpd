@@ -1,0 +1,337 @@
+insert into plp_pipeline (pipeline_code,subject_area_code,description,comment,active,touched_by,touched_dtm,sec_sa_id) Values('pl_payment_history','NCSA','pl_payment_history',NULL,'1','aditya.anand2@mcdermott.com','2025-03-12 06:42:19.043',4)
+
+
+GO
+
+
+--source_to_stage
+
+
+insert into plp_pipeline_parameter (pipeline_code,pipeline_sub_code,parameter_code,display_order,source_column_name,source_operator,comment,active,touched_by,touched_dtm)Values ('pl_payment_history','NetworkFolder','source_name',1,'source_name','IN',NULL,1,'aditya.anand2@mcdermott.com','2025-03-12 06:42:19.043')
+
+insert into plp_pipeline_parameter (pipeline_code,pipeline_sub_code,parameter_code,display_order,source_column_name,source_operator,comment,active,touched_by,touched_dtm)Values ('pl_payment_history','NetworkFolder','sub_source_name',2,'sub_source_name','IN',NULL,1,'aditya.anand2@mcdermott.com','2025-03-12 06:42:19.043')
+
+insert into plp_pipeline_parameter (pipeline_code,pipeline_sub_code,parameter_code,display_order,source_column_name,source_operator,comment,active,touched_by,touched_dtm)Values ('pl_payment_history','NetworkFolder','output_file_system',3,'output_file_system','IN',NULL,1,'aditya.anand2@mcdermott.com','2025-03-12 06:42:19.043')
+
+insert into plp_pipeline_parameter (pipeline_code,pipeline_sub_code,parameter_code,display_order,source_column_name,source_operator,comment,active,touched_by,touched_dtm)Values ('pl_payment_history','NetworkFolder','folder_path',4,'folder_path','IN',NULL,1,'aditya.anand2@mcdermott.com','2025-03-12 06:42:19.043')
+
+insert into plp_pipeline_parameter (pipeline_code,pipeline_sub_code,parameter_code,display_order,source_column_name,source_operator,comment,active,touched_by,touched_dtm)Values ('pl_payment_history','NetworkFolder','file_name',5,'file_name','IN',NULL,1,'aditya.anand2@mcdermott.com','2025-03-12 06:42:19.043')
+
+insert into plp_pipeline_parameter (pipeline_code,pipeline_sub_code,parameter_code,display_order,source_column_name,source_operator,comment,active,touched_by,touched_dtm)Values ('pl_payment_history','NetworkFolder','start_date',6,'start_date','IN',NULL,1,'aditya.anand2@mcdermott.com','2025-03-12 06:42:19.043')
+
+insert into plp_pipeline_parameter (pipeline_code,pipeline_sub_code,parameter_code,display_order,source_column_name,source_operator,comment,active,touched_by,touched_dtm)Values ('pl_payment_history','NetworkFolder','end_date',7,'end_date','IN',NULL,1,'aditya.anand2@mcdermott.com','2025-03-12 06:42:19.043')
+
+insert into plp_pipeline_parameter (pipeline_code,pipeline_sub_code,parameter_code,display_order,source_column_name,source_operator,comment,active,touched_by,touched_dtm)Values ('pl_payment_history','NetworkFolder','report_path',8,'report_path','IN',NULL,1,'aditya.anand2@mcdermott.com','2025-03-12 06:42:19.043')
+
+insert into plp_pipeline_parameter (pipeline_code,pipeline_sub_code,parameter_code,display_order,source_column_name,source_operator,comment,active,touched_by,touched_dtm)Values ('pl_payment_history','NetworkFolder','number_of_days',9,'number_of_days','IN',NULL,1,'aditya.anand2@mcdermott.com','2025-03-12 06:42:19.043')
+
+
+GO
+
+ 
+
+--source_to_stage
+
+
+declare @dd datetime
+select @dd = getdate()
+insert into plp_parameter_value
+(parameter_code,parameter_value,active,touched_by,touched_dtm,pipeline_code,pipeline_sub_code)
+values ('file_name','Payment_History',1,'aditya.anand2@mcdermott.com',@dd,'pl_payment_history','NetworkFolder')
+
+
+insert into plp_parameter_value
+(parameter_code,parameter_value,active,touched_by,touched_dtm,pipeline_code,pipeline_sub_code)
+values ('folder_path','Project_Data/NCSA/Payment_Dashboard/Payment_History',1,'aditya.anand2@mcdermott.com',@dd,'pl_payment_history','NetworkFolder')
+
+
+insert into plp_parameter_value
+(parameter_code,parameter_value,active,touched_by,touched_dtm,pipeline_code,pipeline_sub_code)
+values ('end_date','currdate',1,'aditya.anand2@mcdermott.com',@dd,'pl_payment_history','NetworkFolder')
+
+
+insert into plp_parameter_value
+(parameter_code,parameter_value,active,touched_by,touched_dtm,pipeline_code,pipeline_sub_code)
+values ('sub_source_name','R2P',1,'aditya.anand2@mcdermott.com',@dd,'pl_payment_history','NetworkFolder')
+
+
+insert into plp_parameter_value
+(parameter_code,parameter_value,active,touched_by,touched_dtm,pipeline_code,pipeline_sub_code)
+values ('start_date','2017-07-01 01:01:10',1,'aditya.anand2@mcdermott.com',@dd,'pl_payment_history','NetworkFolder')
+
+
+insert into plp_parameter_value
+(parameter_code,parameter_value,active,touched_by,touched_dtm,pipeline_code,pipeline_sub_code)
+values ('output_file_system','mdr-staging-data',1,'aditya.anand2@mcdermott.com',@dd,'pl_payment_history','NetworkFolder')
+
+
+
+insert into plp_parameter_value
+(parameter_code,parameter_value,active,touched_by,touched_dtm,pipeline_code,pipeline_sub_code)
+values ('report_path','/Custom/Oracle R2P Integrations/Invoice Inquiry Dashboard/AP_PAYMENT_HISTORY_ALL.xdo',1,'aditya.anand2@mcdermott.com',@dd,'pl_payment_history','NetworkFolder')
+
+
+insert into plp_parameter_value
+(parameter_code,parameter_value,active,touched_by,touched_dtm,pipeline_code,pipeline_sub_code)
+values ('source_name','SYSTEM',1,'aditya.anand2@mcdermott.com',@dd,'pl_payment_history','NetworkFolder')
+
+
+insert into plp_parameter_value
+(parameter_code,parameter_value,active,touched_by,touched_dtm,pipeline_code,pipeline_sub_code)
+values ('number_of_days','90',1,'aditya.anand2@mcdermott.com',@dd,'pl_payment_history','NetworkFolder')
+
+
+GO
+
+
+CREATE TABLE [rpy].[Payment_History_stage]
+(
+
+ACCOUNTING_DATE	[varchar](500) NULL,
+ACCOUNTING_EVENT_ID	[varchar](500) NULL,
+BANK_CURRENCY_CODE	[varchar](500) NULL,
+BANK_TO_BASE_XRATE	[varchar](500) NULL,
+BANK_TO_BASE_XRATE_DATE	[varchar](500) NULL,
+BANK_TO_BASE_XRATE_TYPE	[varchar](500) NULL,
+CHARGES_BANK_AMOUNT	[varchar](500) NULL,
+CHARGES_BASE_AMOUNT	[varchar](500) NULL,
+CHARGES_PMT_AMOUNT	[varchar](500) NULL,
+CHARGE_AMOUNT	[varchar](500) NULL,
+CHECK_ID	[varchar](500) NULL,
+CREATED_BY	[varchar](500) NULL,
+CREATION_DATE	[varchar](500) NULL,
+CURRENCY_CODE	[varchar](500) NULL,
+ERRORS_BANK_AMOUNT	[varchar](500) NULL,
+ERRORS_BASE_AMOUNT	[varchar](500) NULL,
+ERRORS_PMT_AMOUNT	[varchar](500) NULL,
+ERROR_AMOUNT	[varchar](500) NULL,
+GAIN_LOSS_INDICATOR	[varchar](500) NULL,
+HISTORICAL_FLAG	[varchar](500) NULL,
+INVOICE_ADJUSTMENT_EVENT_ID	[varchar](500) NULL,
+JOB_DEFINITION_NAME	[varchar](500) NULL,
+JOB_DEFINITION_PACKAGE	[varchar](4000) NULL,
+LAST_UPDATED_BY	[varchar](500) NULL,
+LAST_UPDATE_DATE	[datetime] NULL,
+LAST_UPDATE_LOGIN	[varchar](500) NULL,
+MATCHED_FLAG	[varchar](500) NULL,
+MRC_BANK_TO_BASE_XRATE	[varchar](4000) NULL,
+MRC_BANK_TO_BASE_XRATE_DATE	[varchar](4000) NULL,
+MRC_BANK_TO_BASE_XRATE_TYPE	[varchar](4000) NULL,
+MRC_CHARGES_BASE_AMOUNT	[varchar](4000) NULL,
+MRC_ERRORS_BASE_AMOUNT	[varchar](4000) NULL,
+MRC_EXCHANGE_RATE	[varchar](4000) NULL,
+MRC_EXCHANGE_RATE_DATE	[varchar](4000) NULL,
+MRC_EXCHANGE_RATE_TYPE	[varchar](4000) NULL,
+MRC_PMT_TO_BASE_XRATE	[varchar](4000) NULL,
+MRC_PMT_TO_BASE_XRATE_DATE	[varchar](4000) NULL,
+MRC_PMT_TO_BASE_XRATE_TYPE	[varchar](4000) NULL,
+MRC_TRX_BASE_AMOUNT	[varchar](4000) NULL,
+OBJECT_VERSION_NUMBER	[varchar](500) NULL,
+ORG_ID	[varchar](500) NULL,
+PAYMENT_HISTORY_ID	[varchar](500) NULL,
+PMT_CURRENCY_CODE	[varchar](500) NULL,
+PMT_TO_BANK_XRATE	[varchar](500) NULL,
+PMT_TO_BANK_XRATE_DATE	[varchar](500) NULL,
+PMT_TO_BANK_XRATE_TYPE	[varchar](500) NULL,
+PMT_TO_BASE_XRATE	[varchar](500) NULL,
+PMT_TO_BASE_XRATE_DATE	[varchar](500) NULL,
+PMT_TO_BASE_XRATE_TYPE	[varchar](500) NULL,
+POSTED_FLAG	[varchar](500) NULL,
+PROGRAM_APPLICATION_ID	[varchar](500) NULL,
+PROGRAM_ID	[varchar](500) NULL,
+PROGRAM_UPDATE_DATE	[varchar](500) NULL,
+RELATED_EVENT_ID	[varchar](500) NULL,
+REQUEST_ID	[varchar](500) NULL,
+REV_PMT_HIST_ID	[varchar](500) NULL,
+TRANSACTION_AMOUNT	[varchar](500) NULL,
+TRANSACTION_DATE	[varchar](500) NULL,
+TRANSACTION_TYPE	[varchar](500) NULL,
+TRX_BANK_AMOUNT	[varchar](500) NULL,
+TRX_BASE_AMOUNT	[varchar](500) NULL,
+TRX_PMT_AMOUNT	[varchar](500) NULL,
+source_name	[varchar](500) NULL,
+sub_source_name	[varchar](500) NULL,
+created_date_time	[datetime] NULL
+
+
+)
+WITH
+(
+	DISTRIBUTION = ROUND_ROBIN,
+	CLUSTERED COLUMNSTORE INDEX
+)
+GO
+
+
+
+
+
+
+CREATE TABLE [rpy].[Payment_History]
+(
+
+ACCOUNTING_DATE	[varchar](500) NULL,
+ACCOUNTING_EVENT_ID	[varchar](500) NULL,
+BANK_CURRENCY_CODE	[varchar](500) NULL,
+BANK_TO_BASE_XRATE	[varchar](500) NULL,
+BANK_TO_BASE_XRATE_DATE	[varchar](500) NULL,
+BANK_TO_BASE_XRATE_TYPE	[varchar](500) NULL,
+CHARGES_BANK_AMOUNT	[varchar](500) NULL,
+CHARGES_BASE_AMOUNT	[varchar](500) NULL,
+CHARGES_PMT_AMOUNT	[varchar](500) NULL,
+CHARGE_AMOUNT	[varchar](500) NULL,
+CHECK_ID	[varchar](500) NULL,
+CREATED_BY	[varchar](500) NULL,
+CREATION_DATE	[varchar](500) NULL,
+CURRENCY_CODE	[varchar](500) NULL,
+ERRORS_BANK_AMOUNT	[varchar](500) NULL,
+ERRORS_BASE_AMOUNT	[varchar](500) NULL,
+ERRORS_PMT_AMOUNT	[varchar](500) NULL,
+ERROR_AMOUNT	[varchar](500) NULL,
+GAIN_LOSS_INDICATOR	[varchar](500) NULL,
+HISTORICAL_FLAG	[varchar](500) NULL,
+INVOICE_ADJUSTMENT_EVENT_ID	[varchar](500) NULL,
+JOB_DEFINITION_NAME	[varchar](500) NULL,
+JOB_DEFINITION_PACKAGE	[varchar](4000) NULL,
+LAST_UPDATED_BY	[varchar](500) NULL,
+LAST_UPDATE_DATE	[datetime] NULL,
+LAST_UPDATE_LOGIN	[varchar](500) NULL,
+MATCHED_FLAG	[varchar](500) NULL,
+MRC_BANK_TO_BASE_XRATE	[varchar](4000) NULL,
+MRC_BANK_TO_BASE_XRATE_DATE	[varchar](4000) NULL,
+MRC_BANK_TO_BASE_XRATE_TYPE	[varchar](4000) NULL,
+MRC_CHARGES_BASE_AMOUNT	[varchar](4000) NULL,
+MRC_ERRORS_BASE_AMOUNT	[varchar](4000) NULL,
+MRC_EXCHANGE_RATE	[varchar](4000) NULL,
+MRC_EXCHANGE_RATE_DATE	[varchar](4000) NULL,
+MRC_EXCHANGE_RATE_TYPE	[varchar](4000) NULL,
+MRC_PMT_TO_BASE_XRATE	[varchar](4000) NULL,
+MRC_PMT_TO_BASE_XRATE_DATE	[varchar](4000) NULL,
+MRC_PMT_TO_BASE_XRATE_TYPE	[varchar](4000) NULL,
+MRC_TRX_BASE_AMOUNT	[varchar](4000) NULL,
+OBJECT_VERSION_NUMBER	[varchar](500) NULL,
+ORG_ID	[varchar](500) NULL,
+PAYMENT_HISTORY_ID	[varchar](500) NULL,
+PMT_CURRENCY_CODE	[varchar](500) NULL,
+PMT_TO_BANK_XRATE	[varchar](500) NULL,
+PMT_TO_BANK_XRATE_DATE	[varchar](500) NULL,
+PMT_TO_BANK_XRATE_TYPE	[varchar](500) NULL,
+PMT_TO_BASE_XRATE	[varchar](500) NULL,
+PMT_TO_BASE_XRATE_DATE	[varchar](500) NULL,
+PMT_TO_BASE_XRATE_TYPE	[varchar](500) NULL,
+POSTED_FLAG	[varchar](500) NULL,
+PROGRAM_APPLICATION_ID	[varchar](500) NULL,
+PROGRAM_ID	[varchar](500) NULL,
+PROGRAM_UPDATE_DATE	[varchar](500) NULL,
+RELATED_EVENT_ID	[varchar](500) NULL,
+REQUEST_ID	[varchar](500) NULL,
+REV_PMT_HIST_ID	[varchar](500) NULL,
+TRANSACTION_AMOUNT	[varchar](500) NULL,
+TRANSACTION_DATE	[varchar](500) NULL,
+TRANSACTION_TYPE	[varchar](500) NULL,
+TRX_BANK_AMOUNT	[varchar](500) NULL,
+TRX_BASE_AMOUNT	[varchar](500) NULL,
+TRX_PMT_AMOUNT	[varchar](500) NULL,
+source_name	[varchar](500) NULL,
+sub_source_name	[varchar](500) NULL,
+created_date_time	[datetime] NULL
+
+
+
+)
+WITH
+(
+	DISTRIBUTION = ROUND_ROBIN,
+	CLUSTERED COLUMNSTORE INDEX
+)
+GO
+
+
+
+Create View [rpy].[Payment_History_v] as
+SELECT FORMAT(Cast([ACCOUNTING_DATE] as date), 'MM-dd-yyyy') as [ACCOUNTING_DATE]
+      ,[ACCOUNTING_EVENT_ID]
+      ,[BANK_CURRENCY_CODE]
+      ,[BANK_TO_BASE_XRATE]
+      ,FORMAT(Cast([BANK_TO_BASE_XRATE_DATE] as date), 'MM-dd-yyyy') as [BANK_TO_BASE_XRATE_DATE]
+      ,[BANK_TO_BASE_XRATE_TYPE]
+      ,CAST([CHARGES_BANK_AMOUNT] as decimal(38, 10)) as [CHARGES_BANK_AMOUNT]
+      ,CAST([CHARGES_BASE_AMOUNT] as decimal(38, 10)) as [CHARGES_BASE_AMOUNT]
+      ,CAST([CHARGES_PMT_AMOUNT] as decimal(38, 10)) as [CHARGES_PMT_AMOUNT]
+      ,CAST([CHARGE_AMOUNT] as decimal(38, 10)) as [CHARGE_AMOUNT]
+      ,[CHECK_ID]
+      ,[CREATED_BY]
+      ,FORMAT(Cast([CREATION_DATE] as date), 'MM-dd-yyyy') as [CREATION_DATE]
+      ,[CURRENCY_CODE]
+      ,CAST([ERRORS_BANK_AMOUNT] as decimal(38, 10)) as [ERRORS_BANK_AMOUNT]
+      ,CAST([ERRORS_BASE_AMOUNT] as decimal(38, 10)) as [ERRORS_BASE_AMOUNT]
+      ,CAST([ERRORS_PMT_AMOUNT] as decimal(38, 10)) as [ERRORS_PMT_AMOUNT]
+      ,CAST([ERROR_AMOUNT] as decimal(38, 10)) as [ERROR_AMOUNT]
+      ,[GAIN_LOSS_INDICATOR]
+      ,[HISTORICAL_FLAG]
+      ,[INVOICE_ADJUSTMENT_EVENT_ID]
+      ,[JOB_DEFINITION_NAME]
+      ,[JOB_DEFINITION_PACKAGE]
+      ,[LAST_UPDATED_BY]
+      ,a.[LAST_UPDATE_DATE]
+      ,[LAST_UPDATE_LOGIN]
+      ,[MATCHED_FLAG]
+      ,[MRC_BANK_TO_BASE_XRATE]
+      ,FORMAT(Cast([MRC_BANK_TO_BASE_XRATE_DATE] as date), 'MM-dd-yyyy') as [MRC_BANK_TO_BASE_XRATE_DATE]
+      ,[MRC_BANK_TO_BASE_XRATE_TYPE]
+      ,CAST([MRC_CHARGES_BASE_AMOUNT] as decimal(38, 10)) as [MRC_CHARGES_BASE_AMOUNT]
+      ,CAST([MRC_ERRORS_BASE_AMOUNT] as decimal(38, 10)) as [MRC_ERRORS_BASE_AMOUNT]
+      ,[MRC_EXCHANGE_RATE]
+      ,FORMAT(Cast([MRC_EXCHANGE_RATE_DATE] as date), 'MM-dd-yyyy') as [MRC_EXCHANGE_RATE_DATE]
+      ,[MRC_EXCHANGE_RATE_TYPE]
+      ,[MRC_PMT_TO_BASE_XRATE]
+      ,FORMAT(Cast([MRC_PMT_TO_BASE_XRATE_DATE] as date), 'MM-dd-yyyy') as [MRC_PMT_TO_BASE_XRATE_DATE]
+      ,[MRC_PMT_TO_BASE_XRATE_TYPE]
+      ,CAST([MRC_TRX_BASE_AMOUNT] as decimal(38, 10)) as [MRC_TRX_BASE_AMOUNT]
+      ,[OBJECT_VERSION_NUMBER]
+      ,[ORG_ID]
+      ,a.[PAYMENT_HISTORY_ID]
+      ,[PMT_CURRENCY_CODE]
+      ,[PMT_TO_BANK_XRATE]
+      ,FORMAT(Cast([PMT_TO_BANK_XRATE_DATE] as date), 'MM-dd-yyyy') as [PMT_TO_BANK_XRATE_DATE]
+      ,[PMT_TO_BANK_XRATE_TYPE]
+      ,[PMT_TO_BASE_XRATE]
+      ,FORMAT(Cast([PMT_TO_BASE_XRATE_DATE] as date), 'MM-dd-yyyy') as [PMT_TO_BASE_XRATE_DATE]
+      ,[PMT_TO_BASE_XRATE_TYPE]
+      ,[POSTED_FLAG]
+      ,[PROGRAM_APPLICATION_ID]
+      ,[PROGRAM_ID]
+      ,FORMAT(Cast([PROGRAM_UPDATE_DATE] as date), 'MM-dd-yyyy') as [PROGRAM_UPDATE_DATE]
+      ,[RELATED_EVENT_ID]
+      ,[REQUEST_ID]
+      ,[REV_PMT_HIST_ID]
+      ,CAST([TRANSACTION_AMOUNT] as decimal(38, 10)) as [TRANSACTION_AMOUNT]
+      ,FORMAT(Cast([TRANSACTION_DATE] as date), 'MM-dd-yyyy') as [TRANSACTION_DATE]
+      ,[TRANSACTION_TYPE]
+      ,CAST([TRX_BANK_AMOUNT] as decimal(38, 10)) as [TRX_BANK_AMOUNT]
+      ,CAST([TRX_BASE_AMOUNT] as decimal(38, 10)) as [TRX_BASE_AMOUNT]
+      ,CAST([TRX_PMT_AMOUNT] as decimal(38, 10)) as [TRX_PMT_AMOUNT]
+      ,[source_name]
+      ,[sub_source_name]
+      ,[created_date_time]
+  FROM [rpy].[Payment_History] a,
+  (SELECT PAYMENT_HISTORY_ID, max(LAST_UPDATE_DATE) as LAST_UPDATE_DATE from [rpy].[Payment_History] GROUP BY PAYMENT_HISTORY_ID) b
+WHERE a.PAYMENT_HISTORY_ID = b.PAYMENT_HISTORY_ID AND a.LAST_UPDATE_DATE = b.LAST_UPDATE_DATE
+
+
+
+
+GO
+
+
+
+
+
+CREATE NONCLUSTERED INDEX [idx_Payment_History_PAYMENT_HISTORY_ID_LAST_UPDATE_DATE] ON [rpy].[Payment_History]
+(
+	[PAYMENT_HISTORY_ID],[LAST_UPDATE_DATE] ASC
+)WITH (DROP_EXISTING = OFF)
+GO
+
+
+

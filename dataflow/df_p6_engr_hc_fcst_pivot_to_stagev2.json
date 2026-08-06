@@ -1,0 +1,45 @@
+{
+	"name": "df_p6_engr_hc_fcst_pivot_to_stagev2",
+	"properties": {
+		"description": "Dataflow to convert P6 Engineering data with unpivot per date",
+		"folder": {
+			"name": "Projects/NCSA/P6 Engineering"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_engr_hc_fcst_p6_stage_initial",
+						"type": "DatasetReference"
+					},
+					"name": "SrcP6EngrManHrs"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_P6engr_hc_fcst_stage",
+						"type": "DatasetReference"
+					},
+					"name": "SnkP6EngrManHrs"
+				}
+			],
+			"transformations": [
+				{
+					"name": "dcGetProjectPrime"
+				},
+				{
+					"name": "UnpivotData"
+				},
+				{
+					"name": "FltDummyRows"
+				},
+				{
+					"name": "FltIncorrectActivity"
+				}
+			],
+			"script": "parameters{\n\tp_df_sub_class as string\n}\nsource(output(\n\t\t{Activity ID} as string,\n\t\t{Activity Name} as string,\n\t\t{Original Duration} as string,\n\t\t{Actual Duration} as string,\n\t\t{Remaining Duration} as string,\n\t\tStart as string,\n\t\tFinish as string,\n\t\t{Actual Start} as string,\n\t\t{Actual Finish} as string,\n\t\t{Remaining Late Start} as string,\n\t\t{Remaining Late Finish} as string,\n\t\tCalendar as string,\n\t\t{Budgeted Units} as string,\n\t\t{Actual Units} as string,\n\t\t{Remaining Units} as string,\n\t\tWBS as string,\n\t\t{WBS Name} as string,\n\t\t{Cost Account} as string,\n\t\tRole as string,\n\t\t{GLOBAL - CHANGE MANAGEMENT} as string,\n\t\t{GLOBAL - EXECUTED BY TYPE} as string,\n\t\t{GLOBAL - FUNCTION} as string,\n\t\t{GLOBAL - MILESTONES} as string,\n\t\t{GLOBAL - OFFICE} as string,\n\t\t{GLOBAL - PHASE} as string,\n\t\t{GLOBAL - PRIME (GCOA V11)} as string,\n\t\t{GLOBAL - PRIME (GCOA V13)} as string,\n\t\t{GLOBAL - REGION} as string,\n\t\t{GLOBAL - SCHEDULE RISK ASSESSMENT} as string,\n\t\t{GLOBAL - STORAGE SOLUTIONS} as string,\n\t\t{GLOBAL - SUBPRIME (GCOA V11)} as string,\n\t\t{GLOBAL - SUBPRIME (GCOA V13)} as string,\n\t\t{GLOBAL - SUPPLY CHAIN} as string,\n\t\t{Spreadsheet Field} as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true) ~> SrcP6EngrManHrs\nFltIncorrectActivity derive(Project_Number = iif(length(regexSplit(WBS,'[-]')[1])>5,concat('99',regexSplit(WBS,'[-]')[1]),regexSplit(WBS,'[-]')[1]),\n\t\tPRIME = coalesce({GLOBAL - PRIME (GCOA V11)},{GLOBAL - PRIME (GCOA V13)}),\n\t\tSUBPRIME = coalesce({GLOBAL - SUBPRIME (GCOA V11)},{GLOBAL - SUBPRIME (GCOA V13)}),\n\t\t{Activity ID} = trim({Activity ID}),\n\t\t{Spreadsheet Field} = concat($p_df_sub_class,{Spreadsheet Field})) ~> dcGetProjectPrime\ndcGetProjectPrime unpivot(output(\n\t\tPeriod as string,\n\t\tUnits as string\n\t),\n\tungroupBy(Project_Number,\n\t\t{Activity ID},\n\t\t{Activity Name},\n\t\t{Original Duration},\n\t\t{Actual Duration},\n\t\t{Remaining Duration},\n\t\tStart,\n\t\tFinish,\n\t\t{Actual Start},\n\t\t{Actual Finish},\n\t\t{Remaining Late Start},\n\t\t{Remaining Late Finish},\n\t\tCalendar,\n\t\t{Budgeted Units},\n\t\t{Actual Units},\n\t\t{Remaining Units},\n\t\tWBS,\n\t\t{WBS Name},\n\t\t{Cost Account},\n\t\tRole,\n\t\t{GLOBAL - CHANGE MANAGEMENT},\n\t\t{GLOBAL - EXECUTED BY TYPE},\n\t\t{GLOBAL - FUNCTION},\n\t\t{GLOBAL - MILESTONES},\n\t\t{GLOBAL - OFFICE},\n\t\t{GLOBAL - PHASE},\n\t\t{GLOBAL - REGION},\n\t\t{GLOBAL - SCHEDULE RISK ASSESSMENT},\n\t\t{GLOBAL - STORAGE SOLUTIONS},\n\t\t{GLOBAL - SUPPLY CHAIN},\n\t\t{GLOBAL - PRIME (GCOA V11)},\n\t\t{GLOBAL - PRIME (GCOA V13)},\n\t\tPRIME,\n\t\t{GLOBAL - SUBPRIME (GCOA V11)},\n\t\t{GLOBAL - SUBPRIME (GCOA V13)},\n\t\tSUBPRIME,\n\t\t{Spreadsheet Field}),\n\tlateral: false,\n\tignoreNullPivots: true) ~> UnpivotData\nUnpivotData filter(Units != '-99') ~> FltDummyRows\nSrcP6EngrManHrs filter(!({Activity ID}=='No Activity ID'||isNull({Activity Name}))) ~> FltIncorrectActivity\nFltDummyRows sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['p6_engr_hc_fcst.csv'],\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tmapColumn(\n\t\tProject_Number,\n\t\t{Activity ID},\n\t\t{Activity Name},\n\t\t{Original Duration},\n\t\t{Actual Duration},\n\t\t{Remaining Duration},\n\t\tStart,\n\t\tFinish,\n\t\t{Actual Start},\n\t\t{Actual Finish},\n\t\t{Remaining Late Start},\n\t\t{Remaining Late Finish},\n\t\tCalendar,\n\t\t{Budgeted Units},\n\t\t{Actual Units},\n\t\t{Remaining Units},\n\t\tWBS,\n\t\t{WBS Name},\n\t\t{Cost Account},\n\t\tRole,\n\t\t{GLOBAL - CHANGE MANAGEMENT},\n\t\t{GLOBAL - EXECUTED BY TYPE},\n\t\t{GLOBAL - FUNCTION},\n\t\t{GLOBAL - MILESTONES},\n\t\t{GLOBAL - OFFICE},\n\t\t{GLOBAL - PHASE},\n\t\t{GLOBAL - REGION},\n\t\t{GLOBAL - SCHEDULE RISK ASSESSMENT},\n\t\t{GLOBAL - STORAGE SOLUTIONS},\n\t\t{GLOBAL - SUPPLY CHAIN},\n\t\tPRIME,\n\t\tSUBPRIME,\n\t\t{Spreadsheet Field},\n\t\tPeriod,\n\t\tUnits\n\t),\n\tpartitionBy('hash', 1)) ~> SnkP6EngrManHrs"
+		}
+	}
+}

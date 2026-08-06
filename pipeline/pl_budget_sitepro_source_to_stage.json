@@ -1,0 +1,210 @@
+{
+	"name": "pl_budget_sitepro_source_to_stage",
+	"properties": {
+		"activities": [
+			{
+				"name": "cp_getjdepaytypesdata",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"sqlReaderQuery": {
+							"value": "@concat('WITH Planned AS (\nSELECT pi.ID AS ProgressItemID\n  , ISNULL(sum(hours * rocs.Percentage)/100, 0) AS PIPlannedHours\t\t\t\t\t\t\t\n  FROM dbo.PM_ProgressItem AS pi WITH (NOLOCK)\n    LEFT OUTER JOIN dbo.SP_ProgressItem_CWP  AS  picwp  WITH (NOLOCK) \n\tON pi.id = picwp.ProgressItemID\n    INNER JOIN dbo.PM_ROCS AS rocs WITH (NOLOCK)\t\n\tON rocs.ID = picwp.ROCSID\n    WHERE picwp.IsPlanned = 1\n    GROUP BY pi.id \n)\n, RocsSteps AS (\nSELECT ROCID\n\t, COUNT(ID) AS TotalSteps\n  FROM dbo.PM_ROCS WITH (NOLOCK)\n    GROUP BY ROCID\n)\n, Planning AS (\nSELECT ProgressItemID\n\t, picwp.ROCID \n\t,  sum(CAST( IsPlanned AS int)) PlannedSteps\n\t, TotalSteps\n  FROM dbo.SP_ProgressItem_CWP picwp WITH (NOLOCK)\n    INNER JOIN RocsSteps rs WITH (NOLOCK)\t\n\tON rs.ROCID = picwp.ROCID\n    GROUP BY ProgressItemID\n\t, picwp.ROCID\n\t, TotalSteps\n)\n, Progressed AS (\nSELECT picwp.ProgressItemID\n\t, isnull(sum(ph.ProgressDelta),0) AS SumProgress\n  FROM dbo.SP_ProgressHistory ph WITH (NOLOCK)\n    INNER JOIN dbo.SP_ProgressItem_CWP picwp WITH (NOLOCK) \t\n\tON ph.ProgressItemCWPID = picwp.ID\n    GROUP BY  picwp.ProgressItemID\n)\n\n, ProgressStatus AS (\t\nSELECT pi.ID AS paprsID\n\t,COUNT( Distinct picwp.cwpid) AS WorkPackCount\n\t,CASE\tWHEN SumProgress / TotalSteps = 100\n\t\t\tTHEN','''', 'Fully Progressed','''','\n\t\tWHEN SumProgress = 0 OR SumProgress IS null\n\t\t\tTHEN ','''','Not Progressed','''','\n\t\tELSE ','''','Partially Progressed','''','\n\t\tEND AS ProgressStatus\n\t,CASE WHEN plannedSteps = 0 \n\t\t\tTHEN ','''','Not Planned','''','\n\t\tWHEN plannedSteps < TotalSteps \n\t\t\tTHEN ','''','Partially Planned','''','\n\t\tELSE\t','''','Fully Planned','''','\n\t\tEND AS PlannedStatus\n  FROM dbo.PM_ProgressItem AS pi WITH (NOLOCK)\n    INNER JOIN dbo.SP_ProgressItem_CWP picwp WITH (NOLOCK)\t\n\tON pi.ID = picwp.ProgressItemID\n    LEFT JOIN Planning pl WITH (NOLOCK)\t\n\tON pl.ProgressItemID = pi.id\n    LEFT JOIN Progressed AS prog WITH (NOLOCK)\t\n\tON pi.ID = prog.ProgressItemID\n    GROUP BY pi.ID\n\t\t, plannedSteps\n\t\t, TotalSteps\n\t\t, SumProgress\n)',\n'SELECT ',\n    pipeline().parameters.p_pl_projectid,' Project_id, ',\n\t'''',activity('lk_get_pipeline_parameters').output.firstRow.function_code,'''',' function_code '\n\t,',','''',activity('lk_get_pipeline_parameters').output.firstRow.source_name,'''',' source_name '\n\t,',','''',activity('lk_get_pipeline_parameters').output.firstRow.sub_source_name,'''',' sub_source_name'\n\t,',','''',activity('lk_get_pipeline_parameters').output.firstRow.class_name_hours,'''',' class_name_hours '\n\t,',','''',activity('lk_get_pipeline_parameters').output.firstRow.class_name_quantity,'''',' class_name_quantity '\n\t,',','''',activity('lk_get_pipeline_parameters').output.firstRow.sub_class_hours,'''',' sub_class_hours '\n\t,',','''',activity('lk_get_pipeline_parameters').output.firstRow.sub_class_qty,'''',' sub_class_qty '\n\t,',','''',activity('lk_get_pipeline_parameters').output.firstRow.sub_class_plan,'''',' sub_class_plan '\n\t,',','''',activity('lk_get_pipeline_parameters').output.firstRow.unit_of_measure_hours,'''',' unit_of_measure_hours '\n\t,',','''',activity('lk_get_pipeline_parameters').output.firstRow.unit_of_measure_qty,'''',' unit_of_measure_qty '\n\t,',','pi.PMID pim_code\n\t,r.Code roc_code\n\t,rs.Step ROC_Step\n\t,ph.Code Phase_Code\n\t,wa.Code WorkArea_Code\n\t,act.ScheduleUnit AS WorkUnit_Code\n\t,sr.Code ScheduleResource_Code\n\t,act.CWP cwp_code\n\t,act.Activity\n\t,cwp.Name iwp_Code\n\t,pi.Contract \n\t,pi.CostCode\n\t,replace(replace(replace(pi.CostCodeDescription,char(10),','''',' ','''','),char(34),','''',' ','''','),char(13),','''',' ','''',') costcode_desription\n\t,pi.CostType\n\t,pi.CostingCOA\t\n\t,replace(replace(replace(pi.Description,char(10),','''',' ','''','),char(34),','''',' ','''','),char(13),','''',' ','''',') Description\n\t,convert(date,getdate()) budget_date\n\t,replace(replace(replace(pi.DrawingNo,char(10),','''',' ','''','),char(34),','''',' ','''','),char(13),','''',' ','''',') DrawingNo\n\t,replace(replace(replace(pi.TagNo,char(10),','''',' ','''','),char(34),','''',' ','''','),char(13),','''',' ','''',') TagNo\n\t,replace(replace(replace(pi.Spool,char(10),','''',' ','''','),char(34),','''',' ','''','),char(13),','''',' ','''',') Spool\n\t,replace(replace(replace(pi.Line,char(10),','''',' ','''','),char(34),','''',' ','''','),char(13),','''',' ','''',') Line\n\t,replace(replace(replace(pi.spec,char(10),','''',' ','''','),char(34),','''',' ','''','),char(13),','''',' ','''',') spec\n\t,pi.System\n\t,replace(replace(replace(pi.PieceMark,char(10),','''',' ','''','),char(34),','''',' ','''','),char(13),','''',' ','''',') PieceMark\n\t,replace(replace(replace(pi.NumberOfPieces,char(10),','''',' ','''','),char(34),','''',' ','''','),char(13),','''',' ','''',') NumberOfPieces\n\t,pi.Subsystem\n\t,replace(replace(replace(pi.text5,char(10),','''',' ','''','),char(34),','''',' ','''','),char(13),','''',' ','''',') text5\n\t,replace(replace(replace(pi.Level6,char(10),','''',' ','''','),char(34),','''',' ','''','),char(13),','''',' ','''',') Level6\n\t,isnull(PlannedStatus, ','''','Not Planned','''',') AS PlannedStatus\n\t,isnull(ProgressStatus, ','''','Not Progressed','''',') AS ProgressStatus\n\t,sum(pi.Hours * rs.Percentage * .01) budgethours\n\t,sum(pi.Quantity * rs.Percentage *.01) BudgetQuantity\n\t,sum(ISNULL(p.PIPlannedHours, 0)*rs.Percentage*.01) AS PlannedHours\n  FROM dbo.PM_ProgressItem pi WITH (NOLOCK)\n    LEFT JOIN dbo.PM_Activity act  WITH (NOLOCK) \n\tON pi.ActivityID = act.ID\t\t\n    LEFT JOIN dbo.PM_ROC r WITH (NOLOCK)\t\n\tON pi.ROCID = r.ID\n    LEFT JOIN dbo.PM_ROCS rs WITH (NOLOCK)\n\tON rs.ROCID = pi.ROCID\n\tLEFT JOIN [dbo].[PM_ProjectMasterData] pr with (NOLOCK) ON pr.Project <> ','''','ssssss','''','\n\tLEFT JOIN Planned p WITH (NOLOCK)\t\n\tON pi.ID = p.ProgressItemID\n    LEFT JOIN ProgressStatus ProgStat WITH (NOLOCK) \t\n\tON pi.ID = progstat.paprsID\n    LEFT JOIN dbo.SP_ProgressItem_CWP picwp WITH (NOLOCK) \t\n\tON pi.ID = picwp.ProgressItemID AND rs.ROCID = picwp.ROCID AND rs.ID = picwp.ROCSID\n    LEFT JOIN dbo.SP_ConstructionWorkPack cwp WITH (NOLOCK)  \n\tON cwp.ID = picwp.CWPID\n\tLEFT JOIN [dbo].[SP_WorkArea] wa with (NOLOCK) ON act.ScheduleWorkArea = wa.Code\n\tLEFT JOIN [dbo].[SP_Phases] ph with (NOLOCK) ON wa.PhaseID = ph.ID\n\tLEFT JOIN [dbo].[SP_ScheduleResource] sr with (NOLOCK) ON cwp.ScheduleResourceID = sr.ID\n    WHERE picwp.IsPlanned = 1\ngroup by     ','''','99','''',' + ltrim(rtrim(pr.Project))\n\t,pi.PMID  \n\t,r.Code\n    ,rs.Step  \n\t,ph.Code \n\t,wa.Code\n\t,act.ScheduleUnit\n\t,sr.Code\n\t,act.CWP\n\t,act.Activity\n\t,cwp.Name\n\t,pi.Contract \n\t,pi.CostCode\n\t,pi.CostCodeDescription\n\t,pi.CostType\n\t,pi.CostingCOA\t\n\t,pi.Description\n\t,pi.DrawingNo\n\t,pi.TagNo\n\t,pi.Spool\n\t,pi.Line\n\t,pi.spec\n\t,pi.System\n\t,pi.PieceMark\n\t,pi.NumberOfPieces\n\t,pi.Subsystem\n\t,pi.text5\n\t,pi.Level6\n\t,isnull(PlannedStatus, ','''','Not Planned','''',')\n\t,isnull(ProgressStatus, ','''','Not Progressed','''',')')",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_sitepro_prod",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_ds_dbname": {
+								"value": "@pipeline().parameters.p_pl_dbname",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_generic",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_ds_filesystem": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.file_system",
+								"type": "Expression"
+							},
+							"p_ds_directory": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+								"type": "Expression"
+							},
+							"p_ds_filename": {
+								"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+								"type": "Expression"
+							},
+							"p_ds_first_row_header": true
+						}
+					}
+				]
+			},
+			{
+				"name": "lk_get_pipeline_parameters",
+				"description": "lookup the parameters needed for this pipeline",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "[dbo].[getPipelineParametersValues]",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": {
+									"value": "Sitepro",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "sp_Update_Parameter",
+				"description": "update the appropriate parameter with revised value. i.e Last run datetime",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "cp_getjdepaytypesdata",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+					"storedProcedureParameters": {
+						"pParameterCode": {
+							"value": {
+								"value": "start_date",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pParameterValue": {
+							"value": {
+								"value": "@formatDateTime(activity('lk_get_pipeline_parameters').output.firstRow.run_start_datetime,'yyyy-MM-dd HH:mm:ss')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": {
+								"value": "Sitepro",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseDB_DEV",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"parameters": {
+			"p_pl_dbname": {
+				"type": "String"
+			},
+			"p_pl_projectid": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"v_run_start": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/NCSA/SiteproBudget"
+		},
+		"annotations": [],
+		"lastPublishTime": "2021-12-15T07:13:48Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

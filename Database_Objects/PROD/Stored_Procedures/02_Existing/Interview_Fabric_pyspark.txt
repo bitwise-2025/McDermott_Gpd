@@ -1,0 +1,1607 @@
+If you’re hiring someone with ~6 years of experience specifically to **re-engineer pipelines from Azure Data Factory (ADF) or Synapse into Microsoft Fabric**, you want to test three things:
+
+1. **Conceptual understanding of Fabric vs legacy stack**
+2. **Hands-on migration strategy**
+3. **Real-world problem solving (performance, cost, governance)**
+
+Below is a structured set of **interview questions with strong sample answers**.
+
+---
+
+# 🔹 1. Microsoft Fabric Fundamentals
+
+### Q1. What is Microsoft Fabric and how is it different from Synapse or ADF?
+
+**Answer:**
+Microsoft Fabric is an end-to-end analytics platform that unifies data engineering, data integration, data science, real-time analytics, and BI into a single SaaS environment. Unlike Synapse or ADF:
+
+* It is **fully SaaS (no infrastructure management)**
+* Uses **OneLake as a unified data lake**
+* Integrates tools like Data Factory, Spark, Power BI, and Data Warehouse in one platform
+* Provides **DirectLake mode** for real-time analytics
+
+---
+
+### Q2. What is OneLake and why is it important?
+
+**Answer:**
+OneLake is Fabric’s unified data lake storage:
+
+* Acts as a **single source of truth**
+* Supports **shortcutting** (linking external storage like ADLS)
+* Eliminates data duplication
+* Uses open formats like **Delta Lake**
+
+---
+
+# 🔹 2. Migration from ADF / Synapse
+
+### Q3. How would you migrate an ADF pipeline to Microsoft Fabric?
+
+**Answer:**
+
+* Identify pipeline components (Copy, Data Flow, triggers)
+* Map them to Fabric equivalents:
+
+  * Copy Activity → Data Pipeline / Dataflow Gen2
+  * Mapping Data Flow → Spark notebooks or Dataflows
+* Move data into **OneLake**
+* Recreate orchestration using **Fabric Data Pipelines**
+* Validate triggers and monitoring
+* Optimize using Fabric-native features
+
+---
+
+### Q4. How do Fabric Data Pipelines differ from ADF pipelines?
+
+**Answer:**
+
+* Fabric pipelines are **simplified and integrated**
+* Native connection to OneLake
+* Better integration with notebooks and Power BI
+* No need for linked services in the traditional sense
+* More streamlined UI but fewer advanced controls compared to ADF (as of now)
+
+---
+
+### Q5. How would you migrate Synapse Spark workloads?
+
+**Answer:**
+
+* Export notebooks from Synapse
+* Import into Fabric Spark environment
+* Replace storage paths with OneLake paths
+* Optimize using Fabric runtime
+* Validate dependencies and libraries
+
+---
+
+# 🔹 3. Data Transformation & Engineering
+
+### Q6. When would you use Dataflow Gen2 vs Spark notebooks in Fabric?
+
+**Answer:**
+
+* **Dataflow Gen2**:
+
+  * Low-code transformations
+  * Business-friendly users
+* **Spark Notebooks**:
+
+  * Complex transformations
+  * Large-scale processing
+  * Custom logic
+
+---
+
+### Q7. What file formats are preferred in Fabric and why?
+
+**Answer:**
+
+* **Delta Lake format**
+
+  * Supports ACID transactions
+  * Enables time travel
+  * Optimized for performance
+  * Native integration with Fabric
+
+---
+
+# 🔹 4. Performance Optimization
+
+### Q8. How do you optimize performance in Fabric?
+
+**Answer:**
+
+* Use **Delta tables**
+* Partition large datasets
+* Use **DirectLake mode** for Power BI
+* Optimize Spark jobs (caching, broadcast joins)
+* Avoid unnecessary data movement
+
+---
+
+### Q9. What is DirectLake mode?
+
+**Answer:**
+DirectLake allows Power BI to query data **directly from OneLake without import**, giving:
+
+* Near real-time analytics
+* Better performance than DirectQuery
+* No data duplication
+
+---
+
+# 🔹 5. Real-World Scenario Questions
+
+### Q10. You have a complex ADF pipeline with multiple dependencies. How would you redesign it in Fabric?
+
+**Answer:**
+
+* Break pipeline into modular components
+* Use Fabric pipelines for orchestration
+* Move transformations to Dataflows or Spark
+* Implement dependency handling using pipeline activities
+* Use monitoring tools in Fabric
+
+---
+
+### Q11. How would you handle incremental data loads in Fabric?
+
+**Answer:**
+
+* Use watermark columns
+* Implement incremental logic in pipelines or Spark
+* Use Delta Lake MERGE operations
+* Maintain metadata tables
+
+---
+
+# 🔹 6. Governance & Security
+
+### Q12. How does security work in Microsoft Fabric?
+
+**Answer:**
+
+* Integrated with Azure AD
+* Role-based access control (RBAC)
+* Workspace-level security
+* Data-level security via Power BI (RLS)
+
+---
+
+### Q13. How would you manage data lineage in Fabric?
+
+**Answer:**
+
+* Use built-in lineage view in Fabric
+* Track datasets, pipelines, and reports
+* Ensure proper naming conventions
+
+---
+
+# 🔹 7. Advanced / Experience-Based
+
+### Q14. What challenges might you face when migrating from Synapse to Fabric?
+
+**Answer:**
+
+* Feature gaps (Fabric still evolving)
+* Code compatibility issues
+* Performance tuning differences
+* Learning curve for new architecture
+
+---
+
+### Q15. How would you estimate effort for migration?
+
+**Answer:**
+
+* Assess number of pipelines, notebooks, datasets
+* Identify complexity (transformations, dependencies)
+* Categorize into simple, medium, complex
+* Plan phased migration
+
+---
+
+# 🔹 8. Practical Coding / Hands-On
+
+### Q16. Write a sample logic for incremental load using Delta Lake.
+
+**Answer (conceptual):**
+
+* Use MERGE INTO:
+
+```sql
+MERGE INTO target t
+USING source s
+ON t.id = s.id
+WHEN MATCHED THEN UPDATE SET *
+WHEN NOT MATCHED THEN INSERT *
+```
+
+---
+
+# 🔹 What a Strong Candidate Should Demonstrate
+
+* Clear understanding of **Fabric architecture**
+* Ability to **map old → new system**
+* Hands-on with **Delta Lake & Spark**
+* Awareness of **limitations + workarounds**
+* Practical migration experience (not just theory)
+
+---
+
+If you want, I can also:
+
+* Create a **full interview evaluation scorecard**
+* Give **scenario-based case studies**
+* Or provide a **mock interview script** 👍
+Good—this is exactly where you separate someone who *knows Fabric* from someone who has actually *built and migrated solutions*. Below are **more hands-on / coding-oriented questions with strong sample answers**, focused on **ADF/Synapse → Microsoft Fabric re-engineering scenarios**.
+
+---
+
+# 🔹 Practical Coding / Hands-On Questions (Advanced Set)
+
+---
+
+## Q1. How would you implement SCD Type 2 in Fabric using Delta Lake?
+
+**Answer:**
+
+Use Delta Lake `MERGE` with effective dates and flags.
+
+```sql
+MERGE INTO customer_target t
+USING customer_source s
+ON t.customer_id = s.customer_id AND t.is_current = true
+
+WHEN MATCHED AND (
+    t.name <> s.name OR t.city <> s.city
+)
+THEN UPDATE SET 
+    t.is_current = false,
+    t.end_date = current_timestamp()
+
+WHEN NOT MATCHED 
+THEN INSERT (
+    customer_id, name, city, start_date, end_date, is_current
+)
+VALUES (
+    s.customer_id, s.name, s.city, current_timestamp(), NULL, true
+)
+```
+
+👉 Key points:
+
+* Maintain `is_current`, `start_date`, `end_date`
+* Insert new version + expire old one
+
+---
+
+## Q2. Write PySpark code in Fabric to read from OneLake and write to a Delta table.
+
+**Answer:**
+
+```python
+df = spark.read.format("parquet").load("abfss://onelake/path/source/")
+
+df_transformed = df.filter(df["status"] == "active")
+
+df_transformed.write.format("delta") \
+    .mode("overwrite") \
+    .save("abfss://onelake/path/target/")
+```
+
+👉 Candidate should mention:
+
+* OneLake uses **abfss path**
+* Prefer **Delta format**
+
+---
+
+## Q3. How do you implement incremental load using watermark logic in PySpark?
+
+**Answer:**
+
+```python
+last_watermark = spark.sql("SELECT max(updated_at) FROM target_table").collect()[0][0]
+
+df = spark.read.format("parquet").load("source_path") \
+    .filter(f"updated_at > '{last_watermark}'")
+
+df.write.format("delta").mode("append").save("target_path")
+```
+
+👉 Key:
+
+* Read only new data
+* Store watermark in metadata table
+
+---
+
+## Q4. Convert an ADF Copy Activity logic into Fabric pipeline + notebook approach.
+
+**Answer (Conceptual + Code):**
+
+* Use **Fabric Data Pipeline** to orchestrate
+* Use Notebook for transformation
+
+```python
+df = spark.read.csv("source_path", header=True)
+
+df_clean = df.dropDuplicates()
+
+df_clean.write.format("delta").save("target_path")
+```
+
+👉 Candidate should explain:
+
+* Pipeline triggers notebook
+* Notebook handles transformation
+
+---
+
+## Q5. How would you optimize a slow Spark job in Fabric?
+
+**Answer (with example):**
+
+```python
+from pyspark.sql.functions import broadcast
+
+df_joined = df_large.join(broadcast(df_small), "id")
+```
+
+👉 Optimization techniques:
+
+* Broadcast joins
+* Partitioning
+* Caching:
+
+```python
+df.cache()
+```
+
+---
+
+## Q6. Write SQL to create a Delta table in Fabric Data Warehouse.
+
+**Answer:**
+
+```sql
+CREATE TABLE sales (
+    id INT,
+    amount DECIMAL(10,2),
+    sale_date DATE
+)
+USING DELTA;
+```
+
+👉 Expect:
+
+* Understanding of **Delta-backed tables**
+
+---
+
+## Q7. How would you handle duplicate records in a streaming or batch pipeline?
+
+**Answer:**
+
+```python
+df_dedup = df.dropDuplicates(["id"])
+```
+
+Or using window:
+
+```python
+from pyspark.sql.window import Window
+from pyspark.sql.functions import row_number
+
+window = Window.partitionBy("id").orderBy(df["timestamp"].desc())
+
+df_clean = df.withColumn("rn", row_number().over(window)) \
+             .filter("rn = 1") \
+             .drop("rn")
+```
+
+---
+
+## Q8. Write a PySpark transformation to flatten nested JSON.
+
+**Answer:**
+
+```python
+df = spark.read.json("path")
+
+df_flat = df.select("id", "name", "address.city", "address.zip")
+```
+
+👉 Candidate should understand:
+
+* Handling semi-structured data
+
+---
+
+## Q9. How do you implement error handling in Fabric pipelines?
+
+**Answer:**
+
+* Use **Try-Catch pattern in pipelines**
+* In notebooks:
+
+```python
+try:
+    df = spark.read.parquet("path")
+except Exception as e:
+    print("Error:", str(e))
+```
+
+👉 Bonus:
+
+* Log errors to a table/log system
+
+---
+
+## Q10. Write logic to perform data validation before loading.
+
+**Answer:**
+
+```python
+invalid_df = df.filter(df["id"].isNull())
+
+valid_df = df.filter(df["id"].isNotNull())
+
+valid_df.write.format("delta").save("target_path")
+invalid_df.write.format("delta").save("error_path")
+```
+
+---
+
+## Q11. How would you implement partitioning in Delta tables?
+
+**Answer:**
+
+```python
+df.write.format("delta") \
+    .partitionBy("year", "month") \
+    .save("target_path")
+```
+
+👉 Improves:
+
+* Query performance
+* File pruning
+
+---
+
+## Q12. How do you update records in a Delta table?
+
+**Answer:**
+
+```sql
+UPDATE sales
+SET amount = amount * 1.1
+WHERE sale_date < '2023-01-01';
+```
+
+---
+
+## Q13. Write a query to time travel in Delta Lake.
+
+**Answer:**
+
+```sql
+SELECT * FROM sales VERSION AS OF 5;
+```
+
+OR
+
+```sql
+SELECT * FROM sales TIMESTAMP AS OF '2024-01-01';
+```
+
+---
+
+## Q14. How would you orchestrate multiple notebooks in Fabric?
+
+**Answer:**
+
+* Use **Fabric Data Pipelines**
+* Or inside notebook:
+
+```python
+dbutils.notebook.run("notebook_path", 60)
+```
+
+👉 Candidate should note:
+
+* Pipeline is preferred for orchestration
+
+---
+
+## Q15. How do you create a reusable transformation function in PySpark?
+
+**Answer:**
+
+```python
+def clean_data(df):
+    return df.dropDuplicates().filter(df["status"] == "active")
+
+df_clean = clean_data(df)
+```
+
+---
+
+# 🔥 What to Look For in Answers
+
+A strong candidate will:
+
+* Write **clean, production-like code**
+* Mention **Delta Lake best practices**
+* Talk about **performance + scalability**
+* Connect answers to **migration context (ADF → Fabric)**
+
+---
+
+If you want, I can next give:
+
+* 🔹 **Real-life migration case study (end-to-end)**
+* 🔹 **Tricky scenario-based debugging questions**
+* 🔹 **Hands-on test assignment (take-home)**
+
+
+Below are **realistic, end-to-end migration scenarios** you can use in interviews. Each one mirrors what happens when moving from Azure Data Factory / Azure Synapse Analytics into Microsoft Fabric.
+
+I’ve included:
+
+* Business context
+* Existing (ADF/Synapse) setup
+* What the candidate should design in Fabric
+* Sample code / logic
+* What a strong answer should include
+
+---
+
+# 🔹 Scenario 1: ADF Pipeline → Fabric (Batch ETL Migration)
+
+## 🧩 Problem
+
+A retail company has an ADF pipeline:
+
+* Copies data from SQL DB → Data Lake
+* Uses Mapping Data Flows for transformation
+* Loads into Synapse DW
+
+Now they want everything in Fabric.
+
+---
+
+## 🎯 What candidate should propose
+
+### Target Architecture in Fabric:
+
+* Ingest → Fabric Data Pipeline
+* Transform → Dataflow Gen2 or Spark Notebook
+* Store → OneLake (Delta tables)
+* Serve → Fabric Warehouse / Power BI
+
+---
+
+## 💻 Example Implementation (PySpark)
+
+```python
+df = spark.read.format("jdbc") \
+    .option("url", "jdbc:sqlserver://server") \
+    .option("dbtable", "sales") \
+    .load()
+
+df_clean = df.filter(df["amount"] > 0)
+
+df_clean.write.format("delta") \
+    .mode("overwrite") \
+    .save("abfss://onelake/sales/")
+```
+
+---
+
+## ✅ What to evaluate
+
+* Do they replace **Copy Activity properly?**
+* Do they move logic out of Data Flow into Spark/Dataflow?
+* Do they use **Delta Lake instead of CSV/Parquet blindly?**
+
+---
+
+# 🔹 Scenario 2: Incremental Load (Very Common Migration Case)
+
+## 🧩 Problem
+
+ADF pipeline uses watermark column (`LastModifiedDate`) for incremental load.
+
+---
+
+## 🎯 Fabric Solution
+
+* Maintain watermark table
+* Use Spark or SQL MERGE
+* Store data in Delta
+
+---
+
+## 💻 Example
+
+```python
+last_watermark = spark.sql(
+    "SELECT max(LastModifiedDate) FROM target_table"
+).collect()[0][0]
+
+df = spark.read.format("jdbc") \
+    .option("dbtable", "source_table") \
+    .load() \
+    .filter(f"LastModifiedDate > '{last_watermark}'")
+
+df.write.format("delta").mode("append").save("target_path")
+```
+
+---
+
+## ✅ What to evaluate
+
+* Do they avoid full reload?
+* Do they understand **state management?**
+* Do they mention **MERGE instead of append-only?**
+
+---
+
+# 🔹 Scenario 3: Synapse Spark → Fabric Spark Migration
+
+## 🧩 Problem
+
+Existing Synapse notebook:
+
+* Reads from ADLS
+* Performs joins
+* Writes to dedicated SQL pool
+
+---
+
+## 🎯 Fabric Migration
+
+* Move data → OneLake
+* Import notebook
+* Replace paths
+* Optimize joins
+
+---
+
+## 💻 Example
+
+```python
+from pyspark.sql.functions import broadcast
+
+df1 = spark.read.format("delta").load("abfss://onelake/sales/")
+df2 = spark.read.format("delta").load("abfss://onelake/customers/")
+
+df_joined = df1.join(broadcast(df2), "customer_id")
+
+df_joined.write.format("delta").save("abfss://onelake/output/")
+```
+
+---
+
+## ✅ What to evaluate
+
+* Do they optimize joins?
+* Do they understand **OneLake path changes?**
+* Do they remove Synapse-specific dependencies?
+
+---
+
+# 🔹 Scenario 4: Complex Pipeline with Dependencies
+
+## 🧩 Problem
+
+ADF pipeline has:
+
+* 10+ activities
+* Dependencies (A → B → C)
+* Failure handling
+
+---
+
+## 🎯 Fabric Design
+
+* Use **Fabric Data Pipelines**
+* Break into modular pipelines
+* Add retry + failure path
+
+---
+
+## 💡 Expected Answer (Conceptual)
+
+* Pipeline 1: Ingestion
+* Pipeline 2: Transformation
+* Pipeline 3: Load
+* Use activity dependencies
+
+---
+
+## 💻 Notebook Trigger Example
+
+```python
+# Called via pipeline
+df = spark.read.parquet("source")
+df.write.format("delta").save("target")
+```
+
+---
+
+## ✅ What to evaluate
+
+* Do they simplify architecture?
+* Do they modularize instead of copying ADF complexity?
+
+---
+
+# 🔹 Scenario 5: SCD Type 2 Migration
+
+## 🧩 Problem
+
+ADF Data Flow handles Slowly Changing Dimension (Type 2).
+
+---
+
+## 🎯 Fabric Solution
+
+Use Delta MERGE
+
+---
+
+## 💻 Example
+
+```sql
+MERGE INTO dim_customer t
+USING staging s
+ON t.id = s.id AND t.is_current = true
+
+WHEN MATCHED AND t.name <> s.name THEN
+  UPDATE SET 
+    t.is_current = false,
+    t.end_date = current_timestamp()
+
+WHEN NOT MATCHED THEN
+  INSERT (id, name, start_date, is_current)
+  VALUES (s.id, s.name, current_timestamp(), true)
+```
+
+---
+
+## ✅ What to evaluate
+
+* Do they understand **historical tracking?**
+* Do they avoid overwriting data?
+
+---
+
+# 🔹 Scenario 6: Handling Bad Data / Data Quality
+
+## 🧩 Problem
+
+Source system sends:
+
+* Null IDs
+* Duplicate records
+
+---
+
+## 🎯 Fabric Approach
+
+* Split valid & invalid data
+* Store rejected records
+
+---
+
+## 💻 Example
+
+```python
+invalid_df = df.filter(df["id"].isNull())
+valid_df = df.filter(df["id"].isNotNull())
+
+valid_df.write.format("delta").save("clean/")
+invalid_df.write.format("delta").save("reject/")
+```
+
+---
+
+## ✅ What to evaluate
+
+* Do they design **error handling pipelines?**
+* Do they log bad data?
+
+---
+
+# 🔹 Scenario 7: Performance Issue After Migration
+
+## 🧩 Problem
+
+After moving to Fabric, pipeline is slow.
+
+---
+
+## 🎯 Expected Fixes
+
+* Partition data
+* Use broadcast joins
+* Cache data
+
+---
+
+## 💻 Example
+
+```python
+df = df.repartition("date")
+
+df.cache()
+```
+
+---
+
+## ✅ What to evaluate
+
+* Do they know **Spark optimization?**
+* Do they diagnose root cause vs guessing?
+
+---
+
+# 🔹 Scenario 8: Real-Time / Near Real-Time Analytics
+
+## 🧩 Problem
+
+Business wants near real-time dashboard (previously batch in ADF).
+
+---
+
+## 🎯 Fabric Solution
+
+* Store data in Delta
+* Use DirectLake in Power BI
+
+---
+
+## 💡 Expected Answer
+
+* No need for scheduled refresh
+* Direct read from OneLake
+
+---
+
+## ✅ What to evaluate
+
+* Do they understand **DirectLake advantage?**
+* Do they reduce data duplication?
+
+---
+
+# 🔥 How to Use These in Interview
+
+Ask like this:
+
+> “Walk me through how you would migrate this step-by-step.”
+
+Then probe:
+
+* What breaks?
+* What improves?
+* What would you NOT migrate as-is?
+
+---
+
+# 🚩 Red Flags in Candidates
+
+* Still thinking in **ADF mindset only**
+* No mention of **Delta Lake**
+* No performance considerations
+* Cannot explain **why Fabric is different**
+
+---
+
+If you want next level, I can give:
+
+* 🔥 A **full mock interview (with follow-up grilling)**
+* 📊 A **hands-on assignment (real dataset + evaluation rubric)**
+* 🎯 **Trick questions where candidates usually fail**
+Good call—this is exactly where many candidates struggle. People often default to Spark, but in real migrations a lot of complexity sits in **pipelines/orchestration** (which replaces much of Azure Data Factory behavior inside Microsoft Fabric).
+
+Below are **real pipeline-heavy scenarios** (with minimal PySpark), focusing on orchestration, control flow, retries, parameters, and dependency management.
+
+---
+
+# 🔹 Scenario 1: Multi-Source Ingestion Pipeline
+
+## 🧩 Problem
+
+You have an ADF pipeline:
+
+* Pulls data from 5 different sources (SQL, API, Blob)
+* Runs in parallel
+* Stores in Data Lake
+
+---
+
+## 🎯 Fabric Pipeline Design
+
+* Use **parallel activities**
+* Parameterize source configs
+* Use **ForEach activity**
+
+---
+
+## 💡 Expected Design
+
+* Input: metadata table with source details
+* Pipeline flow:
+
+  1. Lookup activity → get sources
+  2. ForEach → loop through sources
+  3. Copy/Dataflow per source
+
+---
+
+## ✅ What a strong answer includes
+
+* Parallel execution (`batch count`)
+* Metadata-driven pipelines (not hardcoding 5 pipelines)
+* Reusability
+
+---
+
+# 🔹 Scenario 2: Pipeline with Dependency Chain (A → B → C)
+
+## 🧩 Problem
+
+ADF pipeline:
+
+* Step A: Ingest
+* Step B: Transform
+* Step C: Load
+* If B fails → stop everything
+
+---
+
+## 🎯 Fabric Approach
+
+* Use **activity dependency conditions**
+* Define success/failure paths
+
+---
+
+## 💡 Expected Flow
+
+```
+Activity A → (on success) → Activity B → (on success) → Activity C
+                      ↘ (on failure) → Failure handler
+```
+
+---
+
+## ✅ What to evaluate
+
+* Proper use of **dependency conditions**
+* Not running everything blindly
+* Clear failure handling
+
+---
+
+# 🔹 Scenario 3: Retry & Fault Tolerance
+
+## 🧩 Problem
+
+API ingestion fails intermittently.
+
+---
+
+## 🎯 Fabric Solution
+
+* Configure **retry policy** in pipeline activity
+* Add wait + retry pattern
+
+---
+
+## 💡 Expected Answer
+
+* Retry count (e.g., 3)
+* Retry interval (e.g., 30 sec)
+* Optional: fallback logic
+
+---
+
+## Bonus (advanced thinking)
+
+* Logging failed attempts
+* Dead-letter queue or error table
+
+---
+
+# 🔹 Scenario 4: Dynamic File Processing (Folder-Based Trigger)
+
+## 🧩 Problem
+
+ADF pipeline:
+
+* Processes files as they arrive in a folder
+* Loops through all files
+
+---
+
+## 🎯 Fabric Pipeline
+
+* Use **Get Metadata activity**
+* Use **ForEach loop**
+
+---
+
+## 💡 Expected Flow
+
+1. Get Metadata (list files)
+2. ForEach (iterate files)
+3. Process each file
+
+---
+
+## ✅ What to evaluate
+
+* Dynamic handling (not hardcoded filenames)
+* Scalability
+
+---
+
+# 🔹 Scenario 5: Parameterized Pipeline (Reusable Design)
+
+## 🧩 Problem
+
+Same pipeline used for:
+
+* Dev / Test / Prod
+* Different tables
+
+---
+
+## 🎯 Fabric Design
+
+* Use **pipeline parameters**
+
+---
+
+## 💡 Example
+
+Parameters:
+
+* `source_table`
+* `target_path`
+
+Pipeline uses these dynamically.
+
+---
+
+## ✅ Strong candidate says
+
+* “I won’t create 10 pipelines—I’ll reuse one with parameters”
+
+---
+
+# 🔹 Scenario 6: Conditional Execution (If/Else Logic)
+
+## 🧩 Problem
+
+If file size = 0 → skip processing
+Else → process file
+
+---
+
+## 🎯 Fabric Solution
+
+* Use **If Condition activity**
+
+---
+
+## 💡 Expected Flow
+
+```
+Check file size → If Condition:
+   True → Process
+   False → Skip / Log
+```
+
+---
+
+## ✅ What to evaluate
+
+* Control flow understanding
+* Avoid unnecessary processing
+
+---
+
+# 🔹 Scenario 7: Logging & Monitoring Pipeline
+
+## 🧩 Problem
+
+Business wants:
+
+* Pipeline run status
+* Execution time
+* Errors tracked
+
+---
+
+## 🎯 Fabric Design
+
+* Add logging step after each activity
+* Store logs in table
+
+---
+
+## 💡 Expected Answer
+
+Pipeline writes:
+
+* pipeline_name
+* status
+* start_time
+* end_time
+
+---
+
+## ✅ What to evaluate
+
+* Observability mindset
+* Not relying only on UI monitoring
+
+---
+
+# 🔹 Scenario 8: Parent-Child Pipeline Design
+
+## 🧩 Problem
+
+ADF uses:
+
+* Master pipeline
+* Calls multiple child pipelines
+
+---
+
+## 🎯 Fabric Equivalent
+
+* Use **Execute Pipeline activity**
+
+---
+
+## 💡 Expected Flow
+
+```
+Master Pipeline
+   → Execute Pipeline (Ingestion)
+   → Execute Pipeline (Transformation)
+   → Execute Pipeline (Load)
+```
+
+---
+
+## ✅ What to evaluate
+
+* Modular design
+* Reusability
+
+---
+
+# 🔹 Scenario 9: Data Validation Before Load
+
+## 🧩 Problem
+
+Load only if:
+
+* Record count > 0
+* No null keys
+
+---
+
+## 🎯 Fabric Approach
+
+* Use validation activity or notebook
+* Add conditional check
+
+---
+
+## 💡 Expected Flow
+
+```
+Run validation → If pass → Load
+               → Else → Fail pipeline
+```
+
+---
+
+## ✅ What to evaluate
+
+* Quality gates
+* Not blindly loading data
+
+---
+
+# 🔹 Scenario 10: Migration Strategy Scenario (Critical)
+
+## 🧩 Problem
+
+You have 50 ADF pipelines:
+
+* Some simple (copy)
+* Some complex (data flows, dependencies)
+
+---
+
+## 🎯 Expected Answer
+
+Candidate should say:
+
+1. Categorize pipelines:
+
+   * Simple → Direct migration
+   * Complex → Redesign
+
+2. Replace:
+
+   * Copy → Fabric pipeline
+   * Data Flow → Dataflow Gen2 / Spark
+
+3. Optimize:
+
+   * Reduce pipeline count
+   * Use metadata-driven approach
+
+---
+
+## ✅ What to evaluate
+
+* Strategic thinking
+* Not “lift & shift everything”
+
+---
+
+# 🔥 What Separates a Strong Candidate
+
+They will:
+
+* Think in **orchestration patterns**, not just code
+* Use **parameters, loops, conditions** effectively
+* Avoid over-engineering
+* Suggest **simplification during migration**
+
+---
+
+# 🚩 Red Flags
+
+* Treating Fabric pipelines exactly like ADF
+* No idea about **ForEach / If Condition / Execute Pipeline**
+* No logging or retry strategy
+* Hardcoding everything
+
+---
+
+If you want, I can next:
+
+* 🔥 Combine **pipeline + PySpark + architecture into one full case study**
+* 🎯 Give a **real interview case with follow-up cross-questions**
+* 🧪 Create a **hands-on assignment (2–3 hour test)**
+
+Here’s a **realistic end-to-end interview case** you can use to deeply evaluate a candidate working on migration from Azure Data Factory / Azure Synapse Analytics into Microsoft Fabric.
+
+This is structured like an **actual interview flow** with:
+
+* Case prompt
+* Expected approach
+* Follow-up cross-questions (where most candidates fail)
+* What strong vs weak answers look like
+
+---
+
+# 🧩 🔥 REAL INTERVIEW CASE
+
+## 🏢 Business Scenario
+
+You are working for an e-commerce company.
+
+### Current System (ADF + Synapse)
+
+* ADF pipelines ingest:
+
+  * Orders (SQL DB)
+  * Customers (API)
+  * Products (Blob storage)
+* Mapping Data Flows perform transformations
+* Data is loaded into Synapse DW
+* Pipelines run every 2 hours
+
+---
+
+## 🚨 Problem
+
+The company wants to migrate to Fabric because:
+
+* Reduce cost
+* Simplify architecture
+* Enable near real-time reporting
+
+---
+
+## 🎯 TASK (Ask Candidate)
+
+> “Design the migration of this system into Microsoft Fabric. Walk me through architecture, pipelines, transformations, and serving layer.”
+
+---
+
+# ✅ EXPECTED HIGH-LEVEL ANSWER
+
+A strong candidate should structure like this:
+
+### 1. Ingestion Layer
+
+* Use Fabric Data Pipelines
+* Parallel ingestion for:
+
+  * SQL → OneLake
+  * API → OneLake
+  * Blob → OneLake
+
+---
+
+### 2. Storage Layer
+
+* Store all data in **OneLake**
+* Use **Delta format**
+
+---
+
+### 3. Transformation Layer
+
+* Replace Data Flows with:
+
+  * Dataflow Gen2 (simple)
+  * Spark notebooks (complex)
+
+---
+
+### 4. Serving Layer
+
+* Use:
+
+  * Fabric Warehouse OR
+  * Power BI with DirectLake
+
+---
+
+### 5. Orchestration
+
+* Master pipeline:
+
+  * Calls ingestion
+  * Then transformation
+  * Then load
+
+---
+
+# 🔥 FOLLOW-UP CROSS QUESTIONS (CRITICAL)
+
+These are where you test real experience 👇
+
+---
+
+## 🔹 Q1: “Would you do a lift-and-shift migration?”
+
+**Good Answer:**
+“No. I would redesign pipelines. Fabric allows simplification—especially removing unnecessary staging layers.”
+
+**Red Flag:**
+“Yes, we’ll just replicate ADF pipelines.”
+
+---
+
+## 🔹 Q2: “How would you handle incremental loads for Orders?”
+
+**Expected Answer:**
+
+* Use watermark (`LastModifiedDate`)
+* Use Delta MERGE
+
+---
+
+### 💻 Example they might give:
+
+```sql id="i5afc4"
+MERGE INTO orders t
+USING staging s
+ON t.id = s.id
+WHEN MATCHED THEN UPDATE SET *
+WHEN NOT MATCHED THEN INSERT *
+```
+
+---
+
+## 🔹 Q3: “API ingestion sometimes fails. What will you do?”
+
+**Strong Answer:**
+
+* Retry policy in pipeline
+* Logging failures
+* Store failed payloads
+
+**Follow-up trap:**
+👉 “What if API fails after partial load?”
+
+Expected:
+
+* Idempotent design
+* Deduplication logic
+
+---
+
+## 🔹 Q4: “How do you reduce pipeline runtime?”
+
+**Expected:**
+
+* Parallel execution
+* Avoid unnecessary steps
+* Partition data
+* Optimize transformations
+
+---
+
+## 🔹 Q5: “How would you design this for 100+ tables?”
+
+**Strong Answer:**
+
+* Metadata-driven pipeline
+* Parameterized pipelines
+* Avoid hardcoding
+
+---
+
+## 🔹 Q6: “What changes when moving from Synapse to Fabric?”
+
+**Expected:**
+
+* No dedicated SQL pool
+* More reliance on Delta Lake
+* Unified platform (less integration overhead)
+
+---
+
+## 🔹 Q7: “How will Power BI consume the data?”
+
+**Best Answer:**
+
+* DirectLake mode
+* No import needed
+* Faster performance
+
+---
+
+## 🔹 Q8: “What if data volume grows 10x?”
+
+**Expected:**
+
+* Partitioning
+* Optimize Spark jobs
+* Scale Fabric capacity
+
+---
+
+## 🔹 Q9: “How do you handle schema changes?”
+
+**Strong Answer:**
+
+* Enable schema evolution in Delta
+* Add validation layer
+* Version control
+
+---
+
+## 🔹 Q10: “How will you monitor pipelines?”
+
+**Expected:**
+
+* Fabric monitoring UI
+* Custom logging tables
+* Alerts
+
+---
+
+# 🎯 DEEP-DIVE ROUND (Where Experts Shine)
+
+---
+
+## 🔹 Q11: “Design failure recovery”
+
+**Expected Answer:**
+
+* Checkpointing
+* Restart from failure point
+* Idempotent writes
+
+---
+
+## 🔹 Q12: “How do you avoid duplicate data?”
+
+**Expected:**
+
+* Primary key checks
+* MERGE instead of append
+* Deduplication logic
+
+---
+
+## 🔹 Q13: “What would you NOT migrate?”
+
+**Strong Answer:**
+
+* Unnecessary staging layers
+* Redundant pipelines
+* Legacy transformations better done in Spark
+
+---
+
+# 🧪 BONUS HANDS-ON FOLLOW-UP
+
+Ask candidate:
+
+> “Write logic to process only new files from a folder.”
+
+**Expected approach:**
+
+* Track processed files
+* Use metadata table
+* Filter new files
+
+---
+
+# 🏁 HOW TO SCORE THE CANDIDATE
+
+### ⭐ Strong Candidate
+
+* Thinks in **architecture + optimization**
+* Suggests **simplification**
+* Mentions **Delta, DirectLake, metadata-driven pipelines**
+* Handles edge cases
+
+---
+
+### ⚠️ Average Candidate
+
+* Knows tools but:
+
+  * No redesign thinking
+  * Weak on failure handling
+
+---
+
+### 🚩 Weak Candidate
+
+* Only talks about ADF
+* No Fabric-native concepts
+* No performance or scaling ideas
+
+---
+
+# 🔥 PRO TIP FOR INTERVIEWERS
+
+After they answer, ask:
+
+> “What would break in your design?”
+
+This forces **real-world thinking** and exposes experience gaps immediately.
+
+---
+
+If you want, I can next give:
+
+* 🎯 A **very tough “trap-heavy” interview case (for senior roles)**
+* 🧪 A **live whiteboard exercise**
+* 📋 A **complete evaluation rubric (score out of 10)**

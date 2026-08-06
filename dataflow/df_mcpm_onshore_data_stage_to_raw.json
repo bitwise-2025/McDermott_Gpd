@@ -1,0 +1,32 @@
+{
+	"name": "df_mcpm_onshore_data_stage_to_raw",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_mcpm_onshore_stage",
+						"type": "DatasetReference"
+					},
+					"name": "sourceMCPMOnshore"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_mcpm_onshore_raw",
+						"type": "DatasetReference"
+					},
+					"name": "snkMCPMOnshoreRaw"
+				}
+			],
+			"transformations": [
+				{
+					"name": "setFileName"
+				}
+			],
+			"script": "source(output(\n\t\tDomain as string,\n\t\tDomainName as string,\n\t\tCutOff as string,\n\t\tCurrency as string,\n\t\tCoA as string,\n\t\tTitle as string,\n\t\tProgressType as string,\n\t\tContractNo as string,\n\t\tSummaryCostType as string,\n\t\tCostType as string,\n\t\tUnit as string,\n\t\tWorkArea as string,\n\t\tPrime as string,\n\t\tSubPrime as string,\n\t\tCostCode as string,\n\t\tMeasurable as boolean,\n\t\tPhase as string,\n\t\tPSRLevel1 as string,\n\t\tPSRLevel2 as string,\n\t\tPSRL1Description as string,\n\t\tPSRL2Description as string,\n\t\tUoM as string,\n\t\tOBQty as string,\n\t\tOBHrs as string,\n\t\tOBAmt as string,\n\t\tOBRate as string,\n\t\tCBQty as string,\n\t\tCBHrs as string,\n\t\tCBAmt as string,\n\t\tPBQty as string,\n\t\tPBHrs as string,\n\t\tPBAmt as string,\n\t\tActualHrs as string,\n\t\tActualAmt as string,\n\t\tActualRate as string,\n\t\tCommittedHrs as string,\n\t\tCommittedAmt as string,\n\t\tEarnedQty as string,\n\t\tEarnedHrs as string,\n\t\tEarnedAmt as string,\n\t\tTakeOffQty as string,\n\t\tTakeOffHrs as string,\n\t\tPctComplete as string,\n\t\tEACHrs as string,\n\t\tEACAmt as string,\n\t\tETCHrs as string,\n\t\tETCAmt as string,\n\t\tETCRate as string,\n\t\tApprovedEACQty as string,\n\t\tApprovedEACHrs as string,\n\t\tApprovedEACAmt as string,\n\t\tApprovedETCHrs as string,\n\t\tApprovedETCAmt as string,\n\t\tForecastHrs as string,\n\t\tForecastAmt as string,\n\t\tForecastRate as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\twildcardPaths:['Project_Data/NCSA/MCPM/MCPM_Onshore/MCPM_Onshore.csv']) ~> sourceMCPMOnshore\nsourceMCPMOnshore derive(FileName = concat( 'Project_Data/NCSA/MCPM/MCPM_Onshore/',        substring(toString(currentTimestamp()),1,4),        '/',substring(toString(currentTimestamp()),6,2),        '/',substring(toString(currentTimestamp()),9,2),        '/',        'MCPM_Onshore_',        replace(replace(toString(currentTimestamp()),'.',''),':',''),        '.csv')) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\trowUrlColumn:'FileName',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tmapColumn(\n\t\tDomain,\n\t\tDomainName,\n\t\tCutOff,\n\t\tCurrency,\n\t\tCoA,\n\t\tTitle,\n\t\tProgressType,\n\t\tContractNo,\n\t\tSummaryCostType,\n\t\tCostType,\n\t\tUnit,\n\t\tWorkArea,\n\t\tPrime,\n\t\tSubPrime,\n\t\tCostCode,\n\t\tMeasurable,\n\t\tPhase,\n\t\tPSRLevel1,\n\t\tPSRLevel2,\n\t\tPSRL1Description,\n\t\tPSRL2Description,\n\t\tUoM,\n\t\tOBQty,\n\t\tOBHrs,\n\t\tOBAmt,\n\t\tOBRate,\n\t\tCBQty,\n\t\tCBHrs,\n\t\tCBAmt,\n\t\tPBQty,\n\t\tPBHrs,\n\t\tPBAmt,\n\t\tActualHrs,\n\t\tActualAmt,\n\t\tActualRate,\n\t\tCommittedHrs,\n\t\tCommittedAmt,\n\t\tEarnedQty,\n\t\tEarnedHrs,\n\t\tEarnedAmt,\n\t\tTakeOffQty,\n\t\tTakeOffHrs,\n\t\tPctComplete,\n\t\tEACHrs,\n\t\tEACAmt,\n\t\tETCHrs,\n\t\tETCAmt,\n\t\tETCRate,\n\t\tApprovedEACQty,\n\t\tApprovedEACHrs,\n\t\tApprovedEACAmt,\n\t\tApprovedETCHrs,\n\t\tApprovedETCAmt,\n\t\tForecastHrs,\n\t\tForecastAmt,\n\t\tForecastRate,\n\t\tFileName\n\t)) ~> snkMCPMOnshoreRaw"
+		}
+	}
+}

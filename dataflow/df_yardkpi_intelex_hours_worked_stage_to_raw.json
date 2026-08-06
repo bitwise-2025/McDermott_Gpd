@@ -1,0 +1,97 @@
+{
+	"name": "df_yardkpi_intelex_hours_worked_stage_to_raw",
+	"properties": {
+		"folder": {
+			"name": "Projects/YARD KPI/Intelex"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_yardkpi_intelex_generic",
+						"type": "DatasetReference"
+					},
+					"name": "IntelexHoursWrkdSource"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_yardkpi_intelex_generic",
+						"type": "DatasetReference"
+					},
+					"name": "IntelexHoursWrkdSink"
+				}
+			],
+			"transformations": [
+				{
+					"name": "setFileName"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          RowNum as string,",
+				"          Id as string,",
+				"          Display_x0020_Field as string,",
+				"          Location_x0020_Code as string,",
+				"          Location as string,",
+				"          Profile_x0020_No as string,",
+				"          Vessel as string,",
+				"          Other_x0020_Vessel as string,",
+				"          Profile as string,",
+				"          ProfileArea as string,",
+				"          Profile_x0020_Type as string,",
+				"          Business_x0020_Line as string,",
+				"          Project_x0020_Number as string,",
+				"          Project_x0020_Name as string,",
+				"          Month_x0020_Date as string,",
+				"          Month as string,",
+				"          Year as string,",
+				"          Employee_x0020_and_x0020_Supervised_x0020_Contractor_x0020_Hours as string,",
+				"          Subcontractor_x0020_Hours as string,",
+				"          Joint_x0020_Venture_x0020_Partner_x0020_Hours as string,",
+				"          Subcontractor_x0020_Vessel_x0020_Hours as string,",
+				"          Vessel_x0020_Hours_x0020_Helper as string,",
+				"          {Sub-Profile_x0020_Type} as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: true,",
+				"     rowUrlColumn: 'File_Path') ~> IntelexHoursWrkdSource",
+				"IntelexHoursWrkdSource derive(RowNum = trim(replace(RowNum,'\\n',' ')),",
+				"          Id = trim(replace(Id,'\\n',' ')),",
+				"          Display_x0020_Field = trim(replace(Display_x0020_Field,'\\n',' ')),",
+				"          Location_x0020_Code = trim(replace(Location_x0020_Code,'\\n',' ')),",
+				"          Location = trim(replace(Location,'\\n',' ')),",
+				"          Profile_x0020_No = trim(replace(Profile_x0020_No,'\\n',' ')),",
+				"          Vessel = trim(replace(Vessel,'\\n',' ')),",
+				"          Other_x0020_Vessel = trim(replace(Other_x0020_Vessel,'\\n',' ')),",
+				"          Profile = trim(replace(Profile,'\\n',' ')),",
+				"          ProfileArea = trim(replace(ProfileArea,'\\n',' ')),",
+				"          Profile_x0020_Type = trim(replace(Profile_x0020_Type,'\\n',' ')),",
+				"          Business_x0020_Line = trim(replace(Business_x0020_Line,'\\n',' ')),",
+				"          Project_x0020_Number = trim(replace(Project_x0020_Number,'\\n',' ')),",
+				"          Project_x0020_Name = trim(replace(Project_x0020_Name,'\\n',' ')),",
+				"          Month_x0020_Date = trim(replace(Month_x0020_Date,'\\n',' ')),",
+				"          Month = trim(replace(Month,'\\n',' ')),",
+				"          Year = trim(replace(Year,'\\n',' ')),",
+				"          Employee_x0020_and_x0020_Supervised_x0020_Contractor_x0020_Hours = trim(replace(Employee_x0020_and_x0020_Supervised_x0020_Contractor_x0020_Hours,'\\n',' ')),",
+				"          Subcontractor_x0020_Hours = trim(replace(Subcontractor_x0020_Hours,'\\n',' ')),",
+				"          Joint_x0020_Venture_x0020_Partner_x0020_Hours = trim(replace(Joint_x0020_Venture_x0020_Partner_x0020_Hours,'\\n',' ')),",
+				"          Subcontractor_x0020_Vessel_x0020_Hours = trim(replace(Subcontractor_x0020_Vessel_x0020_Hours,'\\n',' ')),",
+				"          Vessel_x0020_Hours_x0020_Helper = trim(replace(Vessel_x0020_Hours_x0020_Helper,'\\n',' ')),",
+				"          {Sub-Profile_x0020_Type} = trim(replace({Sub-Profile_x0020_Type},'\\n',' ')),",
+				"          File_Path = concat(concat(trim(substringIndex(File_Path,'/',5),'/'),'/'),substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',split(substringIndex(File_Path,'/',-1),'.')[1],'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv')) ~> setFileName",
+				"setFileName sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     rowUrlColumn:'File_Path',",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> IntelexHoursWrkdSink"
+			]
+		}
+	}
+}

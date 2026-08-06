@@ -1,0 +1,125 @@
+{
+	"name": "df_yardkpi_Material_OSND_stage_to_raw",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_Src_snk_adgls2_src_ykpi_material_osnd",
+						"type": "DatasetReference"
+					},
+					"name": "SrcOSNDStage"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adgls2_yardkpi_material_register_generic",
+						"type": "DatasetReference"
+					},
+					"name": "SnkOSNDRaw"
+				}
+			],
+			"transformations": [
+				{
+					"name": "CleaningOSND"
+				}
+			],
+			"scriptLines": [
+				"parameters{",
+				"     FilePath as string,",
+				"     FileName as string",
+				"}",
+				"source(output(",
+				"          ContentTypeID as string,",
+				"          PROJECTNO as string,",
+				"          ComplianceAssetId as string,",
+				"          PROJECTDESCRIPTION as string,",
+				"          OSDNUMBER as string,",
+				"          DATERAISED as string,",
+				"          PONUMBER as string,",
+				"          Vendor as string,",
+				"          POITEMNO as string,",
+				"          MRRGRNNO as string,",
+				"          MATERIALCATEGORY as string,",
+				"          OSDCATEGORY as string,",
+				"          OSDREMARKS as string,",
+				"          DISCIPLINE as string,",
+				"          ASSIGNEDTO as string,",
+				"          ASSIGNEDDATE as string,",
+				"          OSDACTION as string,",
+				"          STATUS as string,",
+				"          OSDMEETINGCOMMENTSPMCComments as string,",
+				"          RESOLUTION as string,",
+				"          OSDCLOSUREDATE as string,",
+				"          NOOfDAY as string,",
+				"          YEAR as string,",
+				"          UNIQID as string,",
+				"          Created as string,",
+				"          ColorTag as string,",
+				"          FABLOCATIONYARD as string,",
+				"          Modified as string,",
+				"          Id as string,",
+				"          ContentType as string,",
+				"          CreatedById as string,",
+				"          ModifiedById as string,",
+				"          Owshiddenversion as string,",
+				"          Version as string,",
+				"          Path as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: true,",
+				"     purgeFiles: true,",
+				"     dateFormats: ['dd/MM/yyyy'],",
+				"     timestampFormats: ['dd/MM/yyyy'],",
+				"     preferredIntegralType: 'integer',",
+				"     preferredFractionalType: 'float',",
+				"     wildcardPaths:[(concat($FilePath,'/',$FileName,'_*.csv'))]) ~> SrcOSNDStage",
+				"SrcOSNDStage derive(FileName = concat($FilePath,'/',substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',$FileName,'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv'),",
+				"          Id = trim(replace(replace(replace(replace(replace(replace(replace(Id, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"~\",\" \"),\"  \",\" \")),",
+				"          ContentTypeID = trim(replace(replace(replace(replace(replace(replace(replace(ContentTypeID, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"~\",\" \"),\"  \",\" \")),",
+				"          ContentType = trim(replace(replace(replace(replace(replace(replace(replace(ContentType, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"~\",\" \"),\"  \",\" \")),",
+				"          Modified = trim(replace(replace(replace(replace(replace(replace(replace(Modified, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"~\",\" \"),\"  \",\" \")),",
+				"          Created = trim(replace(replace(replace(replace(replace(replace(replace(Created, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"~\",\" \"),\"  \",\" \")),",
+				"          CreatedById = trim(replace(replace(replace(replace(replace(replace(replace(CreatedById, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"~\",\" \"),\"  \",\" \")),",
+				"          ModifiedById = trim(replace(replace(replace(replace(replace(replace(replace(ModifiedById, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"~\",\" \"),\"  \",\" \")),",
+				"          Owshiddenversion = trim(replace(replace(replace(replace(replace(replace(replace(Owshiddenversion, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"~\",\" \"),\"  \",\" \")),",
+				"          Version = trim(replace(replace(replace(replace(replace(replace(replace(Version, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"~\",\" \"),\"  \",\" \")),",
+				"          Path = trim(replace(replace(replace(replace(replace(replace(replace(Path, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"~\",\" \"),\"  \",\" \")),",
+				"          ComplianceAssetId = trim(replace(replace(replace(replace(replace(replace(replace(ComplianceAssetId, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"~\",\" \"),\"  \",\" \")),",
+				"          PROJECTNO = trim(replace(replace(replace(replace(replace(replace(replace(PROJECTNO, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"~\",\" \"),\"  \",\" \")),",
+				"          PROJECTDESCRIPTION = trim(replace(replace(replace(replace(replace(replace(replace(PROJECTDESCRIPTION, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"~\",\" \"),\"  \",\" \")),",
+				"          OSDNUMBER = trim(replace(replace(replace(replace(replace(replace(replace(OSDNUMBER, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"~\",\" \"),\"  \",\" \")),",
+				"          DATERAISED = trim(replace(replace(replace(replace(replace(replace(replace(DATERAISED, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"~\",\" \"),\"  \",\" \")),",
+				"          PONUMBER = trim(replace(replace(replace(replace(replace(replace(replace(replace(PONUMBER, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"~\",\" \"),\"  \",\" \"),\"â€\",\"-\")),",
+				"          Vendor = trim(replace(replace(replace(replace(replace(replace(replace(Vendor, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"~\",\" \"),\"  \",\" \")),",
+				"          POITEMNO = trim(replace(replace(replace(replace(replace(replace(replace(replace(POITEMNO, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"~\",\" \"),\"  \",\" \"),\"â€\",\"-\")),",
+				"          MRRGRNNO = trim(replace(replace(replace(replace(replace(replace(replace(MRRGRNNO, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"~\",\" \"),\"  \",\" \")),",
+				"          MATERIALCATEGORY = trim(replace(replace(replace(replace(replace(replace(replace(MATERIALCATEGORY, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"~\",\" \"),\"  \",\" \")),",
+				"          OSDCATEGORY = trim(replace(replace(replace(replace(replace(replace(replace(OSDCATEGORY, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"~\",\" \"),\"  \",\" \")),",
+				"          OSDREMARKS = trim(replace(replace(replace(replace(replace(replace(replace(OSDREMARKS, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"~\",\" \"),\"  \",\" \")),",
+				"          DISCIPLINE = trim(replace(replace(replace(replace(replace(replace(replace(DISCIPLINE, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"~\",\" \"),\"  \",\" \")),",
+				"          ASSIGNEDTO = trim(replace(replace(replace(replace(replace(replace(replace(ASSIGNEDTO, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"~\",\" \"),\"  \",\" \")),",
+				"          ASSIGNEDDATE = trim(replace(replace(replace(replace(replace(replace(ASSIGNEDDATE, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+				"          OSDACTION = trim(replace(replace(replace(replace(replace(replace(replace(OSDACTION, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"~\",\" \"),\"  \",\" \")),",
+				"          STATUS = trim(replace(replace(replace(replace(replace(replace(replace(STATUS, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"~\",\" \"),\"  \",\" \")),",
+				"          OSDMEETINGCOMMENTSPMCComments = trim(replace(replace(replace(replace(replace(replace(replace(OSDMEETINGCOMMENTSPMCComments, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"~\",\" \"),\"  \",\" \")),",
+				"          RESOLUTION = trim(replace(replace(replace(replace(replace(replace(replace(RESOLUTION, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"~\",\" \"),\"  \",\" \")),",
+				"          OSDCLOSUREDATE = trim(replace(replace(replace(replace(replace(replace(replace(OSDCLOSUREDATE, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"~\",\" \"),\"  \",\" \")),",
+				"          NOOfDAY = trim(replace(replace(replace(replace(replace(replace(replace(NOOfDAY, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"~\",\" \"),\"  \",\" \")),",
+				"          UNIQID = trim(replace(replace(replace(replace(replace(replace(replace(UNIQID, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"~\",\" \"),\"  \",\" \")),",
+				"          YEAR = trim(replace(replace(replace(replace(replace(replace(replace(YEAR, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"~\",\" \"),\"  \",\" \"))) ~> CleaningOSND",
+				"CleaningOSND sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     rowUrlColumn:'FileName',",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> SnkOSNDRaw"
+			]
+		}
+	}
+}

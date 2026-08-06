@@ -1,0 +1,833 @@
+{
+	"name": "pl_HookUp_Progress_Register_All_Projects",
+	"properties": {
+		"activities": [
+			{
+				"name": "lk_get_pipeline_parameters",
+				"description": "Get the parameters to be used in this pipeline",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": "pl_ncsa_master_pipelines"
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "EMAIL"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "lk_get_pipeline_parameters_2",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "NetworkFolder"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "SP Update Control Table Last Run Date_copy2",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "ForEach1",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+					"storedProcedureParameters": {
+						"pParameterCode": {
+							"value": "start_date",
+							"type": "String"
+						},
+						"pParameterValue": {
+							"value": {
+								"value": "@formatDateTime(activity('lk_get_pipeline_parameters_2').output.firstRow.run_start_datetime,'yyyy-MM-dd HH:mm:ss')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": "NetworkFolder",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "linkedservice_DEV_entanalytics_synapse",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Send Email On Failure_copy1_copy1",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "ForEach1",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "POST",
+					"headers": {
+						"Content-Type": "application/json"
+					},
+					"url": "https://prod-56.eastus.logic.azure.com:443/workflows/3cff41a53ba14a82a9b7cc8d6d2bfe56/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=c7BCbv69x4tk7w5oqGQNOPlpIXvqBQi_Zwm8wkww0WQ",
+					"connectVia": {
+						"referenceName": "integrationRuntimeEast2",
+						"type": "IntegrationRuntimeReference"
+					},
+					"body": {
+						"value": "{\n    \"DataFactoryName\": \"@{pipeline().DataFactory}\",\n    \"PipelineName\": \"@{pipeline().Pipeline}\",\n    \"ErrorMessage\": \"Pipeline Failed\",\n    \"EmailTo\": \"aditya.anand2@mcdermott.com,kjohnson02@mcdermott.com\",\n    \"Activity\":  \"pl_HookUp_Progress_Register_All_Projects\"\n}",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "ForEach1",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Get Metadata1",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get Metadata1').output.childItems",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "If Condition1",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "Get Metadata2",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@greater(ticks(activity('Get Metadata2').output.lastModified),ticks(activity('lk_get_pipeline_parameters_2').output.firstRow.start_date) )",
+									"type": "Expression"
+								},
+								"ifTrueActivities": [
+									{
+										"name": "cp_copy_first_sheet_from_source_to_synapse",
+										"type": "Copy",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "0.00:10:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"source": {
+												"type": "ExcelSource",
+												"additionalColumns": [
+													{
+														"name": "project_number",
+														"value": {
+															"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.project_number",
+															"type": "Expression"
+														}
+													},
+													{
+														"name": "CreatedDateTime",
+														"value": {
+															"value": "@addHours(utcNow(),4 )",
+															"type": "Expression"
+														}
+													},
+													{
+														"name": "SourceFileName",
+														"value": "$$FILEPATH"
+													}
+												],
+												"storeSettings": {
+													"type": "FileServerReadSettings",
+													"recursive": true,
+													"modifiedDatetimeStart": {
+														"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.start_date",
+														"type": "Expression"
+													},
+													"modifiedDatetimeEnd": "2050-11-20T00:00:00.000Z",
+													"enablePartitionDiscovery": false
+												}
+											},
+											"sink": {
+												"type": "SqlDWSink",
+												"preCopyScript": {
+													"value": "truncate table [epr].[05_POB_Hourse_per_Day_1_Stage]",
+													"type": "Expression"
+												},
+												"allowCopyCommand": true,
+												"disableMetricsCollection": false
+											},
+											"enableStaging": true,
+											"stagingSettings": {
+												"linkedServiceName": {
+													"referenceName": "ADLSG2 TimeAnalytics DEV",
+													"type": "LinkedServiceReference"
+												},
+												"path": "mdr-staging-data/Ruya11"
+											}
+										},
+										"inputs": [
+											{
+												"referenceName": "ds_fileststem_network_excel_options_get_Hookup_D7068",
+												"type": "DatasetReference",
+												"parameters": {
+													"range1": {
+														"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.range1",
+														"type": "Expression"
+													},
+													"sheetname1": {
+														"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.sheetname1",
+														"type": "Expression"
+													},
+													"file_name": {
+														"value": "@activity('Get Metadata2').output.itemName",
+														"type": "Expression"
+													},
+													"path": {
+														"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.source_directory",
+														"type": "Expression"
+													}
+												}
+											}
+										],
+										"outputs": [
+											{
+												"referenceName": "ds_excel_loads_AzureSynapseAnalytics",
+												"type": "DatasetReference",
+												"parameters": {
+													"TableName": {
+														"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.table_name1",
+														"type": "Expression"
+													}
+												}
+											}
+										]
+									},
+									{
+										"name": "Delete_old_file_data",
+										"type": "Script",
+										"dependsOn": [
+											{
+												"activity": "cp_copy_first_sheet_from_source_to_synapse",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "0.12:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"linkedServiceName": {
+											"referenceName": "AzureSynapseAnalytics",
+											"type": "LinkedServiceReference"
+										},
+										"typeProperties": {
+											"scripts": [
+												{
+													"type": "Query",
+													"text": "delete from [epr].[05_POB_Hourse_per_Day_1]\nwhere SourceFileName in (select distinct SourceFileName from [epr].[05_POB_Hourse_per_Day_1_Stage]) and project_number in (select distinct project_number from [epr].[05_POB_Hourse_per_Day_1_Stage])\n"
+												}
+											],
+											"scriptBlockExecutionTimeout": "02:00:00"
+										}
+									},
+									{
+										"name": "Insert_to_main_table",
+										"type": "Script",
+										"dependsOn": [
+											{
+												"activity": "Delete_old_file_data",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "0.12:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"linkedServiceName": {
+											"referenceName": "AzureSynapseAnalytics",
+											"type": "LinkedServiceReference"
+										},
+										"typeProperties": {
+											"scripts": [
+												{
+													"type": "Query",
+													"text": "insert into [epr].[05_POB_Hourse_per_Day_1]\nselect * from [epr].[05_POB_Hourse_per_Day_1_Stage]\n"
+												}
+											],
+											"scriptBlockExecutionTimeout": "02:00:00"
+										}
+									},
+									{
+										"name": "cp_copy_first_sheet_from_source_to_synapse_copy2",
+										"type": "Copy",
+										"dependsOn": [
+											{
+												"activity": "Insert_to_main_table_copy1",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "0.00:25:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"source": {
+												"type": "ExcelSource",
+												"additionalColumns": [
+													{
+														"name": "project_number",
+														"value": {
+															"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.project_number",
+															"type": "Expression"
+														}
+													},
+													{
+														"name": "CreatedDateTime",
+														"value": {
+															"value": "@addHours(utcNow(),4 )",
+															"type": "Expression"
+														}
+													},
+													{
+														"name": "SourceFileName",
+														"value": "$$FILEPATH"
+													}
+												],
+												"storeSettings": {
+													"type": "FileServerReadSettings",
+													"recursive": true,
+													"modifiedDatetimeStart": {
+														"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.start_date",
+														"type": "Expression"
+													},
+													"modifiedDatetimeEnd": "2050-11-20T00:00:00.000Z",
+													"enablePartitionDiscovery": false
+												}
+											},
+											"sink": {
+												"type": "SqlDWSink",
+												"preCopyScript": {
+													"value": "truncate table [epr].[Actual_Booking_1_Stage]",
+													"type": "Expression"
+												},
+												"allowCopyCommand": true,
+												"disableMetricsCollection": false
+											},
+											"enableStaging": true,
+											"stagingSettings": {
+												"linkedServiceName": {
+													"referenceName": "ADLSG2 TimeAnalytics DEV",
+													"type": "LinkedServiceReference"
+												},
+												"path": "mdr-staging-data/Ruya11"
+											}
+										},
+										"inputs": [
+											{
+												"referenceName": "ds_fileststem_network_excel_HUC_Actual_Booking_get_Hookup_D7068",
+												"type": "DatasetReference",
+												"parameters": {
+													"range3": {
+														"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.range3",
+														"type": "Expression"
+													},
+													"sheetname3": {
+														"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.sheetname3",
+														"type": "Expression"
+													},
+													"file_name": {
+														"value": "@activity('Get Metadata2').output.itemName",
+														"type": "Expression"
+													},
+													"path": {
+														"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.source_directory",
+														"type": "Expression"
+													}
+												}
+											}
+										],
+										"outputs": [
+											{
+												"referenceName": "ds_excel_loads_AzureSynapseAnalytics",
+												"type": "DatasetReference",
+												"parameters": {
+													"TableName": {
+														"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.table_name3",
+														"type": "Expression"
+													}
+												}
+											}
+										]
+									},
+									{
+										"name": "Insert_to_main_table_copy2",
+										"type": "Script",
+										"dependsOn": [
+											{
+												"activity": "Delete_old_file_data_copy2",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "0.12:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"linkedServiceName": {
+											"referenceName": "AzureSynapseAnalytics",
+											"type": "LinkedServiceReference"
+										},
+										"typeProperties": {
+											"scripts": [
+												{
+													"type": "Query",
+													"text": "insert into epr.Actual_Booking_1\nselect * from epr.Actual_Booking_1_Stage\n"
+												}
+											],
+											"scriptBlockExecutionTimeout": "02:00:00"
+										}
+									},
+									{
+										"name": "Delete_old_file_data_copy2",
+										"type": "Script",
+										"dependsOn": [
+											{
+												"activity": "cp_copy_first_sheet_from_source_to_synapse_copy2",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "0.12:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"linkedServiceName": {
+											"referenceName": "AzureSynapseAnalytics",
+											"type": "LinkedServiceReference"
+										},
+										"typeProperties": {
+											"scripts": [
+												{
+													"type": "Query",
+													"text": "delete from epr.Actual_Booking_1\nwhere SourceFileName in (select distinct SourceFileName from epr.Actual_Booking_1_Stage) and project_number in (select distinct project_number from epr.Actual_Booking_1_Stage)\n"
+												}
+											],
+											"scriptBlockExecutionTimeout": "02:00:00"
+										}
+									},
+									{
+										"name": "cp_copy_first_sheet_from_source_to_synapse_copy1",
+										"type": "Copy",
+										"dependsOn": [
+											{
+												"activity": "Insert_to_main_table",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "0.00:25:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"source": {
+												"type": "ExcelSource",
+												"additionalColumns": [
+													{
+														"name": "project_number",
+														"value": {
+															"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.project_number",
+															"type": "Expression"
+														}
+													},
+													{
+														"name": "CreatedDateTime",
+														"value": {
+															"value": "@addHours(utcNow(),4 )",
+															"type": "Expression"
+														}
+													},
+													{
+														"name": "SourceFileName",
+														"value": "$$FILEPATH"
+													}
+												],
+												"storeSettings": {
+													"type": "FileServerReadSettings",
+													"recursive": true,
+													"modifiedDatetimeStart": {
+														"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.start_date",
+														"type": "Expression"
+													},
+													"modifiedDatetimeEnd": "2050-11-20T00:00:00.000Z",
+													"enablePartitionDiscovery": false
+												}
+											},
+											"sink": {
+												"type": "SqlDWSink",
+												"preCopyScript": {
+													"value": "truncate table [epr].[04_Progress_Files_1_Stage]",
+													"type": "Expression"
+												},
+												"allowCopyCommand": true,
+												"disableMetricsCollection": false
+											},
+											"enableStaging": true,
+											"stagingSettings": {
+												"linkedServiceName": {
+													"referenceName": "ADLSG2 TimeAnalytics DEV",
+													"type": "LinkedServiceReference"
+												},
+												"path": "mdr-staging-data/Ruya11"
+											}
+										},
+										"inputs": [
+											{
+												"referenceName": "ds_fileststem_network_excel_HUP_Progress_get_Hookup_D7068",
+												"type": "DatasetReference",
+												"parameters": {
+													"range2": {
+														"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.range2",
+														"type": "Expression"
+													},
+													"sheetname2": {
+														"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.sheetname2",
+														"type": "Expression"
+													},
+													"file_name": {
+														"value": "@activity('Get Metadata2').output.itemName",
+														"type": "Expression"
+													},
+													"path": {
+														"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.source_directory",
+														"type": "Expression"
+													}
+												}
+											}
+										],
+										"outputs": [
+											{
+												"referenceName": "ds_excel_loads_AzureSynapseAnalytics",
+												"type": "DatasetReference",
+												"parameters": {
+													"TableName": {
+														"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.table_name2",
+														"type": "Expression"
+													}
+												}
+											}
+										]
+									},
+									{
+										"name": "Insert_to_main_table_copy1",
+										"type": "Script",
+										"dependsOn": [
+											{
+												"activity": "Delete_old_file_data_copy1",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "0.12:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"linkedServiceName": {
+											"referenceName": "AzureSynapseAnalytics",
+											"type": "LinkedServiceReference"
+										},
+										"typeProperties": {
+											"scripts": [
+												{
+													"type": "Query",
+													"text": "insert into [epr].[04_Progress_Files_1]\nselect * from [epr].[04_Progress_Files_1_Stage]\n"
+												}
+											],
+											"scriptBlockExecutionTimeout": "02:00:00"
+										}
+									},
+									{
+										"name": "Delete_old_file_data_copy1",
+										"type": "Script",
+										"dependsOn": [
+											{
+												"activity": "cp_copy_first_sheet_from_source_to_synapse_copy1",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "0.12:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"linkedServiceName": {
+											"referenceName": "AzureSynapseAnalytics",
+											"type": "LinkedServiceReference"
+										},
+										"typeProperties": {
+											"scripts": [
+												{
+													"type": "Query",
+													"text": "delete from [epr].[04_Progress_Files_1]\nwhere SourceFileName in (select distinct SourceFileName from [epr].[04_Progress_Files_1_Stage]) and project_number in (select distinct project_number from [epr].[04_Progress_Files_1_Stage])\n"
+												}
+											],
+											"scriptBlockExecutionTimeout": "02:00:00"
+										}
+									}
+								]
+							}
+						},
+						{
+							"name": "Get Metadata2",
+							"type": "GetMetadata",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataset": {
+									"referenceName": "ds_fileststem_network_excel_options_get_Hookup_D7068",
+									"type": "DatasetReference",
+									"parameters": {
+										"range1": {
+											"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.range1",
+											"type": "Expression"
+										},
+										"sheetname1": {
+											"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.sheetname1",
+											"type": "Expression"
+										},
+										"file_name": {
+											"value": "@item().name",
+											"type": "Expression"
+										},
+										"path": {
+											"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.source_directory",
+											"type": "Expression"
+										}
+									}
+								},
+								"fieldList": [
+									"itemName",
+									"lastModified"
+								],
+								"storeSettings": {
+									"type": "FileServerReadSettings",
+									"recursive": true,
+									"enablePartitionDiscovery": false
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Get Metadata1",
+				"type": "GetMetadata",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "lk_get_pipeline_parameters_2",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_fileststem_network_excel_options_get_Hookup_D7068",
+						"type": "DatasetReference",
+						"parameters": {
+							"range1": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.range1",
+								"type": "Expression"
+							},
+							"sheetname1": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.sheetname1",
+								"type": "Expression"
+							},
+							"file_name": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.file_name",
+								"type": "Expression"
+							},
+							"path": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.source_directory",
+								"type": "Expression"
+							}
+						}
+					},
+					"fieldList": [
+						"childItems"
+					],
+					"storeSettings": {
+						"type": "FileServerReadSettings",
+						"recursive": true,
+						"enablePartitionDiscovery": false
+					}
+				}
+			}
+		],
+		"folder": {
+			"name": "Projects/NCSA/Ruya_D7507"
+		},
+		"annotations": []
+	}
+}

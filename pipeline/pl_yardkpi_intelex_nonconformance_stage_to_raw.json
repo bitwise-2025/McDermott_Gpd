@@ -1,0 +1,184 @@
+{
+	"name": "pl_yardkpi_intelex_nonconformance_stage_to_raw",
+	"properties": {
+		"activities": [
+			{
+				"name": "lk_get_pipeline_parameters",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": {
+									"value": "Intelex",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Check File non zero Bytes",
+				"description": "Check if the combined file has any data to be loaded.",
+				"type": "GetMetadata",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_yardkpi_intelex_generic",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_ds_filesystem": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+								"type": "Expression"
+							},
+							"p_ds_directory": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+								"type": "Expression"
+							},
+							"p_ds_filename": {
+								"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+								"type": "Expression"
+							},
+							"p_ds_first_row_header": true
+						}
+					},
+					"fieldList": [
+						"size",
+						"exists"
+					],
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true
+					},
+					"formatSettings": {
+						"type": "DelimitedTextReadSettings"
+					}
+				}
+			},
+			{
+				"name": "if_File_Exists_Copy_to_Raw",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Check File non zero Bytes",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@greater(activity('Check File non zero Bytes').output.size, 2)",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "df_STAGE_To_RAW",
+							"type": "ExecuteDataFlow",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataflow": {
+									"referenceName": "df_yardkpi_intelex_nonconformance_stage_to_raw",
+									"type": "DataFlowReference",
+									"datasetParameters": {
+										"Source": {
+											"p_ds_filesystem": {
+												"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+												"type": "Expression"
+											},
+											"p_ds_directory": {
+												"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+												"type": "Expression"
+											},
+											"p_ds_filename": {
+												"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+												"type": "Expression"
+											},
+											"p_ds_first_row_header": true
+										},
+										"Sink": {
+											"p_ds_filesystem": {
+												"value": "@activity('lk_get_pipeline_parameters').output.firstRow.output_file_system",
+												"type": "Expression"
+											},
+											"p_ds_directory": {
+												"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+												"type": "Expression"
+											},
+											"p_ds_filename": {
+												"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+												"type": "Expression"
+											},
+											"p_ds_first_row_header": true
+										}
+									}
+								},
+								"compute": {
+									"coreCount": 8,
+									"computeType": "General"
+								},
+								"traceLevel": "Fine"
+							}
+						}
+					]
+				}
+			}
+		],
+		"folder": {
+			"name": "Projects/YARD KPI/Intelex/Nonconformance Reporting"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-01-30T08:27:07Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

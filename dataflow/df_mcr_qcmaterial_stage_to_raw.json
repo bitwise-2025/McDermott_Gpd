@@ -1,0 +1,72 @@
+{
+	"name": "df_mcr_qcmaterial_stage_to_raw",
+	"properties": {
+		"folder": {
+			"name": "Projects/YARD KPI/MCR"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_mcr_stg_generic",
+						"type": "DatasetReference"
+					},
+					"name": "MCRStage"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_gen2_mcr_raw_tgt",
+						"type": "DatasetReference"
+					},
+					"name": "MCRRaw"
+				}
+			],
+			"transformations": [
+				{
+					"name": "SetFileName"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          Id as string,",
+				"          ContentTypeID as string,",
+				"          ContentType as string,",
+				"          Title as string,",
+				"          Modified as string,",
+				"          Created as string,",
+				"          CreatedById as string,",
+				"          ModifiedById as string,",
+				"          Owshiddenversion as string,",
+				"          Version as string,",
+				"          Path as string,",
+				"          ComplianceAssetId as string,",
+				"          CutOffDate as string,",
+				"          TotalMCR as string,",
+				"          OnProgressByQCMaterial as string,",
+				"          ProjectCodeId as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> MCRStage",
+				"MCRStage derive(FileName = concat('Project_Data/YARDKPI/MCR/QC_MATERIAL/',substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/','ON_PROGRESS_BY_QC_MATERIAL_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv'),",
+				"          source_code = 'SYSTEM',",
+				"          sub_source_code = 'Sharepoint',",
+				"          create_date_time = currentUTC()) ~> SetFileName",
+				"SetFileName sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     rowUrlColumn:'FileName',",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     mapColumn(",
+				"          each(match(true()))",
+				"     )) ~> MCRRaw"
+			]
+		}
+	}
+}

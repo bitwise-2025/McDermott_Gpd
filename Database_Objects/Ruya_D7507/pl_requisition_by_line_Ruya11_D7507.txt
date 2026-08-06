@@ -1,0 +1,80 @@
+DECLARE @Date DATETIME;
+DECLARE @v_pipelinename varchar(150);
+
+SET @Date = GETDATE();
+SET @v_pipelinename='pl_requisition_by_line_Ruya11_D7507'
+
+delete from [dbo].[plp_pipeline] where [pipeline_code] = @v_pipelinename
+
+
+--PLP Pipeline
+INSERT INTO [dbo].[plp_pipeline] ([pipeline_code],[subject_area_code],[description],[comment],[active],[touched_by],[touched_dtm],[sec_sa_id])
+	VALUES (@v_pipelinename,'NCSA','SMAT Vendor Progress Data Extract',NULL,1,'aditya.anand2@mcdermott.com',@Date,9)
+
+
+--PLP Pipeline Parameter
+
+delete from [dbo].[plp_pipeline_parameter] where [pipeline_code] = @v_pipelinename
+
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+VALUES(@v_pipelinename,'NetworkFolder','table_name',5,'table_name','IN','table_name with schema e.g. gpd.scm_procurement',1,'aditya.anand2@mcdermott.com',@Date)
+
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+VALUES(@v_pipelinename,'NetworkFolder','logicapp_url',6,'logicapp_url','IN',NULL,1,'aditya.anand2@mcdermott.com',@Date)
+
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+VALUES(@v_pipelinename,'NetworkFolder','project_number',7,'project_number','IN',NULL,1,'aditya.anand2@mcdermott.com',@Date)
+
+
+--PLP Pipeline values
+
+
+
+delete from [dbo].[plp_parameter_value] where [pipeline_code] = @v_pipelinename
+
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+     VALUES('table_name','requisition_by_line_Ruya11_D7507',1,'aditya.anand2@mcdermott.com',@Date,@v_pipelinename,'NetworkFolder')
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+     VALUES('logicapp_url','https://prod-56.eastus.logic.azure.com:443/workflows/3cff41a53ba14a82a9b7cc8d6d2bfe56/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=c7BCbv69x4tk7w5oqGQNOPlpIXvqBQi_Zwm8wkww0WQ',1,'aditya.anand2@mcdermott.com',@Date,@v_pipelinename,'NetworkFolder')	 
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+     VALUES('project_number','D7507',1,'aditya.anand2@mcdermott.com',@Date,@v_pipelinename,'NetworkFolder')
+
+
+go
+
+CREATE TABLE [epr].[requisition_by_line_Ruya11_D7507](
+[PROJ_ID]   varchar(200) NULL,
+[R_CODE]   varchar(200) NULL,
+[DESCRIPTION]   varchar(4000) NULL,
+[SUPPLEMENT]   varchar(200) NULL,
+[INQ_PUR_IND]   varchar(200) NULL,
+[ITEMNO]   varchar(200) NULL,
+[ITEMSUB]   varchar(200) NULL,
+[IDENT]   varchar(200) NULL,
+[COMMODITY_CODE]   varchar(200) NULL,
+[INPUT_1]   varchar(200) NULL,
+[INPUT_2]   varchar(200) NULL,
+[INPUT_3]   varchar(200) NULL,
+[INPUT_4]   varchar(200) NULL,
+[INPUT_5]   varchar(200) NULL,
+[IDENT_DESCRIPTION]   varchar(4000) NULL,
+[TOTAL_QTY]   varchar(200) NULL,
+[INCREASED_QTY]   varchar(4000) NULL,
+[UNIT_WEIGHT]   varchar(200) NULL,
+[WEIGHT_CODE]   varchar(200) NULL,
+[ACCOUNTCODE]   varchar(200) NULL,
+[QTY_UNIT]   varchar(200) NULL,
+[Delivery Designation]   varchar(200) NULL,
+[ROS_DATE]   varchar(200) NULL,
+[TAG_NUMBER]   varchar(200) NULL,
+[Long Description]   varchar(4000) NULL,
+[Comment]   varchar(4000) NULL,
+[CreatedDateTime]   varchar(200) NULL
+)WITH(	DISTRIBUTION = ROUND_ROBIN,	CLUSTERED COLUMNSTORE INDEX)
+
+go
+
+alter table [epr].[requisition_by_line_Ruya11_D7507] add week_end_date datetime null
+go
+alter table [epr].[requisition_by_line_Ruya11_D7507] add APPROVED_DATE varchar(200) null
+go

@@ -1,0 +1,2 @@
+insert into plp_parameter (parameter_code,parameter_type_code,description,parameter_data_type,max_no_values,parameter_size,comment,active,touched_by,touched_dtm) values('sheetname','PIPELINE','sheetname','T',1,250,'',1,'aditya.anand2@mcdermott.com','2024-12-16 06:42:19.043')
+insert into plp_parameter (parameter_code,parameter_type_code,description,parameter_data_type,max_no_values,parameter_size,comment,active,touched_by,touched_dtm) values('table_name','PIPELINE','synapse table name','T',1,500,NULL,1,'aditya.anand2@mcdermott.com','2024-12-16 06:42:19.043')

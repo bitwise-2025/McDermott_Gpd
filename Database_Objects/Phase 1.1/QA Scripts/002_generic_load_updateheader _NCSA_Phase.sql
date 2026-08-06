@@ -1,0 +1,2 @@
+--UPDATE generic load header to include the view which is created for resolving same phase code from multiple sources
+UPDATE generic_load_header SET stage_table_name='[gpd].[NCSA_MCPM_Phases_v]',stage_sk_name='stage_ncsa_phase_id' WHERE LOAD_NAME ='dim_entp_phase'

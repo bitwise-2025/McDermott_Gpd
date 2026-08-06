@@ -1,0 +1,143 @@
+{
+	"name": "pl_yardkpi_spc_stage_to_raw",
+	"properties": {
+		"activities": [
+			{
+				"name": "lk_get_pipeline_parameters",
+				"description": "Get the parameters to be used in this pipeline",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "dbo.getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.PipeLineSubCode",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "df_spc_stage_to_raw",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "df_yardkpi_spc_stage_to_raw",
+						"type": "DataFlowReference",
+						"parameters": {
+							"p_directory": {
+								"value": "'@{activity('lk_get_pipeline_parameters').output.firstRow.directory}'",
+								"type": "Expression"
+							},
+							"p_filename": {
+								"value": "'@{activity('lk_get_pipeline_parameters').output.firstRow.file_name}'",
+								"type": "Expression"
+							}
+						},
+						"datasetParameters": {
+							"srcSPCStage": {
+								"p_ds_filesystem": {
+									"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+									"type": "Expression"
+								},
+								"p_ds_directory": {
+									"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+									"type": "Expression"
+								},
+								"p_ds_filename": {
+									"value": "@activity('lk_get_pipeline_parameters').output.firstRow.file_name",
+									"type": "Expression"
+								}
+							},
+							"snkSPCRaw": {
+								"p_ds_directory": {
+									"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+									"type": "Expression"
+								},
+								"p_ds_filesystem": {
+									"value": "@activity('lk_get_pipeline_parameters').output.firstRow.output_file_system",
+									"type": "Expression"
+								},
+								"p_ds_filename": {
+									"value": "@activity('lk_get_pipeline_parameters').output.firstRow.file_name",
+									"type": "Expression"
+								}
+							}
+						}
+					},
+					"compute": {
+						"coreCount": 16,
+						"computeType": "General"
+					},
+					"traceLevel": "Fine"
+				}
+			}
+		],
+		"parameters": {
+			"PipeLineSubCode": {
+				"type": "string",
+				"defaultValue": "SPC"
+			}
+		},
+		"variables": {
+			"v_filename": {
+				"type": "String"
+			},
+			"v_folderpath": {
+				"type": "String"
+			},
+			"p_pl_fileexists": {
+				"type": "Boolean"
+			}
+		},
+		"folder": {
+			"name": "Projects/YARD KPI/SPC"
+		},
+		"annotations": [],
+		"lastPublishTime": "2024-07-17T13:01:02Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

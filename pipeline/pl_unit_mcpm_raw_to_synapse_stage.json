@@ -1,0 +1,428 @@
+{
+	"name": "pl_unit_mcpm_raw_to_synapse_stage",
+	"properties": {
+		"activities": [
+			{
+				"name": "cp_Get_Latest_File",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Set start date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": true,
+							"modifiedDatetimeStart": {
+								"value": "@variables('v_lrd_src_to_stage')",
+								"type": "Expression"
+							},
+							"wildcardFolderPath": "Project_Data/NCSA/MCPM/Unit/*/*/*",
+							"wildcardFileName": "unit_mcpm*.csv"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings",
+							"copyBehavior": "MergeFiles"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ADLSG2 TimeAnalytics DEV",
+							"type": "LinkedServiceReference"
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_mcpm_unit_raw",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_mcpm_unit_raw_ltst",
+						"type": "DatasetReference"
+					}
+				]
+			},
+			{
+				"name": "Check Combined File non zero Bytes",
+				"type": "GetMetadata",
+				"dependsOn": [
+					{
+						"activity": "cp_Get_Latest_File",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_mcpm_unit_raw_ltst",
+						"type": "DatasetReference"
+					},
+					"fieldList": [
+						"exists",
+						"size"
+					],
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true
+					},
+					"formatSettings": {
+						"type": "DelimitedTextReadSettings"
+					}
+				}
+			},
+			{
+				"name": "if_File_Exists_Copy_to_Synapse",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Check Combined File non zero Bytes",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@greater(activity('Check Combined File non zero Bytes').output.size, 0)",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "Copy Raw CSV Folder To Synapse Stage Table",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": true
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "SqlDWSink",
+									"preCopyScript": "truncate table gpd.NCSA_Unit_MCPM",
+									"allowPolyBase": true,
+									"polyBaseSettings": {
+										"rejectValue": 0,
+										"rejectType": "value",
+										"useTypeDefault": true
+									},
+									"disableMetricsCollection": false
+								},
+								"enableStaging": true,
+								"stagingSettings": {
+									"linkedServiceName": {
+										"referenceName": "ADLSG2 TimeAnalytics DEV",
+										"type": "LinkedServiceReference"
+									},
+									"path": "mdr-raw-data/Polybase_Staging_Space"
+								},
+								"translator": {
+									"type": "TabularTranslator",
+									"mappings": [
+										{
+											"source": {
+												"name": "Unit",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Code",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Description",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Description",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Domain",
+												"type": "String"
+											},
+											"sink": {
+												"name": "project_id",
+												"type": "String"
+											}
+										}
+									]
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_adlsg2_csv_mcpm_unit_raw_ltst",
+									"type": "DatasetReference"
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_AzureSynapseAnalytics_unit_mcpm_stage",
+									"type": "DatasetReference"
+								}
+							]
+						}
+					]
+				}
+			},
+			{
+				"name": "Delete Temp combined File",
+				"type": "Delete",
+				"dependsOn": [
+					{
+						"activity": "if_File_Exists_Copy_to_Synapse",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_mcpm_unit_raw_ltst",
+						"type": "DatasetReference"
+					},
+					"enableLogging": false,
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true
+					}
+				}
+			},
+			{
+				"name": "lkup_Get_Pipeline_parameters_getlrd",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "MCPM"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azuresynapse_dev",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Set start date",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lkup_Get_Pipeline_parameters_getlrd",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_lrd_src_to_stage",
+					"value": {
+						"value": "@activity('lkup_Get_Pipeline_parameters_getlrd').output.firstRow.start_date",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "SP Update Control Table Last Run Date",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "SP_load_dim_workunit",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+					"storedProcedureParameters": {
+						"pParameterCode": {
+							"value": "start_date",
+							"type": "String"
+						},
+						"pParameterValue": {
+							"value": {
+								"value": "@formatDateTime(activity('lkup_Get_Pipeline_parameters_getlrd').output.firstRow.run_start_datetime,'yyyy-MM-dd HH:mm:ss')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": "MCPM",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "linkedservice_DEV_entanalytics_synapse",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "SP_load_dim_workunit",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Delete Temp combined File",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[generic_load_dim_v2]",
+					"storedProcedureParameters": {
+						"debug_flag": {
+							"value": "N",
+							"type": "String"
+						},
+						"execute_flag": {
+							"value": "Y",
+							"type": "String"
+						},
+						"load_name": {
+							"value": "dim_entp_work_unit",
+							"type": "String"
+						},
+						"rkValidationRequired": {
+							"value": "Y",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"variables": {
+			"v_lrd_src_to_stage": {
+				"type": "String"
+			},
+			"v_currdatetime": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/NCSA/2.Unit/MCPM Unit"
+		},
+		"annotations": [],
+		"lastPublishTime": "2021-10-07T10:17:31Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

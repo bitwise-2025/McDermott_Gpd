@@ -1,0 +1,42 @@
+{
+	"name": "df_p6_engr_mhrs_pivot_to_stage",
+	"properties": {
+		"description": "Dataflow to convert P6 Engineering data with unpivot per date",
+		"folder": {
+			"name": "Projects/NCSA/P6 Engineering"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_engr_hc_fcst_p6_stage_initial",
+						"type": "DatasetReference"
+					},
+					"name": "SrcP6EngrManHrs"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_P6engr_hc_fcst_stage",
+						"type": "DatasetReference"
+					},
+					"name": "SnkP6EngrManHrs"
+				}
+			],
+			"transformations": [
+				{
+					"name": "dcConvertNulltoDummyVal"
+				},
+				{
+					"name": "UnpivotData"
+				},
+				{
+					"name": "FltDummyRows"
+				}
+			],
+			"script": "source(output(\n\t\tProject_code as string,\n\t\t{Activity ID} as string,\n\t\t{Activity Name} as string,\n\t\t{Remaining Duration} as string,\n\t\tStart as string,\n\t\tFinish as string,\n\t\t{Budgeted Labor Units} as string,\n\t\t{Actual Labor Units} as string,\n\t\t{Remaining Labor Units} as string,\n\t\t{GLOBAL - OFFICE} as string,\n\t\tDisciplines as string,\n\t\tFacility as string,\n\t\t{GLOBAL - PRIME (GCOA V13)} as string,\n\t\t{GLOBAL - SUBPRIME (GCOA V13)} as string,\n\t\t{Spreadsheet Field} as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true) ~> SrcP6EngrManHrs\nSrcP6EngrManHrs derive(each(match(!(in(['Project_code','Activity ID','Activity Name','Remaining Duration','Start','Finish','Budgeted Labor Units','Actual Labor Units','Remaining Labor Units','GLOBAL - OFFICE','Disciplines','Facility','GLOBAL - PRIME (GCOA V13)','GLOBAL - SUBPRIME (GCOA V13)','Spreadsheet Field'],name))), $$ = iif(isNull($$) || !isDecimal($$), '-99', toString($$)))) ~> dcConvertNulltoDummyVal\ndcConvertNulltoDummyVal unpivot(output(\n\t\tPeriod as string,\n\t\tUnits as string\n\t),\n\tungroupBy(Project_code,\n\t\t{Activity ID},\n\t\t{Activity Name},\n\t\t{Remaining Duration},\n\t\tStart,\n\t\tFinish,\n\t\t{Budgeted Labor Units},\n\t\t{Actual Labor Units},\n\t\t{Remaining Labor Units},\n\t\t{GLOBAL - OFFICE},\n\t\tDisciplines,\n\t\tFacility,\n\t\t{GLOBAL - PRIME (GCOA V13)},\n\t\t{GLOBAL - SUBPRIME (GCOA V13)},\n\t\t{Spreadsheet Field}),\n\tlateral: false,\n\tignoreNullPivots: true) ~> UnpivotData\nUnpivotData filter(Units != '-99') ~> FltDummyRows\nFltDummyRows sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['p6_engr_mhrs.csv'],\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> SnkP6EngrManHrs"
+		}
+	}
+}

@@ -1,0 +1,597 @@
+{
+	"name": "pl_idocs_open_exp_raw_to_synapse_stage",
+	"properties": {
+		"description": "ALL OPEN EXPEDITING - ADLS Raw to Synapse Stage table",
+		"activities": [
+			{
+				"name": "Check Combined File non zero Bytes",
+				"description": "Check if the combined file has any data to be loaded.",
+				"type": "GetMetadata",
+				"dependsOn": [
+					{
+						"activity": "cp_Get_Latest_File",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_adlsg2_idocs_open_exp_raw_ltst",
+						"type": "DatasetReference"
+					},
+					"fieldList": [
+						"size",
+						"exists"
+					],
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true
+					},
+					"formatSettings": {
+						"type": "DelimitedTextReadSettings"
+					}
+				}
+			},
+			{
+				"name": "lkup_Get_Pipeline_parameters_getlrd",
+				"description": "Use the lookup procedure to get the last run details to be used in the next steps.",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "iDocs"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Set start date",
+				"description": "Set the last stage run date to the variable as start date.",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lkup_Get_Pipeline_parameters_getlrd",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_lrd_src_to_stage",
+					"value": {
+						"value": "@activity('lkup_Get_Pipeline_parameters_getlrd').output.firstRow.last_run_start_date",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "cp_Get_Latest_File",
+				"description": "Copy all the files created since the last start date and combine them into one file to be processed into Synapse.",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Set start date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": true,
+							"modifiedDatetimeStart": {
+								"value": "@variables('v_lrd_src_to_stage')",
+								"type": "Expression"
+							},
+							"wildcardFolderPath": "Project_Data/NCSA/iDocs/Open_Expediting/*/*/*",
+							"wildcardFileName": "iDocs_open_exp*.csv"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings",
+							"copyBehavior": "MergeFiles"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": "ts_itime_combined.csv"
+						}
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_adlsg2_idocs_open_exp_raw",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_adlsg2_idocs_open_exp_raw_ltst",
+						"type": "DatasetReference"
+					}
+				]
+			},
+			{
+				"name": "if_File_Exists_Copy_to_Synapse",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Check Combined File non zero Bytes",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@greater(activity('Check Combined File non zero Bytes').output.size, 2)",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "Copy Latest Data To Synapse Stage Table",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": true,
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "SqlDWSink",
+									"preCopyScript": "truncate table gpd.iDocs_Open_Expedit",
+									"allowPolyBase": true,
+									"polyBaseSettings": {
+										"rejectValue": 0,
+										"rejectType": "value",
+										"useTypeDefault": false
+									},
+									"disableMetricsCollection": false
+								},
+								"enableStaging": true,
+								"stagingSettings": {
+									"linkedServiceName": {
+										"referenceName": "ADLSG2 TimeAnalytics DEV",
+										"type": "LinkedServiceReference"
+									},
+									"path": "mdr-raw-data/Polybase_Staging_Space"
+								},
+								"translator": {
+									"type": "TabularTranslator",
+									"mappings": [
+										{
+											"source": {
+												"name": "PROJECT NO.",
+												"type": "String"
+											},
+											"sink": {
+												"name": "project_number",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PROJECT ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "project_id",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PROJECT NAME",
+												"type": "String"
+											},
+											"sink": {
+												"name": "project_name",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "DOC ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "document_id",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "DELIVERABLE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "deliverable",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "DOCUMENT NUMBER",
+												"type": "String"
+											},
+											"sink": {
+												"name": "document_number",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "EXPEDITED ISSUE STATE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "document_status",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "TYPE CLASS",
+												"type": "String"
+											},
+											"sink": {
+												"name": "type_class",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "EXPEDITED VERSION",
+												"type": "String"
+											},
+											"sink": {
+												"name": "expedited_version",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "EXPEDITED REVISION",
+												"type": "String"
+											},
+											"sink": {
+												"name": "expedited_revision",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "CURRENT VERSION",
+												"type": "String"
+											},
+											"sink": {
+												"name": "current_version",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "CURRENT REVISION",
+												"type": "String"
+											},
+											"sink": {
+												"name": "current_revision",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "USER TYPE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "user_type",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "RECIPIENT",
+												"type": "String"
+											},
+											"sink": {
+												"name": "recipient",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "COMPANY",
+												"type": "String"
+											},
+											"sink": {
+												"name": "company",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "EXPEDITING START",
+												"type": "String"
+											},
+											"sink": {
+												"name": "expediting_start",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "EXPEDITING DUE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "expediting_due",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "EXPEDITING FORECAST",
+												"type": "String"
+											},
+											"sink": {
+												"name": "expediting_forecast",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "EXPEDITING ACTUAL",
+												"type": "String"
+											},
+											"sink": {
+												"name": "expediting_actual",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "EXP ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "expediting_id",
+												"type": "String"
+											}
+										}
+									]
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_adlsg2_idocs_open_exp_raw_ltst",
+									"type": "DatasetReference"
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_AzureSynapseAnalytics_idocs_open_exp",
+									"type": "DatasetReference"
+								}
+							]
+						}
+					]
+				}
+			},
+			{
+				"name": "Delete Temp combined File",
+				"description": "After the data has been loaded, clear the combined file from the ADLSV2 ",
+				"type": "Delete",
+				"dependsOn": [
+					{
+						"activity": "if_File_Exists_Copy_to_Synapse",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_adlsg2_idocs_open_exp_raw_ltst",
+						"type": "DatasetReference"
+					},
+					"enableLogging": false,
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true
+					}
+				}
+			},
+			{
+				"name": "SP Update Control Table Last Run Date",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Delete Temp combined File",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+					"storedProcedureParameters": {
+						"pParameterCode": {
+							"value": "last_run_start_date",
+							"type": "String"
+						},
+						"pParameterValue": {
+							"value": {
+								"value": "@formatDateTime(utcnow(),'yyyy-MM-dd HH:mm:ss')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": "iDocs",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "linkedservice_DEV_entanalytics_synapse",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "SP load DIM OPEN TASK REGISTER",
+				"description": "Use the SPU generic_load_dim_v2 to populate the dim_entp_eng_ven_open_task dimension table.",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "SP Update Control Table Last Run Date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[generic_load_dim_v2]",
+					"storedProcedureParameters": {
+						"debug_flag": {
+							"value": "N",
+							"type": "String"
+						},
+						"execute_flag": {
+							"value": "Y",
+							"type": "String"
+						},
+						"load_name": {
+							"value": "dim_entp_eng_ven_open_task",
+							"type": "String"
+						},
+						"rkValidationRequired": {
+							"value": "Y",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"variables": {
+			"v_lrd_src_to_stage": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/NCSA/iDocs/Open Expediting"
+		},
+		"annotations": [],
+		"lastPublishTime": "2021-08-16T11:47:58Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

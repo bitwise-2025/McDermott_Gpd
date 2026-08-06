@@ -1,0 +1,734 @@
+DROP PROC [dbo].[generic_load_dim_transaction_based]
+
+GO
+
+CREATE PROC [dbo].[generic_load_dim_transaction_based] @load_name [varchar](40),@rkValidationRequired [varchar](1),@debug_flag [varchar](1),@execute_flag [varchar](1),@transaction_required [varchar](1) AS 
+begin
+
+declare @template_str		varchar(max);
+declare @template_str1		varchar(8000);
+
+select @template_str1 = template_str1
+from generic_load_templates
+where glt_id in (select glt_id from generic_load_header where load_name = @load_name);
+
+-- template info
+set @template_str = @template_str1;
+
+-- header info
+declare @stage_table_name		varchar(120);
+declare @target_table_name		varchar(120);
+declare @reprocess_table_name		varchar(120);
+declare @target_sk_name			varchar(120);
+declare @target_gnk_name		varchar(120);
+declare @stage_sk_name			varchar(120);
+declare @master_load_name		varchar(100);
+declare @individual_leader_slave_ind	varchar(1);
+declare @json_column_delimiter varchar(1);
+
+select		@stage_table_name		= stage_table_name,
+		@target_table_name		= target_table_name,
+		@reprocess_table_name		= reprocess_table_name,
+		@target_sk_name			= target_sk_name,
+		@target_gnk_name		= target_gnk_name,
+		@stage_sk_name			= stage_sk_name,
+		@master_load_name		= master_load_name,
+		@json_column_delimiter	= isnull(json_column_delimiter, '|')
+from	generic_load_header
+where	load_name	 = @load_name
+and	active_flag	 = 'Y';
+
+if @master_load_name is not null
+begin
+	set @individual_leader_slave_ind = 'S';
+end
+else
+begin
+	if exists (select 1 from generic_load_header where master_load_name = @load_name and active_flag = 'Y')
+	begin
+		set @individual_leader_slave_ind = 'L';
+	end
+	else
+	begin
+		set @individual_leader_slave_ind = 'I';
+	end;
+end;
+				
+-- detail info
+begin try
+	drop table #ld;
+end try
+begin catch
+	;
+end catch;
+
+
+create table #ld (
+	record_id				int,
+	gld_id					int,
+	stage_column_name			varchar(120),
+	stage_column_data_type			varchar(20),
+	stage_column_data_type_category		varchar(20),
+	stage_column_key_type			varchar(3),
+	target_column_name			varchar(120),
+	ref_table_name				varchar(120),
+	ref_gnk_name				varchar(120),
+	ref_target_column_name1			varchar(120),
+	ref_source_column_name1			varchar(120),
+	ref_target_column_name2			varchar(120),
+	ref_source_column_name2			varchar(120),
+	ref_target_column_name3			varchar(120),
+	ref_source_column_name3			varchar(120),
+	ref_target_column_name4			varchar(120),
+	ref_source_column_name4			varchar(120),
+	ref_target_column_name5			varchar(120),
+	ref_source_column_name5			varchar(120),
+	sl_no					int,
+	skip_rk_validation			varchar(1));
+
+
+insert into #ld (			record_id,
+					gld_id, 
+					stage_column_name,
+					stage_column_data_type,
+					stage_column_data_type_category,
+					stage_column_key_type,
+					target_column_name,
+					ref_table_name,
+					ref_gnk_name,
+					ref_target_column_name1,
+					ref_source_column_name1,
+					ref_target_column_name2,
+					ref_source_column_name2,
+					ref_target_column_name3,
+					ref_source_column_name3,
+					ref_target_column_name4,
+					ref_source_column_name4,
+					ref_target_column_name5,
+					ref_source_column_name5,
+					sl_no,
+					skip_rk_validation)
+select		row_number() over(partition by a.col1 order by sl_no),
+			gld_id,
+			stage_column_name,
+			stage_column_data_type,
+			stage_column_data_type_category,
+			stage_column_key_type,
+			target_column_name,
+			ref_table_name,
+			ref_gnk_name,
+			ref_target_column_name1,
+			ref_source_column_name1,
+			ref_target_column_name2,
+			ref_source_column_name2,
+			ref_target_column_name3,
+			ref_source_column_name3,
+			ref_target_column_name4,
+			ref_source_column_name4,
+			ref_target_column_name5,
+			ref_source_column_name5,
+			sl_no,
+			isnull(skip_rk_validation, 'N')
+from		generic_load_detail, (select 1 col1) a
+where		load_name = @load_name
+and		active_flag = 'Y';
+
+declare @validationError varchar(1) = 'N';
+
+
+if not exists (select 1 from #ld)
+begin
+	select 'No data found from generic_load_detail... Hint: check tje active_flag';
+	throw 51000, 'No data found from generic_load_detail... Hint: check tje active_flag', 1;
+	set @validationError = 'Y';
+end;
+
+if not exists (select 1 from #ld where stage_column_key_type = 'NK')
+begin
+	select 'No NK found. Please configure NK.';
+	throw 51001, 'No NK found. Please configure NK.', 1;
+	set @validationError = 'Y';
+end;
+	
+if exists (select 1 from #ld where stage_column_key_type not in ('TA') and target_column_name is null)
+begin
+	select 'Target Column Name must be specified for all key other than TA';
+	throw 51002, 'Target Column Name must be specified for all key other than TA', 1;
+
+	set @validationError = 'Y';
+end;
+
+if exists (select 1 from #ld where stage_column_key_type = 'TA' and target_column_name is not null)
+begin
+	select 'Target Column Name must NOT be specified TA';
+	throw 51003, 'Target Column Name must NOT be specified TA', 1;
+
+	set @validationError = 'Y';
+end;
+			
+if @validationError = 'N'
+begin
+	declare @ld_count int;
+	declare @ctr int;
+	select @ld_count = count(*) from #ld;
+
+	-- data type category
+	declare @DTC_TEXT	varchar(20) = 'TEXT';
+	declare @DTC_NUMBER 	varchar(20) = 'NUMBER';
+	declare @DTC_DATE	varchar(20) = 'DATE';
+	declare @DTC_DATETIME	varchar(20) = 'DATETIME';
+
+	-- repalcement constants
+	declare @KW_DEBUG_FLAG							varchar(100) = '<DEBUG_FLAG>';
+	declare @KW_DIM_TABLE_NAME						varchar(100) = '<DIM:TABLE_NAME>';
+	declare @KW_STAGE_TABLE_NAME						varchar(100) = '<STAGE:TABLE_NAME>';
+	declare @KW_REPROCESS_TABLE_NAME					varchar(100) = '<REPROCESS:TABLE_NAME>';
+	declare @KW_DIM_SK_COLUMN_NAME						varchar(100) = '<DIM:SK:COLUMN_NAME>';
+	declare @KW_DIM_GNK_COLUMN_NAME						varchar(100) = '<DIM:GNK:COLUMN_NAME>';
+	declare @KW_STAGE_SK_COLUMN_NAME					varchar(100) = '<STAGE:SK:COLUMN_NAME>';
+
+	declare @KW_NK_T_COLUMN_NAME_COLUMN_DATA_TYPE				varchar(100) = '<NK_T_COLUMN_NAME_COLUMN_DATA_TYPE>';
+	declare @KW_NK_T_COLUMN_NAME						varchar(100) = '<NK_T_COLUMN_NAME>';
+	declare @KW_NK_T_COLUMN_NAME_EQUAL_NK_S_COLUMN_ALIAS_C			varchar(100) = '<NK_T_COLUMN_NAME_EQUAL_NK_S_COLUMN_ALIAS_C>';
+	declare @KW_NK_T_COLUMN_NAME_EQUAL_ADOT_EQUAL_NK_D_COLUMN_NAME		varchar(100) = '<NK_T_COLUMN_NAME_EQUAL_ADOT_EQUAL_NK_D_COLUMN_NAME>';
+	declare @KW_NK_T_COLUMN_NAME_ALIAS_C					varchar(100) = '<NK_T_COLUMN_NAME_ALIAS_C>';
+	declare @KW_NK_S_COLUMN_NAME						varchar(100) = '<NK_S_COLUMN_NAME>';
+	declare @KW_NK_R_COLUMN_NAME						varchar(100) = '<NK_R_COLUMN_NAME>';
+	declare @KW_NK_D_COLUMN_NAME						varchar(100) = '<NK_D_COLUMN_NAME>';
+
+	declare @KW_RK_T_COLUMN_NAME_COLUMN_DATA_TYPE				varchar(100) = '<RK_T_COLUMN_NAME_COLUMN_DATA_TYPE>';
+	declare @KW_RK_T_COLUMN_NAME						varchar(100) = '<RK_T_COLUMN_NAME>';
+	declare @KW_RK_D_COLUMN_NAME						varchar(100) = '<RK_D_COLUMN_NAME>';
+
+	declare @KW_OA_T_COLUMN_NAME_COLUMN_DATA_TYPE				varchar(100) = '<OA_T_COLUMN_NAME_COLUMN_DATA_TYPE>';
+	declare @KW_OA_T_COLUMN_NAME						varchar(100) = '<OA_T_COLUMN_NAME>';
+	declare @KW_OA_S_COLUMN_NAME						varchar(100) = '<OA_S_COLUMN_NAME>';
+	declare @KW_OA_R_COLUMN_NAME						varchar(100) = '<OA_R_COLUMN_NAME>';
+	declare @KW_OA_D_COLUMN_NAME						varchar(100) = '<OA_D_COLUMN_NAME>';
+
+	declare @KW_TA_T_COLUMN_NAME_COLUMN_DATA_TYPE				varchar(100) = '<TA_T_COLUMN_NAME_COLUMN_DATA_TYPE>';
+	declare @KW_TA_T_COLUMN_NAME						varchar(100) = '<TA_T_COLUMN_NAME>';
+	declare @KW_TA_S_COLUMN_NAME						varchar(100) = '<TA_S_COLUMN_NAME>';
+	declare @KW_TA_R_COLUMN_NAME						varchar(100) = '<TA_R_COLUMN_NAME>';
+	
+	declare @KW_HASH							varchar(100) = '<HASH>';
+	declare @KW_RK_DML							varchar(100) = '<RK_DML>';
+	declare @KW_RK_VALIDATION						varchar(100) = '<RK_VALIDATION>';
+	declare @KW_RK_VALIDATION_REQUIRED					varchar(100) = '<RK_VALIDATION_REQUIRED>';
+	declare @KW_LOAD_NAME								varchar(100) = '<LOAD_NAME>';
+	
+	declare @KW_RK_REPOP_REQUIRED						varchar(100) = '<RK_REPOP_REQUIRED>';
+	declare @KW_RK_REPOP_SQL							varchar(100) = '<RK_REPOP_SQL>';
+
+	declare @KW_INDIVIDUAL_LEADER_SLAVE_INDICATOR				varchar(100)= '<INDIVIDUAL_LEADER_SLAVE_INDICATOR>';	
+	declare @KW_LEADER_EXTRA_COLUMNS_FROM_PREVIOUS_TO_CURRENT		varchar(100) = '<LEADER_EXTRA_COLUMNS_FROM_PREVIOUS_TO_CURRENT>';
+	declare @KW_SLAVE_UPDATE_COLUMNS_TO_CURRENT				varchar(100) = '<SLAVE_UPDATE_COLUMNS_TO_CURRENT>';
+	
+	--- replacement starts
+	declare @temp_KW_NK_T_COLUMN_NAME_COLUMN_DATA_TYPE			varchar(max) = '';
+	declare @temp_KW_NK_T_COLUMN_NAME					varchar(max) = '';
+	declare @temp_KW_NK_T_COLUMN_NAME_EQUAL_NK_S_COLUMN_ALIAS_C		varchar(max) = '';
+	declare @temp_KW_NK_T_COLUMN_NAME_EQUAL_ADOT_EQUAL_NK_D_COLUMN_NAME	varchar(max) = '';
+	declare @temp_KW_NK_T_COLUMN_NAME_ALIAS_C				varchar(max) = '';
+	declare @temp_KW_NK_S_COLUMN_NAME					varchar(max) = '';
+	declare @temp_KW_NK_R_COLUMN_NAME					varchar(max) = '';
+	declare @temp_KW_NK_D_COLUMN_NAME					varchar(max) = '';
+	declare @temp_KW_RK_T_COLUMN_NAME_COLUMN_DATA_TYPE			varchar(max) = '';
+	declare @temp_KW_RK_T_COLUMN_NAME					varchar(max) = '';
+	declare @temp_KW_RK_D_COLUMN_NAME					varchar(max) = '';
+	declare @temp_KW_OA_T_COLUMN_NAME_COLUMN_DATA_TYPE			varchar(max) = '';
+	declare @temp_KW_OA_T_COLUMN_NAME					varchar(max) = '';
+	declare @temp_KW_OA_S_COLUMN_NAME					varchar(max) = '';
+	declare @temp_KW_OA_R_COLUMN_NAME					varchar(max) = '';
+	declare @temp_KW_OA_D_COLUMN_NAME					varchar(max) = '';
+	declare @temp_KW_HASH							varchar(max) = null;
+	declare @temp_KW_RK_DML							varchar(max) = '';
+	declare @temp_KW_RK_VALIDATION						varchar(max) = '';
+	declare @temp_KW_TA_T_COLUMN_NAME_COLUMN_DATA_TYPE			varchar(max) = '';
+	declare @temp_KW_TA_T_COLUMN_NAME					varchar(max) = '';
+	declare @temp_KW_TA_S_COLUMN_NAME					varchar(max) = '';
+	declare @temp_KW_TA_R_COLUMN_NAME					varchar(max) = '';
+	declare @temp_KW_RK_REPOP_REQUIRED					varchar(max) = '';
+	declare @temp_KW_RK_REPOP_SQL						varchar(max) = '';
+	declare @temp_KW_INDIVIDUAL_LEADER_SLAVE_INDICATOR			varchar(max) = '';
+	declare @temp_KW_LEADER_EXTRA_COLUMNS_FROM_PREVIOUS_TO_CURRENT		varchar(max) = '';	
+	declare @temp_KW_SLAVE_UPDATE_COLUMNS_TO_CURRENT			varchar(max) = '';	
+	
+	declare @ctr_TT_NK_ALIAS_C						int;
+
+	declare @record_id							int;
+	declare @gld_id								int;
+	declare @stage_column_name						varchar(120);
+	declare @stage_column_data_type						varchar(20);
+	declare @stage_column_data_type_category				varchar(20);
+	declare @stage_column_key_type						varchar(3);
+	declare @target_column_name						varchar(120);
+	declare @ref_table_name							varchar(120);
+	declare @ref_gnk_name							varchar(120);
+	declare	@ref_target_column_name1					varchar(120);
+	declare	@ref_source_column_name1					varchar(120);
+	declare	@ref_target_column_name2					varchar(120);
+	declare	@ref_source_column_name2					varchar(120);
+	declare	@ref_target_column_name3					varchar(120);
+	declare	@ref_source_column_name3					varchar(120);
+	declare	@ref_target_column_name4					varchar(120);
+	declare	@ref_source_column_name4					varchar(120);
+	declare	@ref_target_column_name5					varchar(120);
+	declare	@ref_source_column_name5					varchar(120);
+	declare @skip_rk_Validation						varchar(1);
+
+	declare @sl_no								int;
+
+	set @template_str = replace(@template_str, @KW_DEBUG_FLAG, isnull(@debug_flag, 'N'));
+	set @template_str = replace(@template_str, @KW_STAGE_TABLE_NAME, @stage_table_name);
+	set @template_str = replace(@template_str, @KW_DIM_TABLE_NAME, @target_table_name);
+	set @template_str = replace(@template_str, @KW_DIM_SK_COLUMN_NAME, @target_sk_name);
+	set @template_str = replace(@template_str, @KW_DIM_GNK_COLUMN_NAME, @target_gnk_name);
+	set @template_str = replace(@template_str, @KW_REPROCESS_TABLE_NAME, @reprocess_table_name);
+	set @template_str = replace(@template_str, @KW_STAGE_SK_COLUMN_NAME, @stage_sk_name);
+	set @template_str = replace(@template_str, @KW_RK_VALIDATION_REQUIRED, @rkValidationRequired);
+	set @template_str = replace(@template_str, @KW_INDIVIDUAL_LEADER_SLAVE_INDICATOR, @individual_leader_slave_ind);
+
+	set @ctr = 1
+	set @ctr_TT_NK_ALIAS_C = 1;
+	while @ctr <= @ld_count
+	begin
+		select		@record_id				= record_id,
+				@gld_id					= gld_id,
+				@stage_column_name			= stage_column_name,
+				@stage_column_data_type			= stage_column_data_type,
+				@stage_column_data_type_category 	= stage_column_data_type_category, 
+				@stage_column_key_type			= stage_column_key_type,
+				@target_column_name			= target_column_name,
+				@ref_table_name				= ref_table_name,
+				@ref_gnk_name				= ref_gnk_name,
+				@ref_target_column_name1		= ref_target_column_name1,
+				@ref_source_column_name1		= ref_source_column_name1,		
+				@ref_target_column_name2		= ref_target_column_name2,
+				@ref_source_column_name2		= ref_source_column_name2,
+				@ref_target_column_name3		= ref_target_column_name3,
+				@ref_source_column_name3		= ref_source_column_name3,
+				@ref_target_column_name4		= ref_target_column_name4,
+				@ref_source_column_name4		= ref_source_column_name4,
+				@ref_target_column_name5		= ref_target_column_name5,
+				@ref_source_column_name5		= ref_source_column_name5,
+				@sl_no					= sl_no,
+				@skip_rk_validation			= skip_rk_validation
+		from #ld
+		where record_id = @ctr;
+
+
+		if @stage_column_key_type = 'TA'
+		begin
+			set @temp_KW_TA_T_COLUMN_NAME_COLUMN_DATA_TYPE 
+			= @temp_KW_TA_T_COLUMN_NAME_COLUMN_DATA_TYPE + ', t_'+@stage_column_name+' '+@stage_column_data_type;
+
+			set @temp_KW_TA_T_COLUMN_NAME
+			= @temp_KW_TA_T_COLUMN_NAME + ', t_'+@stage_column_name;
+
+			set @temp_KW_TA_S_COLUMN_NAME
+			= @temp_KW_TA_S_COLUMN_NAME +', '+@stage_column_name;
+
+			set @temp_KW_TA_R_COLUMN_NAME
+			= @temp_KW_TA_R_COLUMN_NAME +', '+@stage_column_name;
+
+			if @temp_KW_HASH is null
+			begin
+				if @stage_column_data_type_category  = @DTC_TEXT
+				begin
+					set @temp_KW_HASH = 'trim(isnull(trim('+@stage_column_name+'), ''~''))';
+				end;
+				if @stage_column_data_type_category = @DTC_NUMBER
+				begin
+					set @temp_KW_HASH = 'trim(isnull(trim(str('+@stage_column_name+')), ''~''))';
+				end;
+				if @stage_column_data_type_category = @DTC_DATE
+				begin
+					set @temp_KW_HASH = 'trim(isnull(trim(convert(varchar, '+@stage_column_name+')), ''~''))';
+				end;
+			end
+			else
+			begin
+				if @stage_column_data_type_category  = @DTC_TEXT
+				begin
+					set @temp_KW_HASH = @temp_KW_HASH +',trim(isnull(trim('+@stage_column_name+'), ''~''))';
+				end;
+				if @stage_column_data_type_category = @DTC_NUMBER
+				begin
+					set @temp_KW_HASH = @temp_KW_HASH +',trim(isnull(trim(str('+@stage_column_name+')), ''~''))';
+				end;
+				if @stage_column_data_type_category = @DTC_DATE
+				begin
+					set @temp_KW_HASH = @temp_KW_HASH +',trim(isnull(trim(convert(varchar, '+@stage_column_name+')), ''~''))';
+				end;
+			end
+
+		end;
+
+		if @stage_column_key_type = 'NK'
+		begin
+			set @temp_KW_NK_T_COLUMN_NAME_COLUMN_DATA_TYPE 
+			= @temp_KW_NK_T_COLUMN_NAME_COLUMN_DATA_TYPE + ', t_'+@stage_column_name+' '+@stage_column_data_type;
+
+			set @temp_KW_NK_T_COLUMN_NAME
+			= @temp_KW_NK_T_COLUMN_NAME+', t_'+@stage_column_name;
+
+			set @temp_KW_NK_S_COLUMN_NAME
+			= @temp_KW_NK_S_COLUMN_NAME +', '+@stage_column_name;
+
+			set @temp_KW_NK_R_COLUMN_NAME
+			= @temp_KW_NK_R_COLUMN_NAME+', '+@stage_column_name;
+
+			set @temp_KW_NK_T_COLUMN_NAME_ALIAS_C
+			= @temp_KW_NK_T_COLUMN_NAME_ALIAS_C + ', t_'+@stage_column_name+' c'++ltrim(rtrim(str(@ctr_TT_NK_ALIAS_C)));
+
+			set @temp_KW_NK_T_COLUMN_NAME_EQUAL_NK_S_COLUMN_ALIAS_C
+			= @temp_KW_NK_T_COLUMN_NAME_EQUAL_NK_S_COLUMN_ALIAS_C+' and t_'+@stage_column_name+' = c'++ltrim(rtrim(str(@ctr_TT_NK_ALIAS_C)));
+
+			set @temp_KW_NK_T_COLUMN_NAME_EQUAL_ADOT_EQUAL_NK_D_COLUMN_NAME
+			= @temp_KW_NK_T_COLUMN_NAME_EQUAL_ADOT_EQUAL_NK_D_COLUMN_NAME+' and t_'+@stage_column_name+' = a.'+@target_column_name;
+
+			set @temp_KW_NK_D_COLUMN_NAME
+			= @temp_KW_NK_D_COLUMN_NAME + ', '+@target_column_name;
+
+
+			if @temp_KW_HASH is null
+			begin
+				if @stage_column_data_type_category  = @DTC_TEXT
+				begin
+					set @temp_KW_HASH = 'trim(isnull(trim('+@stage_column_name+'), ''~''))';
+				end;
+				if @stage_column_data_type_category = @DTC_NUMBER
+				begin
+					set @temp_KW_HASH = 'trim(isnull(trim(str('+@stage_column_name+')), ''~''))';
+				end;
+				if @stage_column_data_type_category = @DTC_DATE
+				begin
+					set @temp_KW_HASH = 'trim(isnull(trim(convert(varchar, '+@stage_column_name+')), ''~''))';
+				end;
+			end
+			else
+			begin
+				if @stage_column_data_type_category  = @DTC_TEXT
+				begin
+					set @temp_KW_HASH = @temp_KW_HASH +',trim(isnull(trim('+@stage_column_name+'), ''~''))';
+				end;
+				if @stage_column_data_type_category = @DTC_NUMBER
+				begin
+					set @temp_KW_HASH = @temp_KW_HASH +',trim(isnull(trim(str('+@stage_column_name+')), ''~''))';
+				end;
+				if @stage_column_data_type_category = @DTC_DATE
+				begin
+					set @temp_KW_HASH = @temp_KW_HASH +',trim(isnull(trim(convert(varchar, '+@stage_column_name+')), ''~''))';
+				end;
+			end
+
+			set @ctr_TT_NK_ALIAS_C  = @ctr_TT_NK_ALIAS_C + 1;
+		end;
+	
+		if @stage_column_key_type = 'RK'
+		begin
+
+			set @temp_KW_RK_T_COLUMN_NAME_COLUMN_DATA_TYPE 
+			= @temp_KW_RK_T_COLUMN_NAME_COLUMN_DATA_TYPE + ', t_'+@stage_column_name+' '+@stage_column_data_type;
+
+			set @temp_KW_RK_D_COLUMN_NAME
+			= @temp_KW_RK_D_COLUMN_NAME +', '+@target_column_name;
+	-- bala change
+			set @temp_KW_RK_T_COLUMN_NAME
+			= @temp_KW_RK_T_COLUMN_NAME +', t_'+@stage_column_name;
+
+			-- reference key update
+			
+			set @temp_KW_RK_DML 
+			= @temp_KW_RK_DML +' update #tt set rk_failure_info =  isnull(rk_failure_info, '' '')+'':RK_FAILURE :'+@ref_gnk_name+''';';
+			
+			set @temp_KW_RK_DML 
+			= @temp_KW_RK_DML +' update #tt set rk_failure_info = replace(rk_failure_info,'':RK_FAILURE :'+@ref_gnk_name+''', ''''), '+'t_'+@stage_column_name+' = '+@ref_gnk_name+' ';
+--bala: change: 10-feb-2021
+
+			set @temp_KW_RK_DML
+			= @temp_KW_RK_DML +' from '+@ref_table_name;
+
+-- bala: change: 2-May-2022: start		
+			/*Old Code: 
+			set @temp_KW_RK_DML
+			= @temp_KW_RK_DML +' where active = 1 and '+@ref_target_column_name1+' = t_'+@ref_source_column_name1;
+			*/
+			set @temp_KW_RK_DML
+			= @temp_KW_RK_DML +' where active = 1 and '+@ref_target_column_name1+' = t_'+@ref_source_column_name1;
+-- bala: change: 2-May-2022: end		
+
+			if @ref_source_column_name2 is not null
+			and ltrim(rtrim(@ref_source_column_name2)) != ''
+			begin
+				set @temp_KW_RK_DML
+				= @temp_KW_RK_DML +' and '+@ref_target_column_name2+' = t_'+@ref_source_column_name2;
+			end;
+
+			if @ref_source_column_name3 is not null
+			and ltrim(rtrim(@ref_source_column_name3)) != ''
+			begin
+				set @temp_KW_RK_DML
+				= @temp_KW_RK_DML +' and '+@ref_target_column_name3+' = t_'+@ref_source_column_name3;
+			end;
+
+			if @ref_source_column_name4 is not null
+			and ltrim(rtrim(@ref_source_column_name4)) != ''
+			begin
+				set @temp_KW_RK_DML
+				= @temp_KW_RK_DML +' and '+@ref_target_column_name4+' = t_'+@ref_source_column_name4;
+			end;
+
+			if @ref_source_column_name5 is not null
+			and ltrim(rtrim(@ref_source_column_name5)) != ''
+			begin
+				set @temp_KW_RK_DML
+				= @temp_KW_RK_DML +' and '+@ref_target_column_name5+' = t_'+@ref_source_column_name5;
+			end;
+			set @temp_KW_RK_DML
+			= @temp_KW_RK_DML +';';
+
+
+			--RK validation
+			if @skip_rk_validation = 'N'
+			begin	
+				declare @rc	varchar(max) = '';
+				if @ref_source_column_name1 is not null
+				and ltrim(rtrim(@ref_source_column_name1)) != ''
+				begin
+					set @rc = @rc +' and t_'+@ref_source_column_name1+'  is not null ';
+				end;
+
+				if @ref_source_column_name2 is not null
+				and ltrim(rtrim(@ref_source_column_name2)) != ''
+				begin
+					set @rc = @rc +' and t_'+@ref_source_column_name2+'  is not null ';
+				end;
+
+				if @ref_source_column_name3 is not null
+				and ltrim(rtrim(@ref_source_column_name3)) != ''
+				begin
+					set @rc = @rc +' and t_'+@ref_source_column_name3+'  is not null ';
+				end;
+
+				if @ref_source_column_name4 is not null
+				and ltrim(rtrim(@ref_source_column_name4)) != ''
+				begin
+					set @rc = @rc +' and t_'+@ref_source_column_name4+'  is not null ';
+				end;
+
+				if @ref_source_column_name5 is not null
+				and ltrim(rtrim(@ref_source_column_name5)) != ''
+				begin
+					set @rc = @rc +' and t_'+@ref_source_column_name5+'  is not null ';
+				end;
+			
+				if @temp_KW_RK_VALIDATION = ''
+				begin
+
+
+					set @temp_KW_RK_VALIDATION = @temp_KW_RK_VALIDATION + 'update #tt set t_ctrl_validated_flag = ''N'' where (t_'+@stage_column_name+' is null '+@rc+') ';	
+				end
+				else
+				begin
+					set @temp_KW_RK_VALIDATION = @temp_KW_RK_VALIDATION + ' or (t_'+@stage_column_name+' is null '+@rc+' ) ';
+				end;
+			end;
+
+			-- re_pop logic
+			if @skip_rk_validation = 'Y'
+			begin
+				set @temp_KW_RK_REPOP_REQUIRED = 'Y';
+				set @temp_KW_RK_REPOP_SQL = @temp_KW_RK_REPOP_SQL+'update '+@target_table_name+' set '+@target_column_name+' = '+'t_'+@stage_column_name;
+				set @temp_KW_RK_REPOP_SQL = @temp_KW_RK_REPOP_SQL + ' from #tt where '+@target_gnk_name+' = t_dim_nk';
+				set @temp_KW_RK_REPOP_SQL = @temp_KW_RK_REPOP_SQL + ' and '+@target_column_name+' is null ';
+				set @temp_KW_RK_REPOP_SQL = @temp_KW_RK_REPOP_SQL + ' and t_ctrl_record_found = ''X''';
+				set @temp_KW_RK_REPOP_SQL = @temp_KW_RK_REPOP_SQL + ' and t_'+@stage_column_name+' is not null;';
+			end;
+		end;
+
+		if @stage_column_key_type = 'OA'
+		begin
+			set @temp_KW_OA_T_COLUMN_NAME_COLUMN_DATA_TYPE
+			= @temp_KW_OA_T_COLUMN_NAME_COLUMN_DATA_TYPE+', t_'+@stage_column_name+' '+@stage_column_data_type;
+
+			set @temp_KW_OA_T_COLUMN_NAME
+			= @temp_KW_OA_T_COLUMN_NAME + ', t_'+@stage_column_name;
+
+			set @temp_KW_OA_S_COLUMN_NAME
+			= @temp_KW_OA_S_COLUMN_NAME +', '+@stage_column_name;
+
+			set @temp_KW_OA_R_COLUMN_NAME
+			= @temp_KW_OA_R_COLUMN_NAME +', '+@stage_column_name;
+
+			set @temp_KW_OA_D_COLUMN_NAME
+			= @temp_KW_OA_D_COLUMN_NAME +', '+@target_column_name;
+
+
+
+			if @temp_KW_HASH is null
+			begin
+				if @stage_column_data_type_category  = @DTC_TEXT
+				begin
+					set @temp_KW_HASH = 'trim(isnull(trim('+@stage_column_name+'), ''~''))';
+				end;
+				if @stage_column_data_type_category = @DTC_NUMBER
+				begin
+					set @temp_KW_HASH = 'trim(isnull(trim(str('+@stage_column_name+')), ''~''))';
+				end;
+				if @stage_column_data_type_category = @DTC_DATE
+				begin
+					set @temp_KW_HASH = 'trim(isnull(trim(convert(varchar, '+@stage_column_name+')), ''~''))';
+				end;
+			end
+			else
+			begin
+				if @stage_column_data_type_category  = @DTC_TEXT
+				begin
+					set @temp_KW_HASH = @temp_KW_HASH +',trim(isnull(trim('+@stage_column_name+'), ''~''))';
+				end;
+				if @stage_column_data_type_category = @DTC_NUMBER
+				begin
+					set @temp_KW_HASH = @temp_KW_HASH +',trim(isnull(trim(str('+@stage_column_name+')), ''~''))';
+				end;
+				if @stage_column_data_type_category = @DTC_DATE
+				begin
+					set @temp_KW_HASH = @temp_KW_HASH +',trim(isnull(trim(convert(varchar, '+@stage_column_name+')), ''~''))';
+				end;
+			end
+
+			/*
+			if @temp_KW_HASH is null
+			begin
+				set @temp_KW_HASH = 'trim(isnull(trim('+@stage_column_name+'), ''~''))';
+			end
+			else
+			begin
+				set @temp_KW_HASH = @temp_KW_HASH +',trim(isnull(trim('+@stage_column_name+'), ''~''))';
+			end
+			*/
+		end;
+
+		set @ctr = @ctr + 1;
+	end;
+	set @template_str = replace(@template_str, @KW_NK_T_COLUMN_NAME_COLUMN_DATA_TYPE, @temp_KW_NK_T_COLUMN_NAME_COLUMN_DATA_TYPE);
+	set @template_str = replace(@template_str, @KW_NK_T_COLUMN_NAME, @temp_KW_NK_T_COLUMN_NAME);
+	set @template_str = replace(@template_str, @KW_NK_T_COLUMN_NAME_EQUAL_NK_S_COLUMN_ALIAS_C, @temp_KW_NK_T_COLUMN_NAME_EQUAL_NK_S_COLUMN_ALIAS_C);
+	set @template_str = replace(@template_str, @KW_NK_T_COLUMN_NAME_EQUAL_ADOT_EQUAL_NK_D_COLUMN_NAME, @temp_KW_NK_T_COLUMN_NAME_EQUAL_ADOT_EQUAL_NK_D_COLUMN_NAME);
+	set @template_str = replace(@template_str, @KW_NK_T_COLUMN_NAME_ALIAS_C, @temp_KW_NK_T_COLUMN_NAME_ALIAS_C);
+	set @template_str = replace(@template_str, @KW_NK_S_COLUMN_NAME, @temp_KW_NK_S_COLUMN_NAME);
+	set @template_str = replace(@template_str, @KW_NK_R_COLUMN_NAME, @temp_KW_NK_R_COLUMN_NAME);
+	set @template_str = replace(@template_str, @KW_NK_D_COLUMN_NAME, @temp_KW_NK_D_COLUMN_NAME);
+	set @template_str = replace(@template_str, @KW_RK_T_COLUMN_NAME_COLUMN_DATA_TYPE, @temp_KW_RK_T_COLUMN_NAME_COLUMN_DATA_TYPE);
+	set @template_str = replace(@template_str, @KW_RK_T_COLUMN_NAME, @temp_KW_RK_T_COLUMN_NAME);
+	set @template_str = replace(@template_str, @KW_RK_D_COLUMN_NAME, @temp_KW_RK_D_COLUMN_NAME);
+	set @template_str = replace(@template_str, @KW_OA_T_COLUMN_NAME_COLUMN_DATA_TYPE, @temp_KW_OA_T_COLUMN_NAME_COLUMN_DATA_TYPE);
+	set @template_str = replace(@template_str, @KW_OA_T_COLUMN_NAME, @temp_KW_OA_T_COLUMN_NAME);
+	set @template_str = replace(@template_str, @KW_OA_S_COLUMN_NAME, @temp_KW_OA_S_COLUMN_NAME);
+	set @template_str = replace(@template_str, @KW_OA_R_COLUMN_NAME, @temp_KW_OA_R_COLUMN_NAME);
+	set @template_str = replace(@template_str, @KW_OA_D_COLUMN_NAME, @temp_KW_OA_D_COLUMN_NAME);
+	set @template_str = replace(@template_str, @KW_HASH, @temp_KW_HASH);
+	set @template_str = replace(@template_str, @KW_RK_DML, @temp_KW_RK_DML);
+	set @template_str = replace(@template_str, @KW_RK_VALIDATION, @temp_KW_RK_VALIDATION);
+	set @template_str = replace(@template_str, @KW_TA_T_COLUMN_NAME_COLUMN_DATA_TYPE, @temp_KW_TA_T_COLUMN_NAME_COLUMN_DATA_TYPE);
+	set @template_str = replace(@template_str, @KW_TA_T_COLUMN_NAME, @temp_KW_TA_T_COLUMN_NAME);
+	set @template_str = replace(@template_str, @KW_TA_S_COLUMN_NAME, @temp_KW_TA_S_COLUMN_NAME);
+	set @template_str = replace(@template_str, @KW_TA_R_COLUMN_NAME, @temp_KW_TA_R_COLUMN_NAME);
+	set @template_str = replace(@template_str, @KW_LOAD_NAME, @load_name);
+	set @template_str = replace(@template_str, '<TRANSACTION_BASED>', @transaction_required);
+	
+	set @template_str = replace(@template_str, @KW_RK_REPOP_REQUIRED, @temp_KW_RK_REPOP_REQUIRED);
+	if @temp_KW_RK_REPOP_SQL = ''
+	begin
+		set @template_str = replace(@template_str, @KW_RK_REPOP_SQL, 'declare @vrp int;');
+	end
+	else
+	begin
+		set @template_str = replace(@template_str, @KW_RK_REPOP_SQL, @temp_KW_RK_REPOP_SQL);
+	end;
+
+	declare @temp1000_str varchar(8000);
+	declare @temp1001_str varchar(8000);
+	declare @temp1002_str varchar(max);
+
+	if @individual_leader_slave_ind = 'L'
+	begin
+		select	@temp1000_str = string_agg(target_column_name+' = x.'+target_column_name, ','),
+				@temp1001_str = string_agg(target_column_name, ',')
+		from generic_load_detail 
+		where load_name in (select load_name from generic_load_header where master_load_name = @load_name)
+		and stage_column_key_type in ('OA', 'RK')
+		and active_flag = 'Y';
+
+		set @temp1002_str  = ' update '+@target_table_name;
+		set @temp1002_str = @temp1002_str+' set '+ @temp1000_str;
+		set @temp1002_str = @temp1002_str+' from (select t_dim_nk, '+@temp1001_str+' from '+@target_table_name+' a, #tt where a.'+@target_sk_name+' = t_dim_sk) x';
+		set @temp1002_str = @temp1002_str+' where '+@target_table_name+'.'+@target_gnk_name +'= x.t_dim_nk'; 
+		set @temp1002_str = @temp1002_str+' and active = 1;';  
+
+		set @temp_KW_LEADER_EXTRA_COLUMNS_FROM_PREVIOUS_TO_CURRENT = @temp1002_str;		
+	end
+	else
+	begin
+		set @temp_KW_LEADER_EXTRA_COLUMNS_FROM_PREVIOUS_TO_CURRENT = 'declare @dummy_assignment1 int = 1;';
+	end;
+	set @template_str = replace(@template_str, 
+				@KW_LEADER_EXTRA_COLUMNS_FROM_PREVIOUS_TO_CURRENT, 
+				@temp_KW_LEADER_EXTRA_COLUMNS_FROM_PREVIOUS_TO_CURRENT);
+
+ 
+
+	if @individual_leader_slave_ind = 'S'
+	begin
+		select	@temp1000_str = string_agg(target_column_name+' = x.t_'+target_column_name, ','),
+				@temp1001_str = string_agg('t_'+target_column_name, ',')
+		from generic_load_detail 
+		where load_name = @load_name
+		and stage_column_key_type in ('OA', 'RK')
+		and active_flag = 'Y';
+
+		set @temp1002_str  = ' update '+@target_table_name;
+		set @temp1002_str = @temp1002_str+' set '+ @temp1000_str;
+		set @temp1002_str = @temp1002_str+' from (select t_dim_sk, '+@temp1001_str+' from #tt ) x';
+		set @temp1002_str = @temp1002_str+' where '+@target_table_name+'.'+@target_sk_name +'= x.t_dim_sk'; 
+		set @temp1002_str = @temp1002_str+' and active = 1;';  
+
+		set @temp_KW_SLAVE_UPDATE_COLUMNS_TO_CURRENT = @temp1002_str;
+
+	end
+	else
+	begin
+		set @temp_KW_SLAVE_UPDATE_COLUMNS_TO_CURRENT = 'declare @dummy_assignment2 int = 1;';
+	end;
+	set @template_str = replace(@template_str, 
+				@KW_SLAVE_UPDATE_COLUMNS_TO_CURRENT, 
+				@temp_KW_SLAVE_UPDATE_COLUMNS_TO_CURRENT);
+
+
+	if @debug_flag = 'Y' 
+	begin
+		select @template_str;
+	end;
+
+	if @execute_flag = 'Y'
+	begin
+		exec ( @template_str);
+	end;
+	
+	--json view creation if applicable
+	if exists (select 1 
+				from generic_load_detail 
+				where load_name = @load_name
+				and target_column_name = 'json_attribute'
+				 and active_flag = 'Y')
+	begin
+		exec [generic_dim_json_flatten_view_create] @target_table_name, @target_sk_name, @target_gnk_name, @json_column_delimiter;
+	end;  	
+end; 
+
+end;
+
+GO
+
+

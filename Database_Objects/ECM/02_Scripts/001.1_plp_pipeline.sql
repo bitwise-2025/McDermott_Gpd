@@ -1,0 +1,7 @@
+insert into plp_pipeline (pipeline_code,subject_area_code,description,comment,active,touched_by,touched_dtm,sec_sa_id) Values('pl_ecm_employeesdata_source_to_stage','NCSA','pl_ecm_employeesdata_source_to_stage',NULL,'1','aditya.anand2@mcdermott.com','2024-08-01 06:42:19.043',68)
+
+insert into plp_pipeline (pipeline_code,subject_area_code,description,comment,active,touched_by,touched_dtm,sec_sa_id) Values('pl_ecm_employeesdata_stage_to_raw','NCSA','pl_ecm_employeesdata_stage_to_raw',NULL,'1','aditya.anand2@mcdermott.com','2024-08-01 06:42:19.043',68)
+
+insert into plp_pipeline (pipeline_code,subject_area_code,description,comment,active,touched_by,touched_dtm,sec_sa_id) Values('pl_ecm_employeesdata_raw_to_synapse','NCSA','pl_ecm_employeesdata_raw_to_synapse',NULL,'1','aditya.anand2@mcdermott.com','2024-08-01 06:42:19.043',68)
+
+insert into plp_pipeline (pipeline_code,subject_area_code,description,comment,active,touched_by,touched_dtm,sec_sa_id) Values('pl_ecm_employeesdata_master_pipeline','NCSA','pl_ecm_employeesdata_master_pipeline',NULL,'1','aditya.anand2@mcdermott.com','2024-08-01 06:42:19.043',68)

@@ -1,0 +1,87 @@
+/****** Object:  Table [edw].[dim_entp_360536_edw_eqa_data_archive]    Script Date: 1/28/2026 10:54:55 AM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE TABLE [edw].[dim_entp_360536_edw_eqa_data_archive]
+(
+	[Tag_Number] [nvarchar](max) NULL,
+	[RDS_PP] [nvarchar](max) NULL,
+	[Tag_Level] [nvarchar](max) NULL,
+	[Status] [nvarchar](max) NULL,
+	[Approval_Revision] [nvarchar](max) NULL,
+	[Approval_Status] [nvarchar](max) NULL,
+	[Approval_Date] [nvarchar](max) NULL,
+	[Approval_Comment] [nvarchar](max) NULL,
+	[Discipline] [nvarchar](max) NULL,
+	[TenneT_Object_Type] [nvarchar](max) NULL,
+	[Type] [nvarchar](max) NULL,
+	[Description] [nvarchar](max) NULL,
+	[Long_Term_Text] [nvarchar](max) NULL,
+	[Service] [nvarchar](max) NULL,
+	[System_Name] [nvarchar](max) NULL,
+	[Major_Equipment] [nvarchar](max) NULL,
+	[State_of_Physical_Label] [nvarchar](max) NULL,
+	[Point_of_Installation] [nvarchar](max) NULL,
+	[Point_of_Installation_Value] [nvarchar](max) NULL,
+	[Site_of_Installation] [nvarchar](max) NULL,
+	[Purchase_Order_Number] [nvarchar](max) NULL,
+	[Source] [nvarchar](max) NULL,
+	[Source_Date] [nvarchar](max) NULL,
+	[Source_Identifier] [nvarchar](max) NULL,
+	[Source_Type] [nvarchar](max) NULL,
+	[Deck_Level] [nvarchar](max) NULL,
+	[Room_Number] [nvarchar](max) NULL,
+	[Room_Description] [nvarchar](max) NULL,
+	[PID_Number] [nvarchar](max) NULL,
+	[Tag_Status_History] [nvarchar](max) NULL,
+	[Approval_Status_History] [nvarchar](max) NULL,
+	[Approval_Date_History] [nvarchar](max) NULL,
+	[Data_Source_History] [nvarchar](max) NULL,
+	[Point_Of_Installation_History] [nvarchar](max) NULL,
+	[Site_Of_Installation_History] [nvarchar](max) NULL,
+	[Design_Capacity] [nvarchar](max) NULL,
+	[Design_Pressure] [nvarchar](max) NULL,
+	[Design_Temperature] [nvarchar](max) NULL,
+	[Operating_Pressure] [nvarchar](max) NULL,
+	[Operating_Temperature] [nvarchar](max) NULL,
+	[L] [nvarchar](max) NULL,
+	[W_ID] [nvarchar](max) NULL,
+	[H_TL_to_TL] [nvarchar](max) NULL,
+	[MOC_Main] [nvarchar](max) NULL,
+	[MOC_Internal] [nvarchar](max) NULL,
+	[Insulated] [nvarchar](max) NULL,
+	[Driver_Type] [nvarchar](max) NULL,
+	[Driver_Power] [nvarchar](max) NULL,
+	[Driver_Volts] [nvarchar](max) NULL,
+	[Electrical_Area_Class] [nvarchar](max) NULL,
+	[Dry_Weight] [nvarchar](max) NULL,
+	[Contents_Weight] [nvarchar](max) NULL,
+	[Gross_Weight] [nvarchar](max) NULL,
+	[Long_Lead_Item] [nvarchar](max) NULL,
+	[Requisition_Number] [nvarchar](max) NULL,
+	[Requisition_Name] [nvarchar](max) NULL,
+	[Remarks] [nvarchar](max) NULL,
+	[E3D_Room] [nvarchar](max) NULL,
+	[Design_Pressure_barg] [nvarchar](max) NULL,
+	[Operating_Pressure_barg] [nvarchar](max) NULL,
+	[Design_Temperature_Max] [nvarchar](max) NULL,
+	[Design_Temperature_Min] [nvarchar](max) NULL,
+	[Operating_Temperature_Max] [nvarchar](max) NULL,
+	[Operating_Temperature_Min] [nvarchar](max) NULL,
+	[Dimension_Length_mm] [nvarchar](max) NULL,
+	[Dimension_Width_mm] [nvarchar](max) NULL,
+	[Dimension_Height_mm] [nvarchar](max) NULL,
+	[Dry_Weight_kg] [nvarchar](max) NULL,
+	[Operating_Weight_kg] [nvarchar](max) NULL,
+	[Long_Term_Text_History] [nvarchar](max) NULL,
+	[Load_date] [datetime] NULL
+)
+WITH
+(
+	DISTRIBUTION = ROUND_ROBIN,
+	HEAP
+)
+GO

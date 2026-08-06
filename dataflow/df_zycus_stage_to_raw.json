@@ -1,0 +1,93 @@
+{
+	"name": "df_zycus_stage_to_raw",
+	"properties": {
+		"folder": {
+			"name": "Zycus"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_zycus_generic",
+						"type": "DatasetReference"
+					},
+					"name": "SrcZycusStage"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_zycus_raw_generic",
+						"type": "DatasetReference"
+					},
+					"name": "SinkZycusRaw",
+					"description": "Export data to ds_adlsg2_csv_zycus_raw_generic"
+				}
+			],
+			"transformations": [
+				{
+					"name": "SetFileName",
+					"description": "1. Cleaning & updating the Description Column\n2. Concating the File_Path as Folder_TimeStamp"
+				}
+			],
+			"scriptLines": [
+				"parameters{",
+				"     p_ds_folder_path as string,",
+				"     p_ds_input_file_name as string,",
+				"     p_ds_output_file_name as string",
+				"}",
+				"source(output(",
+				"          PROJ_ID as string,",
+				"          PROJECT_DESCRIPTION as string,",
+				"          JDE_PROJ_NUMBER as string,",
+				"          OPERATING_GROUP as string,",
+				"          SECTOR as string,",
+				"          CLIENT as string,",
+				"          JDE_SUPPLIER_NUMBER as string,",
+				"          SUPPLIER_NAME as string,",
+				"          IDENT as string,",
+				"          TAG_NUMBER as string,",
+				"          DESCRIPTION as string,",
+				"          PO_NUMBER as string,",
+				"          SPM_POH_ID as string,",
+				"          SUPPLEMENT as string,",
+				"          SUP_POH_ID as string,",
+				"          POLI_POS as string,",
+				"          POLI_SUB_POS as string,",
+				"          ITEM_SHIP_POS as string,",
+				"          ITEM_SHIP_SUB_POS as string,",
+				"          FREIGHT_TERM as string,",
+				"          POLI_QTY as string,",
+				"          UOM as string,",
+				"          ISH_PROM_CONTRACT_DATE as string,",
+				"          MATL_RECV_DATE as string,",
+				"          ISH_ITEM_SHIP_QTY as string,",
+				"          RECV_QTY as string,",
+				"          RECV_TYPE as string,",
+				"          RECV_DOC_NUMBER as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     rowUrlColumn: 'File_Path') ~> SrcZycusStage",
+				"SrcZycusStage derive(DESCRIPTION = replace(replace(replace(replace(replace(replace(DESCRIPTION, ',', ' '),'\\n',' '),'\"',' '),'\\r',' '),';',' '),'  ',' '),",
+				"          File_Path = concat(concat(trim(substringIndex($p_ds_folder_path,'/',5),'/'),'/'),substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',replace(substringIndex($p_ds_output_file_name,'/',-1),'.csv',''),'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv')) ~> SetFileName",
+				"SetFileName sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          Name as string,",
+				"          Category as string,",
+				"          Status as string,",
+				"          Error as string",
+				"     ),",
+				"     rowUrlColumn:'File_Path',",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> SinkZycusRaw"
+			]
+		}
+	}
+}

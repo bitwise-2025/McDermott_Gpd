@@ -1,0 +1,67 @@
+{
+	"name": "df_ecm_user_roles_groups_restapi",
+	"properties": {
+		"folder": {
+			"name": "Projects/ECM User Roles Groups"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_ecm_user_roles_groups_restapi_source_json",
+						"type": "DatasetReference"
+					},
+					"name": "RestAPISource"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_ecm_user_roles_groups_api_stage",
+						"type": "DatasetReference"
+					},
+					"name": "sink"
+				}
+			],
+			"transformations": [
+				{
+					"name": "FlattenRestApiData"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          hasmore as boolean,",
+				"          details as (username as string, email as string, firstname as string, lastname as string, organization as string, groups as string, sitedetails as (shortname as string, name as string, role as string)[])[]",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     documentForm: 'documentPerLine') ~> RestAPISource",
+				"RestAPISource foldDown(unroll(details.sitedetails, details),",
+				"     mapColumn(",
+				"          username = details.username,",
+				"          email = details.email,",
+				"          firstname = details.firstname,",
+				"          lastname = details.lastname,",
+				"          organization = details.organization,",
+				"          groups = details.groups,",
+				"          sitedetails_shortname = details.sitedetails.shortname,",
+				"          sitedetails_name = details.sitedetails.name,",
+				"          sitedetails_role = details.sitedetails.role",
+				"     ),",
+				"     skipDuplicateMapInputs: false,",
+				"     skipDuplicateMapOutputs: false) ~> FlattenRestApiData",
+				"FlattenRestApiData sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     partitionFileNames:['ECM_User_Roles_Groups.csv'],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> sink"
+			]
+		}
+	}
+}

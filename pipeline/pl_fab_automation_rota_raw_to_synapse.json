@@ -1,0 +1,952 @@
+{
+	"name": "pl_fab_automation_rota_raw_to_synapse",
+	"properties": {
+		"activities": [
+			{
+				"name": "Check Combined File non zero Bytes",
+				"description": "Check if the combined file has any data to be loaded.",
+				"type": "GetMetadata",
+				"dependsOn": [
+					{
+						"activity": "cp_Get_Latest_File_Active_leave",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_fab_automation_rota_active_leave_latest",
+						"type": "DatasetReference"
+					},
+					"fieldList": [
+						"size",
+						"exists"
+					],
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true
+					},
+					"formatSettings": {
+						"type": "DelimitedTextReadSettings"
+					}
+				}
+			},
+			{
+				"name": "Set start date",
+				"description": "Set the last stage run date to the variable as start date.",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lkup_Get_Pipeline_parameters_getlrd",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_lrd_src_to_stage",
+					"value": {
+						"value": "@activity('lkup_Get_Pipeline_parameters_getlrd').output.firstRow.start_date",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "cp_Get_Latest_File_Active_leave",
+				"description": "Copy all the files created since the last start date and combine them into one file to be processed into Synapse.",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Set start date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.09:00:00",
+					"retry": 1,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": true,
+							"modifiedDatetimeStart": {
+								"value": "@variables('v_lrd_src_to_stage')",
+								"type": "Expression"
+							},
+							"wildcardFolderPath": "Project_Data/NCSA/FAB Automation/FAB_Rota/Active Leave*/*/*",
+							"wildcardFileName": "rota_active*.csv"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings",
+							"copyBehavior": "MergeFiles"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_fab_automation_rota_file_raw",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_fab_automation_rota_active_leave_latest",
+						"type": "DatasetReference"
+					}
+				]
+			},
+			{
+				"name": "if_File_Exists_Copy_to_Synapse",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Check Combined File non zero Bytes",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Check Combined File non zero Bytes_copy1",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@greater(activity('Check Combined File non zero Bytes').output.size, 2)",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "cp_copy_from_adlsg2_to_Synapse_active",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 3,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"additionalColumns": [
+										{
+											"name": "load_date",
+											"value": {
+												"value": "@utcnow()",
+												"type": "Expression"
+											}
+										}
+									],
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": true,
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "SqlDWSink",
+									"preCopyScript": "truncate table gpd.stage_fab_rota",
+									"allowPolyBase": true,
+									"polyBaseSettings": {
+										"rejectValue": 0,
+										"rejectType": "value",
+										"useTypeDefault": true
+									},
+									"disableMetricsCollection": false
+								},
+								"enableStaging": true,
+								"stagingSettings": {
+									"linkedServiceName": {
+										"referenceName": "ADLSG2 TimeAnalytics DEV",
+										"type": "LinkedServiceReference"
+									},
+									"path": "mdr-staging-data/Project_Data/NCSA/PLM/InboxTask/Logs"
+								},
+								"translator": {
+									"type": "TabularTranslator",
+									"mappings": [
+										{
+											"source": {
+												"name": "B_NO.",
+												"type": "String"
+											},
+											"sink": {
+												"name": "batch_number",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "SAP#",
+												"type": "String"
+											},
+											"sink": {
+												"name": "sap_number",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "NAME",
+												"type": "String"
+											},
+											"sink": {
+												"name": "name",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "TITLE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "title",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "DEPT.",
+												"type": "String"
+											},
+											"sink": {
+												"name": "department",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "C_CENTER",
+												"type": "String"
+											},
+											"sink": {
+												"name": "cost_center",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "hook_up_project_others",
+												"type": "String"
+											},
+											"sink": {
+												"name": "hook_up_project_others",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "local_actual",
+												"type": "String"
+											},
+											"sink": {
+												"name": "local_actual",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "location",
+												"type": "String"
+											},
+											"sink": {
+												"name": "location",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Hire-Date",
+												"type": "String"
+											},
+											"sink": {
+												"name": "hire_date",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "STATUS",
+												"type": "String"
+											},
+											"sink": {
+												"name": "status",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "DATE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "action_date",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "fab_rota_type",
+												"type": "String"
+											},
+											"sink": {
+												"name": "fab_rota_type",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "load_date",
+												"type": "String"
+											},
+											"sink": {
+												"name": "load_date",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "TYPE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "type",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "HCM No",
+												"type": "String"
+											},
+											"sink": {
+												"name": "hcm_number",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "source_file_name",
+												"type": "String"
+											},
+											"sink": {
+												"name": "source_file_name",
+												"type": "String"
+											}
+										}
+									]
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_fab_automation_rota_active_leave_latest",
+									"type": "DatasetReference"
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_azure_synapse_fab_rota_file",
+									"type": "DatasetReference"
+								}
+							]
+						},
+						{
+							"name": "Delete Temp combined File Active",
+							"description": "After the data has been loaded, clear the combined latest file from the ADLSV2 ",
+							"type": "Delete",
+							"dependsOn": [
+								{
+									"activity": "sp_generic_procedure_dim_load_fab_rota",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataset": {
+									"referenceName": "ds_fab_automation_rota_active_leave_latest",
+									"type": "DatasetReference"
+								},
+								"enableLogging": false,
+								"storeSettings": {
+									"type": "AzureBlobFSReadSettings",
+									"recursive": true,
+									"enablePartitionDiscovery": false
+								}
+							}
+						},
+						{
+							"name": "sp_generic_procedure_dim_load_fab_rota",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "cp_copy_from_adlsg2_to_Synapse_offshore",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[generic_load_dim_v2]",
+								"storedProcedureParameters": {
+									"debug_flag": {
+										"value": "N",
+										"type": "String"
+									},
+									"execute_flag": {
+										"value": "Y",
+										"type": "String"
+									},
+									"load_name": {
+										"value": "dim_ent_fab_rota",
+										"type": "String"
+									},
+									"rkValidationRequired": {
+										"value": "Y",
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "AzureSynapseDB_DEV",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "cp_copy_from_adlsg2_to_Synapse_offshore",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "cp_copy_from_adlsg2_to_Synapse_active",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 1,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"additionalColumns": [
+										{
+											"name": "load_date",
+											"value": {
+												"value": "@utcnow()",
+												"type": "Expression"
+											}
+										}
+									],
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": true,
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "SqlDWSink",
+									"allowPolyBase": true,
+									"polyBaseSettings": {
+										"rejectValue": 0,
+										"rejectType": "value",
+										"useTypeDefault": true
+									},
+									"disableMetricsCollection": false
+								},
+								"enableStaging": true,
+								"stagingSettings": {
+									"linkedServiceName": {
+										"referenceName": "ADLSG2 TimeAnalytics DEV",
+										"type": "LinkedServiceReference"
+									},
+									"path": "mdr-staging-data/Project_Data/NCSA/PLM/InboxTask/Logs"
+								},
+								"translator": {
+									"type": "TabularTranslator",
+									"mappings": [
+										{
+											"source": {
+												"name": "B_NO.",
+												"type": "String"
+											},
+											"sink": {
+												"name": "batch_number",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "SAP#",
+												"type": "String"
+											},
+											"sink": {
+												"name": "sap_number",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "NAME",
+												"type": "String"
+											},
+											"sink": {
+												"name": "name",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "TITLE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "title",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "DEPT.",
+												"type": "String"
+											},
+											"sink": {
+												"name": "department",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "cost_center",
+												"type": "String"
+											},
+											"sink": {
+												"name": "cost_center",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "HOOK UP PROJECT/OTHERS",
+												"type": "String"
+											},
+											"sink": {
+												"name": "hook_up_project_others",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "LOC-ACTUAL",
+												"type": "String"
+											},
+											"sink": {
+												"name": "local_actual",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "LOCATION-PIVOT",
+												"type": "String"
+											},
+											"sink": {
+												"name": "location",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "hire_date",
+												"type": "String"
+											},
+											"sink": {
+												"name": "hire_date",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "STATUS",
+												"type": "String"
+											},
+											"sink": {
+												"name": "status",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "DATE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "action_date",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "fab_rota_type",
+												"type": "String"
+											},
+											"sink": {
+												"name": "fab_rota_type",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "load_date",
+												"type": "String"
+											},
+											"sink": {
+												"name": "load_date",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "HCM No",
+												"type": "String"
+											},
+											"sink": {
+												"name": "hcm_number",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "source_file_name",
+												"type": "String"
+											},
+											"sink": {
+												"name": "source_file_name",
+												"type": "String"
+											}
+										}
+									]
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_fab_automation_rota_offshore_latest",
+									"type": "DatasetReference"
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_azure_synapse_fab_rota_file",
+									"type": "DatasetReference"
+								}
+							]
+						},
+						{
+							"name": "Delete Temp combined File Offshore",
+							"description": "After the data has been loaded, clear the combined latest file from the ADLSV2 ",
+							"type": "Delete",
+							"dependsOn": [
+								{
+									"activity": "Delete Temp combined File Active",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataset": {
+									"referenceName": "ds_fab_automation_rota_offshore_latest",
+									"type": "DatasetReference"
+								},
+								"enableLogging": false,
+								"storeSettings": {
+									"type": "AzureBlobFSReadSettings",
+									"recursive": true,
+									"enablePartitionDiscovery": false
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "lkup_Get_Pipeline_parameters_getlrd",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "NetworkFolder"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "sp_Update_Parameter",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "if_File_Exists_Copy_to_Synapse",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+					"storedProcedureParameters": {
+						"pParameterValue": {
+							"value": {
+								"value": "@formatDateTime(activity('lkup_Get_Pipeline_parameters_getlrd').output.firstRow.run_start_datetime,'yyyy-MM-dd HH:mm:ss.fff')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": "NetworkFolder",
+							"type": "String"
+						},
+						"pParameterCode": {
+							"value": "start_date",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseDB_DEV",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Check Combined File non zero Bytes_copy1",
+				"description": "Check if the combined file has any data to be loaded.",
+				"type": "GetMetadata",
+				"dependsOn": [
+					{
+						"activity": "cp_Get_Latest_File_Offshore_employee",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_fab_automation_rota_offshore_latest",
+						"type": "DatasetReference"
+					},
+					"fieldList": [
+						"size",
+						"exists"
+					],
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true
+					},
+					"formatSettings": {
+						"type": "DelimitedTextReadSettings"
+					}
+				}
+			},
+			{
+				"name": "cp_Get_Latest_File_Offshore_employee",
+				"description": "Copy all the files created since the last start date and combine them into one file to be processed into Synapse.",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Set start date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.09:00:00",
+					"retry": 1,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": true,
+							"modifiedDatetimeStart": {
+								"value": "@variables('v_lrd_src_to_stage')",
+								"type": "Expression"
+							},
+							"wildcardFolderPath": "Project_Data/NCSA/FAB Automation/FAB_Rota/Offshore Employee/*/*/*",
+							"wildcardFileName": "rota_offshore*.csv"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings",
+							"copyBehavior": "MergeFiles"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_fab_automation_rota_file_raw",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_fab_automation_rota_offshore_latest",
+						"type": "DatasetReference"
+					}
+				]
+			}
+		],
+		"variables": {
+			"v_lrd_src_to_stage": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/NCSA/FAB Automation/FAB Rota"
+		},
+		"annotations": [],
+		"lastPublishTime": "2024-01-30T14:47:00Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

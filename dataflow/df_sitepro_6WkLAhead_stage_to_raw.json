@@ -1,0 +1,32 @@
+{
+	"name": "df_sitepro_6WkLAhead_stage_to_raw",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_sitepro_6WkLookAhead_stage",
+						"type": "DatasetReference"
+					},
+					"name": "source6WkLAheadSiteproStage"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_6WkLAhead_raw",
+						"type": "DatasetReference"
+					},
+					"name": "snk6WkLAheadSiteproRaw"
+				}
+			],
+			"transformations": [
+				{
+					"name": "setFileName"
+				}
+			],
+			"script": "source(output(\n\t\tproject_code as string,\n\t\tfunction_code as string,\n\t\tsource_code as string,\n\t\tsub_source_code as string,\n\t\tdata_class_code as string,\n\t\tdata_sub_class_code as string,\n\t\tunit_of_measure as string,\n\t\tphase_code as string,\n\t\tschedule_resource_code as string,\n\t\twork_unit_code as string,\n\t\twork_area_code as string,\n\t\tactivity_code as string,\n\t\tIWP_Code as string,\n\t\tCWP_Code as string,\n\t\tWK1 as double,\n\t\tWK2 as double,\n\t\tWK3 as double,\n\t\tWK4 as double,\n\t\tWK5 as double,\n\t\tWK6 as double,\n\t\teff_date_wk1 as string,\n\t\teff_date_wk2 as string,\n\t\teff_date_wk3 as string,\n\t\teff_date_wk4 as string,\n\t\teff_date_wk5 as string,\n\t\teff_date_wk6 as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\twildcardPaths:['Project_Data/NCSA/SitePro/6WkLAhead/sitepro_6WkLAhead.csv']) ~> source6WkLAheadSiteproStage\nsource6WkLAheadSiteproStage derive(FileName = concat( 'Project_Data/NCSA/SitePro/6WkLAhead/',        substring(toString(currentTimestamp()),1,4),        '/',substring(toString(currentTimestamp()),6,2),        '/',substring(toString(currentTimestamp()),9,2),        '/',        'Sitepro_6WkLAhead_',        replace(replace(toString(currentTimestamp()),'.',''),':',''),        '.csv')) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\trowUrlColumn:'FileName',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> snk6WkLAheadSiteproRaw"
+		}
+	}
+}

@@ -1,0 +1,264 @@
+{
+	"name": "pl_procurement_status_excel_master_pipeline",
+	"properties": {
+		"description": "This is Master pipeline for Global Procurement status",
+		"activities": [
+			{
+				"name": "src_to_synstg_wrapper",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_procurement_status_excel_wrapper_pipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_plw_pipelineCode": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"p_plw_pipelineSubCode": "NetworkFolder"
+					}
+				}
+			},
+			{
+				"name": "ADF_Log",
+				"description": "SPU to log the details of the Pipeline run",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Append SYNSTG to SYN Error",
+						"dependencyConditions": [
+							"Skipped",
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "1.00:00:00",
+					"retry": 1,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[usp_InsertADFLogs]",
+					"storedProcedureParameters": {
+						"DataFactoryName": {
+							"value": {
+								"value": "@pipeline().DataFactory",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"Error_pipeline_name": {
+							"value": {
+								"value": "@if(empty(variables('v_error_message')),\nif( not(empty(activity('src_to_synstg_wrapper').error))\n,NULL\n,activity('synstg_to_synapse').output.pipelineName)\n,split(join(variables('v_error_message'),';'),'|' )[1])",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"Error_pipeline_runid": {
+							"value": {
+								"value": "@if(empty(variables('v_error_message')),NULL,split(join(variables('v_error_message'),';'),'|' )[2])",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"ErrorMessage": {
+							"value": {
+								"value": "@if(empty(variables('v_error_message'))\n,NULL\n,split(join(variables('v_error_message'),';'),'|' )[0])",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"PipelineName": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"runid": {
+							"value": {
+								"value": "@pipeline().RunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"status": {
+							"value": {
+								"value": "@if(empty(variables('v_error_message')),'Success','Failed')",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Append SYNSTG to SYN Error",
+				"type": "AppendVariable",
+				"dependsOn": [
+					{
+						"activity": "synstg_to_synapse",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_error_message",
+					"value": {
+						"value": "@concat('SynStage to Synapse Failure: ',\nactivity('synstg_to_synapse').error.message ,'|',\nactivity('synstg_to_synapse').output.pipelineName,'|',\nactivity('synstg_to_synapse').output.pipelineRunId,'|')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "synstg_to_synapse",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "src_to_synstg_wrapper",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_procurement_status_synstg_to_dim",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_pl_pipelineCode": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"p_pl_pipelineSubCode": "NetworkFolder"
+					}
+				}
+			},
+			{
+				"name": "If failure detected send mail",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "ADF_Log",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@if(empty(variables('v_error_message')),false,true)",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "Send Email On Failure",
+							"type": "WebActivity",
+							"dependsOn": [
+								{
+									"activity": "lk_get_pipeline_parameters",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "1.00:00:00",
+								"retry": 1,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"method": "POST",
+								"headers": {
+									"Content-Type": "application/json"
+								},
+								"url": "https://prod-31.eastus.logic.azure.com:443/workflows/03d7da5abbab4215a05aeaceae3b96fa/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=asuyutHtoSxGFURsj1-A6AKRiNLdXZ4mTnZvZ17_8hI",
+								"connectVia": {
+									"referenceName": "integrationRuntimeEast2",
+									"type": "IntegrationRuntimeReference"
+								},
+								"body": {
+									"value": "{\n    \"DataFactoryName\": \"@{pipeline().DataFactory}\",\n    \"PipelineName\": \"@{pipeline().Pipeline}\",\n    \"ErrorMessage\": \"@{replace(replace(join(variables('v_error_message'),';'),'\"',''),'\\','/')}\",\n\"EmailTo\": \"@{activity('lk_get_pipeline_parameters').output.firstRow.ncsa_master_pipeline_email_to}\",\n    \"Activity\":  \"@{if(empty(variables('v_error_message')),'',split(join(variables('v_error_message'),';'),'|' )[1])}\"\n}",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "lk_get_pipeline_parameters",
+							"description": "Get the parameters to be used in this pipeline",
+							"type": "Lookup",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SqlDWSource",
+									"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+									"storedProcedureParameters": {
+										"pPipelineCode": {
+											"type": "String",
+											"value": "pl_ncsa_master_pipelines"
+										},
+										"pPipeLineSubCode": {
+											"type": "String",
+											"value": "EMAIL"
+										}
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "ds_azure_synapse_parameter",
+									"type": "DatasetReference"
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"variables": {
+			"v_error_message": {
+				"type": "Array"
+			}
+		},
+		"folder": {
+			"name": "Projects/NCSA/SCM/Global Procurement Status"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-08-12T05:23:49Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

@@ -1,0 +1,2598 @@
+{
+	"name": "pl_po_smat_raw_to_synapse_stage",
+	"properties": {
+		"description": "SMAT PO EXTRACT - ADLS Raw to Synapse Stage table",
+		"activities": [
+			{
+				"name": "Check Combined File non zero Bytes",
+				"description": "Check if the combined file has any data to be loaded.",
+				"type": "GetMetadata",
+				"dependsOn": [
+					{
+						"activity": "cp_Get_Latest_File",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_smat_po_raw_latest_file",
+						"type": "DatasetReference"
+					},
+					"fieldList": [
+						"size",
+						"exists"
+					],
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true
+					},
+					"formatSettings": {
+						"type": "DelimitedTextReadSettings"
+					}
+				}
+			},
+			{
+				"name": "cp_Get_Latest_File",
+				"description": "Copy all the files created since the last start date and combine them into one file to be processed into Synapse.",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Set start date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": true,
+							"modifiedDatetimeStart": {
+								"value": "@variables('v_lrd_src_to_stage')",
+								"type": "Expression"
+							},
+							"wildcardFolderPath": "Project_Data/NCSA/SMAT/PO/*/*/*",
+							"wildcardFileName": "SMAT_PO_EXTRACT*.csv"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings",
+							"copyBehavior": "MergeFiles"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": "ts_itime_combined.csv"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "PROJ_ID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PROJ_ID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "PROJ_NUMBER",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PROJ_NUMBER",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "DISCIPLINE",
+									"type": "String"
+								},
+								"sink": {
+									"name": "DISCIPLINE",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "REQUISITION_NO",
+									"type": "String"
+								},
+								"sink": {
+									"name": "REQUISITION_NO",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "REQUISITION_DESC",
+									"type": "String"
+								},
+								"sink": {
+									"name": "REQUISITION_DESC",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "PO_NUMBER",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PO_NUMBER",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "PO_REVISION",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PO_REVISION",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "PO_DATE",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PO_DATE",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "PO_ISSUE_DATE",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PO_ISSUE_DATE",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "PO_STATUS",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PO_STATUS",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "SUPPLIER_CODE",
+									"type": "String"
+								},
+								"sink": {
+									"name": "SUPPLIER_CODE",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "SUPPLIER_NAME",
+									"type": "String"
+								},
+								"sink": {
+									"name": "SUPPLIER_NAME",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "SUPPLIER_COUNTRY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "SUPPLIER_COUNTRY",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "MANUFACTURING_LOCATION",
+									"type": "String"
+								},
+								"sink": {
+									"name": "MANUFACTURING_LOCATION",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "PACKAGE_DESCRIPTION",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PACKAGE_DESCRIPTION",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ITEM_DESCRIPTION",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ITEM_DESCRIPTION",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "IDENT_CODE",
+									"type": "String"
+								},
+								"sink": {
+									"name": "IDENT_CODE",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "TAG_NUMBER",
+									"type": "String"
+								},
+								"sink": {
+									"name": "TAG_NUMBER",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "PO_LINE_ITEM",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PO_LINE_ITEM",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "PO_ITEM_SUB",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PO_ITEM_SUB",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "PO_QTY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PO_QTY",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "UOM",
+									"type": "String"
+								},
+								"sink": {
+									"name": "UOM",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "TOTAL_PRICE",
+									"type": "String"
+								},
+								"sink": {
+									"name": "TOTAL_PRICE",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "CURRENCY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "CURRENCY",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "EXPEDITING_LEVEL",
+									"type": "String"
+								},
+								"sink": {
+									"name": "EXPEDITING_LEVEL",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "INSPECTION_LEVEL",
+									"type": "String"
+								},
+								"sink": {
+									"name": "INSPECTION_LEVEL",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "EXPEDITING_LEVEL_DESC",
+									"type": "String"
+								},
+								"sink": {
+									"name": "EXPEDITING_LEVEL_DESC",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "INSPECTION_LEVEL_DESC",
+									"type": "String"
+								},
+								"sink": {
+									"name": "INSPECTION_LEVEL_DESC",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ITEM_SHIP_POS",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ITEM_SHIP_POS",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ITEM_SHIP_SUB",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ITEM_SHIP_SUB",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ITEM_SHIPMENT_QTY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ITEM_SHIPMENT_QTY",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ITEM_SHIP_WEIGHT",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ITEM_SHIP_WEIGHT",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "TOTAL_ISH_WEIGHT",
+									"type": "String"
+								},
+								"sink": {
+									"name": "TOTAL_ISH_WEIGHT",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "WEIGHT_UNIT",
+									"type": "String"
+								},
+								"sink": {
+									"name": "WEIGHT_UNIT",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "CONTRACTUAL_PROMISE_DD",
+									"type": "String"
+								},
+								"sink": {
+									"name": "CONTRACTUAL_PROMISE_DD",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "INCOTERM",
+									"type": "String"
+								},
+								"sink": {
+									"name": "INCOTERM",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "DELIVERY_PLACE",
+									"type": "String"
+								},
+								"sink": {
+									"name": "DELIVERY_PLACE",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ROUTING_METHOD",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ROUTING_METHOD",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "TRANSIT_CLEARANCE_DAYS",
+									"type": "String"
+								},
+								"sink": {
+									"name": "TRANSIT_CLEARANCE_DAYS",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "FORECASTED_DELIVERY_DATE",
+									"type": "String"
+								},
+								"sink": {
+									"name": "FORECASTED_DELIVERY_DATE",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "PRED_ON_SITE_DATE",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PRED_ON_SITE_DATE",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ARVL_ON_SITE_FORECASTED_DATE",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ARVL_ON_SITE_FORECASTED_DATE",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ACTUAL_RECV_ONSITE_OR_WHS_DATE",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ACTUAL_RECV_ONSITE_OR_WHS_DATE",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "DELIVERY_DESIGNATION",
+									"type": "String"
+								},
+								"sink": {
+									"name": "DELIVERY_DESIGNATION",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ROS_DATE",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ROS_DATE",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "FLOAT_DAYS",
+									"type": "String"
+								},
+								"sink": {
+									"name": "FLOAT_DAYS",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "IRC_NO",
+									"type": "String"
+								},
+								"sink": {
+									"name": "IRC_NO",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "IRC_QTY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "IRC_QTY",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "IRC_APPROVED_DATE",
+									"type": "String"
+								},
+								"sink": {
+									"name": "IRC_APPROVED_DATE",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "RELEASE_NOTE_NO",
+									"type": "String"
+								},
+								"sink": {
+									"name": "RELEASE_NOTE_NO",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "RELEASE_NOTE_QTY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "RELEASE_NOTE_QTY",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "RELEASE_NOTE_APPR_DATE",
+									"type": "String"
+								},
+								"sink": {
+									"name": "RELEASE_NOTE_APPR_DATE",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "BALANCE_IRC_QTY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "BALANCE_IRC_QTY",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "SLI_NO",
+									"type": "String"
+								},
+								"sink": {
+									"name": "SLI_NO",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "AWB_NUMBER",
+									"type": "String"
+								},
+								"sink": {
+									"name": "AWB_NUMBER",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "VOY_FLT_NUM",
+									"type": "String"
+								},
+								"sink": {
+									"name": "VOY_FLT_NUM",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ETD_DATE",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ETD_DATE",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ATD_DATE",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ATD_DATE",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ETA_DATE",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ETA_DATE",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ATA_DATE",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ATA_DATE",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "MRR_NUMBER",
+									"type": "String"
+								},
+								"sink": {
+									"name": "MRR_NUMBER",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "MRR_CREATED_DATE",
+									"type": "String"
+								},
+								"sink": {
+									"name": "MRR_CREATED_DATE",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "MRR_POSTED_DATE",
+									"type": "String"
+								},
+								"sink": {
+									"name": "MRR_POSTED_DATE",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "MRR_QUANTITY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "MRR_QUANTITY",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "OSD_NUMBER",
+									"type": "String"
+								},
+								"sink": {
+									"name": "OSD_NUMBER",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "OSD_CREATED_DATE",
+									"type": "String"
+								},
+								"sink": {
+									"name": "OSD_CREATED_DATE",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "OSD_QTY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "OSD_QTY",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "OSD_TYPE",
+									"type": "String"
+								},
+								"sink": {
+									"name": "OSD_TYPE",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "OSD_REQUEST_ACTION",
+									"type": "String"
+								},
+								"sink": {
+									"name": "OSD_REQUEST_ACTION",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "OSD_ACTION_TAKEN",
+									"type": "String"
+								},
+								"sink": {
+									"name": "OSD_ACTION_TAKEN",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "OSD_CLOSED_DATE",
+									"type": "String"
+								},
+								"sink": {
+									"name": "OSD_CLOSED_DATE",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "BALANCE_RN_QTY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "BALANCE_RN_QTY",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "BALANCE_MRR_QTY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "BALANCE_MRR_QTY",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "BUYER",
+									"type": "String"
+								},
+								"sink": {
+									"name": "BUYER",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "EXPEDITOR",
+									"type": "String"
+								},
+								"sink": {
+									"name": "EXPEDITOR",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "BUYER_USR_ID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "BUYER_USR_ID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "EXPEDITOR_USR_ID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "EXPEDITOR_USR_ID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "PACKAGE_MANAGER",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PACKAGE_MANAGER",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ITEM_COMMENT",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ITEM_COMMENT",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "HEADER_COMMENT",
+									"type": "String"
+								},
+								"sink": {
+									"name": "HEADER_COMMENT",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "AGENT_1_LT_COMMENT",
+									"type": "String"
+								},
+								"sink": {
+									"name": "AGENT_1_LT_COMMENT",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "AGENT_2_LT_COMMENT",
+									"type": "String"
+								},
+								"sink": {
+									"name": "AGENT_2_LT_COMMENT",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "THE_COLOR",
+									"type": "String"
+								},
+								"sink": {
+									"name": "THE_COLOR",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "IS_MASTER_TAG",
+									"type": "String"
+								},
+								"sink": {
+									"name": "IS_MASTER_TAG",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "LMOD",
+									"type": "String"
+								},
+								"sink": {
+									"name": "LMOD",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ITEM_SHIP_ID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ITEM_SHIP_ID",
+									"type": "String"
+								}
+							}
+						]
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_smat_po_raw",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_smat_po_raw_latest_file",
+						"type": "DatasetReference"
+					}
+				]
+			},
+			{
+				"name": "if_File_Exists_Copy_to_Synapse",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Check Combined File non zero Bytes",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@greater(activity('Check Combined File non zero Bytes').output.size, 2)",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "Copy Latest Data To Synapse Stage Table",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "SqlDWSink",
+									"preCopyScript": "truncate table [gpd].[NCSA_SMAT_PO_EXTRACT_NEW]",
+									"allowPolyBase": true,
+									"polyBaseSettings": {
+										"rejectValue": 0,
+										"rejectType": "value",
+										"useTypeDefault": false
+									},
+									"disableMetricsCollection": false
+								},
+								"enableStaging": true,
+								"stagingSettings": {
+									"linkedServiceName": {
+										"referenceName": "ADLSG2 TimeAnalytics DEV",
+										"type": "LinkedServiceReference"
+									},
+									"path": "mdr-raw-data/Polybase_Staging_Space"
+								},
+								"translator": {
+									"type": "TabularTranslator",
+									"mappings": [
+										{
+											"source": {
+												"name": "PROJ_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PROJ_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PROJ_NUMBER",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PROJECT_NUMBER",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "DISCIPLINE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "DISCIPLINE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "REQUISITION_NO",
+												"type": "String"
+											},
+											"sink": {
+												"name": "REQUISITION_NO",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "REQUISITION_DESC",
+												"type": "String"
+											},
+											"sink": {
+												"name": "REQUISITION_DESC",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PO_NUMBER",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PO_NUMBER",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PO_REVISION",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PO_REVISION",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PO_DATE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PO_DATE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PO_ISSUE_DATE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PO_ISSUE_DATE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PO_STATUS",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PO_STATUS",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "SUPPLIER_CODE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "SUPPLIER_CODE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "SUPPLIER_NAME",
+												"type": "String"
+											},
+											"sink": {
+												"name": "SUPPLIER_NAME",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "SUPPLIER_COUNTRY",
+												"type": "String"
+											},
+											"sink": {
+												"name": "SUPPLIER_COUNTRY",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "MANUFACTURING_LOCATION",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MANUFACTURING_LOCATION",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PACKAGE_DESCRIPTION",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PACKAGE_DESCRIPTION",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ITEM_DESCRIPTION",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ITEM_DESCRIPTION",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "IDENT_CODE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "IDENT_CODE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "TAG_NUMBER",
+												"type": "String"
+											},
+											"sink": {
+												"name": "TAG_NUMBER",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PO_LINE_ITEM",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PO_LINE_ITEM",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PO_ITEM_SUB",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PO_ITEM_SUB",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PO_QTY",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PO_QTY",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "UOM",
+												"type": "String"
+											},
+											"sink": {
+												"name": "UOM",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "TOTAL_PRICE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "TOTAL_PRICE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "CURRENCY",
+												"type": "String"
+											},
+											"sink": {
+												"name": "CURRENCY",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "EXPEDITING_LEVEL",
+												"type": "String"
+											},
+											"sink": {
+												"name": "EXPEDITING_LEVEL",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "INSPECTION_LEVEL",
+												"type": "String"
+											},
+											"sink": {
+												"name": "INSPECTION_LEVEL",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "EXPEDITING_LEVEL_DESC",
+												"type": "String"
+											},
+											"sink": {
+												"name": "EXPEDITING_LEVEL_DESC",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "INSPECTION_LEVEL_DESC",
+												"type": "String"
+											},
+											"sink": {
+												"name": "INSPECTION_LEVEL_DESC",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ITEM_SHIP_POS",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ITEM_SHIP_POS",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ITEM_SHIP_SUB",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ITEM_SHIP_SUB",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ITEM_SHIPMENT_QTY",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ITEM_SHIPMENT_QTY",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ITEM_SHIP_WEIGHT",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ITEM_SHIP_WEIGHT",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "TOTAL_ISH_WEIGHT",
+												"type": "String"
+											},
+											"sink": {
+												"name": "TOTAL_ISH_WEIGHT",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "WEIGHT_UNIT",
+												"type": "String"
+											},
+											"sink": {
+												"name": "WEIGHT_UNIT",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "CONTRACTUAL_PROMISE_DD",
+												"type": "String"
+											},
+											"sink": {
+												"name": "CONTRACTUAL_PROMISE_DD",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "INCOTERM",
+												"type": "String"
+											},
+											"sink": {
+												"name": "INCOTERM",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "DELIVERY_PLACE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "DELIVERY_PLACE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ROUTING_METHOD",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ROUTING_METHOD",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "TRANSIT_CLEARANCE_DAYS",
+												"type": "String"
+											},
+											"sink": {
+												"name": "TRANSIT_CLEARANCE_DAYS",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "FORECASTED_DELIVERY_DATE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "FORECASTED_DELIVERY_DATE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PRED_ON_SITE_DATE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PRED_ON_SITE_DATE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ARVL_ON_SITE_FORECASTED_DATE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ARVL_ON_SITE_FORECASTED_DATE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ACTUAL_RECV_ONSITE_OR_WHS_DATE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ACTUAL_RECV_ONSITE_OR_WHS_DATE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "DELIVERY_DESIGNATION",
+												"type": "String"
+											},
+											"sink": {
+												"name": "DELIVERY_DESIGNATION",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ROS_DATE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ROS_DATE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "FLOAT_DAYS",
+												"type": "String"
+											},
+											"sink": {
+												"name": "FLOAT_DAYS",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "IRC_NO",
+												"type": "String"
+											},
+											"sink": {
+												"name": "IRC_NO",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "IRC_QTY",
+												"type": "String"
+											},
+											"sink": {
+												"name": "IRC_QTY",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "IRC_APPROVED_DATE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "IRC_APPROVED_DATE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "RELEASE_NOTE_NO",
+												"type": "String"
+											},
+											"sink": {
+												"name": "RELEASE_NOTE_NO",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "RELEASE_NOTE_QTY",
+												"type": "String"
+											},
+											"sink": {
+												"name": "RELEASE_NOTE_QTY",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "RELEASE_NOTE_APPR_DATE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "RELEASE_NOTE_APPR_DATE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "BALANCE_IRC_QTY",
+												"type": "String"
+											},
+											"sink": {
+												"name": "BALANCE_IRC_QTY",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "SLI_NO",
+												"type": "String"
+											},
+											"sink": {
+												"name": "SLI_NO",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "AWB_NUMBER",
+												"type": "String"
+											},
+											"sink": {
+												"name": "AWB_NUMBER",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "VOY_FLT_NUM",
+												"type": "String"
+											},
+											"sink": {
+												"name": "VOY_FLT_NUM",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ETD_DATE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ETD_DATE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ATD_DATE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ATD_DATE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ETA_DATE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ETA_DATE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ATA_DATE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ATA_DATE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "MRR_NUMBER",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MRR_NUMBER",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "MRR_CREATED_DATE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MRR_CREATED_DATE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "MRR_POSTED_DATE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MRR_POSTED_DATE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "MRR_QUANTITY",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MRR_QUANTITY",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "OSD_NUMBER",
+												"type": "String"
+											},
+											"sink": {
+												"name": "OSD_NUMBER",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "OSD_CREATED_DATE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "OSD_CREATED_DATE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "OSD_QTY",
+												"type": "String"
+											},
+											"sink": {
+												"name": "OSD_QTY",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "OSD_TYPE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "OSD_TYPE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "OSD_REQUEST_ACTION",
+												"type": "String"
+											},
+											"sink": {
+												"name": "OSD_REQUEST_ACTION",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "OSD_ACTION_TAKEN",
+												"type": "String"
+											},
+											"sink": {
+												"name": "OSD_ACTION_TAKEN",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "OSD_CLOSED_DATE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "OSD_CLOSED_DATE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "BALANCE_RN_QTY",
+												"type": "String"
+											},
+											"sink": {
+												"name": "BALANCE_RN_QTY",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "BALANCE_MRR_QTY",
+												"type": "String"
+											},
+											"sink": {
+												"name": "BALANCE_MRR_QTY",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "BUYER",
+												"type": "String"
+											},
+											"sink": {
+												"name": "BUYER",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "EXPEDITOR",
+												"type": "String"
+											},
+											"sink": {
+												"name": "EXPEDITOR",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "BUYER_USR_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "BUYER_USR_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "EXPEDITOR_USR_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "EXPEDITOR_USR_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PACKAGE_MANAGER",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PACKAGE_MANAGER",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ITEM_COMMENT",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ITEM_COMMENT",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "HEADER_COMMENT",
+												"type": "String"
+											},
+											"sink": {
+												"name": "HEADER_COMMENT",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "AGENT_1_LT_COMMENT",
+												"type": "String"
+											},
+											"sink": {
+												"name": "AGENT_1_LT_COMMENT",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "AGENT_2_LT_COMMENT",
+												"type": "String"
+											},
+											"sink": {
+												"name": "AGENT_2_LT_COMMENT",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "THE_COLOR",
+												"type": "String"
+											},
+											"sink": {
+												"name": "THE_COLOR",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "IS_MASTER_TAG",
+												"type": "String"
+											},
+											"sink": {
+												"name": "IS_MASTER_TAG",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "LMOD",
+												"type": "String"
+											},
+											"sink": {
+												"name": "LMOD",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ITEM_SHIP_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ITEM_SHIP_ID"
+											}
+										}
+									]
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_adlsg2_csv_smat_po_raw_latest_file",
+									"type": "DatasetReference"
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_AzureSynapseAnalytics_SMAT_PO_EXTRACT_v2",
+									"type": "DatasetReference"
+								}
+							]
+						}
+					]
+				}
+			},
+			{
+				"name": "Delete Temp combined File",
+				"description": "After the data has been loaded, clear the combined file from the ADLSV2 ",
+				"type": "Delete",
+				"dependsOn": [
+					{
+						"activity": "if_File_Exists_Copy_to_Synapse",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_smat_po_raw_latest_file",
+						"type": "DatasetReference"
+					},
+					"enableLogging": false,
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true
+					}
+				}
+			},
+			{
+				"name": "lkup_Get_Pipeline_parameters_getlrd",
+				"description": "Use the lookup procedure to get the last run details to be used in the next steps.",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "SMAT"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "sp_Update_Parameter",
+				"description": "Update the appropriate parameter in the parameter table",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "sp_Update_Transformation",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+					"storedProcedureParameters": {
+						"pParameterValue": {
+							"value": {
+								"value": "@formatDateTime(activity('lkup_Get_Pipeline_parameters_getlrd').output.firstRow.run_start_datetime,'yyyy-MM-dd HH:mm:ss')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": "SMAT",
+							"type": "String"
+						},
+						"pParameterCode": {
+							"value": "last_run_start_date",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseDB_DEV",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "sp_Update_Transformation",
+				"description": "This procedure handles supplier country,measures, and other date conversions to allow generic procedure to process them.",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Delete Temp combined File",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[usp_NCSA_PO_EXTRACT_NEW_Transform]"
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "sp_generic_dim_load_supplier",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "sp_Update_Transformation",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[generic_load_dim_v2]",
+					"storedProcedureParameters": {
+						"debug_flag": {
+							"value": "N",
+							"type": "String"
+						},
+						"execute_flag": {
+							"value": "Y",
+							"type": "String"
+						},
+						"load_name": {
+							"value": "dim_ent_supplier_smat_po",
+							"type": "String"
+						},
+						"rkValidationRequired": {
+							"value": "Y",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "sp_generic_dim_load_po_header",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "sp_generic_dim_load_item",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[generic_load_dim_v2]",
+					"storedProcedureParameters": {
+						"debug_flag": {
+							"value": "N",
+							"type": "String"
+						},
+						"execute_flag": {
+							"value": "Y",
+							"type": "String"
+						},
+						"load_name": {
+							"value": "dim_entp_po_header_smat_po",
+							"type": "String"
+						},
+						"rkValidationRequired": {
+							"value": "Y",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "sp_generic_dim_load_po_detail",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "sp_generic_dim_load_po_header",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[generic_load_dim_v2]",
+					"storedProcedureParameters": {
+						"debug_flag": {
+							"value": "N",
+							"type": "String"
+						},
+						"execute_flag": {
+							"value": "Y",
+							"type": "String"
+						},
+						"load_name": {
+							"value": "dim_entp_po_detail_smat_po",
+							"type": "String"
+						},
+						"rkValidationRequired": {
+							"value": "Y",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Set start date",
+				"description": "Set the last stage run date to the variable as start date.",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lkup_Get_Pipeline_parameters_getlrd",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_lrd_src_to_stage",
+					"value": {
+						"value": "@activity('lkup_Get_Pipeline_parameters_getlrd').output.firstRow.last_run_start_date",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "sp_generic_dim_load_expediting_level",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "sp_generic_dim_load_supplier",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[generic_load_dim_v2]",
+					"storedProcedureParameters": {
+						"debug_flag": {
+							"value": "N",
+							"type": "String"
+						},
+						"execute_flag": {
+							"value": "Y",
+							"type": "String"
+						},
+						"load_name": {
+							"value": "dim_entp_expediting_level_smat_po",
+							"type": "String"
+						},
+						"rkValidationRequired": {
+							"value": "Y",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "sp_generic_dim_load_inspection_level",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "sp_generic_dim_load_expediting_level",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[generic_load_dim_v2]",
+					"storedProcedureParameters": {
+						"debug_flag": {
+							"value": "N",
+							"type": "String"
+						},
+						"execute_flag": {
+							"value": "Y",
+							"type": "String"
+						},
+						"load_name": {
+							"value": "dim_entp_inspection_level_smat_po",
+							"type": "String"
+						},
+						"rkValidationRequired": {
+							"value": "Y",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "sp_generic_dim_load_po",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "sp_generic_dim_load_inspection_level",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[generic_load_dim_v2]",
+					"storedProcedureParameters": {
+						"debug_flag": {
+							"value": "N",
+							"type": "String"
+						},
+						"execute_flag": {
+							"value": "Y",
+							"type": "String"
+						},
+						"load_name": {
+							"value": "dim_entp_po_smat_po",
+							"type": "String"
+						},
+						"rkValidationRequired": {
+							"value": "Y",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "sp_generic_dim_load_requisition",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "sp_generic_dim_load_po",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[generic_load_dim_v2]",
+					"storedProcedureParameters": {
+						"debug_flag": {
+							"value": "N",
+							"type": "String"
+						},
+						"execute_flag": {
+							"value": "Y",
+							"type": "String"
+						},
+						"load_name": {
+							"value": "dim_entp_requisition_smat_po",
+							"type": "String"
+						},
+						"rkValidationRequired": {
+							"value": "Y",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "sp_generic_dim_load_item",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "sp_generic_dim_load_requisition",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[generic_load_dim_v2]",
+					"storedProcedureParameters": {
+						"debug_flag": {
+							"value": "N",
+							"type": "String"
+						},
+						"execute_flag": {
+							"value": "Y",
+							"type": "String"
+						},
+						"load_name": {
+							"value": "dim_entp_item_smat_po",
+							"type": "String"
+						},
+						"rkValidationRequired": {
+							"value": "Y",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "sp_generic_dim_load_mrr_detail",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "sp_generic_dim_load_po_detail",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[generic_load_dim_v2]",
+					"storedProcedureParameters": {
+						"debug_flag": {
+							"value": "N",
+							"type": "String"
+						},
+						"execute_flag": {
+							"value": "Y",
+							"type": "String"
+						},
+						"load_name": {
+							"value": "dim_entp_mrr_detail_smat_po",
+							"type": "String"
+						},
+						"rkValidationRequired": {
+							"value": "Y",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "sp_generic_dim_load_osd_detail",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "sp_generic_dim_load_mrr_detail",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[generic_load_dim_v2]",
+					"storedProcedureParameters": {
+						"debug_flag": {
+							"value": "N",
+							"type": "String"
+						},
+						"execute_flag": {
+							"value": "Y",
+							"type": "String"
+						},
+						"load_name": {
+							"value": "dim_entp_osd_detail_smat_po",
+							"type": "String"
+						},
+						"rkValidationRequired": {
+							"value": "Y",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "sp_generic_dim_load_freight_detail",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "sp_generic_dim_load_osd_detail",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[generic_load_dim_v2]",
+					"storedProcedureParameters": {
+						"debug_flag": {
+							"value": "N",
+							"type": "String"
+						},
+						"execute_flag": {
+							"value": "Y",
+							"type": "String"
+						},
+						"load_name": {
+							"value": "dim_entp_freight_detail_smat_po",
+							"type": "String"
+						},
+						"rkValidationRequired": {
+							"value": "Y",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"variables": {
+			"v_lrd_src_to_stage": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/NCSA/SMAT/PO EXTRACT NEW"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-06-22T12:53:26Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

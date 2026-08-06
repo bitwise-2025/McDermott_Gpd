@@ -1,0 +1,271 @@
+{
+	"name": "pl_R2P_PO_Commitment_Details_master_pipeline_projects_specific",
+	"properties": {
+		"description": "Master pipeline to run the three intermediate pipelines SRC-->STG-->RAW-->Synapse.",
+		"activities": [
+			{
+				"name": "Execute for project D7507",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Truncate R2P_PO_Commitment_Details Table",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_R2P_PO_Commitment_Details_D7507",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "Execute for project D7440",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Execute for project D7507",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_R2P_PO_Commitment_Details_D7440",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "lk_get_pipeline_email_parameters",
+				"description": "Get the parameters to be used in this pipeline",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "pl_ncsa_master_pipelines",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "EMAIL"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Send Email On Failure for Project D7507",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Execute for project D7507",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "POST",
+					"headers": {
+						"Content-Type": "application/json"
+					},
+					"url": "https://prod-31.eastus.logic.azure.com:443/workflows/03d7da5abbab4215a05aeaceae3b96fa/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=asuyutHtoSxGFURsj1-A6AKRiNLdXZ4mTnZvZ17_8hI",
+					"connectVia": {
+						"referenceName": "integrationRuntimeEast2",
+						"type": "IntegrationRuntimeReference"
+					},
+					"body": {
+						"value": "{\n    \"DataFactoryName\": \"@{pipeline().DataFactory}\",\n    \"PipelineName\": \"@{pipeline().Pipeline}\",\n    \"ErrorMessage\": \"Pipeline Failed\",\n    \"EmailTo\": \"@{activity('lk_get_pipeline_email_parameters').output.firstRow.ncsa_master_pipeline_email_to}\",\n    \"Activity\":  \"ADF R2P_PO_Commitment_Details Failed for Project D7507\"\n}",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Send Email On Failure for Project D7440",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Execute for project D7440",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "POST",
+					"headers": {
+						"Content-Type": "application/json"
+					},
+					"url": "https://prod-31.eastus.logic.azure.com:443/workflows/03d7da5abbab4215a05aeaceae3b96fa/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=asuyutHtoSxGFURsj1-A6AKRiNLdXZ4mTnZvZ17_8hI",
+					"connectVia": {
+						"referenceName": "integrationRuntimeEast2",
+						"type": "IntegrationRuntimeReference"
+					},
+					"body": {
+						"value": "{\n    \"DataFactoryName\": \"@{pipeline().DataFactory}\",\n    \"PipelineName\": \"@{pipeline().Pipeline}\",\n    \"ErrorMessage\": \"Pipeline Failed\",\n    \"EmailTo\": \"@{activity('lk_get_pipeline_email_parameters').output.firstRow.ncsa_master_pipeline_email_to}\",\n    \"Activity\":  \"ADF R2P_PO_Commitment_Details Failed for Project D7440\"\n}",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Truncate R2P_PO_Commitment_Details Table",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_email_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "linkedservice_DEV_entanalytics_synapse",
+					"type": "LinkedServiceReference"
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "NonQuery",
+							"text": "truncate table [epr].[R2P_PO_Commitment_Details]"
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "Execute for project D7264",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Execute for project D7440",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_R2P_PO_Commitment_Details_D7264",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "Send Email On Failure for Project D7264",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Execute for project D7264",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "POST",
+					"headers": {
+						"Content-Type": "application/json"
+					},
+					"url": "https://prod-31.eastus.logic.azure.com:443/workflows/03d7da5abbab4215a05aeaceae3b96fa/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=asuyutHtoSxGFURsj1-A6AKRiNLdXZ4mTnZvZ17_8hI",
+					"connectVia": {
+						"referenceName": "integrationRuntimeEast2",
+						"type": "IntegrationRuntimeReference"
+					},
+					"body": {
+						"value": "{\n    \"DataFactoryName\": \"@{pipeline().DataFactory}\",\n    \"PipelineName\": \"@{pipeline().Pipeline}\",\n    \"ErrorMessage\": \"Pipeline Failed\",\n    \"EmailTo\": \"@{activity('lk_get_pipeline_email_parameters').output.firstRow.ncsa_master_pipeline_email_to}\",\n    \"Activity\":  \"ADF R2P_PO_Commitment_Details Failed for Project D7264\"\n}",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"variables": {
+			"v_error_message": {
+				"type": "Array"
+			},
+			"v_allrev_src_start_time": {
+				"type": "String"
+			},
+			"v_allrev_raw_start_time": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/NCSA/R2P_PO_Commitment_Details"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-03-20T06:55:35Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

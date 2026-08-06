@@ -1,0 +1,412 @@
+{
+	"name": "pl_generic_excel_source_to_stage",
+	"properties": {
+		"description": "Generic Src_stg pipeline that consume Excel file source into CSV at stg container",
+		"activities": [
+			{
+				"name": "cp_copy_from_network_to_blob",
+				"description": "Copy from File Network to Block  Container (stage)",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "ExcelSource",
+						"storeSettings": {
+							"type": "FileServerReadSettings",
+							"recursive": false,
+							"fileFilter": {
+								"value": "@{activity('lk_get_pipeline_parameters').output.firstRow.input_file_name}",
+								"type": "Expression"
+							}
+						}
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings",
+							"copyBehavior": "MergeFiles"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_filesystem_network_excel_ncsa",
+						"type": "DatasetReference",
+						"parameters": {
+							"path": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.source_directory",
+								"type": "Expression"
+							},
+							"file": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_name",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_generic",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_ds_filesystem": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.file_system",
+								"type": "Expression"
+							},
+							"p_ds_directory": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+								"type": "Expression"
+							},
+							"p_ds_filename": {
+								"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+								"type": "Expression"
+							},
+							"p_ds_first_row_header": true
+						}
+					}
+				]
+			},
+			{
+				"name": "lk_get_pipeline_parameters",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.01:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.p_pl_pipelineCode",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.p_pl_pipelineSubCode",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "SP Update Control Table Last Run Date",
+				"description": "Update the Start_date for the pipeline  parameters",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "cp_copy_from_network_to_blob",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+					"storedProcedureParameters": {
+						"pParameterCode": {
+							"value": "start_date",
+							"type": "String"
+						},
+						"pParameterValue": {
+							"value": {
+								"value": "@formatDateTime(activity('lk_get_pipeline_parameters').output.firstRow.run_start_datetime,'yyyy-MM-dd HH:mm:ss')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().parameters.p_pl_pipelineCode",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": {
+								"value": "@pipeline().parameters.p_pl_pipelineSubCode",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "linkedservice_DEV_entanalytics_synapse",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "GetFileList",
+				"description": "Get a list of all Files present in Source Location",
+				"type": "GetMetadata",
+				"dependsOn": [
+					{
+						"activity": "cp_copy_from_network_to_blob",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.10:00:00",
+					"retry": 1,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_filesystem_network_excel_ncsa",
+						"type": "DatasetReference",
+						"parameters": {
+							"path": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.source_directory",
+								"type": "Expression"
+							},
+							"file": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_name",
+								"type": "Expression"
+							}
+						}
+					},
+					"fieldList": [
+						"childItems"
+					],
+					"storeSettings": {
+						"type": "FileServerReadSettings",
+						"recursive": true,
+						"enablePartitionDiscovery": false
+					}
+				}
+			},
+			{
+				"name": "Flt_FilesExtn",
+				"description": "Ensure only files of certain extension are sent for Archive",
+				"type": "Filter",
+				"dependsOn": [
+					{
+						"activity": "GetFileList",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('GetFileList').output.childItems",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@and(and(equals(item().type,'File'),endswith(item().name,split(activity('lk_get_pipeline_parameters').output.firstRow.input_file_name,'.')[1])),if(lessOrEquals(length(replace(split(activity('lk_get_pipeline_parameters').output.firstRow.input_file_name,'.')[0],'*','')),0),bool(1),contains(item().name,replace(split(activity('lk_get_pipeline_parameters').output.firstRow.input_file_name,'.')[0],'*',''))))",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "ForEachFile",
+				"description": "For every file found. Run the Archive activity.",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Flt_FilesExtn",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "SP Update Control Table Last Run Date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Flt_FilesExtn').output.value",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"batchCount": 2,
+					"activities": [
+						{
+							"name": "cp_archive_fs_file",
+							"description": "Archive the Source file on the File server on file server location (Copy/Delete combined)",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.01:00:00",
+								"retry": 1,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "BinarySource",
+									"storeSettings": {
+										"type": "FileServerReadSettings",
+										"recursive": false,
+										"deleteFilesAfterCompletion": true
+									},
+									"formatSettings": {
+										"type": "BinaryReadSettings"
+									}
+								},
+								"sink": {
+									"type": "BinarySink",
+									"storeSettings": {
+										"type": "FileServerWriteSettings"
+									}
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_fs_binary_generic_file",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_ds_path": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.source_directory",
+											"type": "Expression"
+										},
+										"p_ds_file": {
+											"value": "@item().name",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_fs_binary_generic_file",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_ds_path": {
+											"value": "@concat(split(activity('lk_get_pipeline_parameters').output.firstRow.source_directory,'/')[0],'/NCSA Operational/Archive')",
+											"type": "Expression"
+										},
+										"p_ds_file": {
+											"value": "@concat(toUpper(activity('lk_get_pipeline_parameters').output.firstRow.file_name),'/',split(item().name,'.')[0],'_',formatDateTime(utcnow(),'yyyy-MM-dd THHmmss'),'.',split(item().name,'.')[1])",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					]
+				}
+			},
+			{
+				"name": "if_StgFile_has_zero_records",
+				"description": "Check the output of the copy activity is zero records. If yes then stop/fail the flow.",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "ForEachFile",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(activity('cp_copy_from_network_to_blob').output.rowsCopied,0)",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "Fail_zero_records",
+							"description": "Fail parent Pipeline for zero records",
+							"type": "Fail",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"message": {
+									"value": "@concat('Error: The Stage CSV file  [',activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.CSV] has ZERO records written on to it. Stopping the workflow from proceeding further. Please check the logs and source file(s) for inconsistencies.')",
+									"type": "Expression"
+								},
+								"errorCode": "501"
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"p_pl_pipelineCode": {
+				"type": "string"
+			},
+			"p_pl_pipelineSubCode": {
+				"type": "string",
+				"defaultValue": "NetworkFolder"
+			}
+		},
+		"folder": {
+			"name": "Projects/NCSA/Generic Reuse Pipeline"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-06-17T05:24:21Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

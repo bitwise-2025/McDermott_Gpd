@@ -1,0 +1,153 @@
+{
+	"name": "pl_zycus_source_to_stage",
+	"properties": {
+		"activities": [
+			{
+				"name": "cp_inbound_to_stage",
+				"description": "Copying the data (input csv file) from inbound folder to the staging container in azure storage.",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "FileServerReadSettings",
+							"recursive": false,
+							"enablePartitionDiscovery": false
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_fs_csv_zycus_inbound",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_ds_source_directory": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.source_directory",
+								"type": "Expression"
+							},
+							"p_ds_file_name": {
+								"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_zycus_generic",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_ds_folder_path": {
+								"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.folder_path,'/','Inbound')",
+								"type": "Expression"
+							},
+							"p_ds_file_name": {
+								"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+								"type": "Expression"
+							},
+							"p_ds_file_system": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.file_system",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "lk_get_pipeline_parameters",
+				"description": "Getting the parameters to be used in this pipeline.",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": {
+									"value": "Zycus",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			}
+		],
+		"variables": {
+			"v_error_message": {
+				"type": "String"
+			},
+			"act_error_message": {
+				"type": "Array"
+			}
+		},
+		"folder": {
+			"name": "Projects/ZYCUS"
+		},
+		"annotations": [],
+		"lastPublishTime": "2024-04-30T07:34:07Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

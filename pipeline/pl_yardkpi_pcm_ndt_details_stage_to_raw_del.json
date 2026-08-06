@@ -1,0 +1,127 @@
+{
+	"name": "pl_yardkpi_pcm_ndt_details_stage_to_raw_del",
+	"properties": {
+		"activities": [
+			{
+				"name": "lk_get_pipeline_parameters",
+				"description": "Get the parameters to be used in this pipeline",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": {
+									"value": "PCM",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "df_pcm_ndt_details_stage_to_raw_del_copy1",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "df_pcm_ndt_details_stage_to_raw_del",
+						"type": "DataFlowReference",
+						"datasetParameters": {
+							"PCMStage": {
+								"p_ds_filename": {
+									"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_name_stg",
+									"type": "Expression"
+								},
+								"p_ds_folderpath": {
+									"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+									"type": "Expression"
+								},
+								"p_ds_filesystem": {
+									"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+									"type": "Expression"
+								}
+							},
+							"PCMRaw": {
+								"p_ds_filesystem": {
+									"value": "@activity('lk_get_pipeline_parameters').output.firstRow.output_file_system_raw",
+									"type": "Expression"
+								},
+								"p_ds_folderpath": {
+									"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+									"type": "Expression"
+								},
+								"p_ds_filename": {
+									"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_name_stg",
+									"type": "Expression"
+								}
+							}
+						}
+					},
+					"compute": {
+						"coreCount": 8,
+						"computeType": "General"
+					},
+					"traceLevel": "Fine"
+				}
+			}
+		],
+		"variables": {
+			"v_filename": {
+				"type": "String"
+			},
+			"v_folderpath": {
+				"type": "String"
+			},
+			"p_pl_fileexists": {
+				"type": "Boolean"
+			}
+		},
+		"folder": {
+			"name": "Projects/YARD KPI/PCM/ndt_details_del"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-12-27T06:02:04Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

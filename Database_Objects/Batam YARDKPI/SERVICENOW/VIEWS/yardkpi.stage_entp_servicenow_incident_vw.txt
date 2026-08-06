@@ -1,0 +1,171 @@
+--Object:  View [yardkpi].[stage_entp_servicenow_incident_vw]    Script Date: 2/11/2025 11:54:46 AM
+DROP VIEW [yardkpi].[stage_entp_servicenow_incident_vw]
+GO
+
+
+--Object:  View [yardkpi].[stage_entp_servicenow_incident_vw]    Script Date: 2/11/2025 11:54:46 AM
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE VIEW [yardkpi].[stage_entp_servicenow_incident_vw]
+AS select distinct
+   ROW_NUMBER() over(ORDER BY inc_number ASC) as  stage_entp_servicenow_incident_id,
+       [source_code]
+      ,[sub_source_code]
+      ,[resolved_by]
+      ,[approval_set]
+      ,[problem_id]
+      ,[work_end]
+      ,[reassignment_count]
+      ,[time_worked]
+      ,[made_sla]
+      ,[inc_number]
+      ,[sys_class_name]
+      ,[additional_assignee_list]
+      ,[category]
+      ,[severity]
+      ,[due_date]
+      ,[sys_tags]
+      ,[upon_approval]
+      ,[follow_up]
+      ,[company]
+      ,[inc_active]
+      ,[sys_domain_path]
+      ,[calendar_duration]
+      ,[sys_created_on]
+      ,[rfc]
+      ,[sys_mod_count]
+      ,[escalation]
+      ,[assigned_to]
+      ,[i_order]
+      ,[sys_updated_on]
+      ,[caller_id]
+      ,[assignment_group]
+      ,[closed_at]
+      ,[approval]
+      ,[sys_created_by]
+      ,[upon_reject]
+      ,[impact]
+      ,[sys_updated_by]
+      ,[work_start]
+	  ,cmdb_ci
+      ,[inc_sys_id]
+      ,[correlation_display]
+      ,[i_location]
+      ,[parent_incident]
+      ,[business_duration]
+      ,[opened_by]
+      ,[incident_state]
+      ,[knowledge]
+      ,[i_priority]
+      ,[expected_start]
+      ,[contact_type]
+      ,[subcategory]
+      ,[sla_due]
+      ,[sys_domain]
+      ,[calendar_stc]
+      ,[urgency]
+      ,[correlation_id]
+      ,[notify]
+      ,[closed_by]
+      ,[activity_due]
+      ,[close_code]
+      ,[opened_at]
+      ,[business_stc]
+      ,[i_state]
+      ,[resolved_at]
+      ,[reopen_count]
+,[u_type]
+   FROM
+   (
+select 
+I.source_code,
+I.sub_source_code,
+R.name_value as resolved_by,
+I.approval_set,
+I.problem_id,
+I.work_end,
+I.reassignment_count,
+I.time_worked,
+I.made_sla,
+I.inc_number,
+I.sys_class_name,
+--I.watch_list,
+I.additional_assignee_list,
+I.category,
+I.severity, 
+I.due_date,
+I.sys_tags,
+I.upon_approval,
+I.follow_up,
+CM.name_value as company,
+I.inc_active,
+I.sys_domain_path,
+I.calendar_duration,
+I.sys_created_on,
+I.rfc,
+I.sys_mod_count,
+I.escalation, 
+AC.name_value as assigned_to,
+I.i_order,
+I.sys_updated_on,
+CI.name_value as caller_id,
+AG.name_value as assignment_group,
+I.closed_at,
+I.approval,
+I.sys_created_by,
+I.upon_reject,
+I.impact,
+I.sys_updated_by,
+I.work_start,
+I.cmdb_ci,
+I.inc_sys_id,
+I.correlation_display,
+L.name_value as i_location,
+I.parent_incident,
+I.business_duration,
+OB.name_value as opened_by,
+I.incident_state,
+I.knowledge,
+I.i_priority,
+I.expected_start,
+I.contact_type,
+I.subcategory,
+I.sla_due,
+I.sys_domain,
+I.calendar_stc,
+I.urgency,
+I.correlation_id,
+I.notify,
+CB.name_value as closed_by,
+I.activity_due,
+I.close_code,
+I.opened_at,
+I.business_stc,
+I.i_state,
+I.resolved_at,
+I.reopen_count,
+I.u_type
+from yardkpi.stage_entp_servicenow_incident I
+LEFT OUTER JOIN yardkpi.stage_servicenow_sys_user R
+ON I.resolved_by = R.sys_id_value 
+LEFT OUTER JOIN yardkpi.stage_servicenow_core_company CM
+on I.company = CM.sys_id_value
+LEFT OUTER JOIN yardkpi.stage_servicenow_sys_user AC
+ON I.assigned_to = AC.sys_id_value 
+LEFT OUTER JOIN yardkpi.stage_servicenow_sys_user CI
+ON I.caller_id = CI.sys_id_value 
+LEFT OUTER JOIN yardkpi.stage_servicenow_sys_user_group AG
+ON I.assignment_group = AG.sys_id_value
+LEFT OUTER JOIN  yardkpi.stage_servicenow_location L
+ON I.[i_location]  = L.sys_id_value
+LEFT OUTER JOIN yardkpi.stage_servicenow_sys_user OB
+ON I.opened_by = OB.sys_id_value 
+LEFT OUTER JOIN yardkpi.stage_servicenow_sys_user CB
+ON I.closed_by= CB.sys_id_value
+
+) unquery;
+GO

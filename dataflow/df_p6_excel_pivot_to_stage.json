@@ -1,0 +1,38 @@
+{
+	"name": "df_p6_excel_pivot_to_stage",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_labor_units_p6_stage_sample_file",
+						"type": "DatasetReference"
+					},
+					"name": "srcP6UnitsOverTime"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_P6L3UnitsOverTime",
+						"type": "DatasetReference"
+					},
+					"name": "sinkL3UnitsOverTime"
+				}
+			],
+			"transformations": [
+				{
+					"name": "unpivotData"
+				},
+				{
+					"name": "dcConvertNulltoDummyVal"
+				},
+				{
+					"name": "FilterDummyRows"
+				}
+			],
+			"script": "source(output(\n\t\t{Activity ID} as string,\n\t\t{Activity Name} as string,\n\t\t{Resource ID Name} as string,\n\t\t{GLOBAL - EXECUTED BY TYPE} as string,\n\t\tStart as string,\n\t\tFinish as string,\n\t\t{Spreadsheet Field} as string,\n\t\tperiod as string,\n\t\tunits as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: true) ~> srcP6UnitsOverTime\ndcConvertNulltoDummyVal unpivot(output(\n\t\tperiod as string,\n\t\tunits as string\n\t),\n\tungroupBy({Activity ID},\n\t\t{Activity Name},\n\t\t{Resource ID Name},\n\t\tStart,\n\t\tFinish,\n\t\t{Spreadsheet Field}),\n\tlateral: false,\n\tignoreNullPivots: true) ~> unpivotData\nsrcP6UnitsOverTime derive(each(match(!(in(['Activity ID','Activity Name','Resource ID Name','Start','Finish','Spreadsheet Field'],name))), $$ = iif(isNull($$) || !isDecimal($$), '-99', $$))) ~> dcConvertNulltoDummyVal\nunpivotData filter(units != '-99') ~> FilterDummyRows\nFilterDummyRows sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tinput(\n\t\t{project code} as string,\n\t\t{from function} as string,\n\t\t{to function} as string,\n\t\tquantity as string,\n\t\tuom as string,\n\t\t{amount in USD} as string,\n\t\tcomments as string\n\t),\n\tpartitionFileNames:['p6_labor_stage.csv'],\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> sinkL3UnitsOverTime"
+		}
+	}
+}

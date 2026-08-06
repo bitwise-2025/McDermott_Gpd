@@ -1,0 +1,203 @@
+{
+	"name": "pl_rpsr_smat_source_to_stage",
+	"properties": {
+		"description": "SMAT RPSR - Source to ADLS Stage Folder",
+		"activities": [
+			{
+				"name": "cp_getSMAT_RPSR_data",
+				"description": "Run the Custom query to fetch RPSR data from SMAT server (source) and copy into the Stage ADLS2.",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Set data pull date time",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "OracleSource",
+						"oracleReaderQuery": {
+							"value": "select distinct e.eci_id,\n\t\tSUBSTR(e.r_Code,0,INSTR(e.r_Code,'-')-1) as PROJ_NB,\n        e.r_Code, \n        mssp.r_supp,    \n        mssp.actual_ind, \n        mc.order_seq, \n        msn.short_desc, \n        m.scheduled_date, \n        m.planned_date, \n        m.actual_date,\n        e.eci_comment, \n        m_pck_configs.get_attr_value ('P6003',e.eci_id,4,'ECI','ECI') eci_attr_4,\n\t\tnvl(amp_get_eciv_attr_cd(e.eci_id, 'DISCIPLINE'), 'NO DISC') as DISCIPLINE,\n\t\tnvl(amp_get_eciv_attr_cd(e.eci_id, 'DEPARTMENT'), 'NO DEPT') as DEPARTMENT,\n\t\tDECODE(UPPER('Y'),'Y', max(r.buyer),NULL) as PLANNED_BUYER,\n\t\tMax(rnls.DESCRIPTION) as REQ_DESC  -- Not part of the original Query but had to added to get the REQ_DESC\n        /*replace(m_pck_ppd_defaults.get_value('ZX_PROJ_NR') || \n                chr(124) || nvl(amp_get_eciv_attr_cd(e.eci_id, 'DISCIPLINE'), 'NO DISC') ||  \n                chr(124) || e.r_code || \n                chr(124) || mssp.r_supp  || \n                chr(124) || replace(msn.short_desc,'|',null)|| \n                chr(124) || to_char(m.scheduled_date, 'yyyy-mm-dd')|| \n                chr(124) || to_char(m.planned_date, 'yyyy-mm-dd')|| \n                chr(124) || to_char(m.actual_date, 'yyyy-mm-dd')||\n                chr(124) || nvl(amp_get_eciv_attr_cd(e.eci_id, 'DEPARTMENT'), 'NO DEPT') || \n                CHR(124) || e.eci_comment  || -- 610-PRB-0901 11Dec06                                           \n                DECODE(UPPER('Y'),'Y', CHR(124) ||max(r.buyer) ||CHR(124) ||poh.po_number ,NULL)|| \n      CHR(124) || mssp.actual_ind ||CHR(124)\n                    , CHR(10), ' ') output */                                                                        \n                 from    \n                 m_sys.m_ms_config_nls msn\n                 ,m_sys.m_ms_configs mc             \n                 ,m_sys.m_milestones m\n                 ,m_sys.m_eng_comm_items e     \n                 ,m_sys.m_reqs r              \n                 ,m_sys.m_req_nls rnls       \n                 ,m_sys.m_po_headers poh     \n                 ,m_sys.m_ms_suppl_plans mssp  \n                 WHERE  1 = 1\n                 AND  rnls.nls_id(+) = @{activity('lk_get_pipeline_parameters').output.firstRow.p_nls_id}\n                 AND  rnls.r_id(+)   = r.r_id      \n                 AND (('@{activity('lk_get_pipeline_parameters').output.firstRow.P_ZP_MSSUPP}'= 'Y' AND Mssp.R_SUPP IS NOT NULL)  \t--Parameter_1\n      OR ('@{activity('lk_get_pipeline_parameters').output.firstRow.P_ZP_MSSUPP}'='N' AND Mssp.R_SUPP IS NULL))   \t\t\t\t\t--Parameter_1\n                 AND  r.r_code(+)    = e.r_code    \n                 AND  r.proj_id(+)   = e.proj_id   \n                 AND  m.mssp_id      = mssp.mssp_id(+) \n                 AND  m.enci_id is null       \n                 AND  e.eci_id = m.eci_id\n                 and  m.mc_id = mc.mc_id \n                 and  mc.mc_id = msn.mc_id \n                 and  msn.nls_id = 1\n--                and  e.proj_id = p_proj_id   \n                 and  e.proj_id in ('@{activity('lk_get_pipeline_parameters').output.firstRow.p_proj_id}') \t\t\t\t\t\t\t--Parameter 4\n    and  poh.poh_id (+) = e.poh_id    \n                 and mc.order_seq in \n                 (SELECT REGEXP_SUBSTR('@{activity('lk_get_pipeline_parameters').output.firstRow.a_ord_seq}', '[^,]+',1,ROWNUM) \t--Parameter_3\n                        FROM   dual\n                        CONNECT BY ROWNUM <= (LENGTH('@{activity('lk_get_pipeline_parameters').output.firstRow.a_ord_seq}') - LENGTH(REPLACE('@{activity('lk_get_pipeline_parameters').output.firstRow.a_ord_seq}',','))+1)) --Parameter_3, Parameter_3\n                 group by  e.eci_id, e.r_Code,        mssp.r_supp, mssp.actual_ind, mc.order_seq, msn.short_desc, m.scheduled_date, \n              m.planned_date,   m.actual_date,    e.eci_comment,       nvl(amp_get_eciv_attr_cd(e.eci_id, 'DISCIPLINE'), 'NO DISC'),\n              nvl(amp_get_eciv_attr_cd(e.eci_id, 'DEPARTMENT'), 'NO DEPT'),  poh.po_number \n                order by  e.r_Code, mssp.r_supp, mssp.actual_ind, mc.order_seq ;",
+							"type": "Expression"
+						},
+						"partitionOption": "None",
+						"queryTimeout": "02:00:00"
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_oracle_SMP8_SMAT_src",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_generic",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_ds_filesystem": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.file_system",
+								"type": "Expression"
+							},
+							"p_ds_directory": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+								"type": "Expression"
+							},
+							"p_ds_filename": {
+								"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+								"type": "Expression"
+							},
+							"p_ds_first_row_header": true
+						}
+					}
+				]
+			},
+			{
+				"name": "Set data pull date time",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_run_start_time",
+					"value": {
+						"value": "@utcnow()",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "lk_get_pipeline_parameters",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "SMAT"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "sp_Update_Parameter",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "cp_getSMAT_RPSR_data",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+					"storedProcedureParameters": {
+						"pParameterValue": {
+							"value": {
+								"value": "@formatDateTime(variables('v_run_start_time'),'yyyy-MM-dd HH:mm:ss')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": "SMAT",
+							"type": "String"
+						},
+						"pParameterCode": {
+							"value": "last_run_start_date",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseDB_DEV",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"variables": {
+			"v_run_start_time": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/NCSA/SMAT/RPSR"
+		},
+		"annotations": [],
+		"lastPublishTime": "2021-04-16T07:11:12Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

@@ -1,0 +1,138 @@
+{
+	"name": "pl_yardkpi_load_and_training_source_to_stage",
+	"properties": {
+		"activities": [
+			{
+				"name": "lk_get_pipeline_parameters",
+				"description": "Get the parameters to be used in this pipeline",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": {
+									"value": "NetworkFolder",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Load_Excel to Stage",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "ExcelSource",
+						"storeSettings": {
+							"type": "FileServerReadSettings",
+							"recursive": true,
+							"enablePartitionDiscovery": false
+						}
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings",
+							"copyBehavior": "MergeFiles"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_yardkpi_excel_load_and_training",
+						"type": "DatasetReference",
+						"parameters": {
+							"folder_path": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.source_directory",
+								"type": "Expression"
+							},
+							"file_name": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_name",
+								"type": "Expression"
+							},
+							"sheet_name": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.sheet_name",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_yardkpi_load_source",
+						"type": "DatasetReference",
+						"parameters": {
+							"Directory": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.output_folder_path",
+								"type": "Expression"
+							},
+							"File": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.output_file_name",
+								"type": "Expression"
+							},
+							"FileSystem": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.output_file_system",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			}
+		],
+		"folder": {
+			"name": "Projects/YARD KPI/LoadANDTraining"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-09-14T20:33:18Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

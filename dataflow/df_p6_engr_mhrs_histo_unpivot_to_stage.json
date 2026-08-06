@@ -1,0 +1,45 @@
+{
+	"name": "df_p6_engr_mhrs_histo_unpivot_to_stage",
+	"properties": {
+		"description": "Dataflow to convert P6 Engineering histogram data with unpivot per date",
+		"folder": {
+			"name": "Projects/NCSA/P6 Engr Histogram"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_engr_mhrs_histo_p6_stage_initial",
+						"type": "DatasetReference"
+					},
+					"name": "SrcP6EngrManHrsHisto"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_P6engr_mhrs_histo_stage",
+						"type": "DatasetReference"
+					},
+					"name": "SnkP6EngrManHrs"
+				}
+			],
+			"transformations": [
+				{
+					"name": "dcGetProject"
+				},
+				{
+					"name": "UnpivotData"
+				},
+				{
+					"name": "FltDummyRows"
+				},
+				{
+					"name": "FltIncorrectActivity"
+				}
+			],
+			"script": "source(output(\n\t\tContract as string,\n\t\tPhase as string,\n\t\tPSRL1Code as string,\n\t\tPSRL2Code as string,\n\t\tOffice as string,\n\t\tTYPE as string,\n\t\tPrime as string,\n\t\t{Sub Prime} as string,\n\t\tSFN as string,\n\t\t{Activity Code} as string,\n\t\tDiscipline as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true) ~> SrcP6EngrManHrsHisto\nFltIncorrectActivity derive(Contract = iif(length(trim(Contract))>5,concat('99',trim(Contract)),trim(Contract)),\n\t\tOffice = trim(Office),\n\t\teach(match(in(['TYPE','Prime','Sub Prime','SFN','Activity Code','Discipline','Phase','PSRL1Code','PSRL2Code'],name)), $$ = trim($$))) ~> dcGetProject\ndcGetProject unpivot(output(\n\t\tPeriod as string,\n\t\tUnits as string\n\t),\n\tungroupBy(Contract,\n\t\tPhase,\n\t\tOffice,\n\t\tTYPE,\n\t\tPrime,\n\t\t{Sub Prime},\n\t\tSFN,\n\t\t{Activity Code},\n\t\tDiscipline,\n\t\tPSRL1Code,\n\t\tPSRL2Code),\n\tlateral: false,\n\tignoreNullPivots: true) ~> UnpivotData\nUnpivotData filter(Units != '-') ~> FltDummyRows\nSrcP6EngrManHrsHisto filter(!(isNull(Contract))) ~> FltIncorrectActivity\nFltDummyRows sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['p6_engr_histo.csv'],\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tmapColumn(\n\t\tContract,\n\t\tPhase,\n\t\tOffice,\n\t\tTYPE,\n\t\tPrime,\n\t\t{Sub Prime},\n\t\tSFN,\n\t\t{Activity Code},\n\t\tDiscipline,\n\t\tPSRL1Code,\n\t\tPSRL2Code,\n\t\tPeriod,\n\t\tUnits\n\t),\n\tpartitionBy('hash', 1)) ~> SnkP6EngrManHrs"
+		}
+	}
+}

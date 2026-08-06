@@ -1,0 +1,125 @@
+{
+	"name": "df_yardkpi_pcm_dl_master_weld_process_stage_to_raw",
+	"properties": {
+		"folder": {
+			"name": "Projects/YARD KPI/PCM"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_yardkpi_pcm_master_generic",
+						"type": "DatasetReference"
+					},
+					"name": "Source"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_yardkpi_pcm_master_generic",
+						"type": "DatasetReference"
+					},
+					"name": "Sink"
+				}
+			],
+			"transformations": [
+				{
+					"name": "setFileName"
+				}
+			],
+			"scriptLines": [
+				"parameters{",
+				"     p_df_folderpath as string,",
+				"     p_df_filename as string",
+				"}",
+				"source(output(",
+				"          fab_code as string,",
+				"          process as string,",
+				"          process_title as string,",
+				"          discipline as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: true,",
+				"     purgeFiles: true,",
+				"     rowUrlColumn: 'File_Path',",
+				"     wildcardPaths:[($p_df_folderpath+'/'+$p_df_filename+'_*.csv')]) ~> Source",
+				"Source derive(File_Path = concat(concat($p_df_folderpath,'/'),substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',$p_df_filename,'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv')) ~> setFileName",
+				"setFileName sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          trans_date as string,",
+				"          trans_type as string,",
+				"          fab_code as string,",
+				"          contract as string,",
+				"          contract_title as string,",
+				"          job as string,",
+				"          job_title as string,",
+				"          item as string,",
+				"          item_title as string,",
+				"          ndt_drawing as string,",
+				"          ndt_drawing_desc as string,",
+				"          wctrl as string,",
+				"          weld_suffix as string,",
+				"          stress_relief as string,",
+				"          weld_repair_ref as string,",
+				"          discipline as string,",
+				"          spool as string,",
+				"          weld as string,",
+				"          weld_location as string,",
+				"          weld_type as string,",
+				"          joint_type as string,",
+				"          material_type as string,",
+				"          material_grade as string,",
+				"          material_type2 as string,",
+				"          material_grade2 as string,",
+				"          fabrication_area as string,",
+				"          weld_attachment as string,",
+				"          weld_category as string,",
+				"          pipe_bore as string,",
+				"          pipe_schedule as string,",
+				"          thickness as string,",
+				"          diameter as string,",
+				"          weld_length as string,",
+				"          weld_date as string,",
+				"          weld_status as string,",
+				"          weld_clear_date as string,",
+				"          cutout as string,",
+				"          weldcount as string,",
+				"          weld_updated_on as string,",
+				"          recap as string,",
+				"          repair_gen as string,",
+				"          repair_status_code as string,",
+				"          weld_repair_date as string,",
+				"          mcd_inspector as string,",
+				"          client_inspector as string,",
+				"          vis_report_num as string,",
+				"          vis_date as string,",
+				"          clear_date as string,",
+				"          weld_machine as string,",
+				"          fitter1 as string,",
+				"          fitter2 as string,",
+				"          fitter3 as string,",
+				"          Fitup_insp_name as string,",
+				"          fitup_date as string,",
+				"          fitup_status as string,",
+				"          fitup_updated_on as string,",
+				"          fitup_inspection_date as string,",
+				"          fitup_inspector as string,",
+				"          fitup_rep_num as string,",
+				"          mtn1 as string,",
+				"          mtn2 as string,",
+				"          include_in_rr_calc as string",
+				"     ),",
+				"     rowUrlColumn:'File_Path',",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> Sink"
+			]
+		}
+	}
+}

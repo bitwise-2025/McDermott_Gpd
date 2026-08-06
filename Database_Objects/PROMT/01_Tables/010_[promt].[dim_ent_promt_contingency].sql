@@ -1,0 +1,67 @@
+CREATE TABLE [promt].[dim_ent_promt_contingency]
+(
+	[dim_ent_promt_contingency_sk] 				[int] IDENTITY(1,1) NOT NULL,
+	[dim_ent_promt_contingency_nk] 				[int] NOT NULL,
+	[ca_id]										int NOT NULL,	
+	[t_project_id] 								int NOT NULL,	
+	[project_no] 								[varchar](120) NOT NULL,
+	[start_date] 								[datetime] NOT NULL,
+	[end_date] 									[datetime] NOT NULL,
+	[hash_code] 								[varchar](5000) NOT NULL,
+	[active] 									[int] NULL,
+	[created_date_time] 						[datetime] NULL,
+	[modified_date_time] 						[datetime] NULL,
+	[late_arrival_flag] 						[varchar](1) NOT NULL,
+	[project_month]								int NULL,
+	[month_date]								datetime NULL,
+	[drawdown_baseline]							decimal(15, 5) NULL,
+	[drawdown_actuals]							decimal(15, 5) NULL,
+	[drawdown_forecast]							decimal(15, 5) NULL,
+	[active_flag]								varchar(1) NULL,
+	[value_type]								varchar(1) NULL,
+	[created_dtm]								datetime NULL,
+	[created_by]								varchar(120) NULL,	
+	[project_pc_code]							[varchar](120) NULL,
+	[project_pc_code_description]				[varchar](500) NULL,
+	[project_bid_project_id]					[int] NULL,         
+	[project_project_title]						[varchar](500) NULL,
+	[project_client_name]						[varchar](500) NULL,
+	[project_business_line]						[varchar](120) NULL,
+	[project_business_line_description]			[varchar](500) NULL,
+	[project_country]							[varchar](500) NULL,
+	[project_manager]							[varchar](500) NULL,
+	[project_prom_lead]							[varchar](500) NULL,
+	[project_category]							[varchar](120) NULL,
+	[project_category_description]				[varchar](500) NULL,
+	[project_total_contract_value]				[decimal](15, 2) NULL,
+	[project_estimated_cost]					[decimal](15, 2) NULL,
+	[project_currency_code]						[varchar](120) NULL,
+	[project_currency_code_description]			[varchar](500) NULL,
+	[project_contract_type]						[varchar](120) NULL,
+	[project_contract_type_description]			[varchar](500) NULL,
+	[project_total_duration]					[decimal](15, 2) NULL,
+	[project_document_revision_no]				[varchar](120) NULL,
+	[project_document_revision_date]			[datetime] NULL,
+	[project_revisied_by]						[varchar](120) NULL,
+	[project_approved_by]						[varchar](120) NULL,
+	[project_award_date]						[datetime] NULL,
+	[project_active_flag]						[varchar](1) NULL,
+	[project_project_type]						[varchar](120) NULL,
+	[project_project_type_description]			[varchar](500) NULL,
+	[project_duration_type]						[varchar](120) NULL,
+	[project_version_no]						[int] NULL,
+	[project_status]							[varchar](20) NULL,
+	[project_status_description]				[varchar](500) NULL,
+	dl_touched_dtm								datetime NULL,		
+ CONSTRAINT [ca_idpk] PRIMARY KEY NONCLUSTERED 
+	(
+		[dim_ent_promt_contingency_sk] ASC
+	) NOT ENFORCED 
+)
+WITH
+(
+	DISTRIBUTION = ROUND_ROBIN,
+	CLUSTERED COLUMNSTORE INDEX
+)
+GO
+

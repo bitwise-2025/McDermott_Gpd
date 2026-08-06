@@ -1,0 +1,1038 @@
+{
+	"name": "pl_yardkpi_mwin_raw_to_synapse",
+	"properties": {
+		"activities": [
+			{
+				"name": "cp_Get_Latest_File",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Set_current_date_time",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": true,
+							"modifiedDatetimeStart": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.last_run_start_date",
+								"type": "Expression"
+							},
+							"wildcardFolderPath": {
+								"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.directory,'/*/*/*')",
+								"type": "Expression"
+							},
+							"wildcardFileName": {
+								"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'_*.csv')",
+								"type": "Expression"
+							},
+							"enablePartitionDiscovery": false
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings",
+							"copyBehavior": "MergeFiles"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_yardkpi_mwin_default",
+						"type": "DatasetReference",
+						"parameters": {
+							"Directory": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+								"type": "Expression"
+							},
+							"FileSystem": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+								"type": "Expression"
+							},
+							"FileName": {
+								"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_yardkpi_mwin_default",
+						"type": "DatasetReference",
+						"parameters": {
+							"Directory": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+								"type": "Expression"
+							},
+							"FileSystem": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+								"type": "Expression"
+							},
+							"FileName": {
+								"value": "@concat('Combined_',activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "Check Combined File non zero Bytes",
+				"type": "GetMetadata",
+				"dependsOn": [
+					{
+						"activity": "cp_Get_Latest_File",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_yardkpi_mwin_default",
+						"type": "DatasetReference",
+						"parameters": {
+							"Directory": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+								"type": "Expression"
+							},
+							"FileSystem": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+								"type": "Expression"
+							},
+							"FileName": {
+								"value": "@concat('Combined_',activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+								"type": "Expression"
+							}
+						}
+					},
+					"fieldList": [
+						"size",
+						"exists"
+					],
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true,
+						"enablePartitionDiscovery": false
+					},
+					"formatSettings": {
+						"type": "DelimitedTextReadSettings"
+					}
+				}
+			},
+			{
+				"name": "if_File_Exists_Copy_to_Synapse",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Check Combined File non zero Bytes",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@greater(activity('Check Combined File non zero Bytes').output.size, 2)",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "CP_Raw_To_Synapse_Stage",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"additionalColumns": [
+										{
+											"name": "load_time",
+											"value": {
+												"value": "@formatDateTime(utcNow(),'yyyy-MM-dd HH:mm:ss.fff')",
+												"type": "Expression"
+											}
+										}
+									],
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": true,
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "SqlDWSink",
+									"preCopyScript": {
+										"value": "truncate table yardkpi.stage_entp_mwin_rfi_milestone",
+										"type": "Expression"
+									},
+									"allowPolyBase": true,
+									"polyBaseSettings": {
+										"rejectValue": 0,
+										"rejectType": "value",
+										"useTypeDefault": true
+									},
+									"disableMetricsCollection": false
+								},
+								"enableStaging": true,
+								"stagingSettings": {
+									"linkedServiceName": {
+										"referenceName": "ADGLS2 SRCDEST DEV",
+										"type": "LinkedServiceReference"
+									}
+								},
+								"translator": {
+									"type": "TabularTranslator",
+									"mappings": [
+										{
+											"source": {
+												"name": "rbt_id",
+												"type": "String"
+											},
+											"sink": {
+												"name": "rbt_id",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "source_name",
+												"type": "String"
+											},
+											"sink": {
+												"name": "source_code",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "sub_source_name",
+												"type": "String"
+											},
+											"sink": {
+												"name": "sub_source_code",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "location",
+												"type": "String"
+											},
+											"sink": {
+												"name": "location",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "rbt_hdr_category",
+												"type": "String"
+											},
+											"sink": {
+												"name": "rbt_hdr_category",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "rbt_version",
+												"type": "String"
+											},
+											"sink": {
+												"name": "rbt_version",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "qr_number",
+												"type": "String"
+											},
+											"sink": {
+												"name": "qr_number",
+												"type": "Double"
+											}
+										},
+										{
+											"source": {
+												"name": "project_id",
+												"type": "String"
+											},
+											"sink": {
+												"name": "project_id",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "rbt_revision",
+												"type": "String"
+											},
+											"sink": {
+												"name": "rbt_revision",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "rbt_number",
+												"type": "String"
+											},
+											"sink": {
+												"name": "rbt_number",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "rbt_title",
+												"type": "String"
+											},
+											"sink": {
+												"name": "rbt_title",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "qc_inspector",
+												"type": "String"
+											},
+											"sink": {
+												"name": "qc_inspector",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "qc_inspector_name",
+												"type": "String"
+											},
+											"sink": {
+												"name": "qc_inspector_name",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "area_id",
+												"type": "String"
+											},
+											"sink": {
+												"name": "area_id",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "area_title",
+												"type": "String"
+											},
+											"sink": {
+												"name": "area_title",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "discipline_id",
+												"type": "String"
+											},
+											"sink": {
+												"name": "discipline_id",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "discipline_title",
+												"type": "String"
+											},
+											"sink": {
+												"name": "discipline_title",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "project_title",
+												"type": "String"
+											},
+											"sink": {
+												"name": "project_title",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "rbt_hdr_categoryname",
+												"type": "String"
+											},
+											"sink": {
+												"name": "rbt_hdr_categoryname",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "drawing_no",
+												"type": "String"
+											},
+											"sink": {
+												"name": "drawing_no",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "qc_inspection_date",
+												"type": "DateTime"
+											},
+											"sink": {
+												"name": "qc_inspection_date",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "qc_inspection_time",
+												"type": "String"
+											},
+											"sink": {
+												"name": "qc_inspection_time",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "qc_inspection_enddate",
+												"type": "DateTime"
+											},
+											"sink": {
+												"name": "qc_inspection_enddate",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "qc_inspection_endtime",
+												"type": "String"
+											},
+											"sink": {
+												"name": "qc_inspection_endtime",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "submitted_date",
+												"type": "DateTime"
+											},
+											"sink": {
+												"name": "submitted_date",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "inspection_date",
+												"type": "DateTime"
+											},
+											"sink": {
+												"name": "inspection_date",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "remark",
+												"type": "String"
+											},
+											"sink": {
+												"name": "remark",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "rbt_status",
+												"type": "String"
+											},
+											"sink": {
+												"name": "rbt_status",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "rbt_type",
+												"type": "String"
+											},
+											"sink": {
+												"name": "rbt_type",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "appr1_title",
+												"type": "String"
+											},
+											"sink": {
+												"name": "appr1_title",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "appr1_name",
+												"type": "String"
+											},
+											"sink": {
+												"name": "appr1_name",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "appr1_approval_dt",
+												"type": "DateTime"
+											},
+											"sink": {
+												"name": "appr1_approval_dt",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "appr2_title",
+												"type": "String"
+											},
+											"sink": {
+												"name": "appr2_title",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "appr2_name",
+												"type": "String"
+											},
+											"sink": {
+												"name": "appr2_name",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "appr2_approval_dt",
+												"type": "DateTime"
+											},
+											"sink": {
+												"name": "appr2_approval_dt",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "appr3_title",
+												"type": "String"
+											},
+											"sink": {
+												"name": "appr3_title",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "appr3_name",
+												"type": "String"
+											},
+											"sink": {
+												"name": "appr3_name",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "appr3_appr_status",
+												"type": "String"
+											},
+											"sink": {
+												"name": "appr3_appr_status",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "appr3_approval_dt",
+												"type": "DateTime"
+											},
+											"sink": {
+												"name": "appr3_approval_dt",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "appr4_title",
+												"type": "String"
+											},
+											"sink": {
+												"name": "appr4_title",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "appr4_name",
+												"type": "String"
+											},
+											"sink": {
+												"name": "appr4_name",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "appr4_appr_status",
+												"type": "String"
+											},
+											"sink": {
+												"name": "appr4_appr_status",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "appr4_approval_dt",
+												"type": "DateTime"
+											},
+											"sink": {
+												"name": "appr4_approval_dt",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "load_time",
+												"type": "String"
+											},
+											"sink": {
+												"name": "created_date_time",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "Root Cause",
+												"type": "String"
+											},
+											"sink": {
+												"name": "root_cause",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Inspection Level Client",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Inspection_Level_Client",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Inspection Level Contractor",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Inspection_Level_Contractor",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ProductionPersonal_title",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ProductionPersonal_title",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ProductionPersonal_name",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ProductionPersonal_name",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ProductionPersonal_Remarks",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ProductionPersonal_Remarks",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ProductionPersonal_appr_status",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ProductionPersonal_appr_status",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ProductionPersonal_approval_dt",
+												"type": "DateTime"
+											},
+											"sink": {
+												"name": "ProductionPersonal_approval_dt",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "Foremen",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Foremen",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "rbt_no_formtd",
+												"type": "String"
+											},
+											"sink": {
+												"name": "rbt_no_formtd",
+												"type": "String"
+											}
+										}
+									]
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_adlsg2_csv_yardkpi_mwin_default",
+									"type": "DatasetReference",
+									"parameters": {
+										"Directory": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+											"type": "Expression"
+										},
+										"FileSystem": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+											"type": "Expression"
+										},
+										"FileName": {
+											"value": "@concat('Combined_',activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "AzureSynapseAnalyticsPool",
+									"type": "DatasetReference",
+									"parameters": {
+										"schema": {
+											"value": "yardkpi",
+											"type": "Expression"
+										},
+										"TableName": {
+											"value": "stage_entp_mwin_rfi_milestone",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "sp_execute_mwin_sp_validate",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "CP_Raw_To_Synapse_Stage",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": {
+									"value": "[dbo].[usp_yardkpi_mwin_dim_load]",
+									"type": "Expression"
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+								"type": "LinkedServiceReference"
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Delete Temp combined File",
+				"type": "Delete",
+				"dependsOn": [
+					{
+						"activity": "if_File_Exists_Copy_to_Synapse",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_yardkpi_mwin_default",
+						"type": "DatasetReference",
+						"parameters": {
+							"Directory": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+								"type": "Expression"
+							},
+							"FileSystem": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+								"type": "Expression"
+							},
+							"FileName": {
+								"value": "@concat('Combined_',activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+								"type": "Expression"
+							}
+						}
+					},
+					"enableLogging": false,
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true,
+						"enablePartitionDiscovery": false
+					}
+				}
+			},
+			{
+				"name": "lk_get_pipeline_parameters",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "[dbo].[getPipelineParametersValues]",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.p_pipeline_sub_code",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "AzureSynapseAnalyticsDB",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Set_current_date_time",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_current_date_time",
+					"value": {
+						"value": "@formatDateTime(utcNow(),'yyyy-MM-dd HH:mm:ss.fff')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "sp_Update_Parameter",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "if_File_Exists_Copy_to_Synapse",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+					"storedProcedureParameters": {
+						"pParameterCode": {
+							"value": {
+								"value": "last_run_start_date",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pParameterValue": {
+							"value": {
+								"value": "@variables('v_current_date_time')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": {
+								"value": "@pipeline().parameters.p_pipeline_sub_code",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseAnalytics",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"parameters": {
+			"p_pipeline_sub_code": {
+				"type": "string",
+				"defaultValue": "MWIN"
+			}
+		},
+		"variables": {
+			"v_current_date_time": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/YARD KPI/MWIN"
+		},
+		"annotations": [],
+		"lastPublishTime": "2024-06-05T20:56:56Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

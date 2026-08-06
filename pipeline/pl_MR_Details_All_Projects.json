@@ -1,0 +1,264 @@
+{
+	"name": "pl_MR_Details_All_Projects",
+	"properties": {
+		"activities": [
+			{
+				"name": "lk_get_pipeline_parameters",
+				"description": "Get the parameters to be used in this pipeline",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": "pl_ncsa_master_pipelines"
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "EMAIL"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "lk_get_pipeline_parameters_2",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "NetworkFolder"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "cp_copy_first_sheet_from_source_to_synapse",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Update_Week_end_date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "OracleSource",
+						"additionalColumns": [
+							{
+								"name": "CreatedDateTime",
+								"value": {
+									"value": "@addHours(utcNow(),4 )",
+									"type": "Expression"
+								}
+							}
+						],
+						"oracleReaderQuery": {
+							"value": "SELECT DISTINCT\n    r.proj_id project_id,\n    proj.description Project_Title,\n    r.r_id,\n    r.r_code requisition_no,\n    r_nls.short_desc Req_Short_Desc,\n    r_nls.Description Req_Desc,\n    r.r_supp req_rev,\n    r.created_date req_created_date,\n    r.rel_to_proc_date released_to_proc,\n    r.approved_date req_approved_date,\n    r.proc_acknowledge_date proc_ack_date\nFROM\n  m_sys.m_reqs r, \n  m_sys.m_req_nls r_nls,\n  m_sys.m_projects proj\nWHERE 1=1\n  AND r.proj_id = '@{pipeline().parameters.proj_id}'\n  AND r.proj_id = proj.proj_id\n  AND r.r_code like '%MR%'\n  AND r.actual_ind = 'N'\n  AND r.r_supp = '0'\n  AND r.r_id = r_nls.r_id\n  AND r_nls.nls_id = 1\nORDER BY project_id, r.r_code\n\n",
+							"type": "Expression"
+						},
+						"partitionOption": "None",
+						"convertDecimalToInteger": false,
+						"queryTimeout": "02:00:00"
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"allowCopyCommand": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ADLSG2 TimeAnalytics DEV",
+							"type": "LinkedServiceReference"
+						},
+						"path": "mdr-staging-data/Ruya11"
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_smat_11_extracts",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_excel_loads_AzureSynapseAnalytics",
+						"type": "DatasetReference",
+						"parameters": {
+							"TableName": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.table_name",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "Send Email On Failure",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "cp_copy_first_sheet_from_source_to_synapse",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "POST",
+					"headers": {
+						"Content-Type": "application/json"
+					},
+					"url": "https://prod-31.eastus.logic.azure.com:443/workflows/03d7da5abbab4215a05aeaceae3b96fa/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=asuyutHtoSxGFURsj1-A6AKRiNLdXZ4mTnZvZ17_8hI",
+					"connectVia": {
+						"referenceName": "integrationRuntimeEast2",
+						"type": "IntegrationRuntimeReference"
+					},
+					"body": {
+						"value": "{\n    \"DataFactoryName\": \"@{pipeline().DataFactory}\",\n    \"PipelineName\": \"@{pipeline().Pipeline}\",\n    \"ErrorMessage\": \"Pipeline Failed\",\n    \"EmailTo\": \"@{activity('lk_get_pipeline_parameters').output.firstRow.ncsa_master_pipeline_email_to}\",\n    \"Activity\":  \"pl_MR_Details_Ruya11_D7507\"\n}",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Update_Week_end_date",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "lk_get_pipeline_parameters_2",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseAnalytics",
+					"type": "LinkedServiceReference"
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"parameters": [
+								{
+									"name": "proj_id",
+									"type": "String",
+									"value": {
+										"value": "@pipeline().parameters.proj_id",
+										"type": "Expression"
+									},
+									"direction": "Input"
+								}
+							],
+							"type": "Query",
+							"text": {
+								"value": "@concat('delete from [epr].[',activity('lk_get_pipeline_parameters_2').output.firstRow.table_name,']','\nwhere  PROJECT_ID = ','''',pipeline().parameters.proj_id,'''')",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			}
+		],
+		"parameters": {
+			"proj_id": {
+				"type": "string",
+				"defaultValue": "D7507"
+			}
+		},
+		"variables": {
+			"v_error_message": {
+				"type": "Array"
+			},
+			"v_pipelinedetails": {
+				"type": "Array"
+			},
+			"date": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/NCSA/Ruya_D7507"
+		},
+		"annotations": [],
+		"lastPublishTime": "2024-04-30T07:33:42Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

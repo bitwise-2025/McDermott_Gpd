@@ -1,0 +1,244 @@
+{
+	"name": "pl_maps_posting_source_to_stage",
+	"properties": {
+		"activities": [
+			{
+				"name": "cp_get_maps_posting",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"sqlReaderQuery": {
+							"value": "SELECT\n[Posting_Id]\n,[Post_Id]\n,[Id_Number]\n,[Org_Group_Id]\n,[Posting_sDate]\n,[ePostg_rType]\n,[Posting_Ereas]\n,[Posting_eDate]\n,[Posting_rDate]\n,[Part_Time_hrs]\n,[Pg_Type_Id]\n,[Fall_Back_Post_Id]\n,[Notes]\n,[Carry_Over_Leave]\n,[Leave_Taken]\n,[Liquidated_Leave]\n,[Last_calc_On]\n,[Calc_For_Date]\n,CAST(Leave_Accrued AS INT) AS Leave_Accrued\n,[Probationary_Period]\n,[Confirmed_Start_Date]\n,[Confirmed_End_Date]\n,[Sob_Person_Id]\n,[Posting_Extra_Code_1]\n,[Posting_Extra_Code_2]\n,CAST(Is_Suspect AS INT) AS Is_Suspect\n,[Suspect_Date]\n,[temp_pwc_Id]\n,[Transit_Days_Before]\n,[Transit_Days_After]\n,CAST(PostIng_Check_Box_1 AS INT) AS PostIng_Check_Box_1\n,CAST(PostIng_Check_Box_2 AS INT) AS PostIng_Check_Box_2\n,CAST(Travel_Required AS INT) AS Travel_Required\n,[Posting_Start_Reason_Id]\n,[ItemTag_Id]\n,[Itemdb_Id]\n,[Date_Created]\n,[Date_Last_mod]\n,[Last_Edit_By]\n,[Activity_Id]\n,[Activity_db]\n,[Spare_Char_1_255]\n,[Spare_Char_1_100]\n,[Spare_Char_1_50]\n,[Spare_Int_1]\n,[Spare_Int_2]\n,[b1m]\n,[b2m]\n,[b3m]\n,[b4m]\n,[b5m]\n,[b6m]\n,[b7m]\n,[b8m]\n,[Orig_Post_ID]\nfrom Posting\nwhere Date_Last_mod > '@{activity('lk_get_pipeline_parameters').output.firstRow.start_date}'\n",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_maps_posting_source",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_generic",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_ds_filesystem": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.file_system",
+								"type": "Expression"
+							},
+							"p_ds_directory": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+								"type": "Expression"
+							},
+							"p_ds_filename": {
+								"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+								"type": "Expression"
+							},
+							"p_ds_first_row_header": true
+						}
+					}
+				]
+			},
+			{
+				"name": "lk_get_pipeline_parameters",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "[dbo].[getPipelineParametersValues]",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "NetworkFolder"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "sp_Update_Parameter",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Set data pull date time",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+					"storedProcedureParameters": {
+						"pParameterCode": {
+							"value": {
+								"value": "start_date",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pParameterValue": {
+							"value": {
+								"value": "@variables('v_run_start')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": "NetworkFolder",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseDB_DEV",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "lk_get_max_Date_Last_mod",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "cp_get_maps_posting",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"sqlReaderQuery": "select max(Date_Last_mod) as Date_Last_mod from Post",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_maps_post_source",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Set data pull date time",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lk_get_max_Date_Last_mod",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_run_start",
+					"value": {
+						"value": "@activity('lk_get_max_Date_Last_mod').output.firstRow.Date_Last_mod",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"variables": {
+			"v_run_start": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/NCSA/FAB Automation/MAPS/Posting"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-11-17T05:35:47Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

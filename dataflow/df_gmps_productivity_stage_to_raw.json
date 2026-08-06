@@ -1,0 +1,69 @@
+{
+	"name": "df_gmps_productivity_stage_to_raw",
+	"properties": {
+		"folder": {
+			"name": "Projects/YARD KPI/GMPS"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_gmps_productivity_stg_raw",
+						"type": "DatasetReference"
+					},
+					"name": "GMPSStage"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_gen2_gmps_raw_tgt",
+						"type": "DatasetReference"
+					},
+					"name": "MCRRaw"
+				}
+			],
+			"transformations": [
+				{
+					"name": "SetFileName"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          CONTRACTNO as string,",
+				"          JOBNO as string,",
+				"          JOBNO_DESC as string,",
+				"          SFN as string,",
+				"          AREA as string,",
+				"          SCOPE as string,",
+				"          DISCIPLINE as string,",
+				"          AREA_ACTUAL as string,",
+				"          CYEAR as string,",
+				"          CMONTH as string,",
+				"          CUTOFFDATE as string,",
+				"          ACTUAL as string,",
+				"          EARNED as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> GMPSStage",
+				"GMPSStage derive(FileName = concat('Project_Data/YARDKPI/GMPS/PRODUCTIVITY/',substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/','GMPS_PRODUCTIVITY_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv'),",
+				"          source_code = 'SYSTEM',",
+				"          sub_source_code = 'GMPS',",
+				"          create_date_time = currentUTC()) ~> SetFileName",
+				"SetFileName sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     rowUrlColumn:'FileName',",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     mapColumn(",
+				"          each(match(true()))",
+				"     )) ~> MCRRaw"
+			]
+		}
+	}
+}

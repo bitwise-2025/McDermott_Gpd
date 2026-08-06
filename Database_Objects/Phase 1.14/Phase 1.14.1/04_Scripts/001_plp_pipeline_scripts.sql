@@ -1,0 +1,121 @@
+DECLARE @Date DATETIME;
+SET @Date = GETDATE();
+
+
+INSERT INTO [dbo].[plp_pipeline] ([pipeline_code],[subject_area_code],[description],[comment],[active],[touched_by],[touched_dtm],[sec_sa_id])
+	VALUES ('pl_hdms_booking_data_source_to_stage','NCSA','Load HDMS Booking data',NULL,1,'abhijit.kharat@mcdermott.com',@Date,47)
+INSERT INTO [dbo].[plp_pipeline] ([pipeline_code],[subject_area_code],[description],[comment],[active],[touched_by],[touched_dtm],[sec_sa_id])
+	VALUES ('pl_hdms_booking_data_master_pipeline','NCSA','Load HDMS Booking data',NULL,1,'abhijit.kharat@mcdermott.com',@Date,47)
+INSERT INTO [dbo].[plp_pipeline] ([pipeline_code],[subject_area_code],[description],[comment],[active],[touched_by],[touched_dtm],[sec_sa_id])
+	VALUES ('pl_hdms_booking_data_stage_to_raw','NCSA','Load HDMS Booking data',NULL,1,'abhijit.kharat@mcdermott.com',@Date,47)
+INSERT INTO [dbo].[plp_pipeline] ([pipeline_code],[subject_area_code],[description],[comment],[active],[touched_by],[touched_dtm],[sec_sa_id])
+	VALUES ('pl_hdms_booking_data_raw_to_synapse_stage','NCSA','Load HDMS Booking data',NULL,1,'abhijit.kharat@mcdermott.com',@Date,47)
+
+
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+VALUES('pl_hdms_booking_data_raw_to_synapse_stage','HDMS','start_date',1,'start_date','IN',NULL,1,'abhijit.kharat@mcdermott.com',@Date)
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+VALUES('pl_hdms_booking_data_raw_to_synapse_stage','HDMS','end_date',2,'end_date','IN',NULL,1,'abhijit.kharat@mcdermott.com',@Date)
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+VALUES('pl_hdms_booking_data_raw_to_synapse_stage','HDMS','function_code',3,'function_code','IN',NULL,1,'abhijit.kharat@mcdermott.com',@Date)
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+VALUES('pl_hdms_booking_data_raw_to_synapse_stage','HDMS','source_code',4,'source_code','IN',NULL,1,'abhijit.kharat@mcdermott.com',@Date)
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+VALUES('pl_hdms_booking_data_raw_to_synapse_stage','HDMS','sub_source_code',5,'sub_source_code','IN',NULL,1,'abhijit.kharat@mcdermott.com',@Date)
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+VALUES('pl_hdms_booking_data_raw_to_synapse_stage','HDMS','projectid',6,'projectid','IN',NULL,1,'abhijit.kharat@mcdermott.com',@Date)
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+VALUES('pl_hdms_booking_data_raw_to_synapse_stage','HDMS','data_class_hours_code',7,'data_class_hours_code','IN',NULL,1,'abhijit.kharat@mcdermott.com',@Date)
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+VALUES('pl_hdms_booking_data_raw_to_synapse_stage','HDMS','hdms_estimated_booking_mhours_code',8,'Hdms_estimated_booking_mhours_code','IN',NULL,1,'abhijit.kharat@mcdermott.com',@Date)
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+VALUES('pl_hdms_booking_data_raw_to_synapse_stage','HDMS','hdms_cummulative_booking_mhours_code',9,'Hdms_cummulative_booking_mhours_code','IN',NULL,1,'abhijit.kharat@mcdermott.com',@Date)
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+VALUES('pl_hdms_booking_data_raw_to_synapse_stage','HDMS','hdms_daily_actual_booking_mhours_code',10,'Hdms_daily_actual_booking_mhours_code','IN',NULL,1,'abhijit.kharat@mcdermott.com',@Date)
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+VALUES('pl_hdms_booking_data_source_to_stage','HDMS','start_date',1,'start_date','IN',NULL,1,'abhijit.kharat@mcdermott.com',@Date)
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+VALUES('pl_hdms_booking_data_source_to_stage','HDMS','end_date',2,'end_date','IN',NULL,1,'abhijit.kharat@mcdermott.com',@Date)
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+VALUES('pl_hdms_booking_data_source_to_stage','HDMS','folder_path',3,'folder_path','IN',NULL,1,'abhijit.kharat@mcdermott.com',@Date)
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+VALUES('pl_hdms_booking_data_source_to_stage','HDMS','file_system',4,'file_system','IN',NULL,1,'abhijit.kharat@mcdermott.com',@Date)
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+VALUES('pl_hdms_booking_data_source_to_stage','HDMS','file_name',5,'file_name','IN',NULL,1,'abhijit.kharat@mcdermott.com',@Date)
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+VALUES('pl_hdms_booking_data_stage_to_raw','HDMS','lastrundate',1,'lastrundate','IN',NULL,1,'abhijit.kharat@mcdermott.com',@Date)
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+VALUES('pl_hdms_booking_data_stage_to_raw','HDMS','file_system',2,'file_system','IN',NULL,1,'abhijit.kharat@mcdermott.com',@Date)
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+VALUES('pl_hdms_booking_data_stage_to_raw','HDMS','folder_path',3,'folder_path','IN',NULL,1,'abhijit.kharat@mcdermott.com',@Date)
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+VALUES('pl_hdms_booking_data_stage_to_raw','HDMS','file_name',4,'file_name','IN',NULL,1,'abhijit.kharat@mcdermott.com',@Date)
+
+
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+     VALUES('source_code','SYSTEM',1,'abhijit.kharat@mcdermott.com',@Date,'pl_hdms_booking_data_raw_to_synapse_stage','HDMS')
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+     VALUES('hdms_cummulative_booking_mhours_code','Hdms Cumulative Actual Booking Mhrs',1,'abhijit.kharat@mcdermott.com',@Date,'pl_hdms_booking_data_raw_to_synapse_stage','HDMS')
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+     VALUES('sub_source_code','HDMS',1,'abhijit.kharat@mcdermott.com',@Date,'pl_hdms_booking_data_raw_to_synapse_stage','HDMS')
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+     VALUES('hdms_daily_actual_booking_mhours_code','Hdms Daily Actual Booking Mhrs',1,'abhijit.kharat@mcdermott.com',@Date,'pl_hdms_booking_data_raw_to_synapse_stage','HDMS')
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+     VALUES('start_date','2023-03-13 10:28:54.400',1,'abhijit.kharat@mcdermott.com',@Date,'pl_hdms_booking_data_raw_to_synapse_stage','HDMS')
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+     VALUES('projectid','D7068',1,'abhijit.kharat@mcdermott.com',@Date,'pl_hdms_booking_data_raw_to_synapse_stage','HDMS')
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+     VALUES('hdms_estimated_booking_mhours_code','Hdms Estimated Booking Mhrs',1,'abhijit.kharat@mcdermott.com',@Date,'pl_hdms_booking_data_raw_to_synapse_stage','HDMS')
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+     VALUES('function_code','HUC',1,'abhijit.kharat@mcdermott.com',@Date,'pl_hdms_booking_data_raw_to_synapse_stage','HDMS')
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+     VALUES('end_date','currdate',1,'abhijit.kharat@mcdermott.com',@Date,'pl_hdms_booking_data_raw_to_synapse_stage','HDMS')
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+     VALUES('data_class_hours_code','TIME',1,'abhijit.kharat@mcdermott.com',@Date,'pl_hdms_booking_data_raw_to_synapse_stage','HDMS')
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+     VALUES('folder_path','Project_Data/NCSA/HDMS/HDMS_Booking',1,'abhijit.kharat@mcdermott.com',@Date,'pl_hdms_booking_data_source_to_stage','HDMS')
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+     VALUES('start_date','2023-03-13 11:32:21',1,'abhijit.kharat@mcdermott.com',@Date,'pl_hdms_booking_data_source_to_stage','HDMS')
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+     VALUES('file_system','mdr-staging-data',1,'abhijit.kharat@mcdermott.com',@Date,'pl_hdms_booking_data_source_to_stage','HDMS')
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+     VALUES('file_name','HDMS_Booking',1,'abhijit.kharat@mcdermott.com',@Date,'pl_hdms_booking_data_source_to_stage','HDMS')
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+     VALUES('end_date','currdate',1,'abhijit.kharat@mcdermott.com',@Date,'pl_hdms_booking_data_source_to_stage','HDMS')
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+     VALUES('lastrundate','2022-05-09 13:28:54.400',1,'abhijit.kharat@mcdermott.com',@Date,'pl_hdms_booking_data_stage_to_raw','HDMS')
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+     VALUES('file_name','HDMS_Booking',1,'abhijit.kharat@mcdermott.com',@Date,'pl_hdms_booking_data_stage_to_raw','HDMS')
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+     VALUES('folder_path','Project_Data/NCSA/HDMS/HDMS_Booking',1,'abhijit.kharat@mcdermott.com',@Date,'pl_hdms_booking_data_stage_to_raw','HDMS')
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+     VALUES('file_system','mdr-raw-data',1,'abhijit.kharat@mcdermott.com',@Date,'pl_hdms_booking_data_stage_to_raw','HDMS')
+
+INSERT INTO [dbo].[plp_parameter]
+([parameter_code],[parameter_type_code],[description],[parameter_data_type],[max_no_values],[parameter_size],[comment],[active],[touched_by],[touched_dtm])
+     VALUES('hdms_daily_actual_booking_mhours_code','PIPELINE','hdms_daily_actual_booking_mhours_code','T','1','255',NULL,1,'abhijit.kharat@mcdermott.com',@Date)
+INSERT INTO [dbo].[plp_parameter]
+([parameter_code],[parameter_type_code],[description],[parameter_data_type],[max_no_values],[parameter_size],[comment],[active],[touched_by],[touched_dtm])
+     VALUES('hdms_estimated_booking_mhours_code','PIPELINE','hdms_estimated_booking_mhours_code','T','1','255',NULL,1,'abhijit.kharat@mcdermott.com',@Date)
+INSERT INTO [dbo].[plp_parameter]
+([parameter_code],[parameter_type_code],[description],[parameter_data_type],[max_no_values],[parameter_size],[comment],[active],[touched_by],[touched_dtm])
+     VALUES('hdms_cummulative_booking_mhours_code','PIPELINE','hdms_cummulative_booking_mhours_code','T','1','255',NULL,1,'abhijit.kharat@mcdermott.com',@Date)
+
+
+
+
+
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+VALUES('pl_hdms_booking_data_source_to_stage','HDMS','projectid',6,'projectid','IN',NULL,1,'abhijit.kharat@mcdermott.com',@Date)
+
+
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+     VALUES('projectid','D7068',1,'abhijit.kharat@mcdermott.com',@Date,'pl_hdms_booking_data_source_to_stage','HDMS')
+
+
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+VALUES('pl_hdms_progress_data_source_to_stage','HDMS','projectid',6,'projectid','IN',NULL,1,'abhijit.kharat@mcdermott.com',@Date)
+
+
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+     VALUES('projectid','D7068',1,'abhijit.kharat@mcdermott.com',@Date,'pl_hdms_progress_data_source_to_stage','HDMS')

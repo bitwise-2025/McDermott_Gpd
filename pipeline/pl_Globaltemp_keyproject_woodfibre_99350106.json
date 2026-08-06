@@ -1,0 +1,345 @@
+{
+	"name": "pl_Globaltemp_keyproject_woodfibre_99350106",
+	"properties": {
+		"activities": [
+			{
+				"name": "lk_get_pipeline_parameters",
+				"description": "Get the parameters to be used in this pipeline",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": "pl_ncsa_master_pipelines"
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "EMAIL"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "lk_get_pipeline_parameters_2",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "NetworkFolder"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "SP Update Control Table Last Run Date_copy2",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "If Condition1",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+					"storedProcedureParameters": {
+						"pParameterCode": {
+							"value": "start_date",
+							"type": "String"
+						},
+						"pParameterValue": {
+							"value": {
+								"value": "@formatDateTime(activity('lk_get_pipeline_parameters_2').output.firstRow.run_start_datetime,'yyyy-MM-dd HH:mm:ss')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": "NetworkFolder",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "linkedservice_DEV_entanalytics_synapse",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Send Email On Failure_copy1_copy1",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "If Condition1",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "POST",
+					"headers": {
+						"Content-Type": "application/json"
+					},
+					"url": "https://prod-56.eastus.logic.azure.com:443/workflows/3cff41a53ba14a82a9b7cc8d6d2bfe56/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=c7BCbv69x4tk7w5oqGQNOPlpIXvqBQi_Zwm8wkww0WQ",
+					"connectVia": {
+						"referenceName": "integrationRuntimeEast2",
+						"type": "IntegrationRuntimeReference"
+					},
+					"body": {
+						"value": "{\n    \"DataFactoryName\": \"@{pipeline().DataFactory}\",\n    \"PipelineName\": \"@{pipeline().Pipeline}\",\n    \"ErrorMessage\": \"Pipeline Failed\",\n    \"EmailTo\": \"aditya.anand2@mcdermott.com,kjohnson02@mcdermott.com\",\n    \"Activity\":  \"pl_Globaltemp_keyproject_woodfibre_99350106\"\n}",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Get Metadata1",
+				"type": "GetMetadata",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "lk_get_pipeline_parameters_2",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_filesystem_network_excel_get_subfolders_sheetname",
+						"type": "DatasetReference",
+						"parameters": {
+							"path": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.source_directory",
+								"type": "Expression"
+							},
+							"file_name": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.file_name",
+								"type": "Expression"
+							},
+							"Sheetname": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.sheetname",
+								"type": "Expression"
+							},
+							"range": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.range",
+								"type": "Expression"
+							}
+						}
+					},
+					"fieldList": [
+						"lastModified"
+					],
+					"storeSettings": {
+						"type": "FileServerReadSettings",
+						"enablePartitionDiscovery": false
+					}
+				}
+			},
+			{
+				"name": "If Condition1",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Get Metadata1",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@greater(ticks(activity('Get Metadata1').output.lastModified),ticks(activity('lk_get_pipeline_parameters_2').output.firstRow.start_date) )",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "cp_copy_first_sheet_from_source_to_synapse",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.00:10:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "ExcelSource",
+									"additionalColumns": [
+										{
+											"name": "SourceFileName",
+											"value": "$$FILEPATH"
+										},
+										{
+											"name": "CreatedDateTime",
+											"value": {
+												"value": "@addHours(utcNow(),4 )",
+												"type": "Expression"
+											}
+										},
+										{
+											"name": "project_number",
+											"value": {
+												"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.project_number",
+												"type": "Expression"
+											}
+										}
+									],
+									"storeSettings": {
+										"type": "FileServerReadSettings",
+										"recursive": true,
+										"enablePartitionDiscovery": false
+									}
+								},
+								"sink": {
+									"type": "SqlDWSink",
+									"preCopyScript": {
+										"value": "@{concat('truncate table',' ','epr.',activity('lk_get_pipeline_parameters_2').output.firstRow.table_name)} ",
+										"type": "Expression"
+									},
+									"allowCopyCommand": true,
+									"disableMetricsCollection": false
+								},
+								"enableStaging": true,
+								"stagingSettings": {
+									"linkedServiceName": {
+										"referenceName": "ADLSG2 TimeAnalytics DEV",
+										"type": "LinkedServiceReference"
+									},
+									"path": "mdr-staging-data/Ruya11"
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_filesystem_network_excel_get_subfolders_sheetname",
+									"type": "DatasetReference",
+									"parameters": {
+										"path": {
+											"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.source_directory",
+											"type": "Expression"
+										},
+										"file_name": {
+											"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.file_name",
+											"type": "Expression"
+										},
+										"Sheetname": {
+											"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.sheetname",
+											"type": "Expression"
+										},
+										"range": {
+											"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.range",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_excel_loads_AzureSynapseAnalytics",
+									"type": "DatasetReference",
+									"parameters": {
+										"TableName": {
+											"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.table_name",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					]
+				}
+			}
+		],
+		"folder": {
+			"name": "Projects/NCSA/Woodfibre_99350106"
+		},
+		"annotations": []
+	}
+}

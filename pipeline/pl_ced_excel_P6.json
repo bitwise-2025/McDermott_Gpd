@@ -1,0 +1,512 @@
+{
+	"name": "pl_ced_excel_P6",
+	"properties": {
+		"activities": [
+			{
+				"name": "lk_get_pipeline_parameters",
+				"description": "Get the parameters to be used in this pipeline",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": {
+									"value": "Excel",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "gm_check_sourcefile_exists",
+				"description": "Check if the combined file has any data to be loaded.",
+				"type": "GetMetadata",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_fileshare_excel_ced_generic",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_ds_directory": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+								"type": "Expression"
+							},
+							"p_ds_file_name": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.file_name",
+								"type": "Expression"
+							},
+							"p_ds_sheet_name": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.sheet_name",
+								"type": "Expression"
+							}
+						}
+					},
+					"fieldList": [
+						"lastModified"
+					],
+					"storeSettings": {
+						"type": "FileServerReadSettings",
+						"recursive": true,
+						"modifiedDatetimeStart": null,
+						"enablePartitionDiscovery": false
+					}
+				}
+			},
+			{
+				"name": "if_File_Exists_Copy_to_Synapse",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "gm_check_sourcefile_exists",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@greaterOrEquals(activity('gm_check_sourcefile_exists').output.lastModified,activity('lk_get_pipeline_parameters').output.firstRow.last_run_start_date)",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "sp_update_parameter",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "cd_src_to_synapse",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": {
+									"value": "[dbo].[updateIncrementPipelineParameterValue]",
+									"type": "Expression"
+								},
+								"storedProcedureParameters": {
+									"pParameterCode": {
+										"value": {
+											"value": "last_run_start_date",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"pParameterValue": {
+										"value": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.run_start_datetime",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"pPipelineCode": {
+										"value": {
+											"value": "@pipeline().Pipeline",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"pPipelineSubCode": {
+										"value": {
+											"value": "Excel",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "linkedservice_DEV_entanalytics_synapse",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "cd_src_to_synapse",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "ExcelSource",
+									"additionalColumns": [
+										{
+											"name": "Load_date",
+											"value": {
+												"value": "@activity('lk_get_pipeline_parameters').output.firstRow.run_start_datetime",
+												"type": "Expression"
+											}
+										}
+									],
+									"storeSettings": {
+										"type": "FileServerReadSettings",
+										"recursive": true,
+										"enablePartitionDiscovery": false
+									}
+								},
+								"sink": {
+									"type": "SqlDWSink",
+									"preCopyScript": {
+										"value": "INSERT INTO @{concat(activity('lk_get_pipeline_parameters').output.firstRow.target_table,'_archive')} \nSELECT * FROM @{activity('lk_get_pipeline_parameters').output.firstRow.target_table};\n\nTRUNCATE TABLE @{activity('lk_get_pipeline_parameters').output.firstRow.target_table};\n\nDELETE FROM @{concat(activity('lk_get_pipeline_parameters').output.firstRow.target_table,'_archive')}\nWHERE Load_date < DATEADD(MONTH, -6, GETDATE());",
+										"type": "Expression"
+									},
+									"allowCopyCommand": true,
+									"disableMetricsCollection": false
+								},
+								"enableStaging": true,
+								"stagingSettings": {
+									"linkedServiceName": {
+										"referenceName": "ADGLS2 SRCDEST DEV",
+										"type": "LinkedServiceReference"
+									},
+									"path": "mdr-raw-data/Polybase_Staging_Space"
+								},
+								"translator": {
+									"type": "TabularTranslator",
+									"mappings": [
+										{
+											"source": {
+												"name": "Activity ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Activity_ID"
+											}
+										},
+										{
+											"source": {
+												"name": "Activity Status",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Activity_Status"
+											}
+										},
+										{
+											"source": {
+												"name": "WBS Code",
+												"type": "String"
+											},
+											"sink": {
+												"name": "WBS_Code"
+											}
+										},
+										{
+											"source": {
+												"name": "Activity Name",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Activity_Name"
+											}
+										},
+										{
+											"source": {
+												"name": "(*)Total Float(d)",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Total_Float_d"
+											}
+										},
+										{
+											"source": {
+												"name": "Remaining Duration(d)",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Remaining_Duration_d"
+											}
+										},
+										{
+											"source": {
+												"name": "(*)Start",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Start"
+											}
+										},
+										{
+											"source": {
+												"name": "(*)Finish",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Finish"
+											}
+										},
+										{
+											"source": {
+												"name": "(*)BL Project Start",
+												"type": "String"
+											},
+											"sink": {
+												"name": "BL_Project_Start"
+											}
+										},
+										{
+											"source": {
+												"name": "(*)BL Project Finish",
+												"type": "String"
+											},
+											"sink": {
+												"name": "BL_Project_Finish"
+											}
+										},
+										{
+											"source": {
+												"name": "(*)Variance - BL Project Finish Date(d)",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Variance_BL_Project_Finish Date(d)"
+											}
+										},
+										{
+											"source": {
+												"name": "(*)Longest Path",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Longest_Path"
+											}
+										},
+										{
+											"source": {
+												"name": "GEM-TT Responsibility",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GEM_TT_Responsibility"
+											}
+										},
+										{
+											"source": {
+												"name": "GEM-MCD - Discipline",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GEM_MCD_Discipline"
+											}
+										},
+										{
+											"source": {
+												"name": "GEM-MCD - Procurement Items",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GEM_MCD_Procurement Items"
+											}
+										},
+										{
+											"source": {
+												"name": "GEM-TT Phase",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GEM_TT_Phase"
+											}
+										},
+										{
+											"source": {
+												"name": "Delete This Row",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Delete_This_Row"
+											}
+										},
+										{
+											"source": {
+												"name": "Load_date",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Load_date",
+												"type": "String"
+											}
+										}
+									]
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_fileshare_excel_ced_P6",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_ds_directory": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+											"type": "Expression"
+										},
+										"p_ds_file_name": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.file_name",
+											"type": "Expression"
+										},
+										"p_ds_sheet_name": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.sheet_name",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "AzureSynapseAnalyticsPool",
+									"type": "DatasetReference",
+									"parameters": {
+										"schema": {
+											"value": "@split(activity('lk_get_pipeline_parameters').output.firstRow.target_table,'.')[0]",
+											"type": "Expression"
+										},
+										"TableName": {
+											"value": "@split(activity('lk_get_pipeline_parameters').output.firstRow.target_table,'.')[1]",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "sp_dataload_status",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "cd_src_to_synapse",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": {
+									"value": "[edw].data_warehouse_dataload_status",
+									"type": "Expression"
+								},
+								"storedProcedureParameters": {
+									"datasource": {
+										"value": {
+											"value": "@pipeline().parameters.pPipeLineSubCode",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"description": {
+										"value": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.description",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"load_date_time": {
+										"value": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.run_start_datetime",
+											"type": "Expression"
+										},
+										"type": "DateTime"
+									},
+									"project_number": {
+										"value": {
+											"value": "@pipeline().parameters.pProjectNumber",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"table_name": {
+										"value": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.target_table",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "linkedservice_DEV_entanalytics_synapse",
+								"type": "LinkedServiceReference"
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"pPipeLineSubCode": {
+				"type": "string"
+			},
+			"pProjectNumber": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "Projects/Central Engineering Database/Excel/P6"
+		},
+		"annotations": []
+	}
+}

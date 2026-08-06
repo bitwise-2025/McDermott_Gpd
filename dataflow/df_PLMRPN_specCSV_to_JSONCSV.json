@@ -1,0 +1,61 @@
+{
+	"name": "df_PLMRPN_specCSV_to_JSONCSV",
+	"properties": {
+		"description": "Dataflow to convert special characters CSV file data into Dynamic JSONCSV",
+		"folder": {
+			"name": "Projects/NCSA/PLM/PLM RPN"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_rpnDT_plm_STGfile",
+						"type": "DatasetReference"
+					},
+					"name": "SrcRpnDTFile"
+				},
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_rpnRF_plm_STGfile",
+						"type": "DatasetReference"
+					},
+					"name": "srcRpnRFFile"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_rpn_StageJSON",
+						"type": "DatasetReference"
+					},
+					"name": "snkJsonSTG"
+				}
+			],
+			"transformations": [
+				{
+					"name": "UnpivotRpnDTData"
+				},
+				{
+					"name": "selectRpnRFColumns"
+				},
+				{
+					"name": "joinRpnRFDTData"
+				},
+				{
+					"name": "DerivedColSwapAttributeNames"
+				},
+				{
+					"name": "selectSTGColumns"
+				},
+				{
+					"name": "aggregateKeyColumns"
+				},
+				{
+					"name": "SnkJSONFormat"
+				}
+			],
+			"script": "parameters{\n\tp_ds_stgfilepath as string,\n\tp_ds_snkstgpath as string,\n\tp_ds_snkstgfilename as string\n}\nsource(output(\n\t\tPROJECT_NUMBER as string,\n\t\tID as string,\n\t\tORIGINATOR as string,\n\t\tORIGINATED_DATE as string,\n\t\tEFFECTIVE_DATE as string,\n\t\tRPN_IMPACT as string,\n\t\tRPN_PROBABILITY as string,\n\t\tRPN_EDIT_FLAG as string,\n\t\tDISPLAY_RPN_CATEGORIES as string,\n\t\tTIMESTAMP as string,\n\t\tNAME as string,\n\t\tDELETED as string,\n\t\tATTRIBUTEVALUE1 as string,\n\t\tATTRIBUTEVALUE2 as string,\n\t\tATTRIBUTEVALUE3 as string,\n\t\tATTRIBUTEVALUE4 as string,\n\t\tATTRIBUTEVALUE5 as string,\n\t\tATTRIBUTEVALUE6 as string,\n\t\tATTRIBUTEVALUE7 as string,\n\t\tATTRIBUTEVALUE8 as string,\n\t\tATTRIBUTEVALUE9 as string,\n\t\tATTRIBUTEVALUE10 as string,\n\t\tATTRIBUTEVALUE11 as string,\n\t\tATTRIBUTEVALUE12 as string,\n\t\tATTRIBUTEVALUE13 as string,\n\t\tATTRIBUTEVALUE14 as string,\n\t\tATTRIBUTEVALUE15 as string,\n\t\tPROJECT as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tmultiLineRow: true) ~> SrcRpnDTFile\nsource(output(\n\t\tCOLLABSPACE as string,\n\t\tATTRIBUTE1 as string,\n\t\tATTRIBUTE2 as string,\n\t\tATTRIBUTE3 as string,\n\t\tATTRIBUTE4 as string,\n\t\tATTRIBUTE5 as string,\n\t\tATTRIBUTE6 as string,\n\t\tATTRIBUTE7 as string,\n\t\tATTRIBUTE8 as string,\n\t\tATTRIBUTE9 as string,\n\t\tATTRIBUTE10 as string,\n\t\tATTRIBUTE11 as string,\n\t\tATTRIBUTE12 as string,\n\t\tATTRIBUTE13 as string,\n\t\tATTRIBUTE14 as string,\n\t\tATTRIBUTE15 as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false) ~> srcRpnRFFile\nSrcRpnDTFile unpivot(output(\n\t\tCKey as string,\n\t\tRValue as string\n\t),\n\tungroupBy(PROJECT_NUMBER,\n\t\tPROJECT,\n\t\tID),\n\tlateral: false,\n\tignoreNullPivots: true) ~> UnpivotRpnDTData\nsrcRpnRFFile select(mapColumn(\n\t\tPROJECT = COLLABSPACE,\n\t\tATTRIBUTEVALUE1 = ATTRIBUTE1,\n\t\tATTRIBUTEVALUE2 = ATTRIBUTE2,\n\t\tATTRIBUTEVALUE3 = ATTRIBUTE3,\n\t\tATTRIBUTEVALUE4 = ATTRIBUTE4,\n\t\tATTRIBUTEVALUE5 = ATTRIBUTE5,\n\t\tATTRIBUTEVALUE6 = ATTRIBUTE6,\n\t\tATTRIBUTEVALUE7 = ATTRIBUTE7,\n\t\tATTRIBUTEVALUE8 = ATTRIBUTE8,\n\t\tATTRIBUTEVALUE9 = ATTRIBUTE9,\n\t\tATTRIBUTEVALUE10 = ATTRIBUTE10,\n\t\tATTRIBUTEVALUE11 = ATTRIBUTE11,\n\t\tATTRIBUTEVALUE12 = ATTRIBUTE12,\n\t\tATTRIBUTEVALUE13 = ATTRIBUTE13,\n\t\tATTRIBUTEVALUE14 = ATTRIBUTE14,\n\t\tATTRIBUTEVALUE15 = ATTRIBUTE15\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> selectRpnRFColumns\nselectRpnRFColumns, UnpivotRpnDTData join(selectRpnRFColumns@PROJECT == UnpivotRpnDTData@PROJECT,\n\tjoinType:'right',\n\tmatchType:'exact',\n\tignoreSpaces: false,\n\tbroadcast: 'auto')~> joinRpnRFDTData\njoinRpnRFDTData derive(CKey = case(CKey == 'ATTRIBUTEVALUE1',ATTRIBUTEVALUE1,CKey == 'ATTRIBUTEVALUE2', ATTRIBUTEVALUE2,CKey == 'ATTRIBUTEVALUE3', ATTRIBUTEVALUE3,CKey == 'ATTRIBUTEVALUE4', ATTRIBUTEVALUE4,CKey == 'ATTRIBUTEVALUE5', ATTRIBUTEVALUE5,CKey == 'ATTRIBUTEVALUE6', ATTRIBUTEVALUE6,CKey == 'ATTRIBUTEVALUE7', ATTRIBUTEVALUE7,CKey == 'ATTRIBUTEVALUE8', ATTRIBUTEVALUE8,CKey == 'ATTRIBUTEVALUE9', ATTRIBUTEVALUE9,CKey == 'ATTRIBUTEVALUE10', ATTRIBUTEVALUE10,CKey == 'ATTRIBUTEVALUE11', ATTRIBUTEVALUE11,CKey == 'ATTRIBUTEVALUE12', ATTRIBUTEVALUE12,CKey == 'ATTRIBUTEVALUE13', ATTRIBUTEVALUE13,CKey == 'ATTRIBUTEVALUE14', ATTRIBUTEVALUE14,CKey == 'ATTRIBUTEVALUE15', ATTRIBUTEVALUE15,CKey)) ~> DerivedColSwapAttributeNames\nDerivedColSwapAttributeNames select(mapColumn(\n\t\tPROJECT = selectRpnRFColumns@PROJECT,\n\t\tPROJECT_NUMBER,\n\t\tID,\n\t\tCKey,\n\t\tRValue\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> selectSTGColumns\nselectSTGColumns aggregate(groupBy(PROJECT_NUMBER,\n\t\tPROJECT,\n\t\tID),\n\tJSON_ATTRIBUTE = collect(CKey+'::'+replace(replace(RValue,'\\n',' '),'\\r',' '))) ~> aggregateKeyColumns\naggregateKeyColumns derive(JSON_ATTRIBUTE = '{ '+trim(replace(toString(JSON_ATTRIBUTE),'::','\" : \"'),'[]')+' }') ~> SnkJSONFormat\nSnkJSONFormat sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:[($p_ds_snkstgfilename)],\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tmapColumn(\n\t\tPROJECT,\n\t\tPROJECT_NUMBER,\n\t\tID,\n\t\tJSON_ATTRIBUTE\n\t),\n\tpartitionBy('hash', 1)) ~> snkJsonSTG"
+		}
+	}
+}

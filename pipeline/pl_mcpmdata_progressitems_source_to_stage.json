@@ -1,0 +1,577 @@
+{
+	"name": "pl_mcpmdata_progressitems_source_to_stage",
+	"properties": {
+		"activities": [
+			{
+				"name": "lk_get_pipeline_parameters",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "MCPM"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "sp_Update_Parameter",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Delete Temp Files",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+					"storedProcedureParameters": {
+						"pParameterValue": {
+							"value": {
+								"value": "@formatDateTime(utcnow(),'yyyy-MM-dd HH:mm:ss')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": "MCPM",
+							"type": "String"
+						},
+						"pParameterCode": {
+							"value": "start_date",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseDB_DEV",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "lk_get_date_value",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderQuery": "select dateadd(day,-7,week_start_date) as week_start_date,dateadd(second,-1,dateadd(day,-6,week_end_date)) as week_end_date\nfrom dim_date_v where date_attribute= CAST(getdate() as date)",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "ForEachProject",
+				"description": "Loop through every project present in the lookup output Projectid",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "lk_get_date_value",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "PreRun Cleanup",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@split(activity('lk_get_pipeline_parameters').output.firstRow.projectid,',')",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "cp_mcpm_progress_items_src_to_stg",
+							"description": "Initial call to get current/manual param based week's data.",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [
+								{
+									"name": "Project_no",
+									"value": "@item()"
+								}
+							],
+							"typeProperties": {
+								"source": {
+									"type": "SqlServerSource",
+									"additionalColumns": [
+										{
+											"name": "Cutoff",
+											"value": {
+												"value": "@formatDateTime(if(equals(activity('lk_get_pipeline_parameters').output.firstRow.end_date, 'currdate'),activity('lk_get_date_value').output.firstRow.week_end_date, activity('lk_get_pipeline_parameters').output.firstRow.end_date), 'yyyy-MM-dd')",
+												"type": "Expression"
+											}
+										}
+									],
+									"sqlReaderStoredProcedureName": "[dbo].[astp_PC_EPC_Tableau_ProgressItems]",
+									"storedProcedureParameters": {
+										"Domain": {
+											"type": "String",
+											"value": {
+												"value": "@item()",
+												"type": "Expression"
+											}
+										},
+										"LastPeriod": {
+											"type": "DateTime",
+											"value": {
+												"value": "@if(equals(activity('lk_get_pipeline_parameters').output.firstRow.end_date, 'currdate'),activity('lk_get_date_value').output.firstRow.week_start_date, activity('lk_get_pipeline_parameters').output.firstRow.start_date)",
+												"type": "Expression"
+											}
+										},
+										"Phase": {
+											"type": "String",
+											"value": null
+										},
+										"ThisPeriod": {
+											"type": "DateTime",
+											"value": {
+												"value": "@if(equals(activity('lk_get_pipeline_parameters').output.firstRow.end_date, 'currdate'),activity('lk_get_date_value').output.firstRow.week_end_date, activity('lk_get_pipeline_parameters').output.firstRow.end_date)",
+												"type": "Expression"
+											}
+										}
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"sink": {
+									"type": "DelimitedTextSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									},
+									"formatSettings": {
+										"type": "DelimitedTextWriteSettings",
+										"quoteAllText": true,
+										"fileExtension": ".txt"
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_mcpm_onshore_prod",
+									"type": "DatasetReference"
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_adlsg2_csv_generic",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_ds_filesystem": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.file_system",
+											"type": "Expression"
+										},
+										"p_ds_directory": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+											"type": "Expression"
+										},
+										"p_ds_filename": {
+											"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'_curwk.csv')",
+											"type": "Expression"
+										},
+										"p_ds_first_row_header": true
+									}
+								}
+							]
+						},
+						{
+							"name": "cp_mcpm_progress_items_prev_wk",
+							"description": "Get the previous week data by moving the parameters by -7 days.\nThis will be used to calc the variance for Actual amt/hrs",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "cp_mcpm_progress_items_src_to_stg",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [
+								{
+									"name": "Project_no",
+									"value": "@item()"
+								}
+							],
+							"typeProperties": {
+								"source": {
+									"type": "SqlServerSource",
+									"additionalColumns": [
+										{
+											"name": "Cutoff",
+											"value": {
+												"value": "@formatDateTime(adddays(if(equals(activity('lk_get_pipeline_parameters').output.firstRow.end_date, 'currdate'),activity('lk_get_date_value').output.firstRow.week_end_date, activity('lk_get_pipeline_parameters').output.firstRow.end_date),-7), 'yyyy-MM-dd')",
+												"type": "Expression"
+											}
+										}
+									],
+									"sqlReaderStoredProcedureName": "[dbo].[astp_PC_EPC_Tableau_ProgressItems]",
+									"storedProcedureParameters": {
+										"Domain": {
+											"type": "String",
+											"value": {
+												"value": "@item()",
+												"type": "Expression"
+											}
+										},
+										"LastPeriod": {
+											"type": "DateTime",
+											"value": {
+												"value": "@adddays(if(equals(activity('lk_get_pipeline_parameters').output.firstRow.end_date, 'currdate'),activity('lk_get_date_value').output.firstRow.week_start_date, activity('lk_get_pipeline_parameters').output.firstRow.start_date),-7)",
+												"type": "Expression"
+											}
+										},
+										"Phase": {
+											"type": "String",
+											"value": null
+										},
+										"ThisPeriod": {
+											"type": "DateTime",
+											"value": {
+												"value": "@adddays(if(equals(activity('lk_get_pipeline_parameters').output.firstRow.end_date, 'currdate'),activity('lk_get_date_value').output.firstRow.week_end_date, activity('lk_get_pipeline_parameters').output.firstRow.end_date),-7)",
+												"type": "Expression"
+											}
+										}
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"sink": {
+									"type": "DelimitedTextSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									},
+									"formatSettings": {
+										"type": "DelimitedTextWriteSettings",
+										"quoteAllText": true,
+										"fileExtension": ".txt"
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_mcpm_onshore_prod",
+									"type": "DatasetReference"
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_adlsg2_csv_generic",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_ds_filesystem": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.file_system",
+											"type": "Expression"
+										},
+										"p_ds_directory": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+											"type": "Expression"
+										},
+										"p_ds_filename": {
+											"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'_prvwk.csv')",
+											"type": "Expression"
+										},
+										"p_ds_first_row_header": true
+									}
+								}
+							]
+						},
+						{
+							"name": "df_mcpm_progressitems_variance_calc",
+							"description": "Dataflow to calculate the Variance Actual Hours and Amount.\nFile Projects are required for Calc and final target mapping.",
+							"type": "ExecuteDataFlow",
+							"dependsOn": [
+								{
+									"activity": "cp_mcpm_progress_items_prev_wk",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "1.00:00:00",
+								"retry": 1,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [
+								{
+									"name": "Project_no",
+									"value": "@item()"
+								}
+							],
+							"typeProperties": {
+								"dataflow": {
+									"referenceName": "df_mcpm_progressitems_stg_variance_calc",
+									"type": "DataFlowReference"
+								},
+								"integrationRuntime": {
+									"referenceName": "integrationRuntimeEast2",
+									"type": "IntegrationRuntimeReference"
+								},
+								"traceLevel": "Fine"
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "cp_combine_mcpm_Prjfile",
+				"description": "Combine multiple Projects source files",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "ForEachProject",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": true,
+							"wildcardFolderPath": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+								"type": "Expression"
+							},
+							"wildcardFileName": "Int_MCPM_Onshore_*_.csv",
+							"enablePartitionDiscovery": false
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings",
+							"copyBehavior": "MergeFiles"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_adlsg2_mcpm_onshore_progressitems_data",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_generic",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_ds_filesystem": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.file_system",
+								"type": "Expression"
+							},
+							"p_ds_directory": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+								"type": "Expression"
+							},
+							"p_ds_filename": {
+								"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+								"type": "Expression"
+							},
+							"p_ds_first_row_header": true
+						}
+					}
+				]
+			},
+			{
+				"name": "Delete Temp Files",
+				"description": "Cleanup temp files created during the process.",
+				"type": "Delete",
+				"dependsOn": [
+					{
+						"activity": "cp_combine_mcpm_Prjfile",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_adlsg2_mcpm_onshore_progressitems_data",
+						"type": "DatasetReference"
+					},
+					"enableLogging": false,
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true,
+						"wildcardFileName": "Int_MCPM_Onshore_*_.csv"
+					}
+				}
+			},
+			{
+				"name": "PreRun Cleanup",
+				"description": "Cleanup temp files created during the process.",
+				"type": "Delete",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_adlsg2_mcpm_onshore_progressitems_data",
+						"type": "DatasetReference"
+					},
+					"enableLogging": false,
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true,
+						"wildcardFileName": "Int_MCPM_Onshore_*_.csv"
+					}
+				}
+			}
+		],
+		"variables": {
+			"v_run_start": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/NCSA/MCPM Progress Items"
+		},
+		"annotations": [],
+		"lastPublishTime": "2021-12-16T05:45:20Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

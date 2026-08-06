@@ -1,0 +1,46 @@
+{
+	"name": "df_yardkpi_bench_mark_stage_to_raw",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_Src_snk_adgls2_src_ykpi",
+						"type": "DatasetReference"
+					},
+					"name": "srcYardKPIBenchMark"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_Src_snk_adgls2_src_ykpi",
+						"type": "DatasetReference"
+					},
+					"name": "snkYardKPIBenchMark"
+				}
+			],
+			"transformations": [
+				{
+					"name": "derivedColumn1"
+				}
+			],
+			"scriptLines": [
+				"source(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     purgeFiles: true) ~> srcYardKPIBenchMark",
+				"srcYardKPIBenchMark derive(FileName = concat('Project_Data/YARDKPI/Bench_Mark/',substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/','Bench_Mark',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv')) ~> derivedColumn1",
+				"derivedColumn1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     rowUrlColumn:'FileName',",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> snkYardKPIBenchMark"
+			]
+		}
+	}
+}

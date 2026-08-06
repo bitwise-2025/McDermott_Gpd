@@ -1,0 +1,131 @@
+{
+	"name": "pl_zycus_stage_to_raw",
+	"properties": {
+		"activities": [
+			{
+				"name": "lk_get_pipeline_parameters",
+				"description": "Getting the parameters to be used in this pipeline.",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": {
+									"value": "Zycus",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "df_zycus_stage_to_raw",
+				"description": "1.Importing data from \"ds_adlsg2_csv_zycus_generic\"\n2. Cleaning data and Concating the \"file_name\" as current TimeStamp\n3. Exporting data to ds_adlsg2_csv_zycus_raw_generic",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "df_zycus_stage_to_raw",
+						"type": "DataFlowReference",
+						"parameters": {
+							"p_ds_folder_path": {
+								"value": "'@{concat(activity('lk_get_pipeline_parameters').output.firstRow.folder_path,'/','Inbound')}'",
+								"type": "Expression"
+							},
+							"p_ds_input_file_name": {
+								"value": "'@{activity('lk_get_pipeline_parameters').output.firstRow.input_file_name}'",
+								"type": "Expression"
+							},
+							"p_ds_output_file_name": {
+								"value": "'@{activity('lk_get_pipeline_parameters').output.firstRow.output_file_name}'",
+								"type": "Expression"
+							}
+						},
+						"datasetParameters": {
+							"SrcZycusStage": {
+								"p_ds_folder_path": {
+									"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.folder_path,'/','Inbound')",
+									"type": "Expression"
+								},
+								"p_ds_file_name": {
+									"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.input_file_name,'.csv')",
+									"type": "Expression"
+								},
+								"p_ds_file_system": {
+									"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+									"type": "Expression"
+								}
+							},
+							"SinkZycusRaw": {
+								"p_ds_folder_path": {
+									"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.folder_path,'/','Inbound')",
+									"type": "Expression"
+								},
+								"p_ds_file_name": {
+									"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.output_file_name,'.csv')",
+									"type": "Expression"
+								},
+								"p_ds_file_system": {
+									"value": "@activity('lk_get_pipeline_parameters').output.firstRow.output_file_system",
+									"type": "Expression"
+								}
+							}
+						}
+					},
+					"compute": {
+						"coreCount": 8,
+						"computeType": "General"
+					},
+					"traceLevel": "Fine"
+				}
+			}
+		],
+		"folder": {
+			"name": "Projects/ZYCUS"
+		},
+		"annotations": [],
+		"lastPublishTime": "2024-04-30T07:34:08Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

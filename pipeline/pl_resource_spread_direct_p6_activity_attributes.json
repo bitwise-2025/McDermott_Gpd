@@ -1,0 +1,475 @@
+{
+	"name": "pl_resource_spread_direct_p6_activity_attributes",
+	"properties": {
+		"description": "P6 Engineering resource spread to ADLS Stage Folder",
+		"activities": [
+			{
+				"name": "cp_copy_from_p6_activity_attributes",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "lk_get_pipeline_parameters_2",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"additionalColumns": [
+							{
+								"name": "source_name",
+								"value": {
+									"value": "SYSTEM",
+									"type": "Expression"
+								}
+							},
+							{
+								"name": "sub_source_name",
+								"value": {
+									"value": "P6",
+									"type": "Expression"
+								}
+							},
+							{
+								"name": "created_date_time",
+								"value": {
+									"value": "@utcNow()",
+									"type": "Expression"
+								}
+							}
+						],
+						"sqlReaderQuery": {
+							"value": "select * from [dbo].[p6_activity_attributes] where created_dttm > '@{activity('lk_get_pipeline_parameters').output.firstRow.p6_activity_attributes_start_date}'",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"allowCopyCommand": true
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ADGLS2 SRCDEST DEV",
+							"type": "LinkedServiceReference"
+						},
+						"path": "mdr-staging-data/Test_ad"
+					},
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "p6aaid",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "p6aaid",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "p6apid",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "p6apid",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "activity_code_description",
+									"type": "String"
+								},
+								"sink": {
+									"name": "activity_code_description",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "activity_code_object_id",
+									"type": "String"
+								},
+								"sink": {
+									"name": "activity_code_object_id",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "activity_code_type_name",
+									"type": "String"
+								},
+								"sink": {
+									"name": "activity_code_type_name",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "activity_code_type_object_id",
+									"type": "String"
+								},
+								"sink": {
+									"name": "activity_code_type_object_id",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "activity_code_type_scope",
+									"type": "String"
+								},
+								"sink": {
+									"name": "activity_code_type_scope",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "activity_code_value",
+									"type": "String"
+								},
+								"sink": {
+									"name": "activity_code_value",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "activity_id",
+									"type": "String"
+								},
+								"sink": {
+									"name": "activity_id",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "activity_name",
+									"type": "String"
+								},
+								"sink": {
+									"name": "activity_name",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "activity_object_id",
+									"type": "String"
+								},
+								"sink": {
+									"name": "activity_object_id",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "is_base_line",
+									"type": "String"
+								},
+								"sink": {
+									"name": "is_base_line",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "is_template",
+									"type": "String"
+								},
+								"sink": {
+									"name": "is_template",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "wbs_object_id",
+									"type": "String"
+								},
+								"sink": {
+									"name": "wbs_object_id",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "created_dttm",
+									"type": "DateTime"
+								},
+								"sink": {
+									"name": "created_dttm",
+									"type": "DateTime"
+								}
+							},
+							{
+								"source": {
+									"name": "source_name",
+									"type": "String"
+								},
+								"sink": {
+									"name": "source_name",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "sub_source_name",
+									"type": "String"
+								},
+								"sink": {
+									"name": "sub_source_name",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "created_date_time",
+									"type": "String"
+								},
+								"sink": {
+									"name": "created_date_time",
+									"type": "DateTime"
+								}
+							}
+						]
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_projectsxd_azsql_source",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_AzureSynapseAnalytics_p6_activity_attributes",
+						"type": "DatasetReference"
+					}
+				]
+			},
+			{
+				"name": "lk_get_pipeline_parameters",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.01:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "NetworkFolder"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Update Start Date with max LAST_UPDATE_DATE",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Lookup to get max created_dttm for p6_activities",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+					"storedProcedureParameters": {
+						"pParameterValue": {
+							"value": {
+								"value": "@formatDateTime(activity('Lookup to get max created_dttm for p6_activities').output.firstRow.created_dttm,'yyyy-MM-dd HH:mm:ss.fff')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": "NetworkFolder",
+							"type": "String"
+						},
+						"pParameterCode": {
+							"value": "p6_activity_attributes_start_date",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseDB_DEV",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Lookup to get max created_dttm for p6_activities",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "cp_copy_from_p6_activity_attributes",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderQuery": "select max(created_dttm) as created_dttm from [pxd].[p6_activity_attributes]",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "AzureSynapseAnalyticsDB",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Send Email On Failure for p6_activities",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "cp_copy_from_p6_activity_attributes",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "POST",
+					"headers": {
+						"Content-Type": "application/json"
+					},
+					"url": "https://prod-31.eastus.logic.azure.com:443/workflows/03d7da5abbab4215a05aeaceae3b96fa/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=asuyutHtoSxGFURsj1-A6AKRiNLdXZ4mTnZvZ17_8hI",
+					"connectVia": {
+						"referenceName": "integrationRuntimeEast2",
+						"type": "IntegrationRuntimeReference"
+					},
+					"body": {
+						"value": "{\n    \"DataFactoryName\": \"@{pipeline().DataFactory}\",\n    \"PipelineName\": \"@{pipeline().Pipeline}\",\n    \"ErrorMessage\": \"Pipeline Failed\",\n    \"EmailTo\": \"@{activity('lk_get_pipeline_parameters_2').output.firstRow.ncsa_master_pipeline_email_to}\",\n    \"Activity\":  \"Failed Copy Activity for pl_resource_spread_direct_p6_activity_attributes\"\n}",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "lk_get_pipeline_parameters_2",
+				"description": "Get the parameters to be used in this pipeline",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": "pl_ncsa_master_pipelines"
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "EMAIL"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			}
+		],
+		"folder": {
+			"name": "Projects/NCSA/P6 Resource Spread Direct"
+		},
+		"annotations": [],
+		"lastPublishTime": "2024-04-30T07:34:09Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

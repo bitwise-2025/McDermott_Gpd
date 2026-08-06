@@ -1,0 +1,216 @@
+
+DECLARE @Date DATETIME;
+
+DECLARE @v_pipelinename varchar(150);
+
+SET @Date = GETDATE();
+
+SET @v_pipelinename='pl_sample_fss_Backlog_Revenue_Rolloff_stagejson_master_pipeline'
+
+ 
+DELETE FROM PLP_PIPELINE WHERE PIPELINE_CODE =@v_pipelinename
+--PLP Pipeline
+
+INSERT INTO [dbo].[plp_pipeline] ([pipeline_code],[subject_area_code],[description],[comment],[active],[touched_by],[touched_dtm],[sec_sa_id])
+
+    VALUES (@v_pipelinename,'FSS','Excel File to Syn Stage JSON',NULL,1,'chhaya.kotian@mcdermott.com',@Date,47) 
+
+/*****************************************/ 
+DELETE FROM [dbo].[plp_pipeline_parameter] WHERE PIPELINE_CODE =@v_pipelinename
+--PLP Pipeline Parameter
+
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+
+VALUES(@v_pipelinename,'NetworkFolder','start_date',1,'start_date','IN',NULL,1,'chhaya.kotian@mcdermott.com',@Date)
+
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+
+VALUES(@v_pipelinename,'NetworkFolder','end_date',2,'end_date','IN',NULL,1,'chhaya.kotian@mcdermott.com',@Date)
+
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+
+VALUES(@v_pipelinename,'NetworkFolder','folder_path',4,'folder_path','IN',NULL,1,'chhaya.kotian@mcdermott.com',@Date)
+
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+
+VALUES(@v_pipelinename,'NetworkFolder','file_system',3,'file_system','IN',NULL,1,'chhaya.kotian@mcdermott.com',@Date)
+
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+
+VALUES(@v_pipelinename,'NetworkFolder','file_name',5,'file_name','IN',NULL,1,'chhaya.kotian@mcdermott.com',@Date)
+
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+
+VALUES(@v_pipelinename,'NetworkFolder','source_directory',6,'source_directory','IN',NULL,1,'chhaya.kotian@mcdermott.com',@Date)
+
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+
+VALUES(@v_pipelinename,'NetworkFolder','input_file_name',7,'input_file_name','IN',NULL,1,'chhaya.kotian@mcdermott.com',@Date)
+
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+
+VALUES(@v_pipelinename,'NetworkFolder','lastrundate',8,'lastrundate','IN','Date used to store when raw was last run',1,'chhaya.kotian@mcdermott.com',@Date)
+
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+
+VALUES(@v_pipelinename,'NetworkFolder','version_no',9,'version_no','IN','version number to indicate latest load. Incremented everyrun success or failed',1,'chhaya.kotian@mcdermott.com',@Date)
+
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+
+VALUES(@v_pipelinename,'NetworkFolder','stage_table',10,'stage_table','IN','stage_table name with schema e.g. gpd.scm_procurement',1,'chhaya.kotian@mcdermott.com',@Date)
+
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+
+VALUES(@v_pipelinename,'NetworkFolder','load_name',11,'load_name','IN',NULL,1,'chhaya.kotian@mcdermott.com',@Date)
+ 
+/*************************************************/
+DELETE FROM [plp_parameter_value]  WHERE PIPELINE_CODE =@v_pipelinename
+--PLP Pipeline values
+
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+
+     VALUES('start_date','2021-10-07 11:33:55',1,'chhaya.kotian@mcdermott.com',@Date,@v_pipelinename,'NetworkFolder')
+
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+
+     VALUES('end_date','currdate',1,'chhaya.kotian@mcdermott.com',@Date,@v_pipelinename,'NetworkFolder')
+
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+
+     VALUES('folder_path','Project_Data/FSS',1,'chhaya.kotian@mcdermott.com',@Date,@v_pipelinename,'NetworkFolder')
+
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+
+     VALUES('file_system','mdr-staging-data',1,'chhaya.kotian@mcdermott.com',@Date,@v_pipelinename,'NetworkFolder')
+
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+
+     VALUES('file_name','fss_Backlog_Revenue_Rolloff',1,'chhaya.kotian@mcdermott.com',@Date,@v_pipelinename,'NetworkFolder')
+
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+
+     VALUES('source_directory','Development/FSS',1,'chhaya.kotian@mcdermott.com',@Date,@v_pipelinename,'NetworkFolder')
+
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+
+     VALUES('input_file_name','*EXCOM*.xlsx',1,'chhaya.kotian@mcdermott.com',@Date,@v_pipelinename,'NetworkFolder')
+
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+
+     VALUES('stage_table','fss.stage_fss_Backlog_Revenue_Rolloff',1,'chhaya.kotian@mcdermott.com',@Date,@v_pipelinename,'NetworkFolder')
+
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+
+     VALUES('lastrundate','2022-01-15 11:53:39.682',1,'chhaya.kotian@mcdermott.com',@Date,@v_pipelinename,'NetworkFolder')
+
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+
+     VALUES('version_no','2',1,'chhaya.kotian@mcdermott.com',@Date,@v_pipelinename,'NetworkFolder')
+
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+
+     VALUES('load_name','fss_Backlog_Revenue_Rolloff_JSON',1,'chhaya.kotian@mcdermott.com',@Date,@v_pipelinename,'NetworkFolder')
+
+/**********************************/
+DELETE FROM GENERIC_JSON_HEADER WHERE LOAD_NAME='fss_Backlog_Revenue_Rolloff_JSON'
+
+INSERT INTO GENERIC_JSON_HEADER VALUES
+('fss_Backlog_Revenue_Rolloff_JSON','fss_Backlog_Revenue_Rolloff_JSON','fss.stage_fss_Backlog_Revenue_Rolloff','fss.stage_fss_Backlog_Revenue_Rolloff_v','fss.error_fss_Backlog_Revenue_Rolloff_v','Y','Y')
+
+DELETE FROM GENERIC_JSON_DETAIL WHERE LOAD_NAME='fss_Backlog_Revenue_Rolloff_JSON'
+
+INSERT INTO GENERIC_JSON_DETAIL(load_name,json_column_name,json_column_data_type,json_column_data_group,json_column_data_group_format,json_column_alias_name,active_flag) VALUES('fss_Backlog_Revenue_Rolloff_JSON','zVersionNo','Int','NI',NULL,'[zVersionNo]','Y')
+INSERT INTO GENERIC_JSON_DETAIL(load_name,json_column_name,json_column_data_type,json_column_data_group,json_column_data_group_format,json_column_alias_name,active_flag) VALUES('fss_Backlog_Revenue_Rolloff_JSON','zSourceFileName','Varchar(Max)','V',NULL,'[zSourceFileName]','Y')
+INSERT INTO GENERIC_JSON_DETAIL(load_name,json_column_name,json_column_data_type,json_column_data_group,json_column_data_group_format,json_column_alias_name,active_flag) VALUES('fss_Backlog_Revenue_Rolloff_JSON','zCreatedDateTime','DateTime','D',23,'[zCreatedDateTime]','Y')
+INSERT INTO GENERIC_JSON_DETAIL(load_name,json_column_name,json_column_data_type,json_column_data_group,json_column_data_group_format,json_column_alias_name,active_flag) VALUES('fss_Backlog_Revenue_Rolloff_JSON','Sub Title','Varchar(Max)','V',NULL,'[Sub Title]','Y')
+INSERT INTO GENERIC_JSON_DETAIL(load_name,json_column_name,json_column_data_type,json_column_data_group,json_column_data_group_format,json_column_alias_name,active_flag) VALUES('fss_Backlog_Revenue_Rolloff_JSON','Business Line','Varchar(Max)','V',NULL,'[Business Line]','Y')
+INSERT INTO GENERIC_JSON_DETAIL(load_name,json_column_name,json_column_data_type,json_column_data_group,json_column_data_group_format,json_column_alias_name,active_flag) VALUES('fss_Backlog_Revenue_Rolloff_JSON','External Product Offering','Varchar(Max)','V',NULL,'[External Product Offering]','Y')
+INSERT INTO GENERIC_JSON_DETAIL(load_name,json_column_name,json_column_data_type,json_column_data_group,json_column_data_group_format,json_column_alias_name,active_flag) VALUES('fss_Backlog_Revenue_Rolloff_JSON','Project No.','Varchar(Max)','V',NULL,'[Project No.]','Y')
+INSERT INTO GENERIC_JSON_DETAIL(load_name,json_column_name,json_column_data_type,json_column_data_group,json_column_data_group_format,json_column_alias_name,active_flag) VALUES('fss_Backlog_Revenue_Rolloff_JSON','Project Title','Varchar(Max)','V',NULL,'[Project Title]','Y')
+INSERT INTO GENERIC_JSON_DETAIL(load_name,json_column_name,json_column_data_type,json_column_data_group,json_column_data_group_format,json_column_alias_name,active_flag) VALUES('fss_Backlog_Revenue_Rolloff_JSON','Customer','Varchar(Max)','V',NULL,'[Customer]','Y')
+INSERT INTO GENERIC_JSON_DETAIL(load_name,json_column_name,json_column_data_type,json_column_data_group,json_column_data_group_format,json_column_alias_name,active_flag) VALUES('fss_Backlog_Revenue_Rolloff_JSON','Contract Type','Varchar(Max)','V',NULL,'[Contract Type]','Y')
+INSERT INTO GENERIC_JSON_DETAIL(load_name,json_column_name,json_column_data_type,json_column_data_group,json_column_data_group_format,json_column_alias_name,active_flag) VALUES('fss_Backlog_Revenue_Rolloff_JSON','X1','Varchar(Max)','V',NULL,'[X1]','Y')
+INSERT INTO GENERIC_JSON_DETAIL(load_name,json_column_name,json_column_data_type,json_column_data_group,json_column_data_group_format,json_column_alias_name,active_flag) VALUES('fss_Backlog_Revenue_Rolloff_JSON','Revenue Prev Qtr Backlog','Money','N',NULL,'[Revenue Prev Qtr Backlog]','Y')
+INSERT INTO GENERIC_JSON_DETAIL(load_name,json_column_name,json_column_data_type,json_column_data_group,json_column_data_group_format,json_column_alias_name,active_flag) VALUES('fss_Backlog_Revenue_Rolloff_JSON','GP Prev Qtr Backlog','Money','N',NULL,'[GP Prev Qtr Backlog]','Y')
+INSERT INTO GENERIC_JSON_DETAIL(load_name,json_column_name,json_column_data_type,json_column_data_group,json_column_data_group_format,json_column_alias_name,active_flag) VALUES('fss_Backlog_Revenue_Rolloff_JSON','GP% Prev Qtr Backlog','Money','N',NULL,'[GP% Prev Qtr Backlog]','Y')
+INSERT INTO GENERIC_JSON_DETAIL(load_name,json_column_name,json_column_data_type,json_column_data_group,json_column_data_group_format,json_column_alias_name,active_flag) VALUES('fss_Backlog_Revenue_Rolloff_JSON','POC% Exclude Reset  Prev Qtr Backlog','Money','N',NULL,'[POC% Exclude Reset  Prev Qtr Backlog]','Y')
+INSERT INTO GENERIC_JSON_DETAIL(load_name,json_column_name,json_column_data_type,json_column_data_group,json_column_data_group_format,json_column_alias_name,active_flag) VALUES('fss_Backlog_Revenue_Rolloff_JSON','POC% Prev Qtr Backlog','Money','N',NULL,'[POC% Prev Qtr Backlog]','Y')
+INSERT INTO GENERIC_JSON_DETAIL(load_name,json_column_name,json_column_data_type,json_column_data_group,json_column_data_group_format,json_column_alias_name,active_flag) VALUES('fss_Backlog_Revenue_Rolloff_JSON','X2','Varchar(Max)','V',NULL,'[X2]','Y')
+INSERT INTO GENERIC_JSON_DETAIL(load_name,json_column_name,json_column_data_type,json_column_data_group,json_column_data_group_format,json_column_alias_name,active_flag) VALUES('fss_Backlog_Revenue_Rolloff_JSON','Order Intake Curr Qtr Update','Money','N',NULL,'[Order Intake Curr Qtr Update]','Y')
+INSERT INTO GENERIC_JSON_DETAIL(load_name,json_column_name,json_column_data_type,json_column_data_group,json_column_data_group_format,json_column_alias_name,active_flag) VALUES('fss_Backlog_Revenue_Rolloff_JSON','Recog Curr Qtr Update','Money','N',NULL,'[Recog Curr Qtr Update]','Y')
+INSERT INTO GENERIC_JSON_DETAIL(load_name,json_column_name,json_column_data_type,json_column_data_group,json_column_data_group_format,json_column_alias_name,active_flag) VALUES('fss_Backlog_Revenue_Rolloff_JSON','X3','Varchar(Max)','V',NULL,'[X3]','Y')
+INSERT INTO GENERIC_JSON_DETAIL(load_name,json_column_name,json_column_data_type,json_column_data_group,json_column_data_group_format,json_column_alias_name,active_flag) VALUES('fss_Backlog_Revenue_Rolloff_JSON','Revenue Curr Qtr Backlog','Money','N',NULL,'[Revenue Curr Qtr Backlog]','Y')
+INSERT INTO GENERIC_JSON_DETAIL(load_name,json_column_name,json_column_data_type,json_column_data_group,json_column_data_group_format,json_column_alias_name,active_flag) VALUES('fss_Backlog_Revenue_Rolloff_JSON','GP Curr Qtr Backlog','Money','N',NULL,'[GP Curr Qtr Backlog]','Y')
+INSERT INTO GENERIC_JSON_DETAIL(load_name,json_column_name,json_column_data_type,json_column_data_group,json_column_data_group_format,json_column_alias_name,active_flag) VALUES('fss_Backlog_Revenue_Rolloff_JSON','GP% Curr Qtr Backlog','Money','N',NULL,'[GP% Curr Qtr Backlog]','Y')
+INSERT INTO GENERIC_JSON_DETAIL(load_name,json_column_name,json_column_data_type,json_column_data_group,json_column_data_group_format,json_column_alias_name,active_flag) VALUES('fss_Backlog_Revenue_Rolloff_JSON','POC% Exclude Reset  Curr Qtr Backlog','Money','N',NULL,'[POC% Exclude Reset  Curr Qtr Backlog]','Y')
+INSERT INTO GENERIC_JSON_DETAIL(load_name,json_column_name,json_column_data_type,json_column_data_group,json_column_data_group_format,json_column_alias_name,active_flag) VALUES('fss_Backlog_Revenue_Rolloff_JSON','POC% Curr Qtr Backlog','Money','N',NULL,'[POC% Curr Qtr Backlog]','Y')
+INSERT INTO GENERIC_JSON_DETAIL(load_name,json_column_name,json_column_data_type,json_column_data_group,json_column_data_group_format,json_column_alias_name,active_flag) VALUES('fss_Backlog_Revenue_Rolloff_JSON','X4','Varchar(Max)','V',NULL,'[X4]','Y')
+INSERT INTO GENERIC_JSON_DETAIL(load_name,json_column_name,json_column_data_type,json_column_data_group,json_column_data_group_format,json_column_alias_name,active_flag) VALUES('fss_Backlog_Revenue_Rolloff_JSON','Q1 Backlog Revenue','Money','N',NULL,'[Q1 Backlog Revenue]','Y')
+INSERT INTO GENERIC_JSON_DETAIL(load_name,json_column_name,json_column_data_type,json_column_data_group,json_column_data_group_format,json_column_alias_name,active_flag) VALUES('fss_Backlog_Revenue_Rolloff_JSON','Q2 Backlog Revenue','Money','N',NULL,'[Q2 Backlog Revenue]','Y')
+INSERT INTO GENERIC_JSON_DETAIL(load_name,json_column_name,json_column_data_type,json_column_data_group,json_column_data_group_format,json_column_alias_name,active_flag) VALUES('fss_Backlog_Revenue_Rolloff_JSON','Q3 Backlog Revenue','Money','N',NULL,'[Q3 Backlog Revenue]','Y')
+INSERT INTO GENERIC_JSON_DETAIL(load_name,json_column_name,json_column_data_type,json_column_data_group,json_column_data_group_format,json_column_alias_name,active_flag) VALUES('fss_Backlog_Revenue_Rolloff_JSON','Q4 Backlog Revenue','Money','N',NULL,'[Q4 Backlog Revenue]','Y')
+INSERT INTO GENERIC_JSON_DETAIL(load_name,json_column_name,json_column_data_type,json_column_data_group,json_column_data_group_format,json_column_alias_name,active_flag) VALUES('fss_Backlog_Revenue_Rolloff_JSON','CY Backlog Revenue','Money','N',NULL,'[CY Backlog Revenue]','Y')
+INSERT INTO GENERIC_JSON_DETAIL(load_name,json_column_name,json_column_data_type,json_column_data_group,json_column_data_group_format,json_column_alias_name,active_flag) VALUES('fss_Backlog_Revenue_Rolloff_JSON','Next CY Backlog Revenue','Money','N',NULL,'[Next CY Backlog Revenue]','Y')
+INSERT INTO GENERIC_JSON_DETAIL(load_name,json_column_name,json_column_data_type,json_column_data_group,json_column_data_group_format,json_column_alias_name,active_flag) VALUES('fss_Backlog_Revenue_Rolloff_JSON','Beyond Next CY Backlog Revenue','Money','N',NULL,'[Beyond Next CY Backlog Revenue]','Y')
+INSERT INTO GENERIC_JSON_DETAIL(load_name,json_column_name,json_column_data_type,json_column_data_group,json_column_data_group_format,json_column_alias_name,active_flag) VALUES('fss_Backlog_Revenue_Rolloff_JSON','X5','Varchar(Max)','V',NULL,'[X5]','Y')
+INSERT INTO GENERIC_JSON_DETAIL(load_name,json_column_name,json_column_data_type,json_column_data_group,json_column_data_group_format,json_column_alias_name,active_flag) VALUES('fss_Backlog_Revenue_Rolloff_JSON','Q1 Backlog GP','Money','N',NULL,'[Q1 Backlog GP]','Y')
+INSERT INTO GENERIC_JSON_DETAIL(load_name,json_column_name,json_column_data_type,json_column_data_group,json_column_data_group_format,json_column_alias_name,active_flag) VALUES('fss_Backlog_Revenue_Rolloff_JSON','Q2 Backlog GP','Money','N',NULL,'[Q2 Backlog GP]','Y')
+INSERT INTO GENERIC_JSON_DETAIL(load_name,json_column_name,json_column_data_type,json_column_data_group,json_column_data_group_format,json_column_alias_name,active_flag) VALUES('fss_Backlog_Revenue_Rolloff_JSON','Q3 Backlog GP','Money','N',NULL,'[Q3 Backlog GP]','Y')
+INSERT INTO GENERIC_JSON_DETAIL(load_name,json_column_name,json_column_data_type,json_column_data_group,json_column_data_group_format,json_column_alias_name,active_flag) VALUES('fss_Backlog_Revenue_Rolloff_JSON','Q4 Backlog GP','Money','N',NULL,'[Q4 Backlog GP]','Y')
+INSERT INTO GENERIC_JSON_DETAIL(load_name,json_column_name,json_column_data_type,json_column_data_group,json_column_data_group_format,json_column_alias_name,active_flag) VALUES('fss_Backlog_Revenue_Rolloff_JSON','CY Backlog GP','Money','N',NULL,'[CY Backlog GP]','Y')
+INSERT INTO GENERIC_JSON_DETAIL(load_name,json_column_name,json_column_data_type,json_column_data_group,json_column_data_group_format,json_column_alias_name,active_flag) VALUES('fss_Backlog_Revenue_Rolloff_JSON','Next CY Backlog GP','Money','N',NULL,'[Next CY Backlog GP]','Y')
+INSERT INTO GENERIC_JSON_DETAIL(load_name,json_column_name,json_column_data_type,json_column_data_group,json_column_data_group_format,json_column_alias_name,active_flag) VALUES('fss_Backlog_Revenue_Rolloff_JSON','Beyond Next CY Backlog GP','Money','N',NULL,'[Beyond Next CY Backlog GP]','Y')
+
+
+/*
+
+create schema fss
+
+select * from generic_json_detail where json_column_data_type ='date'
+
+--drop table fss.stage_fss_reportingperiod
+  */ 
+SET ANSI_NULLS ON
+
+GO
+
+
+
+SET QUOTED_IDENTIFIER ON
+
+GO
+
+
+CREATE TABLE [fss].[stage_fss_Backlog_Revenue_Rolloff]
+
+(
+
+    [rssk] [bigint] IDENTITY(1,1) NOT NULL,
+
+    [JSON_Attribute] [varchar](8000) NULL
+
+)
+
+WITH
+
+(
+
+    DISTRIBUTION = ROUND_ROBIN,
+
+    CLUSTERED COLUMNSTORE INDEX
+
+)
+
+GO
+
+
+
+/*
+
+
+select * from  fss.stage_fss_Backlog_Revenue_Rolloff
+*/
+ 
+
+ 
+

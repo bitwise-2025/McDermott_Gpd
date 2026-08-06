@@ -1,0 +1,123 @@
+{
+	"name": "df_yardkpi_servicenow_stage_to_raw",
+	"properties": {
+		"folder": {
+			"name": "Projects/YARD KPI/ServiceNow"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_yardkpi_servicenow_src",
+						"type": "DatasetReference"
+					},
+					"name": "source"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_yardkpi_servicenow_generic",
+						"type": "DatasetReference"
+					},
+					"name": "sink"
+				}
+			],
+			"transformations": [
+				{
+					"name": "derivedColumn"
+				}
+			],
+			"scriptLines": [
+				"parameters{",
+				"     Directory as string,",
+				"     File as string",
+				"}",
+				"source(output(",
+				"          category as string,",
+				"          business_stc as string,",
+				"          parent_incident as string,",
+				"          caller_id as string,",
+				"          subcategory as string,",
+				"          close_code as string,",
+				"          sys_id as string,",
+				"          severity as string,",
+				"          problem_id as string,",
+				"          notify as string,",
+				"          resolved_by as string,",
+				"          resolved_at as string,",
+				"          reopen_count as string,",
+				"          u_type as string,",
+				"          rfc as string,",
+				"          incident_state as string,",
+				"          calendar_stc as string,",
+				"          contact_type as string,",
+				"          sys_mod_count as string,",
+				"          activity_due as string,",
+				"          made_sla as string,",
+				"          sys_updated_by as string,",
+				"          upon_approval as string,",
+				"          approval_set as string,",
+				"          closed_at as string,",
+				"          company as string,",
+				"          opened_by as string,",
+				"          work_end as string,",
+				"          impact as string,",
+				"          correlation_id as string,",
+				"          sys_domain as string,",
+				"          additional_assignee_list as string,",
+				"          sys_updated_on as string,",
+				"          follow_up as string,",
+				"          assigned_to as string,",
+				"          time_worked as string,",
+				"          state as string,",
+				"          closed_by as string,",
+				"          escalation as string,",
+				"          active as string,",
+				"          reassignment_count as string,",
+				"          order as string,",
+				"          knowledge as string,",
+				"          sys_created_by as string,",
+				"          due_date as string,",
+				"          correlation_display as string,",
+				"          priority as string,",
+				"          upon_reject as string,",
+				"          sys_class_name as string,",
+				"          approval as string,",
+				"          expected_start as string,",
+				"          assignment_group as string,",
+				"          calendar_duration as string,",
+				"          work_start as string,",
+				"          location as string,",
+				"          sys_created_on as string,",
+				"          sla_due as string,",
+				"          sys_domain_path as string,",
+				"          number as string,",
+				"          opened_at as string,",
+				"          cmdb_ci as string,",
+				"          business_duration as string,",
+				"          urgency as string,",
+				"          source_code as string,",
+				"          sub_source_code as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: true,",
+				"     purgeFiles: true,",
+				"     rowUrlColumn: 'FileName',",
+				"     multiLineRow: true,",
+				"     wildcardPaths:[($Directory+'/'+$File+'*.csv')]) ~> source",
+				"source derive(FileName = concat($Directory,'/',substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',$File,'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv')) ~> derivedColumn",
+				"derivedColumn sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     rowUrlColumn:'FileName',",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> sink"
+			]
+		}
+	}
+}

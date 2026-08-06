@@ -1,0 +1,60 @@
+/****** Object:  StoredProcedure [dbo].[usp_yardKPI_material_receiving_dim_fact_load_validate]    Script Date: 1/13/2023 4:42:10 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+drop proc [dbo].[usp_yardKPI_servicenow_dim_fact_load_validate]
+go
+CREATE PROC [dbo].[usp_yardKPI_servicenow_dim_fact_load_validate] AS
+
+begin
+begin try
+set nocount on
+declare @error_message varchar(1000)
+declare @processed_count int
+declare @unprocessed_count  int
+declare @exceptionRaiser int;
+declare @errorMessage varchar(4000);
+
+
+EXECUTE [dbo].[generic_load_dim_v2] 'dim_entp_servicenow_incident','Y','Y','Y'
+
+
+-----------------------------------------------------------------
+--Cleanup Stage table. Report stats along with any error message
+-----------------------------------------------------------------
+
+
+	if isnull(@processed_count,0) > 0 
+	begin
+		select @error_message = 'Total records processed is ' + convert(varchar(40),@processed_count)
+	end
+	select @error_message = isnull(@error_message,'')
+	if isnull(@processed_count,0) > 0 
+	begin
+		select @error_message = @error_message + 'Total records failed validation ' + convert(varchar(40),@unprocessed_count)
+	end
+
+	if isnull(@error_message,'') = '' 
+	begin
+	  select 'Success'; 
+	end
+	else
+	begin
+      select @error_message ;
+	end
+
+end try
+begin catch
+	if @errorMessage is not null
+	begin
+		select 'Failed', @errorMessage;
+		--RAISEERROR(@errorMessage)
+	end
+	else
+	begin
+		select 'Failed', error_message()
+	end;
+end catch;
+
+END

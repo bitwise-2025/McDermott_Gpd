@@ -1,0 +1,546 @@
+{
+	"name": "pl_legacy_plan_excel_p6_master_pipeline",
+	"properties": {
+		"description": "Master pipeline for Picking source files from external FS. The files are first filtered and passed through the loop to be processed by further ADF pipelines.",
+		"activities": [
+			{
+				"name": "ADF_Log",
+				"description": "SPU to log the details of the Pipeline run",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "ForEachProject",
+						"dependencyConditions": [
+							"Completed",
+							"Skipped"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[usp_InsertADFLogs]",
+					"storedProcedureParameters": {
+						"DataFactoryName": {
+							"value": {
+								"value": "@pipeline().DataFactory",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"Error_pipeline_name": {
+							"value": {
+								"value": "@if(empty(variables('v_error_message')),\nconcat(join(variables('v_pipelinedetails'),';'))\n,split(join(variables('v_error_message'),';'),'|' )[1])",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"Error_pipeline_runid": {
+							"value": {
+								"value": "@if(empty(variables('v_error_message')),NULL,split(join(variables('v_error_message'),';'),'|' )[2])",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"ErrorMessage": {
+							"value": {
+								"value": "@if(empty(variables('v_error_message')),\nif( empty(activity('val_Check_SourceFile_Availablity').output.childItems),\n'Source file unavailable for the current run'\n,if( empty(activity('Flt_csvFilesOnly').output.value),\n'Valid file-extension not present for the current run'\n,NULL))\n,split(join(variables('v_error_message'),';'),'|' )[0])",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"PipelineName": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"runid": {
+							"value": {
+								"value": "@pipeline().RunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"status": {
+							"value": {
+								"value": "@if(empty(variables('v_error_message')),'Success','Failed')",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "If failure detected send mail",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "ADF_Log",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@if(empty(variables('v_error_message')),false,true)",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "Send Email On Failure",
+							"type": "WebActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"method": "POST",
+								"headers": {
+									"Content-Type": "application/json"
+								},
+								"url": "https://prod-31.eastus.logic.azure.com:443/workflows/03d7da5abbab4215a05aeaceae3b96fa/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=asuyutHtoSxGFURsj1-A6AKRiNLdXZ4mTnZvZ17_8hI",
+								"connectVia": {
+									"referenceName": "integrationRuntimeEast2",
+									"type": "IntegrationRuntimeReference"
+								},
+								"body": {
+									"value": "{\n    \"DataFactoryName\": \"@{pipeline().DataFactory}\",\n    \"PipelineName\": \"@{pipeline().Pipeline}\",\n    \"ErrorMessage\": \"@{replace(replace(join(variables('v_error_message'),';'),'\"',''),'\\','/')}\",\n\"EmailTo\": \"@{activity('lk_get_pipeline_parameters').output.firstRow.ncsa_master_pipeline_email_to}\",\n    \"Activity\":  \"@{if(empty(variables('v_error_message')),'',split(join(variables('v_error_message'),';'),'|' )[1])}\"\n}",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "ForEachProject",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Flt_csvFilesOnly",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Flt_csvFilesOnly').output.value",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Source to Stage",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "pl_legacy_plan_excel_p6_source_to_stage",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"p_pl_srcfilename": {
+										"value": "@item().name",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Append SRC to STG Error",
+							"type": "AppendVariable",
+							"dependsOn": [
+								{
+									"activity": "Source to Stage",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "v_error_message",
+								"value": {
+									"value": "@concat('Source to Stage Failure for ', item().name,': ',\nactivity('Source To Stage').error.message,'|',\nactivity('Source To Stage').output.pipelineName,'|',\nactivity('Source To Stage').output.pipelineRunId,'|')\n\n",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Stage to Raw",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Source to Stage",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "pl_legacy_plan_excel_p6_stage_to_raw",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true
+							}
+						},
+						{
+							"name": "Append STG to RAW Error",
+							"type": "AppendVariable",
+							"dependsOn": [
+								{
+									"activity": "Stage to Raw",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "v_error_message",
+								"value": {
+									"value": "@concat('Stage to Raw Failure for ', item().name,': ',\nactivity('Stage to Raw').error.message ,'|',\nactivity('Stage to Raw').output.pipelineName,'|',\nactivity('Stage to Raw').output.pipelineRunId,'|')",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Append STG to RAW Pipeline Info",
+							"type": "AppendVariable",
+							"dependsOn": [
+								{
+									"activity": "Stage to Raw",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "v_pipelinedetails",
+								"value": {
+									"value": "@concat(activity('Stage to Raw').output.pipelineName)",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Append SRC to STG Pipeline Info",
+							"type": "AppendVariable",
+							"dependsOn": [
+								{
+									"activity": "Source to Stage",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "v_pipelinedetails",
+								"value": {
+									"value": "@concat(activity('Source To Stage').output.pipelineName)",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Raw to Synapse",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Stage to Raw",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "pl_legacy_plan_excel_p6_raw_to_synapse",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true
+							}
+						},
+						{
+							"name": "Append RAW to SYN",
+							"type": "AppendVariable",
+							"dependsOn": [
+								{
+									"activity": "Raw to Synapse",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "v_error_message",
+								"value": {
+									"value": "@concat('Raw to Synapse Failure: ',\nactivity('Raw to Synapse').error.message ,'|',\nactivity('Raw to Synapse').output.pipelineName,'|',\nactivity('Raw to Synapse').output.pipelineRunId,'|')\n",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Append RAW to SYN Pipeline Info",
+							"type": "AppendVariable",
+							"dependsOn": [
+								{
+									"activity": "Raw to Synapse",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "v_pipelinedetails",
+								"value": {
+									"value": "@concat(activity('Raw to Synapse').output.pipelineName)",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "lk_get_pipeline_parameters",
+				"description": "Get the parameters to be used in this pipeline",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": "pl_ncsa_master_pipelines"
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "EMAIL"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "lk_get_pipeline_parameters_2",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "pl_legacy_plan_excel_p6_source_to_stage",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "NetworkFolder"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "val_Check_SourceFile_Availablity",
+				"description": "Check if the source file is available at the Dataset location. If not wait for the timeout period.",
+				"type": "Validation",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters_2",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_fs_csv_legacy_plan_source",
+						"type": "DatasetReference",
+						"parameters": {
+							"Path": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.source_directory",
+								"type": "Expression"
+							},
+							"File": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.excel_file_name",
+								"type": "Expression"
+							}
+						}
+					},
+					"timeout": "0.01:50:00",
+					"sleep": 90,
+					"childItems": true
+				}
+			},
+			{
+				"name": "GetFileList",
+				"description": "Get a list of all the files present in the location.",
+				"type": "GetMetadata",
+				"dependsOn": [
+					{
+						"activity": "val_Check_SourceFile_Availablity",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.10:00:00",
+					"retry": 1,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_fs_csv_legacy_plan_source",
+						"type": "DatasetReference",
+						"parameters": {
+							"Path": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.source_directory",
+								"type": "Expression"
+							},
+							"File": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.excel_file_name",
+								"type": "Expression"
+							}
+						}
+					},
+					"fieldList": [
+						"childItems"
+					],
+					"storeSettings": {
+						"type": "FileServerReadSettings",
+						"recursive": true,
+						"enablePartitionDiscovery": false
+					},
+					"formatSettings": {
+						"type": "DelimitedTextReadSettings"
+					}
+				}
+			},
+			{
+				"name": "Flt_csvFilesOnly",
+				"description": "Checking for files with particular extension",
+				"type": "Filter",
+				"dependsOn": [
+					{
+						"activity": "GetFileList",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('GetFileList').output.childItems",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@and(equals(item().type,'File'),endswith(item().name,'.csv'))",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"variables": {
+			"v_error_message": {
+				"type": "Array"
+			},
+			"v_pipelinedetails": {
+				"type": "Array"
+			}
+		},
+		"folder": {
+			"name": "Projects/NCSA/P6 Legacy Plan"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-03-31T05:32:48Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

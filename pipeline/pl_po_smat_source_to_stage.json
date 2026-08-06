@@ -1,0 +1,419 @@
+{
+	"name": "pl_po_smat_source_to_stage",
+	"properties": {
+		"description": "SMAT PO EXTRACT - Source to ADLS Stage Folder",
+		"activities": [
+			{
+				"name": "cp_getSMAT10_PO_data",
+				"description": "Get Data from oracle staging table source for SMAT10 Source.",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "OracleSource",
+						"oracleReaderQuery": {
+							"value": "SELECT DISTINCT PROJ_NUMBER,\nPROJ_ID,\nDISCIPLINE,\nREQUISITION_NO,\nREQUISITION_DESC,\nPO_NUMBER,\nPO_REVISION,\nPO_DATE,\nPO_ISSUE_DATE,\nPO_STATUS,\nSUPPLIER_CODE,\nSUPPLIER_NAME,\nSUPPLIER_COUNTRY,\nMANUFACTURING_LOCATION,\nreplace( replace (replace (LTRIM(PACKAGE_DESCRIPTION),chr(13), ' '),chr(10)) ,'�',' ' ) PACKAGE_DESCRIPTION,\nreplace( replace (replace (LTRIM(ITEM_DESCRIPTION),chr(13), ' '),chr(10)) ,'�',' ' ) ITEM_DESCRIPTION,\nreplace( replace (replace (LTRIM(IDENT_CODE),chr(13), ' '),chr(10)) ,'�',' ' ) IDENT_CODE,\nreplace( replace (replace (LTRIM(TAG_NUMBER),chr(13), ' '),chr(10)) ,'�',' ' ) TAG_NUMBER,\nPO_LINE_ITEM,\nPO_ITEM_SUB,\nPO_QTY,\nUOM,\nTOTAL_PRICE,\nCURRENCY,\nEXPEDITING_LEVEL,\nINSPECTION_LEVEL,\nEXPEDITING_LEVEL_DESC,\nINSPECTION_LEVEL_DESC,\nITEM_SHIP_POS,\nITEM_SHIP_SUB,\nITEM_SHIPMENT_QTY,\nITEM_SHIP_WEIGHT,\nTOTAL_ISH_WEIGHT,\nWEIGHT_UNIT,\nCONTRACTUAL_PROMISE_DD,\nINCOTERM,\nDELIVERY_PLACE,\nROUTING_METHOD,\nTRANSIT_CLEARANCE_DAYS,\nFORECASTED_DELIVERY_DATE,\nPRED_ON_SITE_DATE,\nARVL_ON_SITE_FORECASTED_DATE,\nACTUAL_RECV_ONSITE_OR_WHS_DATE,\nDELIVERY_DESIGNATION,\nROS_DATE,\nFLOAT_DAYS,\nIRC_NO,\nIRC_QTY,\nIRC_APPROVED_DATE,\nRELEASE_NOTE_NO,\nRELEASE_NOTE_QTY,\nRELEASE_NOTE_APPR_DATE,\nBALANCE_IRC_QTY,\nSLI_NO,\nAWB_NUMBER,\nVOY_FLT_NUM,\nETD_DATE,\nATD_DATE,\nETA_DATE,\nATA_DATE,\nMRR_NUMBER,\nMRR_CREATED_DATE,\nMRR_POSTED_DATE,\nMRR_QUANTITY,\nOSD_NUMBER,\nOSD_CREATED_DATE,\nOSD_QTY,\nOSD_TYPE,\nreplace( replace (replace (LTRIM(OSD_REQUEST_ACTION),chr(13), ' '),chr(10)) ,'�',' ' ) OSD_REQUEST_ACTION,\nreplace( replace (replace (LTRIM(OSD_ACTION_TAKEN),chr(13), ' '),chr(10)) ,'�',' ' ) OSD_ACTION_TAKEN,\nOSD_CLOSED_DATE,\nBALANCE_RN_QTY,\nBALANCE_MRR_QTY,\nBUYER,\nEXPEDITOR,\nBUYER_USR_ID,\nEXPEDITOR_USR_ID,\nPACKAGE_MANAGER,\nreplace( replace (replace (LTRIM(ITEM_COMMENT),chr(13), ' '),chr(10)) ,'�',' ' ) ITEM_COMMENT,\nreplace( replace (replace (LTRIM(HEADER_COMMENT),chr(13), ' '),chr(10)) ,'�',' ' ) HEADER_COMMENT,\nreplace( replace (replace (LTRIM(AGENT_1_LT_COMMENT),chr(13), ' '),chr(10)) ,'�',' ' ) AGENT_1_LT_COMMENT,\nreplace( replace (replace (LTRIM(AGENT_2_LT_COMMENT),chr(13), ' '),chr(10)) ,'�',' ' ) AGENT_2_LT_COMMENT,\nTHE_COLOR,\nIS_MASTER_TAG,\nLMOD,\nITEM_SHIP_ID\nFROM MDR_CUST.MDR_PMT_008_REP_TAB\nWHERE PROJ_NUMBER IN ( '@{activity('lk_get_pipeline_parameters').output.firstRow.p_proj_id}');\n",
+							"type": "Expression"
+						},
+						"partitionOption": "None",
+						"queryTimeout": "02:00:00"
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_oracle_SMP8_SMAT_src",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_smat_po_generic",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_ds_filesystem": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.file_system",
+								"type": "Expression"
+							},
+							"p_ds_directory": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+								"type": "Expression"
+							},
+							"p_ds_filename": {
+								"value": "SMAT10_Temp.csv",
+								"type": "Expression"
+							},
+							"p_ds_first_row_header": true
+						}
+					}
+				]
+			},
+			{
+				"name": "lk_get_pipeline_parameters",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "SMAT"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "sp_Update_Parameter",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Delete Both Temp File",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+					"storedProcedureParameters": {
+						"pParameterValue": {
+							"value": {
+								"value": "@formatDateTime(activity('lk_get_pipeline_parameters').output.firstRow.run_start_datetime,'yyyy-MM-dd HH:mm:ss')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": "SMAT",
+							"type": "String"
+						},
+						"pParameterCode": {
+							"value": "last_run_start_date",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseDB_DEV",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "cp_getSMAT7_PO_data",
+				"description": "Get Data from oracle staging table source for SMAT7 Source.",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "OracleSource",
+						"oracleReaderQuery": {
+							"value": "SELECT DISTINCT PROJ_NUMBER,\nPROJ_ID,\nDISCIPLINE,\nREQUISITION_NO,\nREQUISITION_DESC,\nPO_NUMBER,\nPO_REVISION,\nPO_DATE,\nPO_ISSUE_DATE,\nPO_STATUS,\nSUPPLIER_CODE,\nSUPPLIER_NAME,\nSUPPLIER_COUNTRY,\nMANUFACTURING_LOCATION,\nreplace( replace (replace (LTRIM(PACKAGE_DESCRIPTION),chr(13), ' '),chr(10)) ,'�',' ' ) PACKAGE_DESCRIPTION,\nreplace( replace (replace (LTRIM(ITEM_DESCRIPTION),chr(13), ' '),chr(10)) ,'�',' ' ) ITEM_DESCRIPTION,\nreplace( replace (replace (LTRIM(IDENT_CODE),chr(13), ' '),chr(10)) ,'�',' ' ) IDENT_CODE,\nreplace( replace (replace (LTRIM(TAG_NUMBER),chr(13), ' '),chr(10)) ,'�',' ' ) TAG_NUMBER,\nPO_LINE_ITEM,\nPO_ITEM_SUB,\nPO_QTY,\nUOM,\nTOTAL_PRICE,\nCURRENCY,\nEXPEDITING_LEVEL,\nINSPECTION_LEVEL,\nEXPEDITING_LEVEL_DESC,\nINSPECTION_LEVEL_DESC,\nITEM_SHIP_POS,\nITEM_SHIP_SUB,\nITEM_SHIPMENT_QTY,\nITEM_SHIP_WEIGHT,\nTOTAL_ISH_WEIGHT,\nWEIGHT_UNIT,\nCONTRACTUAL_PROMISE_DD,\nINCOTERM,\nDELIVERY_PLACE,\nROUTING_METHOD,\nTRANSIT_CLEARANCE_DAYS,\nFORECASTED_DELIVERY_DATE,\nPRED_ON_SITE_DATE,\nARVL_ON_SITE_FORECASTED_DATE,\nACTUAL_RECV_ONSITE_OR_WHS_DATE,\nDELIVERY_DESIGNATION,\nROS_DATE,\nFLOAT_DAYS,\nIRC_NO,\nIRC_QTY,\nIRC_APPROVED_DATE,\nRELEASE_NOTE_NO,\nRELEASE_NOTE_QTY,\nRELEASE_NOTE_APPR_DATE,\nBALANCE_IRC_QTY,\nSLI_NO,\nAWB_NUMBER,\nVOY_FLT_NUM,\nETD_DATE,\nATD_DATE,\nETA_DATE,\nATA_DATE,\nMRR_NUMBER,\nMRR_CREATED_DATE,\nMRR_POSTED_DATE,\nMRR_QUANTITY,\nOSD_NUMBER,\nOSD_CREATED_DATE,\nOSD_QTY,\nOSD_TYPE,\nreplace( replace (replace (LTRIM(OSD_REQUEST_ACTION),chr(13), ' '),chr(10)) ,'�',' ' ) OSD_REQUEST_ACTION,\nreplace( replace (replace (LTRIM(OSD_ACTION_TAKEN),chr(13), ' '),chr(10)) ,'�',' ' ) OSD_ACTION_TAKEN,\nOSD_CLOSED_DATE,\nBALANCE_RN_QTY,\nBALANCE_MRR_QTY,\nBUYER,\nEXPEDITOR,\nBUYER_USR_ID,\nEXPEDITOR_USR_ID,\nPACKAGE_MANAGER,\nreplace( replace (replace (LTRIM(ITEM_COMMENT),chr(13), ' '),chr(10)) ,'�',' ' ) ITEM_COMMENT,\nreplace( replace (replace (LTRIM(HEADER_COMMENT),chr(13), ' '),chr(10)) ,'�',' ' ) HEADER_COMMENT,\nreplace( replace (replace (LTRIM(AGENT_1_LT_COMMENT),chr(13), ' '),chr(10)) ,'�',' ' ) AGENT_1_LT_COMMENT,\nreplace( replace (replace (LTRIM(AGENT_2_LT_COMMENT),chr(13), ' '),chr(10)) ,'�',' ' ) AGENT_2_LT_COMMENT,\nTHE_COLOR,\nIS_MASTER_TAG,\nLMOD,\nITEM_SHIP_ID\nFROM MCD_MDR.MDR_7_PMT_008_REP_TAB\nWHERE PROJ_NUMBER IN ( '@{activity('lk_get_pipeline_parameters').output.firstRow.p_proj_id}');",
+							"type": "Expression"
+						},
+						"partitionOption": "None",
+						"queryTimeout": "02:00:00"
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_oracle_SMP7_SMAT_src",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_smat_po_generic",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_ds_filesystem": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.file_system",
+								"type": "Expression"
+							},
+							"p_ds_directory": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+								"type": "Expression"
+							},
+							"p_ds_filename": {
+								"value": "SMAT7_Temp.csv",
+								"type": "Expression"
+							},
+							"p_ds_first_row_header": true
+						}
+					}
+				]
+			},
+			{
+				"name": "Check if any file exists for any SMAT source",
+				"description": "Check if the combined file has any data to be loaded.",
+				"type": "GetMetadata",
+				"dependsOn": [
+					{
+						"activity": "cp_getSMAT7_PO_data",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "cp_getSMAT10_PO_data",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_SMAT7_PO_source_combined",
+						"type": "DatasetReference"
+					},
+					"fieldList": [
+						"childItems",
+						"exists"
+					],
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true,
+						"enablePartitionDiscovery": false
+					},
+					"formatSettings": {
+						"type": "DelimitedTextReadSettings"
+					}
+				}
+			},
+			{
+				"name": "if_AnySourceFile_Exists_Copy_to_Stage",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Check if any file exists for any SMAT source",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@activity('Check if any file exists for any SMAT source').output.exists",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "cp_getSMATSourceCombined_PO_data",
+							"description": "Get Data from oracle staging table source for BOTH SMAT Sources.",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": true,
+										"wildcardFolderPath": "Project_Data/NCSA/SMAT/PO/",
+										"wildcardFileName": "**Temp.csv",
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "DelimitedTextSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings",
+										"copyBehavior": "MergeFiles"
+									},
+									"formatSettings": {
+										"type": "DelimitedTextWriteSettings",
+										"quoteAllText": true,
+										"fileExtension": ".txt"
+									}
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_adlsg2_csv_SMAT7_PO_source_combined",
+									"type": "DatasetReference"
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_adlsg2_csv_smat_po_generic",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_ds_filesystem": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.file_system",
+											"type": "Expression"
+										},
+										"p_ds_directory": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+											"type": "Expression"
+										},
+										"p_ds_filename": {
+											"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+											"type": "Expression"
+										},
+										"p_ds_first_row_header": true
+									}
+								}
+							]
+						}
+					]
+				}
+			},
+			{
+				"name": "Delete Both Temp File",
+				"description": "After the data has been loaded, clear the combined file from the ADLSV2 ",
+				"type": "Delete",
+				"dependsOn": [
+					{
+						"activity": "if_AnySourceFile_Exists_Copy_to_Stage",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_SMAT7_PO_source_combined",
+						"type": "DatasetReference"
+					},
+					"enableLogging": false,
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true,
+						"wildcardFileName": "*Temp.csv",
+						"enablePartitionDiscovery": false
+					}
+				}
+			}
+		],
+		"variables": {
+			"v_run_start_time": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/NCSA/SMAT/PO EXTRACT NEW"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-08-08T17:10:48Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

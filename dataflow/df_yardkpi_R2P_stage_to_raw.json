@@ -1,0 +1,35 @@
+{
+	"name": "df_yardkpi_R2P_stage_to_raw",
+	"properties": {
+		"folder": {
+			"name": "Projects/YARD KPI/R2P"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_yardkpi_r2p_generic",
+						"type": "DatasetReference"
+					},
+					"name": "srcR2PStage"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_yardkpi_r2p_generic",
+						"type": "DatasetReference"
+					},
+					"name": "snkR2PRaw"
+				}
+			],
+			"transformations": [
+				{
+					"name": "setFileName"
+				}
+			],
+			"script": "parameters{\n\tfolder_path as string,\n\tinput_file_name as string\n}\nsource(output(\n\t\tACCOUNT_CODE_ITEM as string,\n\t\tAGREEMENT_NUMBER as string,\n\t\tBUYER as string,\n\t\tBUYER_EMAIL_ID as string,\n\t\tCATEGORY_ID as string,\n\t\tCURRENCY as string,\n\t\tEND_DATE as string,\n\t\tFIRST_PO_VERSION_RECEIVE_DATE as string,\n\t\tFIRST_PO_VERSION_RECEIVE_DATE1 as string,\n\t\tFIRST_PO_VER_REC_DATE as string,\n\t\tINCOTERM as string,\n\t\tINIT_REV_LINE_AMT as string,\n\t\tLAST_UPDATE_DATE as string,\n\t\tMATERIAL_WORK_GROUP as string,\n\t\tMPP_PO as string,\n\t\tORIGINALORDEREDAMOUNTDISPLAY as string,\n\t\tPAYMENT_MODE as string,\n\t\tPO_ACKNOWLEDGEMENT_DATE as string,\n\t\tPO_ACK_DATE_POV as string,\n\t\tPO_ACK_DATE_POV1 as string,\n\t\tPO_APPROVED_DATE as string,\n\t\tPO_APPROVER as string,\n\t\tPO_CLOSED_DATE as string,\n\t\tPO_CREATION_DATE as string,\n\t\tPO_DESCRIPTION as string,\n\t\tPO_NO as string,\n\t\tPO_REV as string,\n\t\tPO_REV_2 as string,\n\t\tPO_STATUS as string,\n\t\tPROJECT_ID as string,\n\t\tPROJECT_NAME as string,\n\t\tPURCHASER_REQUESTER as string,\n\t\tREQUESTER_EMAIL_ID as string,\n\t\tREQUISITION_BU as string,\n\t\tREQUISITION_DATE as string,\n\t\tREQUISITION_NO_ as string,\n\t\tREQUISITION_ORIGINATOR as string,\n\t\tREQ_RELEASED_TO_PROC as string,\n\t\tREVISED_DATE as string,\n\t\tSELECTION_CODE as string,\n\t\tSMAT_REV_NO as string,\n\t\tSOURCE_BASE_POH_ID as string,\n\t\tSOURCE_POH_ID as string,\n\t\tSPMAT_PO_NUMBER as string,\n\t\tSTART_DATE as string,\n\t\tSUPPLIER as string,\n\t\tSUPPLIER_COUNTRY as string,\n\t\tSUPPLIER_COUNTRY_CODE as string,\n\t\tSUPPLIER_LOCATION as string,\n\t\tSUPPLIER_NUM as string,\n\t\tSUPPLIER_TYPE as string,\n\t\tUSD as string,\n\t\tsource_name as string,\n\t\tsub_source_name as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: true,\n\tpurgeFiles: true,\n\trowUrlColumn: 'File_Path',\n\twildcardPaths:[($folder_path+'/'+$input_file_name+'_*.csv')]) ~> srcR2PStage\nsrcR2PStage derive(File_Path = concat(concat(trim(substringIndex($folder_path,'/',4),'/'),'/'),substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',$input_file_name,'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv')) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\trowUrlColumn:'File_Path',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> snkR2PRaw"
+		}
+	}
+}

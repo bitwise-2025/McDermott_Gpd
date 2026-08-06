@@ -1,0 +1,101 @@
+{
+	"name": "pl_yardkpi_material_register_master_of_master",
+	"properties": {
+		"activities": [
+			{
+				"name": "pl_yardkpi_project_no_master_pipeline",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_yardkpi_project_no_master_pipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "pl_yardkpi_material_receiving_master_pipelines",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "pl_yardkpi_project_no_master_pipeline",
+						"dependencyConditions": [
+							"Succeeded",
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_yardkpi_material_receiving_master_pipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "pl_yardkpi_material_issuing_master_pipelines",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "pl_yardkpi_material_receiving_master_pipelines",
+						"dependencyConditions": [
+							"Succeeded",
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_yardkpi_material_issuing_master_pipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "pl_yardkpi_material_osnd_masters_pipeline",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "pl_yardkpi_material_issuing_master_pipelines",
+						"dependencyConditions": [
+							"Succeeded",
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_yardkpi_material_osnd_master_pipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			}
+		],
+		"folder": {
+			"name": "Projects/YARD KPI/Material Register"
+		},
+		"annotations": [],
+		"lastPublishTime": "2024-04-09T06:13:43Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

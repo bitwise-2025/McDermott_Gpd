@@ -1,0 +1,45 @@
+{
+	"name": "df_generic_specCSV_to_JSONCSV",
+	"properties": {
+		"description": "Dataflow to convert special characters CSV file data into Dynamic JSONCSV",
+		"folder": {
+			"name": "Projects/NCSA/P6 Engr Histogram"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_generic_File_StageJSON",
+						"type": "DatasetReference"
+					},
+					"name": "SrcFile"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_generic_StageJSON",
+						"type": "DatasetReference"
+					},
+					"name": "SnkJSON"
+				}
+			],
+			"transformations": [
+				{
+					"name": "UnpivotData"
+				},
+				{
+					"name": "surrogateKey"
+				},
+				{
+					"name": "aggregate"
+				},
+				{
+					"name": "JSONFormat"
+				}
+			],
+			"script": "parameters{\n\tp_df_tgt_filename as string\n}\nsource(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\tmultiLineRow: true) ~> SrcFile\nsurrogateKey unpivot(output(\n\t\tCKey as string,\n\t\tRValue as string\n\t),\n\tungroupBy(SurKey),\n\tlateral: false,\n\tignoreNullPivots: true) ~> UnpivotData\nSrcFile keyGenerate(output(SurKey as long),\n\tstartAt: 1L,\n\tstepValue: 1L) ~> surrogateKey\nUnpivotData aggregate(groupBy(SurKey),\n\tJSON_ATTRIBUTE = collect(CKey+'::'+replace(replace(RValue,'\\n',' '),'\\r',' '))) ~> aggregate\naggregate derive(JSON_ATTRIBUTE = '{ '+trim(replace(toString(JSON_ATTRIBUTE),'::','\" : \"'),'[]')+' }') ~> JSONFormat\nJSONFormat sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:[($p_df_tgt_filename+'.csv')],\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tmapColumn(\n\t\tJSON_Attribute = JSON_ATTRIBUTE\n\t),\n\tpartitionBy('hash', 1)) ~> SnkJSON"
+		}
+	}
+}

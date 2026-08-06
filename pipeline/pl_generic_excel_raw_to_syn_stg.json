@@ -1,0 +1,348 @@
+{
+	"name": "pl_generic_excel_raw_to_syn_stg",
+	"properties": {
+		"description": "Generic  pipeline to load the data from RAW CSV file(s) into Synapse Stage table. Using ORC to External table conversion Logic",
+		"activities": [
+			{
+				"name": "sp_generic_load_external_to_stage",
+				"description": "Stored procedure to load the RAW File to Synapse Stage. \nThe config is hosted on the table: \"generic_load_external_header\"",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "cp_RAW_CSV_to_ORC",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.01:00:00",
+					"retry": 1,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "dbo.generic_load_external_to_stage",
+					"storedProcedureParameters": {
+						"p_debug_flag": {
+							"value": "Y",
+							"type": "String"
+						},
+						"p_external_file_location": {
+							"value": {
+								"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.folder_path,'/latest_',activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.orc')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"p_load_code": {
+							"value": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.load_name",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "lk_get_pipeline_parameters",
+				"description": "Use the lookup procedure to get the last run details to be used in the next steps",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.01:00:00",
+					"retry": 1,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.p_pl_pipelineCode",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.p_pl_pipelineSubCode",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Set start date",
+				"description": "Set the last stage run date to the variable as start date.",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_lastrundate",
+					"value": {
+						"value": "@formatDateTime(activity('lk_get_pipeline_parameters').output.firstRow.last_run_start_date,'yyyy-MM-dd HH:mm:ss')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "cp_RAW_CSV_to_ORC",
+				"description": "Copy the RAW CSV file(s) into the one latest ORC file",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Set start date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Delete Temp combined File",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.01:00:00",
+					"retry": 1,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": true,
+							"modifiedDatetimeStart": {
+								"value": "@variables('v_lastrundate')",
+								"type": "Expression"
+							},
+							"wildcardFolderPath": {
+								"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.folder_path,'/*/*/*')",
+								"type": "Expression"
+							},
+							"wildcardFileName": {
+								"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'*.csv')",
+								"type": "Expression"
+							},
+							"enablePartitionDiscovery": false
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"sink": {
+						"type": "OrcSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings",
+							"copyBehavior": "MergeFiles"
+						},
+						"formatSettings": {
+							"type": "OrcWriteSettings"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_parameter_generic",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_ds_filename": {
+								"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'*.csv')",
+								"type": "Expression"
+							},
+							"p_ds_folderpath": {
+								"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.folder_path,'/*/*/*')",
+								"type": "Expression"
+							},
+							"p_ds_first_row_header": true,
+							"p_ds_filesystem": "mdr-raw-data"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_adlsg2_orc_generic_file",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_ds_orc_dir": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+								"type": "Expression"
+							},
+							"p_ds_orc_file": {
+								"value": "@concat('latest_',activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.orc')",
+								"type": "Expression"
+							},
+							"p_ds_orc_container": "mdr-raw-data"
+						}
+					}
+				]
+			},
+			{
+				"name": "sp_Update_Parameter",
+				"description": "Update the stg_raw date last_run_start_date ,  in the plp parameters.",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "sp_generic_load_external_to_stage",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.01:00:00",
+					"retry": 1,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+					"storedProcedureParameters": {
+						"pParameterValue": {
+							"value": {
+								"value": "@formatDateTime(utcnow(),'yyyy-MM-dd HH:mm:ss.fff')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().parameters.p_pl_pipelineCode",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": {
+								"value": "@pipeline().parameters.p_pl_pipelineSubCode",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pParameterCode": {
+							"value": "last_run_start_date",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseDB_DEV",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Delete Temp combined File",
+				"description": "After the data has been loaded, clear the combined file from the ADLSV2 ",
+				"type": "Delete",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.02:00:00",
+					"retry": 1,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_adlsg2_orc_generic_file",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_ds_orc_dir": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+								"type": "Expression"
+							},
+							"p_ds_orc_file": {
+								"value": "@concat('latest_',activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.orc')",
+								"type": "Expression"
+							},
+							"p_ds_orc_container": "mdr-raw-data"
+						}
+					},
+					"enableLogging": false,
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true
+					}
+				}
+			}
+		],
+		"parameters": {
+			"p_pl_pipelineCode": {
+				"type": "string"
+			},
+			"p_pl_pipelineSubCode": {
+				"type": "string",
+				"defaultValue": "NetworkFolder"
+			}
+		},
+		"variables": {
+			"v_lastrundate": {
+				"type": "String",
+				"defaultValue": "'2021-10-04 12:36:58.280'"
+			}
+		},
+		"folder": {
+			"name": "Projects/NCSA/Generic Reuse Pipeline"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-05-11T05:42:18Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

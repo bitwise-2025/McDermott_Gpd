@@ -1,0 +1,156 @@
+DECLARE @Date DATETIME;
+DECLARE @v_pipelinename varchar(150);
+
+SET @Date = GETDATE();
+SET @v_pipelinename='pl_Schedule_Ruya11_D7507'
+
+
+delete from [dbo].[plp_pipeline] where [pipeline_code] = @v_pipelinename
+
+--PLP Pipeline
+INSERT INTO [dbo].[plp_pipeline] ([pipeline_code],[subject_area_code],[description],[comment],[active],[touched_by],[touched_dtm],[sec_sa_id])
+	VALUES (@v_pipelinename,'NCSA','Manual Excel File Direct Source To Synapse',NULL,1,'aditya.anand2@mcdermott.com',@Date,9)
+
+delete from [dbo].[plp_pipeline_parameter] where [pipeline_code] = @v_pipelinename
+
+--PLP Pipeline Parameter
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+VALUES(@v_pipelinename,'NetworkFolder','start_date',1,'start_date','IN',NULL,1,'aditya.anand2@mcdermott.com',@Date)
+
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+VALUES(@v_pipelinename,'NetworkFolder','end_date',2,'end_date','IN',NULL,1,'aditya.anand2@mcdermott.com',@Date)
+
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+VALUES(@v_pipelinename,'NetworkFolder','source_directory',3,'source_directory','IN',NULL,1,'aditya.anand2@mcdermott.com',@Date)
+
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+VALUES(@v_pipelinename,'NetworkFolder','table_name',5,'table_name','IN','table_name with schema e.g. gpd.scm_procurement',1,'aditya.anand2@mcdermott.com',@Date)
+
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+VALUES(@v_pipelinename,'NetworkFolder','logicapp_url',6,'logicapp_url','IN',NULL,1,'aditya.anand2@mcdermott.com',@Date)
+
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+VALUES(@v_pipelinename,'NetworkFolder','project_number',7,'project_number','IN',NULL,1,'aditya.anand2@mcdermott.com',@Date)
+
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+VALUES(@v_pipelinename,'NetworkFolder','range',8,'range','IN',NULL,1,'aditya.anand2@mcdermott.com',@Date)
+
+--PLP parameter
+
+delete from [dbo].[plp_parameter] where parameter_code = 'project_number'
+
+insert into [dbo].[plp_parameter]
+(parameter_code,parameter_type_code,description,parameter_data_type,max_no_values,parameter_size,comment,active,touched_by,touched_dtm)
+values ('project_number','PIPELINE','project_number','T',1,250,'',1,'zmohammad@mcdermott.com','2021-03-19 00:00:00.000')
+
+delete from [dbo].[plp_parameter] where parameter_code = 'range'
+
+insert into [dbo].[plp_parameter]
+(parameter_code,parameter_type_code,description,parameter_data_type,max_no_values,parameter_size,comment,active,touched_by,touched_dtm)
+values ('range','PIPELINE','range','T',1,250,'',1,'zmohammad@mcdermott.com','2021-03-19 00:00:00.000')
+
+delete from [dbo].[plp_parameter_value] where [pipeline_code] = @v_pipelinename
+
+--PLP Pipeline values
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+     VALUES('start_date','2021-10-07 11:33:55',1,'aditya.anand2@mcdermott.com',@Date,@v_pipelinename,'NetworkFolder')
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+     VALUES('end_date','currdate',1,'aditya.anand2@mcdermott.com',@Date,@v_pipelinename,'NetworkFolder')
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+     VALUES('source_directory','07. D7507 - RUYA 11/01. Schedule',1,'aditya.anand2@mcdermott.com',@Date,@v_pipelinename,'NetworkFolder')
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+     VALUES('table_name','[epr].[Schedule_Ruya11_D7507_stage]',1,'aditya.anand2@mcdermott.com',@Date,@v_pipelinename,'NetworkFolder')
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+     VALUES('logicapp_url','https://prod-56.eastus.logic.azure.com:443/workflows/3cff41a53ba14a82a9b7cc8d6d2bfe56/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=c7BCbv69x4tk7w5oqGQNOPlpIXvqBQi_Zwm8wkww0WQ',1,'aditya.anand2@mcdermott.com',@Date,@v_pipelinename,'NetworkFolder')	 
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+     VALUES('project_number','D7507',1,'aditya.anand2@mcdermott.com',@Date,@v_pipelinename,'NetworkFolder')
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+     VALUES('range','A2:Y500000',1,'aditya.anand2@mcdermott.com',@Date,@v_pipelinename,'NetworkFolder')
+
+go
+
+
+CREATE TABLE [epr].[Schedule_Ruya11_D7507]
+(
+	[Activity ID] [varchar](100) NULL,
+	[Activity Status] [varchar](100) NULL,
+	[WBS Code] [varchar](6000) NULL,
+	[Activity Name] [varchar](6000) NULL,
+	[Original Duration(d)] [varchar](100) NULL,
+	[(*)Actual Duration(d)] [varchar](100) NULL,
+	[(*)Start] [varchar](100) NULL,
+	[(*)Finish] [varchar](100) NULL,
+	[Actual Start] [varchar](100) NULL,
+	[Actual Finish] [varchar](6000) NULL,
+	[(*)Total Float(d)] [varchar](100) NULL,
+	[(*)WBS Path] [varchar](100) NULL,
+	[(*)Resources] [varchar](500) NULL,
+	[R11 Phases] [varchar](100) NULL,
+	[R11-PLATFORM] [varchar](100) NULL,
+	[R11-Component] [varchar](100) NULL,
+	[R11-DISCIPLINE] [varchar](100) NULL,
+	[DISCIPLINE] [varchar](100) NULL,
+	[YARD] [varchar](100) NULL,
+	[CWP] [varchar](6000) NULL,
+	[Revision] [varchar](100) NULL,
+	[PMR Milestones] [varchar](100) NULL,
+	[Contract Date] [varchar](100) NULL,
+	[Key Dates (KD)] [varchar](100) NULL,
+	[Milestone Date] [varchar](100) NULL,
+	[Payment Milestone] [varchar](100) NULL,
+	[Delete This Row] [varchar](100) NULL,
+	[SourceFileName] [varchar](4000) NULL,
+	[CreatedDateTime] [datetime] NULL,
+	[project_number] [varchar](100) NULL,
+	[schedule_type] [varchar](100) NULL,
+	[schedule_version] [varchar](100) NULL
+)
+WITH
+(
+	DISTRIBUTION = ROUND_ROBIN,
+	CLUSTERED COLUMNSTORE INDEX
+)
+GO
+
+
+
+
+go
+
+
+CREATE TABLE [epr].[Schedule_Ruya11_D7507_stage](
+[Activity ID]   varchar(100) NULL,
+[Activity Status]   varchar(100) NULL,
+[WBS Code]   varchar(6000) NULL,
+[Activity Name]   varchar(6000) NULL,
+[Original Duration(d)]   varchar(100) NULL,
+[(*)Actual Duration(d)]   varchar(100) NULL,
+[(*)Start]   varchar(100) NULL,
+[(*)Finish]   varchar(100) NULL,
+[Actual Start]   varchar(100) NULL,
+[Actual Finish]   varchar(6000) NULL,
+[(*)Total Float(d)]   varchar(100) NULL,
+[(*)WBS Path]   varchar(100) NULL,
+[(*)Resources]   varchar(500) NULL,
+[R11 Phases]   varchar(100) NULL,
+[R11-PLATFORM]   varchar(100) NULL,
+[R11-Component]   varchar(100) NULL,
+[R11-DISCIPLINE]   varchar(100) NULL,
+[DISCIPLINE]   varchar(100) NULL,
+[YARD]   varchar(100) NULL,
+[CWP]   varchar(6000) NULL,
+[Revision]   varchar(100) NULL,
+[PMR Milestones]   varchar(100) NULL,
+[Contract Date]   varchar(100) NULL,
+[Key Dates (KD)]   varchar(100) NULL,
+[Milestone Date]   varchar(100) NULL,
+[Payment Milestone]   varchar(100) NULL,
+[Delete This Row]   varchar(100) NULL,
+[SourceFileName]   varchar(4000) NULL,
+[CreatedDateTime]   datetime NULL,
+[project_number]   varchar(100) NULL,
+[schedule_type]   varchar(100) NULL,
+[schedule_version]   varchar(100) NULL
+)WITH(	DISTRIBUTION = ROUND_ROBIN,	CLUSTERED COLUMNSTORE INDEX)
+
+go

@@ -1,0 +1,112 @@
+
+ 
+  
+  CREATE PROC [dbo].[fact_gmps_productivity_fact_reprocess_load] AS BEGIN 
+SET 
+  NOCOUNT ON DECLARE @DateKey DATETIME = GETDATE() DECLARE @invalidrow int 
+Delete from 
+  [yardkpi].[reprocess_fact_gmps_productivity];
+SELECT 
+  v.source_code, 
+  v.sub_source_code, 
+  v.contract_no, 
+  v.job_no, 
+  v.job_desc, 
+  v.subfunction, 
+  v.scope, 
+  v.discipline, 
+  v.area, 
+  v.area_actual, 
+  v.cyear, 
+  v.cmonth, 
+  v.cutoffdate, 
+  v.actual, 
+  v.earned, 
+  S.dim_ent_source_nk, 
+  SS.dim_ent_sub_source_nk, 
+  DC.dim_entp_gmps_productivity_nk, 
+  SC.dim_entp_gmps_sp_area_nk, 
+  C.dim_entp_gmps_sp_area_nk as dim_entp_gmps_sp_area_nk_actual, 
+  @DateKey As Created_date_time INTO #temp_factdata 
+FROM 
+  yardkpi.stage_entp_gmps_productivity V 
+  LEFT OUTER JOIN dim_Ent_source S ON V.source_code = S.source_name 
+  and s.Active = 1 --for all dim tables
+  LEFT OUTER JOIN dim_ent_sub_source SS ON V.source_code = SS.source_name 
+  AND V.sub_source_code = SS.sub_source_name 
+  and ss.Active = 1 
+  LEFT OUTER JOIN dbo.dim_entp_gmps_productivity DC ON v.contract_no = dc.contract_no 
+  and v.job_no = dc.job_no 
+  and v.job_desc = dc.job_desc 
+  and v.subfunction = dc.subfunction 
+  and v.scope = dc.scope 
+  and v.discipline = dc.discipline 
+  and dc.Active = 1 
+  LEFT OUTER JOIN dbo.dim_entp_gmps_sp_area SC ON V.area = SC.Aread_ID 
+  LEFT OUTER JOIN dbo.dim_entp_gmps_sp_area C ON V.area_actual = C.Aread_ID 
+select 
+  @invalidrow = count(*) 
+from 
+  #temp_factdata
+Where 
+  dim_ent_source_nk is null 
+  or dim_ent_sub_source_nk is null 
+  or dim_entp_gmps_productivity_nk is null 
+If @invalidrow > 0 Begin Insert into [yardkpi].[reprocess_fact_gmps_productivity] 
+SELECT 
+  source_code, 
+  sub_source_code, 
+  contract_no, 
+  job_no, 
+  job_desc, 
+  subfunction, 
+  scope, 
+  discipline, 
+  area, 
+  area_actual, 
+  cyear, 
+  cmonth, 
+  cutoffdate, 
+  actual, 
+  earned, 
+  'GMPS Fct table invalide row' As hash_code, 
+  case when dim_ent_source_nk  is null then 'Missing Source code - ' + isnull(source_code, '') + ',' else '' end + case when dim_ent_sub_source_nk  is null then 'Missing Sub Source code - ' + isnull(sub_source_code, '') + ',' else '' end + case when dim_entp_gmps_productivity_nk  is null then 'Missing productivity dimension' + ',' else '' end As rk_failure_info, 
+  @DateKey As Created_date_time 
+from 
+  #temp_factdata
+where 
+  dim_ent_source_nk is null 
+  or dim_ent_sub_source_nk is null 
+  or dim_entp_gmps_productivity_nk is null 
+ 
+delete from 
+  #temp_factdata 
+where 
+  dim_ent_source_nk is null 
+  or dim_ent_sub_source_nk is null 
+  or dim_entp_gmps_productivity_nk is null ;
+
+END INSERT INTO [dbo].[fact_gmps_productivity] (
+  dim_ent_source_nk, dim_ent_sub_source_nk, 
+  dim_entp_gmps_productivity_nk, 
+  dim_entp_gmps_sp_area_nk, dim_entp_gmps_sp_area_nk_actual, 
+  cyear, cmonth, cutoff, actual, earned, 
+  create_date_time
+) 
+SELECT 
+  dim_ent_source_nk, 
+  dim_ent_sub_source_nk, 
+  dim_entp_gmps_productivity_nk, 
+  dim_entp_gmps_sp_area_nk, 
+  dim_entp_gmps_sp_area_nk_actual, 
+  cyear, 
+  cmonth, 
+  cutoffdate, 
+  actual, 
+  earned, 
+  @DateKey 
+From 
+  #temp_factdata 
+drop 
+  table #temp_factdata 
+  END;

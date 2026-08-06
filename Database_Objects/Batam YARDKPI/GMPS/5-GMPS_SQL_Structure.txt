@@ -1,0 +1,300 @@
+
+EXEC [dbo].[load_dim_ent_sub_source] 'SYSTEM','GMPS'
+
+CREATE  TABLE [yardkpi].[stage_gmps_sp_contract]
+(
+stage_entp_gmps_sp_contract_id bigint IDENTITY(1,1) NOT NULL,
+source_code  varchar(50)   NULL ,
+sub_source_code  varchar(50)  NOT NULL  ,
+contract_no  varchar(50)  NOT NULL  ,
+gmps_contract_no  varchar(50)   NULL  ,
+description  varchar(1000)  NULL  ,
+created_date_time datetime NOT NULL  
+ 
+)
+WITH
+(
+	DISTRIBUTION = ROUND_ROBIN,
+	CLUSTERED COLUMNSTORE INDEX
+)
+
+
+
+CREATE TABLE [yardkpi].[reprocess_gmps_sp_contract]
+(
+	[rssk] [bigint] IDENTITY(1,1) NOT NULL,
+source_code  varchar(50)  Not Null default 'SYSTEM'  ,
+sub_source_code  varchar(50) Not  null default 'GMPS'   ,
+contract_no  varchar(50)  NOT NULL  ,
+gmps_contract_no  varchar(50)   NULL  ,
+description  varchar(1000)  NULL  ,
+hash_code varchar(8000) NOT NULL,
+rk_failure_info varchar(5000) NULL,
+created_date_time varchar(50) NOT NULL
+)
+WITH
+(
+	DISTRIBUTION = ROUND_ROBIN,
+	CLUSTERED COLUMNSTORE INDEX
+)
+
+
+CREATE  TABLE [dbo].[dim_entp_gmps_sp_contract]
+(
+dim_entp_gmps_sp_contract_sk  [bigint] IDENTITY(1,1) NOT NULL,
+dim_entp_gmps_sp_contract_nk  BIGINT NULL ,
+start_date   DATETIME  NOT NULL  ,
+end_date   DATETIME  NOT NULL  ,
+hash_code   VARCHAR (8000)  NOT NULL  ,
+active   INT  NOT NULL  ,
+created_date_time   DATETIME  NULL  ,
+modified_date_time   DATETIME  NULL  ,
+late_arrival_flag   VARCHAR(1)  NULL  ,
+dim_ent_contract_nk  BIGINT  NULL  ,
+gmps_contract_no  varchar(50)   NULL  ,
+description  varchar(1000)  NULL 
+)
+WITH
+(
+	DISTRIBUTION = ROUND_ROBIN,
+	CLUSTERED COLUMNSTORE INDEX
+)
+
+CREATE VIEW [yardkpi].[stage_entp_gmps_contract_vw]
+AS select ROW_NUMBER() over(ORDER BY contract ASC) as rowID,
+source_code,
+sub_source_code,
+contract,
+contract_title,
+contract as project_number,
+LastUpdate
+from (
+select distinct
+    'SYSTEM' as source_code,
+    'GMPS' as sub_source_code,
+    contract_no as contract ,
+	contract_no as contract_title,
+	contract_no as project_number,
+    getdate() LastUpdate
+from [yardkpi].[stage_gmps_sp_contract] dcsr
+where not exists (select 1 from dbo.dim_ent_contract
+        where contract_number = dcsr.contract_no
+        and active = 1)		
+        ) disa;
+
+
+CREATE TABLE [yardkpi].[reprocess_ent_gmps_contract]
+(
+	[rssk] [bigint] IDENTITY(1,1) NOT NULL,
+source_code  varchar(50)  Not Null default 'SYSTEM'  ,
+sub_source_code  varchar(50) Not  null default 'GMPS'   ,
+	[contract] [varchar](10) NULL,
+	[contract_title] [varchar](255) NULL,
+	[hash_code] [varchar](8000) NOT NULL,
+	[project_number] [varchar](10) NULL,
+	[rk_failure_info] [varchar](5000) NULL,
+	[created_date_time] [datetime] NOT NULL
+)
+WITH
+(
+	DISTRIBUTION = ROUND_ROBIN,
+	CLUSTERED COLUMNSTORE INDEX
+)
+
+CREATE  TABLE [yardkpi].[stage_gmps_sp_area]
+(
+stage_entp_gmps_sp_contract_id bigint IDENTITY(1,1) NOT NULL,
+source_code  varchar(50)  Not Null  ,
+sub_source_code  varchar(50)  not null  ,
+Aread_ID  Varchar(50)   null  ,
+Area_Name  varchar(200)  NULL  ,
+Phase  Varchar(200)  NULL  ,
+created_date_time  datetime  not null 
+)
+WITH
+(
+	DISTRIBUTION = ROUND_ROBIN,
+	CLUSTERED COLUMNSTORE INDEX
+)
+
+
+CREATE TABLE [yardkpi].[reprocess_gmps_sp_area]
+(
+rssk bigint IDENTITY(1,1) NOT NULL,
+source_code  varchar(50)  Not Null default 'SYSTEM'  ,
+sub_source_code  varchar(50) Not  null default 'GMPS'   ,
+Aread_ID  Varchar(50)   null  ,
+Area_Name  varchar(200)  NULL  ,
+Phase  Varchar(200)  NULL  ,
+hash_code varchar(8000) NOT NULL,
+rk_failure_info varchar(5000) NULL,
+created_date_time varchar(50) NOT NULL
+)
+WITH
+(
+	DISTRIBUTION = ROUND_ROBIN,
+	CLUSTERED COLUMNSTORE INDEX
+)
+
+CREATE  TABLE [dbo].[dim_entp_gmps_sp_area]
+(
+dim_entp_gmps_sp_area_sk  bigint IDENTITY(1,1) NOT NULL,
+dim_entp_gmps_sp_area_nk    BIGINT    ,
+start_date   DATETIME  NOT NULL  ,
+end_date   DATETIME  NOT NULL  ,
+hash_code   VARCHAR (8000)  NOT NULL  ,
+active   INT  NOT NULL  ,
+created_date_time   DATETIME  NULL  ,
+modified_date_time   DATETIME  NULL  ,
+late_arrival_flag   VARCHAR(1)  NULL  ,
+Aread_ID  Varchar(50)   null  ,
+Area_Name  varchar(200)  NULL  ,
+Phase  Varchar(200)  NULL 
+)
+WITH
+(
+	DISTRIBUTION = ROUND_ROBIN,
+	CLUSTERED COLUMNSTORE INDEX
+)
+
+
+CREATE VIEW [dbo].[dim_entp_gmps_sp_contract_vw] as
+select *
+from dbo.dim_entp_gmps_sp_contract where active =1 ;
+
+
+CREATE VIEW [dbo].[dim_entp_gmps_sp_area_vw] as
+select *
+from dbo.dim_entp_gmps_sp_area where active =1 
+
+
+
+CREATE TABLE [yardkpi].[stage_entp_gmps_productivity]
+(
+stage_entp_gmps_productivity_id bigint IDENTITY(1,1) NOT NULL,
+source_code  varchar(50)  Not Null  ,
+sub_source_code  varchar(50)  not null  ,
+contract_no Varchar(50)    NOT NULL  ,
+job_no Varchar(50)    NOT NULL  ,
+job_desc Varchar(5000)    NOT NULL  ,
+subfunction Varchar(50)    NOT NULL  ,
+scope Varchar(50)    NOT NULL  ,
+discipline  Varchar(50)    NOT NULL  ,
+area Varchar(50)    NULL  ,
+area_actual Varchar(50)    NULL  ,
+cyear Varchar(50)   null  ,
+cmonth Varchar(50)   null  ,
+cutoffdate  datetime   null ,
+actual Varchar(50) null,
+earned Varchar(50)  null,
+created_date_time  datetime  not null 
+)
+WITH
+(
+	DISTRIBUTION = ROUND_ROBIN,
+	CLUSTERED COLUMNSTORE INDEX
+)
+
+
+
+CREATE TABLE [yardkpi].[reprocess_entp_gmps_productivity]
+(
+rssk bigint IDENTITY(1,1) NOT NULL,
+source_code  varchar(50)  Not Null default 'SYSTEM'  ,
+sub_source_code  varchar(50) Not  null default 'GMPS'   ,
+contract_no Varchar(50)   NOT NULL  ,
+job_no Varchar(50)   NOT NULL  ,
+job_desc Varchar(5000)   NOT NULL  ,
+subfunction Varchar(50)   NOT NULL  ,
+scope Varchar(50)   NOT NULL  ,
+discipline  Varchar(50)   NOT NULL  ,
+hash_code varchar(8000) NOT NULL,
+rk_failure_info varchar(5000) NULL,
+created_date_time varchar(50) NOT NULL
+)
+WITH
+(
+	DISTRIBUTION = ROUND_ROBIN,
+	CLUSTERED COLUMNSTORE INDEX
+)
+
+CREATE  TABLE [dbo].[dim_entp_gmps_productivity]
+(
+dim_entp_gmps_productivity_sk   bigint IDENTITY(1,1) NOT NULL,
+dim_entp_gmps_productivity_nk     BIGINT    ,
+start_date   DATETIME  NOT NULL  ,
+end_date   DATETIME  NOT NULL  ,
+hash_code   VARCHAR (8000)  NOT NULL  ,
+active   INT  NOT NULL  ,
+created_date_time   DATETIME  NULL  ,
+modified_date_time   DATETIME  NULL  ,
+late_arrival_flag   VARCHAR(1)  NULL  ,
+dim_entp_gmps_sp_contract_nk  BIGINT not null ,
+contract_no Varchar(50)   NOT NULL  ,
+job_no Varchar(50)   NOT NULL  ,
+job_desc Varchar(5000)   NOT NULL  ,
+subfunction Varchar(50)   NOT NULL  ,
+scope Varchar(50)   NOT NULL  ,
+discipline  Varchar(50)   NOT NULL   
+)
+WITH
+(
+	DISTRIBUTION = ROUND_ROBIN,
+	CLUSTERED COLUMNSTORE INDEX
+)
+
+CREATE  TABLE [dbo].[fact_gmps_productivity]
+(
+fact_gmps_productivity_sk  bigint IDENTITY(1,1) NOT NULL,
+dim_ent_source_nk BIGINT  not NULL,
+dim_ent_sub_source_nk BIGINT not  NULL,
+dim_entp_gmps_productivity_nk BIGINT not NULL,
+dim_entp_gmps_sp_area_nk BIGINT   NULL,
+dim_entp_gmps_sp_area_nk_actual BIGINT  NULL,
+cyear varchar(10) null,
+cmonth varchar(10) null,
+cutoff datetime Null,
+actual varchar(50) null,
+earned varchar(50) null,
+create_date_time  datetime Null
+)
+WITH
+(
+	DISTRIBUTION = ROUND_ROBIN,
+	CLUSTERED COLUMNSTORE INDEX
+)
+
+
+CREATE TABLE [yardkpi].[reprocess_fact_gmps_productivity]
+(
+rssk bigint IDENTITY(1,1) NOT NULL,
+source_code  varchar(50)  Not Null default 'SYSTEM'  ,
+sub_source_code  varchar(50) Not  null default 'GMPS'   ,
+contract_no Varchar(50)    NOT NULL  ,
+job_no Varchar(50)    NOT NULL  ,
+job_desc Varchar(5000)    NOT NULL  ,
+subfunction Varchar(50)    NOT NULL  ,
+scope Varchar(50)    NOT NULL  ,
+discipline  Varchar(50)    NOT NULL  ,
+area Varchar(50)     NULL  ,
+area_actual Varchar(50)     NULL  ,
+cyear Varchar(50)   null  ,
+cmonth Varchar(50)   null  ,
+cutoffdate  datetime   null ,
+actual Varchar(50)  null,
+earned Varchar(50)   null,
+hash_code varchar(8000) NOT NULL,
+rk_failure_info varchar(5000) NULL,
+created_date_time varchar(50) NOT NULL
+)
+WITH
+(
+	DISTRIBUTION = ROUND_ROBIN,
+	CLUSTERED COLUMNSTORE INDEX
+)
+
+CREATE VIEW [dbo].[dim_entp_gmps_productivity_vw] as
+select *
+from dbo.dim_entp_gmps_productivity where active =1
+
+

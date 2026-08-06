@@ -1,0 +1,117 @@
+{
+	"name": "pl_wa_mcpm_stage_to_raw",
+	"properties": {
+		"activities": [
+			{
+				"name": "Check File Exists",
+				"type": "GetMetadata",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_mcpm_wa_stage",
+						"type": "DatasetReference"
+					},
+					"fieldList": [
+						"childItems"
+					],
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true
+					},
+					"formatSettings": {
+						"type": "DelimitedTextReadSettings"
+					}
+				}
+			},
+			{
+				"name": "Set_File_Exists_status",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Check File Exists",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "p_pl_fileexists",
+					"value": {
+						"value": "@greaterOrEquals(indexof(string(activity('Check File Exists').output.childItems),'WA'),0)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Run Data Flow if File Exists",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Set_File_Exists_status",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@variables('p_pl_fileexists')",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "df_wa_mcpm_stage_to_raw",
+							"description": "Dataflow to handle Work area data from MCPM",
+							"type": "ExecuteDataFlow",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataflow": {
+									"referenceName": "df_wa_mcpm_stage_to_raw",
+									"type": "DataFlowReference"
+								},
+								"integrationRuntime": {
+									"referenceName": "integrationRuntimeEast2",
+									"type": "IntegrationRuntimeReference"
+								},
+								"traceLevel": "Fine"
+							}
+						}
+					]
+				}
+			}
+		],
+		"variables": {
+			"p_pl_fileexists": {
+				"type": "Boolean"
+			}
+		},
+		"folder": {
+			"name": "Projects/NCSA/3. Work Area/MCPM Work Area"
+		},
+		"annotations": [],
+		"lastPublishTime": "2021-10-07T10:17:35Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

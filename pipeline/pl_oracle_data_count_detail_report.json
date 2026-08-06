@@ -1,0 +1,1189 @@
+{
+	"name": "pl_oracle_data_count_detail_report",
+	"properties": {
+		"activities": [
+			{
+				"name": "lk_get_pipeline_parameters",
+				"description": "Get the parameters to be used in this pipeline",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": {
+									"value": "NetworkFolder",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Set last_run_date - one day",
+				"description": "Sets start and current date",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "lk_get_pipeline_parameters_2",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_end_date",
+					"value": {
+						"value": "@if(equals(activity('lk_get_pipeline_parameters').output.firstRow.end_date,'currdate'),formatDateTime(utcNow(),'yyyy-MM-dd'),formatDateTime(activity('lk_get_pipeline_parameters').output.firstRow.end_date,'yyyy-MM-dd'))",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Run Until start date equals to end date",
+				"type": "Until",
+				"dependsOn": [
+					{
+						"activity": "Set last_run_date - one day",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "GetClientId",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "GetClientSecret",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@greaterOrEquals(activity('lk_get_pipeline_parameters_to_lookup_dates').output.firstRow.start_date,if(equals(activity('lk_get_pipeline_parameters').output.firstRow.end_date,'currdate'),formatDateTime(utcNow(),'yyyy-MM-dd HH:mm:ss'),formatDateTime(activity('lk_get_pipeline_parameters').output.firstRow.end_date,'yyyy-MM-dd HH:mm:ss')))",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "Oracle_Data_Count_Detail_Report_Src_to_Stage",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "Get Access Token",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "BinarySource",
+									"storeSettings": {
+										"type": "HttpReadSettings",
+										"requestMethod": "POST",
+										"additionalHeaders": {
+											"value": "@concat('Authorization: Bearer ', activity('Get Access Token').output.access_token,'\nContent-Type: application/soap+xml;charset=UTF-8\nContent-Length: 649\nConnection: Keep-Alive\nUser-Agent: Apache-HttpClient/4.1.1 (java 1.5)\n')",
+											"type": "Expression"
+										},
+										"requestBody": {
+											"value": "@concat('<ns1:Envelope xmlns:ns1=\"http://www.w3.org/2003/05/soap-envelope\">\n<ns1:Body>\n<ns2:runReport xmlns:ns2=\"http://xmlns.oracle.com/oxp/service/PublicReportService\">\n<ns2:reportRequest>\n<ns2:attributeFormat>xml</ns2:attributeFormat>\n<ns2:parameterNameValues>\n<ns2:item>\n<ns2:name>P_FROM_DATE</ns2:name>\n<ns2:values>\n<ns2:item>',variables('v_start_date'),'</ns2:item>\n</ns2:values>\n</ns2:item>\n<ns2:item>\n<ns2:name>P_TO_DATE</ns2:name>\n<ns2:values>\n<ns2:item>',variables('v_end_date'),'</ns2:item>\n</ns2:values>\n</ns2:item>\n</ns2:parameterNameValues>\n<ns2:reportAbsolutePath>/Custom/Oracle R2P Integrations/Invoice Inquiry Dashboard/MDR_ORACLE_DATA_COUNT_DETAIL_REPORT.xdo</ns2:reportAbsolutePath>\n<ns2:sizeOfDataChunkDownload>-1</ns2:sizeOfDataChunkDownload>\n</ns2:reportRequest>\n</ns2:runReport>\n</ns1:Body>\n</ns1:Envelope>')",
+											"type": "Expression"
+										},
+										"requestTimeout": ""
+									},
+									"formatSettings": {
+										"type": "BinaryReadSettings"
+									}
+								},
+								"sink": {
+									"type": "BinarySink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									}
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_http_binary_oracle_data_count_detail_report_source",
+									"type": "DatasetReference"
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_adlsg2_binary_oracle_data_count_detail_report_source_stage",
+									"type": "DatasetReference"
+								}
+							]
+						},
+						{
+							"name": "df_oracle_data_count_detail_report_decoding",
+							"type": "ExecuteDataFlow",
+							"dependsOn": [
+								{
+									"activity": "Oracle_Data_Count_Detail_Report_Src_to_Stage",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataflow": {
+									"referenceName": "df_oracle_data_count_detail_report_decoding",
+									"type": "DataFlowReference"
+								},
+								"compute": {
+									"coreCount": 32,
+									"computeType": "MemoryOptimized"
+								},
+								"traceLevel": "Fine"
+							}
+						},
+						{
+							"name": "df_oracle_data_count_detail_report_flattening",
+							"type": "ExecuteDataFlow",
+							"dependsOn": [
+								{
+									"activity": "df_oracle_data_count_detail_report_decoding",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataflow": {
+									"referenceName": "df_oracle_data_count_detail_report_flattening",
+									"type": "DataFlowReference"
+								},
+								"compute": {
+									"coreCount": 32,
+									"computeType": "MemoryOptimized"
+								},
+								"traceLevel": "Fine"
+							}
+						},
+						{
+							"name": "Copy Latest Data To Synapse Stage Table",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "df_oracle_data_count_detail_report_flattening",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": false,
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "SqlDWSink",
+									"preCopyScript": "truncate table [rpy].[Oracle_Data_Count_Detail_Report_stage]",
+									"allowCopyCommand": true,
+									"disableMetricsCollection": false
+								},
+								"enableStaging": true,
+								"stagingSettings": {
+									"linkedServiceName": {
+										"referenceName": "ADLSG2 TimeAnalytics DEV",
+										"type": "LinkedServiceReference"
+									},
+									"path": "mdr-raw-data/Polybase_Staging_Space"
+								},
+								"translator": {
+									"type": "TabularTranslator",
+									"mappings": [
+										{
+											"source": {
+												"name": "LAST_UPDATE_DATE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "LAST_UPDATE_DATE",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "TABLENAME",
+												"type": "String"
+											},
+											"sink": {
+												"name": "TABLENAME",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "SOURCE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "SOURCE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "BU_NAME",
+												"type": "String"
+											},
+											"sink": {
+												"name": "BU_NAME",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ORG_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ORG_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "INVOICE_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "INVOICE_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PAYMENT_NUM",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PAYMENT_NUM",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "CODE_COMBINATION_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "CODE_COMBINATION_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PROJECT_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PROJECT_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PROJ_ELEMENT_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PROJ_ELEMENT_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PARTY_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PARTY_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PARTY_SITE_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PARTY_SITE_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "INVOICE_PAYMENT_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "INVOICE_PAYMENT_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "CHECK_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "CHECK_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PAYMENT_HISTORY_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PAYMENT_HISTORY_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PREPAY_APP_DIST_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PREPAY_APP_DIST_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PREPAY_HISTORY_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PREPAY_HISTORY_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "EXPENDITURE_TYPE_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "EXPENDITURE_TYPE_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "USER_ROLE_DATA_ASSIGNMENT_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "USER_ROLE_DATA_ASSIGNMENT_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "FROM_CURRENCY",
+												"type": "String"
+											},
+											"sink": {
+												"name": "FROM_CURRENCY",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "TO_CURRENCY",
+												"type": "String"
+											},
+											"sink": {
+												"name": "TO_CURRENCY",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "CONVERSION_DATE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "CONVERSION_DATE",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "CONVERSION_TYPE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "CONVERSION_TYPE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ACCOUNT",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ACCOUNT",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "EVENT_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "EVENT_ID",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "LINE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "LINE",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "JOURNAL_LINE_NUMBER",
+												"type": "String"
+											},
+											"sink": {
+												"name": "JOURNAL_LINE_NUMBER",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "LAST_UPDATE_DATE_DD",
+												"type": "String"
+											},
+											"sink": {
+												"name": "LAST_UPDATE_DATE_DD",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "LAST_UPDATE_DATE_MM",
+												"type": "String"
+											},
+											"sink": {
+												"name": "LAST_UPDATE_DATE_MM",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "LAST_UPDATE_DATE_YYYY",
+												"type": "String"
+											},
+											"sink": {
+												"name": "LAST_UPDATE_DATE_YYYY",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "DATA_COUNT",
+												"type": "String"
+											},
+											"sink": {
+												"name": "DATA_COUNT",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "P_FROM_DATE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "P_FROM_DATE",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "P_TO_DATE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "P_TO_DATE",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "source_name",
+												"type": "String"
+											},
+											"sink": {
+												"name": "source_name",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "sub_source_name",
+												"type": "String"
+											},
+											"sink": {
+												"name": "sub_source_name",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "created_date_time",
+												"type": "String"
+											},
+											"sink": {
+												"name": "created_date_time",
+												"type": "DateTime"
+											}
+										}
+									]
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_adlsg2_csv_oracle_data_count_detail_report_source_stage_final_flatten_csv",
+									"type": "DatasetReference"
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_AzureSynapseAnalytics_oracle_data_count_detail_report",
+									"type": "DatasetReference"
+								}
+							]
+						},
+						{
+							"name": "Set Start Date",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "lk_get_pipeline_parameters_to_lookup_dates",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "v_start_date",
+								"value": {
+									"value": "@activity('lk_get_pipeline_parameters_to_lookup_dates').output.firstRow.start_date",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Set End Date",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Set Start Date",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "v_end_date",
+								"value": {
+									"value": "@formatDateTime(addDays(activity('lk_get_pipeline_parameters_to_lookup_dates').output.firstRow.start_date,int(activity('lk_get_pipeline_parameters_to_lookup_dates').output.firstRow.number_of_days)),'yyyy-MM-dd HH:mm:ss')",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Increment Start Date",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Insert from stage to final table",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+								"storedProcedureParameters": {
+									"pParameterValue": {
+										"value": {
+											"value": "@formatDateTime(addDays(activity('lk_get_pipeline_parameters_to_lookup_dates').output.firstRow.start_date,int(activity('lk_get_pipeline_parameters_to_lookup_dates').output.firstRow.number_of_days)),'yyyy-MM-dd HH:mm:ss')",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"pPipelineCode": {
+										"value": {
+											"value": "@pipeline().Pipeline",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"pPipelineSubCode": {
+										"value": "NetworkFolder",
+										"type": "String"
+									},
+									"pParameterCode": {
+										"value": "start_date",
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "AzureSynapseDB_DEV",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "Insert from stage to final table",
+							"type": "Script",
+							"dependsOn": [
+								{
+									"activity": "Delete NULL Oracle_Data_Count_Detail_Report",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"linkedServiceName": {
+								"referenceName": "linkedservice_DEV_entanalytics_synapse",
+								"type": "LinkedServiceReference"
+							},
+							"typeProperties": {
+								"scripts": [
+									{
+										"type": "NonQuery",
+										"text": "insert into [rpy].[Oracle_Data_Count_Detail_Report] select * from [rpy].[Oracle_Data_Count_Detail_Report_stage]"
+									}
+								],
+								"scriptBlockExecutionTimeout": "02:00:00"
+							}
+						},
+						{
+							"name": "lk_get_pipeline_parameters_to_lookup_dates",
+							"description": "Get the parameters to be used in this pipeline",
+							"type": "Lookup",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SqlDWSource",
+									"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+									"storedProcedureParameters": {
+										"pPipelineCode": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().Pipeline",
+												"type": "Expression"
+											}
+										},
+										"pPipeLineSubCode": {
+											"type": "String",
+											"value": {
+												"value": "NetworkFolder",
+												"type": "Expression"
+											}
+										}
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "ds_azure_synapse_parameter",
+									"type": "DatasetReference"
+								}
+							}
+						},
+						{
+							"name": "Delete NULL Oracle_Data_Count_Detail_Report",
+							"type": "Script",
+							"dependsOn": [
+								{
+									"activity": "Copy Latest Data To Synapse Stage Table",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"linkedServiceName": {
+								"referenceName": "linkedservice_DEV_entanalytics_synapse",
+								"type": "LinkedServiceReference"
+							},
+							"typeProperties": {
+								"scripts": [
+									{
+										"type": "NonQuery",
+										"text": "delete from [rpy].[Oracle_Data_Count_Detail_Report_stage] where LAST_UPDATE_DATE is NULL and TABLENAME is NULL"
+									}
+								],
+								"scriptBlockExecutionTimeout": "02:00:00"
+							}
+						},
+						{
+							"name": "Increment Start Date_copy1",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Oracle_Data_Count_Detail_Report_Src_to_Stage",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+								"storedProcedureParameters": {
+									"pParameterValue": {
+										"value": {
+											"value": "@formatDateTime(addDays(activity('lk_get_pipeline_parameters_to_lookup_dates').output.firstRow.start_date,int(activity('lk_get_pipeline_parameters_to_lookup_dates').output.firstRow.number_of_days)),'yyyy-MM-dd HH:mm:ss')",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"pPipelineCode": {
+										"value": {
+											"value": "@pipeline().Pipeline",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"pPipelineSubCode": {
+										"value": "NetworkFolder",
+										"type": "String"
+									},
+									"pParameterCode": {
+										"value": "start_date",
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "AzureSynapseDB_DEV",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "Get Access Token",
+							"type": "WebActivity",
+							"dependsOn": [
+								{
+									"activity": "Set End Date",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"method": "POST",
+								"headers": {
+									"Content-Type": {
+										"value": "application/x-www-form-urlencoded",
+										"type": "Expression"
+									}
+								},
+								"url": {
+									"value": "@activity('lk_get_pipeline_parameters_to_lookup_dates').output.firstRow.token_url",
+									"type": "Expression"
+								},
+								"body": {
+									"value": "grant_type=client_credentials&client_id=@{activity('GetClientId').output.value}&client_secret=@{activity('GetClientSecret').output.value}&scope=@{activity('lk_get_pipeline_parameters').output.firstRow.scope}",
+									"type": "Expression"
+								}
+							}
+						}
+					],
+					"timeout": "6.12:00:00"
+				}
+			},
+			{
+				"name": "Update Start Date with max LAST_UPDATE_DATE",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Lookup to get max LAST_UPDATE_DATE",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+					"storedProcedureParameters": {
+						"pParameterValue": {
+							"value": {
+								"value": "@formatDateTime(activity('Lookup to get max LAST_UPDATE_DATE').output.firstRow.last_update_date,'yyyy-MM-dd HH:mm:ss')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": "NetworkFolder",
+							"type": "String"
+						},
+						"pParameterCode": {
+							"value": "start_date",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseDB_DEV",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Lookup to get max LAST_UPDATE_DATE",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Run Until start date equals to end date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderQuery": "select max(LAST_UPDATE_DATE) as last_update_date from [rpy].[Oracle_Data_Count_Detail_Report]",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "AzureSynapseAnalyticsDB",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Send Email On Failure",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Run Until start date equals to end date",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "POST",
+					"headers": {
+						"Content-Type": "application/json"
+					},
+					"url": "https://prod-31.eastus.logic.azure.com:443/workflows/03d7da5abbab4215a05aeaceae3b96fa/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=asuyutHtoSxGFURsj1-A6AKRiNLdXZ4mTnZvZ17_8hI",
+					"connectVia": {
+						"referenceName": "integrationRuntimeEast2",
+						"type": "IntegrationRuntimeReference"
+					},
+					"body": {
+						"value": "{\n    \"DataFactoryName\": \"@{pipeline().DataFactory}\",\n    \"PipelineName\": \"@{pipeline().Pipeline}\",\n    \"ErrorMessage\": \"Pipeline Failed\",\n    \"EmailTo\": \"@{activity('lk_get_pipeline_parameters_2').output.firstRow.ncsa_master_pipeline_email_to}\",\n    \"Activity\":  \"pl_oracle_data_count_detail_report\"\n}",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "lk_get_pipeline_parameters_2",
+				"description": "Get the parameters to be used in this pipeline",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": "pl_ncsa_master_pipelines"
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "EMAIL"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "GetClientId",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "GET",
+					"url": {
+						"value": "@activity('lk_get_pipeline_parameters').output.firstRow.client_id",
+						"type": "Expression"
+					},
+					"authentication": {
+						"type": "MSI",
+						"resource": {
+							"value": "@concat(split(activity('lk_get_pipeline_parameters').output.firstRow.client_id, '/secrets')[0], '/')",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "GetClientSecret",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "GET",
+					"url": {
+						"value": "@activity('lk_get_pipeline_parameters').output.firstRow.client_secret",
+						"type": "Expression"
+					},
+					"authentication": {
+						"type": "MSI",
+						"resource": {
+							"value": "@concat(split(activity('lk_get_pipeline_parameters').output.firstRow.client_secret, '/secrets')[0], '/')",
+							"type": "Expression"
+						}
+					}
+				}
+			}
+		],
+		"variables": {
+			"v_end_date": {
+				"type": "String"
+			},
+			"v_start_date": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/Payment Dashboard"
+		},
+		"annotations": []
+	}
+}

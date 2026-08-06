@@ -1,0 +1,36 @@
+{
+	"name": "df_smat_po_extract_stage_to_raw",
+	"properties": {
+		"description": "Data Flow to pull data from ADLS Stg to ADLS Raw.",
+		"folder": {
+			"name": "Projects/NCSA/SMAT"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_SMAT_PO_stg",
+						"type": "DatasetReference"
+					},
+					"name": "srcSMATPOExtractStage"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_smat_po_raw",
+						"type": "DatasetReference"
+					},
+					"name": "snkSMATPORaw"
+				}
+			],
+			"transformations": [
+				{
+					"name": "setFileName"
+				}
+			],
+			"script": "parameters{\n\tWildPath as string,\n\tFileName as string\n}\nsource(output(\n\t\tPO_NBR as string,\n\t\tPO_SUPPL as string,\n\t\tPO_DESCR as string,\n\t\tPO_ISSUE_DATE as string,\n\t\tPO_APPR_DATE as string,\n\t\tSUPPLIER_CODE as string,\n\t\tSUPPLIER_NAME as string,\n\t\tSUPPLIER_COUNTRY as string,\n\t\tPO_ITEM_POS as string,\n\t\tPO_ITEM_SUB as string,\n\t\tISH_POS as string,\n\t\tITEM_SHIP_SUB as string,\n\t\tITEM_DESC as string,\n\t\tIDENT_CODE as string,\n\t\tCLIENT_IDENT_CODE as string,\n\t\tTAG_NO as string,\n\t\tCOMMODITY_CODE as string,\n\t\tSIZE1 as string,\n\t\tSIZE2 as string,\n\t\tSIZE3 as string,\n\t\tSIZE4 as string,\n\t\tITEM_SHIP_ID as string,\n\t\tTOTAL_POLI_QT as string,\n\t\tITEM_SHIP_QTY as string,\n\t\tRECD_QTY as string,\n\t\tUOM as string,\n\t\tUNIT_PRICE as string,\n\t\tCURRENCY as string,\n\t\tDELIVERY_DEIGNATION as string,\n\t\tROUTING_METHOD as string,\n\t\tINCOTERM as string,\n\t\tDELIVERY_PLACE as string,\n\t\tPROM_CONTRACT as string,\n\t\tROS_DATE as string,\n\t\tRN_NUMBER as string,\n\t\tRN_DATE as string,\n\t\tRN_QTY as string,\n\t\tRB_APPR_DATE as string,\n\t\tRN_DELIV_DATE as string,\n\t\tRN_READY_DATE as string,\n\t\tIRCT_NUMBER as string,\n\t\tIRCT_DATE as string,\n\t\tINSP_DATE as string,\n\t\tIRC_QTY as string,\n\t\tMCS_NR as string,\n\t\tMCS_DATE as string,\n\t\tHAND_OVER_DEST as string,\n\t\tHAND_OVER_PLAN as string,\n\t\tHAND_OVER_FCST as string,\n\t\tHAND_OVER_ACT as string,\n\t\tSHIP_DEST_1 as string,\n\t\tSHIP_PLAN_1 as string,\n\t\tSHIP_FCST_1 as string,\n\t\tSHIP_ACT_1 as string,\n\t\tSHIP_DEST_2 as string,\n\t\tSHIP_PLAN_2 as string,\n\t\tSHIP_FCST_2 as string,\n\t\tSHIP_ACT_2 as string,\n\t\tSHIP_DEST_3 as string,\n\t\tSHIP_PLAN_3 as string,\n\t\tSHIP_FCST_3 as string,\n\t\tSHIP_ACT_3 as string,\n\t\tTRAFF_ARR_DEST as string,\n\t\tTRAFF_ARR_PLAN as string,\n\t\tTRAFF_ARR_FCST as string,\n\t\tTRAFF_ARR_ACT as string,\n\t\tARR_ON_SITE_DEST as string,\n\t\tARR_ON_SITE_PLAN as string,\n\t\tARR_ON_SITE_FCST as string,\n\t\tARR_ON_SITE_ACT as string,\n\t\tMOC_CARRIER as string,\n\t\tMOC_VOYFLT_NUM as string,\n\t\tMOC_NAME_1 as string,\n\t\tMOC_NAME_2 as string,\n\t\tMOC_ETD as string,\n\t\tMOC_ATD as string,\n\t\tMOC_ETA as string,\n\t\tMOC_ATA as string,\n\t\tMOC_LOADING_PT as string,\n\t\tMOC_UNLOADING_POINT as string,\n\t\tMOC_BOL as string,\n\t\tBUYER as string,\n\t\tEXPEDITER as string,\n\t\tREQUISITION as string,\n\t\tREQ_SUPP as string,\n\t\tREQ_LI as string,\n\t\tREQ_SUB_LI as string,\n\t\tACCOUNT_NUMBER as string,\n\t\tFORECASTED_DEL_DATE as string,\n\t\tIRC_DEST as string,\n\t\tIRC_PLAN as string,\n\t\tIRC_FCST as string,\n\t\tIRC_ACT as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\trowUrlColumn: 'Filename',\n\twildcardPaths:[($WildPath + $FileName + '.csv')]) ~> srcSMATPOExtractStage\nsrcSMATPOExtractStage derive(Filename = concat($WildPath,substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',$FileName,'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv')) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\trowUrlColumn:'Filename',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tmapColumn(\n\t\tPO_NBR,\n\t\tPO_SUPPL,\n\t\tPO_DESCR,\n\t\tPO_ISSUE_DATE,\n\t\tPO_APPR_DATE,\n\t\tSUPPLIER_CODE,\n\t\tSUPPLIER_NAME,\n\t\tSUPPLIER_COUNTRY,\n\t\tPO_ITEM_POS,\n\t\tPO_ITEM_SUB,\n\t\tISH_POS,\n\t\tITEM_SHIP_SUB,\n\t\tITEM_DESC,\n\t\tIDENT_CODE,\n\t\tCLIENT_IDENT_CODE,\n\t\tTAG_NO,\n\t\tCOMMODITY_CODE,\n\t\tSIZE1,\n\t\tSIZE2,\n\t\tSIZE3,\n\t\tSIZE4,\n\t\tITEM_SHIP_ID,\n\t\tTOTAL_POLI_QT,\n\t\tITEM_SHIP_QTY,\n\t\tRECD_QTY,\n\t\tUOM,\n\t\tUNIT_PRICE,\n\t\tCURRENCY,\n\t\tDELIVERY_DEIGNATION,\n\t\tROUTING_METHOD,\n\t\tINCOTERM,\n\t\tDELIVERY_PLACE,\n\t\tPROM_CONTRACT,\n\t\tROS_DATE,\n\t\tRN_NUMBER,\n\t\tRN_DATE,\n\t\tRN_QTY,\n\t\tRB_APPR_DATE,\n\t\tRN_DELIV_DATE,\n\t\tRN_READY_DATE,\n\t\tIRCT_NUMBER,\n\t\tIRCT_DATE,\n\t\tINSP_DATE,\n\t\tIRC_QTY,\n\t\tMCS_NR,\n\t\tMCS_DATE,\n\t\tHAND_OVER_DEST,\n\t\tHAND_OVER_PLAN,\n\t\tHAND_OVER_FCST,\n\t\tHAND_OVER_ACT,\n\t\tSHIP_DEST_1,\n\t\tSHIP_PLAN_1,\n\t\tSHIP_FCST_1,\n\t\tSHIP_ACT_1,\n\t\tSHIP_DEST_2,\n\t\tSHIP_PLAN_2,\n\t\tSHIP_FCST_2,\n\t\tSHIP_ACT_2,\n\t\tSHIP_DEST_3,\n\t\tSHIP_PLAN_3,\n\t\tSHIP_FCST_3,\n\t\tSHIP_ACT_3,\n\t\tTRAFF_ARR_DEST,\n\t\tTRAFF_ARR_PLAN,\n\t\tTRAFF_ARR_FCST,\n\t\tTRAFF_ARR_ACT,\n\t\tARR_ON_SITE_DEST,\n\t\tARR_ON_SITE_PLAN,\n\t\tARR_ON_SITE_FCST,\n\t\tARR_ON_SITE_ACT,\n\t\tMOC_CARRIER,\n\t\tMOC_VOYFLT_NUM,\n\t\tMOC_NAME_1,\n\t\tMOC_NAME_2,\n\t\tMOC_ETD,\n\t\tMOC_ATD,\n\t\tMOC_ETA,\n\t\tMOC_ATA,\n\t\tMOC_LOADING_PT,\n\t\tMOC_UNLOADING_POINT,\n\t\tMOC_BOL,\n\t\tBUYER,\n\t\tEXPEDITER,\n\t\tREQUISITION,\n\t\tREQ_SUPP,\n\t\tREQ_LI,\n\t\tREQ_SUB_LI,\n\t\tACCOUNT_NUMBER,\n\t\tFORECASTED_DEL_DATE,\n\t\tIRC_DEST,\n\t\tIRC_PLAN,\n\t\tIRC_FCST,\n\t\tIRC_ACT,\n\t\tFilename\n\t)) ~> snkSMATPORaw"
+		}
+	}
+}

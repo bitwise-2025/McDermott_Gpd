@@ -1,0 +1,61 @@
+{
+	"name": "df_PLMRisk_specCSV_to_JSONCSV",
+	"properties": {
+		"description": "Dataflow to convert special characters CSV file data into Dynamic JSONCSV",
+		"folder": {
+			"name": "Projects/NCSA/PLM/PLM Risk"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_riskDT_plm_STGfile",
+						"type": "DatasetReference"
+					},
+					"name": "SrcRiskDTFile"
+				},
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_riskRF_plm_STGfile",
+						"type": "DatasetReference"
+					},
+					"name": "srcRiskRFFile"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_risk_StageJSON",
+						"type": "DatasetReference"
+					},
+					"name": "snkJsonSTG"
+				}
+			],
+			"transformations": [
+				{
+					"name": "UnpivotRiskDTData"
+				},
+				{
+					"name": "selectRiskRFColumns"
+				},
+				{
+					"name": "joinRiskRFDTData"
+				},
+				{
+					"name": "DerivedColSwapAttributeNames"
+				},
+				{
+					"name": "selectSTGColumns"
+				},
+				{
+					"name": "aggregateKeyColumns"
+				},
+				{
+					"name": "SnkJSONFormat"
+				}
+			],
+			"script": "parameters{\n\tp_ds_stgfilepath as string,\n\tp_ds_snkstgpath as string,\n\tp_ds_snkstgfilename as string\n}\nsource(output(\n\t\tPROJECT_NUMBER as string,\n\t\tID as string,\n\t\tNAME as string,\n\t\tSTATE as string,\n\t\tDESCRIPTION as string,\n\t\tPOLICY as string,\n\t\tTITLE as string,\n\t\tPROJECT as string,\n\t\tTIMESTAMP as string,\n\t\tORIGINATOR as string,\n\t\tNOTES as string,\n\t\tMEASURE_OF_SUCCESS as string,\n\t\tRISK_VISIBILITY as string,\n\t\tACTUAL_END_DATE as string,\n\t\tACTUAL_START_DATE as string,\n\t\tESTIMATED_END_DATE as string,\n\t\tESTIMATED_START_DATE as string,\n\t\tCOMMENTS as string,\n\t\tRISK_HANDLING_PLAN_TECHNIQUE as string,\n\t\tRISK_HANDLING_PLAN_TECHNIQUE_DESCRIPTION as string,\n\t\tESTIMATED_COST as string,\n\t\tABATEMENT_PLAN as string,\n\t\tRISK_TYPE as string,\n\t\tRISK_PROBABILITY as string,\n\t\tRISK_CATEGORY as string,\n\t\tRISK_FACTOR as string,\n\t\tRISK_IMPACT as string,\n\t\tRISK_MANAGER_ALTERNATE as string,\n\t\tMDR_SUBCATEGORY as string,\n\t\tMDR_RISKFUNCTION as string,\n\t\tINCLUDE_RISK_PROJECT as string,\n\t\tWATCH_LIST as string,\n\t\tRESPONSIBLE_IPT as string,\n\t\tIMPACTED_WBS_NUMBER as string,\n\t\tMAJOR_SYSTEM_OR_COMPONENT_OR_FUNCTIONAL_AREA as string,\n\t\tRISK_ASSIGNEE as string,\n\t\tRISK_MANAGER as string,\n\t\tRISK_AREA_COORDINATOR as string,\n\t\tRISK_STATEMENT as string,\n\t\tPRIMARY_RISK_CATEGORY as string,\n\t\tRISK_TIME_FRAME as string,\n\t\tACTUAL_RISK_FACTOR_LEVEL as string,\n\t\tACTUAL_RISK_FACTOR_COLOR as string,\n\t\tLAST_MONTH_ENTERED as string,\n\t\tPLANNED_MONTH as string,\n\t\tRISK_CONTROL_BOARD_ACTIVITY_LEVEL as string,\n\t\tRISK_CONTROL_BOARD_MEETING_DATE as string,\n\t\tRISK_CONTROL_BOARD_COMMENTS as string,\n\t\tMDR_SCHEDULE_IMPACT as string,\n\t\tMDR_CONSEQUENCE as string,\n\t\tRISK_COST as string,\n\t\tMAXIMUM_ACTUAL_CONSEQUENCE_VALUE as string,\n\t\tMAXIMUM_ACTUAL_LIKELIHOOD_VALUE as string,\n\t\tSTATEMENT_OF_RISK as string,\n\t\tORIGINATED as string,\n\t\tRPN_ID as string,\n\t\tATTRIBUTEVALUE1 as string,\n\t\tATTRIBUTEVALUE2 as string,\n\t\tATTRIBUTEVALUE3 as string,\n\t\tATTRIBUTEVALUE4 as string,\n\t\tATTRIBUTEVALUE5 as string,\n\t\tATTRIBUTEVALUE6 as string,\n\t\tATTRIBUTEVALUE7 as string,\n\t\tATTRIBUTEVALUE8 as string,\n\t\tATTRIBUTEVALUE9 as string,\n\t\tATTRIBUTEVALUE10 as string,\n\t\tATTRIBUTEVALUE11 as string,\n\t\tATTRIBUTEVALUE12 as string,\n\t\tATTRIBUTEVALUE13 as string,\n\t\tATTRIBUTEVALUE14 as string,\n\t\tATTRIBUTEVALUE15 as string,\n\t\tRPN_NUMBER as string,\n\t\tDELETED as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tmultiLineRow: true) ~> SrcRiskDTFile\nsource(output(\n\t\tCOLLABSPACE as string,\n\t\tATTRIBUTE1 as string,\n\t\tATTRIBUTE2 as string,\n\t\tATTRIBUTE3 as string,\n\t\tATTRIBUTE4 as string,\n\t\tATTRIBUTE5 as string,\n\t\tATTRIBUTE6 as string,\n\t\tATTRIBUTE7 as string,\n\t\tATTRIBUTE8 as string,\n\t\tATTRIBUTE9 as string,\n\t\tATTRIBUTE10 as string,\n\t\tATTRIBUTE11 as string,\n\t\tATTRIBUTE12 as string,\n\t\tATTRIBUTE13 as string,\n\t\tATTRIBUTE14 as string,\n\t\tATTRIBUTE15 as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false) ~> srcRiskRFFile\nSrcRiskDTFile unpivot(output(\n\t\tCKey as string,\n\t\tRValue as string\n\t),\n\tungroupBy(PROJECT_NUMBER,\n\t\tPROJECT,\n\t\tID,\n\t\tRPN_ID),\n\tlateral: false,\n\tignoreNullPivots: true) ~> UnpivotRiskDTData\nsrcRiskRFFile select(mapColumn(\n\t\tPROJECT = COLLABSPACE,\n\t\tATTRIBUTEVALUE1 = ATTRIBUTE1,\n\t\tATTRIBUTEVALUE2 = ATTRIBUTE2,\n\t\tATTRIBUTEVALUE3 = ATTRIBUTE3,\n\t\tATTRIBUTEVALUE4 = ATTRIBUTE4,\n\t\tATTRIBUTEVALUE5 = ATTRIBUTE5,\n\t\tATTRIBUTEVALUE6 = ATTRIBUTE6,\n\t\tATTRIBUTEVALUE7 = ATTRIBUTE7,\n\t\tATTRIBUTEVALUE8 = ATTRIBUTE8,\n\t\tATTRIBUTEVALUE9 = ATTRIBUTE9,\n\t\tATTRIBUTEVALUE10 = ATTRIBUTE10,\n\t\tATTRIBUTEVALUE11 = ATTRIBUTE11,\n\t\tATTRIBUTEVALUE12 = ATTRIBUTE12,\n\t\tATTRIBUTEVALUE13 = ATTRIBUTE13,\n\t\tATTRIBUTEVALUE14 = ATTRIBUTE14,\n\t\tATTRIBUTEVALUE15 = ATTRIBUTE15\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> selectRiskRFColumns\nselectRiskRFColumns, UnpivotRiskDTData join(selectRiskRFColumns@PROJECT == UnpivotRiskDTData@PROJECT,\n\tjoinType:'right',\n\tmatchType:'exact',\n\tignoreSpaces: false,\n\tbroadcast: 'auto')~> joinRiskRFDTData\njoinRiskRFDTData derive(CKey = case(CKey == 'ATTRIBUTEVALUE1',ATTRIBUTEVALUE1,CKey == 'ATTRIBUTEVALUE2', ATTRIBUTEVALUE2,CKey == 'ATTRIBUTEVALUE3', ATTRIBUTEVALUE3,CKey == 'ATTRIBUTEVALUE4', ATTRIBUTEVALUE4,CKey == 'ATTRIBUTEVALUE5', ATTRIBUTEVALUE5,CKey == 'ATTRIBUTEVALUE6', ATTRIBUTEVALUE6,CKey == 'ATTRIBUTEVALUE7', ATTRIBUTEVALUE7,CKey == 'ATTRIBUTEVALUE8', ATTRIBUTEVALUE8,CKey == 'ATTRIBUTEVALUE9', ATTRIBUTEVALUE9,CKey == 'ATTRIBUTEVALUE10', ATTRIBUTEVALUE10,CKey == 'ATTRIBUTEVALUE11', ATTRIBUTEVALUE11,CKey == 'ATTRIBUTEVALUE12', ATTRIBUTEVALUE12,CKey == 'ATTRIBUTEVALUE13', ATTRIBUTEVALUE13,CKey == 'ATTRIBUTEVALUE14', ATTRIBUTEVALUE14,CKey == 'ATTRIBUTEVALUE15', ATTRIBUTEVALUE15,CKey)) ~> DerivedColSwapAttributeNames\nDerivedColSwapAttributeNames select(mapColumn(\n\t\tPROJECT = selectRiskRFColumns@PROJECT,\n\t\tPROJECT_NUMBER,\n\t\tID,\n\t\tRPN_ID,\n\t\tCKey,\n\t\tRValue\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> selectSTGColumns\nselectSTGColumns aggregate(groupBy(PROJECT_NUMBER,\n\t\tPROJECT,\n\t\tID,\n\t\tRPN_ID),\n\tJSON_ATTRIBUTE = collect(CKey+'::'+replace(replace(RValue,'\\n',' '),'\\r',' '))) ~> aggregateKeyColumns\naggregateKeyColumns derive(JSON_ATTRIBUTE = '{ '+trim(replace(toString(JSON_ATTRIBUTE),'::','\" : \"'),'[]')+' }') ~> SnkJSONFormat\nSnkJSONFormat sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:[($p_ds_snkstgfilename)],\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tmapColumn(\n\t\tPROJECT,\n\t\tPROJECT_NUMBER,\n\t\tID,\n\t\tRPN_ID,\n\t\tJSON_ATTRIBUTE\n\t),\n\tpartitionBy('hash', 1)) ~> snkJsonSTG"
+		}
+	}
+}

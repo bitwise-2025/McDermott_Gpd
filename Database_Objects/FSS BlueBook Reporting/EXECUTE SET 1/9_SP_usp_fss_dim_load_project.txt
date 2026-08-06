@@ -1,0 +1,62 @@
+/****** Object:  StoredProcedure [dbo].[usp_fss_dim_load_project]    Script Date: 10/17/2023 6:31:33 AM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE PROC [dbo].[usp_fss_dim_load_project]
+AS
+BEGIN
+	BEGIN TRY
+		SET NOCOUNT ON
+
+		DECLARE @error_message VARCHAR(1000)
+		DECLARE @processed_count INT
+		DECLARE @unprocessed_count INT
+		DECLARE @exceptionRaiser INT;
+		DECLARE @errorMessage VARCHAR(4000);
+
+		EXECUTE [dbo].[generic_load_dim_v2] 'dim_entp_fss_project','Y','N','Y'
+
+		-----------------------------------------------------------------
+		--Cleanup Stage table. Report stats along with any error message
+		-----------------------------------------------------------------
+		IF isnull(@processed_count, 0) > 0
+		BEGIN
+			SELECT @error_message = 'Total records processed is ' + convert(VARCHAR(40), @processed_count)
+		END
+
+		SELECT @error_message = isnull(@error_message, '')
+
+		IF isnull(@processed_count, 0) > 0
+		BEGIN
+			SELECT @error_message = @error_message + 'Total records failed validation ' + convert(VARCHAR(40), @unprocessed_count)
+		END
+
+		IF isnull(@error_message, '') = ''
+		BEGIN
+			SELECT 'Success';
+		END
+		ELSE
+		BEGIN
+			SELECT @error_message;
+		END
+	END TRY
+
+	BEGIN CATCH
+		IF @errorMessage IS NOT NULL
+		BEGIN
+			SELECT 'Failed'
+				,@errorMessage;
+				--RAISEERROR(@errorMessage)
+		END
+		ELSE
+		BEGIN
+			SELECT 'Failed'
+				,error_message()
+		END;
+	END CATCH;
+END
+GO
+

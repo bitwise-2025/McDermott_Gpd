@@ -1,0 +1,1193 @@
+{
+	"name": "pl_ecm_employeesdata_raw_to_synapse",
+	"properties": {
+		"activities": [
+			{
+				"name": "Check Combined File non zero Bytes",
+				"description": "Check if the combined file has any data to be loaded.",
+				"type": "GetMetadata",
+				"dependsOn": [
+					{
+						"activity": "cp_Get_Latest_File",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_maps_ecm_employeesdata_raw_latest",
+						"type": "DatasetReference"
+					},
+					"fieldList": [
+						"size",
+						"exists"
+					],
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true
+					},
+					"formatSettings": {
+						"type": "DelimitedTextReadSettings"
+					}
+				}
+			},
+			{
+				"name": "Set start date",
+				"description": "Set the last stage run date to the variable as start date.",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lkup_Get_Pipeline_parameters_getlrd",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_lrd_src_to_stage",
+					"value": {
+						"value": "@activity('lkup_Get_Pipeline_parameters_getlrd').output.firstRow.start_date",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "cp_Get_Latest_File",
+				"description": "Copy all the files created since the last start date and combine them into one file to be processed into Synapse.",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Set start date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.09:00:00",
+					"retry": 1,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": true,
+							"modifiedDatetimeStart": {
+								"value": "@variables('v_lrd_src_to_stage')",
+								"type": "Expression"
+							},
+							"wildcardFolderPath": "Project_Data/NCSA/ECM/EmployeesData",
+							"wildcardFileName": "EmployeesData*.csv"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings",
+							"copyBehavior": "MergeFiles"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": "ts_itime_combined.csv"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_maps_ecm_employeesdata_raw",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_maps_ecm_employeesdata_raw_latest",
+						"type": "DatasetReference"
+					}
+				]
+			},
+			{
+				"name": "if_File_Exists_Copy_to_Synapse",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Check Combined File non zero Bytes",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@greater(activity('Check Combined File non zero Bytes').output.size, 2)",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "cp_copy_from_adlsg2_to_Synapse",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": true,
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "SqlDWSink",
+									"preCopyScript": "truncate table gpd.ECM_EmployeesData",
+									"allowCopyCommand": true,
+									"disableMetricsCollection": false
+								},
+								"enableStaging": true,
+								"stagingSettings": {
+									"linkedServiceName": {
+										"referenceName": "ADLSG2 TimeAnalytics DEV",
+										"type": "LinkedServiceReference"
+									},
+									"path": "mdr-raw-data/Polybase_Staging_Space/ECM/Staging"
+								},
+								"enableSkipIncompatibleRow": true,
+								"logSettings": {
+									"enableCopyActivityLog": true,
+									"copyActivityLogSettings": {
+										"logLevel": "Warning",
+										"enableReliableLogging": false
+									},
+									"logLocationSettings": {
+										"linkedServiceName": {
+											"referenceName": "ADGLS2 SRCDEST DEV",
+											"type": "LinkedServiceReference"
+										},
+										"path": "mdr-raw-data/Polybase_Staging_Space/ECM/Logs"
+									}
+								},
+								"translator": {
+									"type": "TabularTranslator",
+									"mappings": [
+										{
+											"source": {
+												"name": "employeesdata_country",
+												"type": "String"
+											},
+											"sink": {
+												"name": "employeesdata_country",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "missingfolders",
+												"type": "String"
+											},
+											"sink": {
+												"name": "missingfolders",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "employeesdata_modifiedAt",
+												"type": "String"
+											},
+											"sink": {
+												"name": "employeesdata_modifiedAt",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "employeesdata_oracleID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "employeesdata_oracleID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "employeesdata_employeeStatus",
+												"type": "String"
+											},
+											"sink": {
+												"name": "employeesdata_employeeStatus",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "employeesdata_terminationDate",
+												"type": "String"
+											},
+											"sink": {
+												"name": "employeesdata_terminationDate",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "employeesdata_createdAt",
+												"type": "String"
+											},
+											"sink": {
+												"name": "employeesdata_createdAt",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "employeesdata_sitename",
+												"type": "String"
+											},
+											"sink": {
+												"name": "employeesdata_sitename",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "employeesdata_siteid",
+												"type": "String"
+											},
+											"sink": {
+												"name": "employeesdata_siteid",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "employeesdata_noderef",
+												"type": "String"
+											},
+											"sink": {
+												"name": "employeesdata_noderef",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "employeesdata_modifiedBy",
+												"type": "String"
+											},
+											"sink": {
+												"name": "employeesdata_modifiedBy",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "employeesdata_businesslinetwo",
+												"type": "String"
+											},
+											"sink": {
+												"name": "employeesdata_businesslinetwo",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "employeesdata_area",
+												"type": "String"
+											},
+											"sink": {
+												"name": "employeesdata_area",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "employeesdata_documentCreationDate",
+												"type": "String"
+											},
+											"sink": {
+												"name": "employeesdata_documentCreationDate",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "employeesdata_allowTermination",
+												"type": "String"
+											},
+											"sink": {
+												"name": "employeesdata_allowTermination",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "employeesdata_hireDate",
+												"type": "String"
+											},
+											"sink": {
+												"name": "employeesdata_hireDate",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "employeesdata_author",
+												"type": "String"
+											},
+											"sink": {
+												"name": "employeesdata_author",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "employeesdata_isExecutive",
+												"type": "String"
+											},
+											"sink": {
+												"name": "employeesdata_isExecutive",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "employeesdata_businesslineone",
+												"type": "String"
+											},
+											"sink": {
+												"name": "employeesdata_businesslineone",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "employeesdata_planInactiveDate",
+												"type": "String"
+											},
+											"sink": {
+												"name": "employeesdata_planInactiveDate",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "employeesdata_createdBy",
+												"type": "String"
+											},
+											"sink": {
+												"name": "employeesdata_createdBy",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "employeesdata_legacyID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "employeesdata_legacyID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "employeesdata_location",
+												"type": "String"
+											},
+											"sink": {
+												"name": "employeesdata_location",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "recorddetails_identifier",
+												"type": "String"
+											},
+											"sink": {
+												"name": "recorddetails_identifier",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "recorddetails_recordSearchDispositionAuthority",
+												"type": "String"
+											},
+											"sink": {
+												"name": "recorddetails_recordSearchDispositionAuthority",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "recorddetails_recordSearchDispositionActionAsOf",
+												"type": "String"
+											},
+											"sink": {
+												"name": "recorddetails_recordSearchDispositionActionAsOf",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "recorddetails_recordOriginatingLocation",
+												"type": "String"
+											},
+											"sink": {
+												"name": "recorddetails_recordOriginatingLocation",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "recorddetails_rootNodeRef",
+												"type": "String"
+											},
+											"sink": {
+												"name": "recorddetails_rootNodeRef",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "recorddetails_recordSearchDispositionEventsEligible",
+												"type": "String"
+											},
+											"sink": {
+												"name": "recorddetails_recordSearchDispositionEventsEligible",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "recorddetails_recordOriginatingCreationDate",
+												"type": "String"
+											},
+											"sink": {
+												"name": "recorddetails_recordOriginatingCreationDate",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "recorddetails_recordSearchDispositionInstructions",
+												"type": "String"
+											},
+											"sink": {
+												"name": "recorddetails_recordSearchDispositionInstructions",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "recorddetails_holddetails",
+												"type": "String"
+											},
+											"sink": {
+												"name": "recorddetails_holddetails",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "recorddetails_recordSearchDispositionPeriod",
+												"type": "String"
+											},
+											"sink": {
+												"name": "recorddetails_recordSearchDispositionPeriod",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "recorddetails_recordSearchHasDispositionSchedule",
+												"type": "String"
+											},
+											"sink": {
+												"name": "recorddetails_recordSearchHasDispositionSchedule",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "recorddetails_recordOriginatingUserId",
+												"type": "String"
+											},
+											"sink": {
+												"name": "recorddetails_recordOriginatingUserId",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "recorddetails_recordSearchVitalRecordReviewPeriod",
+												"type": "String"
+											},
+											"sink": {
+												"name": "recorddetails_recordSearchVitalRecordReviewPeriod",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "recorddetails_recordSearchDispositionEvents",
+												"type": "String"
+											},
+											"sink": {
+												"name": "recorddetails_recordSearchDispositionEvents",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "recorddetails_frozenBy",
+												"type": "String"
+											},
+											"sink": {
+												"name": "recorddetails_frozenBy",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "recorddetails_recordSearchDispositionActionName",
+												"type": "String"
+											},
+											"sink": {
+												"name": "recorddetails_recordSearchDispositionActionName",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "recorddetails_recordSearchVitalRecordReviewPeriodExpression",
+												"type": "String"
+											},
+											"sink": {
+												"name": "recorddetails_recordSearchVitalRecordReviewPeriodExpression",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "recorddetails_recordSearchDispositionPeriodExpression",
+												"type": "String"
+											},
+											"sink": {
+												"name": "recorddetails_recordSearchDispositionPeriodExpression",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "recorddetails_frozenAt",
+												"type": "String"
+											},
+											"sink": {
+												"name": "recorddetails_frozenAt",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "recorddetails_origionalName",
+												"type": "String"
+											},
+											"sink": {
+												"name": "recorddetails_origionalName",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "recorddetails_cutoffdate",
+												"type": "String"
+											},
+											"sink": {
+												"name": "recorddetails_cutoffdate",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "documents_name",
+												"type": "String"
+											},
+											"sink": {
+												"name": "documents_name",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "documents_noofpages",
+												"type": "String"
+											},
+											"sink": {
+												"name": "documents_noofpages",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "documents_noderef",
+												"type": "String"
+											},
+											"sink": {
+												"name": "documents_noderef",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "subfolders_name",
+												"type": "String"
+											},
+											"sink": {
+												"name": "subfolders_name",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "subfolders_noderef",
+												"type": "String"
+											},
+											"sink": {
+												"name": "subfolders_noderef",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "employeesdata_directdocuments",
+												"type": "String"
+											},
+											"sink": {
+												"name": "employeesdata_directdocuments",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "employeesdata_employeename",
+												"type": "String"
+											},
+											"sink": {
+												"name": "employeesdata_employeename",
+												"type": "String"
+											}
+										}
+									]
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_adlsg2_csv_maps_ecm_employeesdata_raw_latest",
+									"type": "DatasetReference"
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_synapse_ecm_employeesdata",
+									"type": "DatasetReference"
+								}
+							]
+						},
+						{
+							"name": "Delete Temp combined File",
+							"description": "After the data has been loaded, clear the combined latest file from the ADLSV2 ",
+							"type": "Delete",
+							"dependsOn": [
+								{
+									"activity": "cp_copy_from_adlsg2_to_Synapse",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataset": {
+									"referenceName": "ds_adlsg2_csv_maps_ecm_employeesdata_raw_latest",
+									"type": "DatasetReference"
+								},
+								"enableLogging": false,
+								"storeSettings": {
+									"type": "AzureBlobFSReadSettings",
+									"recursive": true,
+									"enablePartitionDiscovery": false
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "lkup_Get_Pipeline_parameters_getlrd",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "NetworkFolder"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "sp_Update_Parameter",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "dim_ecmhr_detail",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+					"storedProcedureParameters": {
+						"pParameterValue": {
+							"value": {
+								"value": "@formatDateTime(activity('lkup_Get_Pipeline_parameters_getlrd').output.firstRow.run_start_datetime,'yyyy-MM-dd HH:mm:ss.fff')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": "NetworkFolder",
+							"type": "String"
+						},
+						"pParameterCode": {
+							"value": "start_date",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseDB_DEV",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "dim_ecmhr_geolocation_bl1",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "if_File_Exists_Copy_to_Synapse",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[generic_load_dim_v2]",
+					"storedProcedureParameters": {
+						"debug_flag": {
+							"value": "N",
+							"type": "String"
+						},
+						"execute_flag": {
+							"value": "Y",
+							"type": "String"
+						},
+						"load_name": {
+							"value": "dim_ecmhr_geolocation_bl1",
+							"type": "String"
+						},
+						"rkValidationRequired": {
+							"value": "Y",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "dim_ecmhr_geolocation_bl2",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "dim_ecmhr_geolocation_bl1",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[generic_load_dim_v2]",
+					"storedProcedureParameters": {
+						"debug_flag": {
+							"value": "N",
+							"type": "String"
+						},
+						"execute_flag": {
+							"value": "Y",
+							"type": "String"
+						},
+						"load_name": {
+							"value": "dim_ecmhr_geolocation_bl2",
+							"type": "String"
+						},
+						"rkValidationRequired": {
+							"value": "Y",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "dim_ecmhr_geolocation_area",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "dim_ecmhr_geolocation_bl2",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[generic_load_dim_v2]",
+					"storedProcedureParameters": {
+						"debug_flag": {
+							"value": "N",
+							"type": "String"
+						},
+						"execute_flag": {
+							"value": "Y",
+							"type": "String"
+						},
+						"load_name": {
+							"value": "dim_ecmhr_geolocation_area",
+							"type": "String"
+						},
+						"rkValidationRequired": {
+							"value": "Y",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "dim_ecmhr_geolocation_country",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "dim_ecmhr_geolocation_area",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[generic_load_dim_v2]",
+					"storedProcedureParameters": {
+						"debug_flag": {
+							"value": "N",
+							"type": "String"
+						},
+						"execute_flag": {
+							"value": "Y",
+							"type": "String"
+						},
+						"load_name": {
+							"value": "dim_ecmhr_geolocation_country",
+							"type": "String"
+						},
+						"rkValidationRequired": {
+							"value": "Y",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "dim_ecmhr_geolocation_location",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "dim_ecmhr_geolocation_country",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[generic_load_dim_v2]",
+					"storedProcedureParameters": {
+						"debug_flag": {
+							"value": "N",
+							"type": "String"
+						},
+						"execute_flag": {
+							"value": "Y",
+							"type": "String"
+						},
+						"load_name": {
+							"value": "dim_ecmhr_geolocation_location",
+							"type": "String"
+						},
+						"rkValidationRequired": {
+							"value": "Y",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "dim_ecmhr_header",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "dim_ecmhr_geolocation_location",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[generic_load_dim_v2]",
+					"storedProcedureParameters": {
+						"debug_flag": {
+							"value": "N",
+							"type": "String"
+						},
+						"execute_flag": {
+							"value": "Y",
+							"type": "String"
+						},
+						"load_name": {
+							"value": "dim_ecmhr_header",
+							"type": "String"
+						},
+						"rkValidationRequired": {
+							"value": "Y",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "dim_ecmhr_detail",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "dim_ecmhr_header",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[generic_load_dim_v2]",
+					"storedProcedureParameters": {
+						"debug_flag": {
+							"value": "N",
+							"type": "String"
+						},
+						"execute_flag": {
+							"value": "Y",
+							"type": "String"
+						},
+						"load_name": {
+							"value": "dim_ecmhr_detail",
+							"type": "String"
+						},
+						"rkValidationRequired": {
+							"value": "Y",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"variables": {
+			"v_lrd_src_to_stage": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/ECM"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-03-09T05:53:35Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

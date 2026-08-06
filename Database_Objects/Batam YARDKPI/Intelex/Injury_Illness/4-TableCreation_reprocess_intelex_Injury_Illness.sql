@@ -1,0 +1,106 @@
+/****** Object:  Table [yardkpi].[reprocess_injury_illness]    Script Date: 11/23/2022 11:29:07 AM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+--DROP TABLE [yardkpi].[reprocess_intelex_injury_illness]
+
+CREATE TABLE [yardkpi].[reprocess_intelex_injury_illness]
+(
+	[rssk] [bigint] IDENTITY(1,1) NOT NULL,
+	[source_code] [varchar](50) NULL,
+	[sub_source_code] [varchar](50) NULL,
+	[row_id] [bigint] NULL,
+	[employee_id] [varchar](50) NULL,
+	[record_no] [bigint] NULL,
+	[category] [varchar](100) NULL,
+	[date] [datetime] NULL,
+	[hipo_change_counter] [int] NULL,
+	[location] [varchar](50) NULL,
+	[was_treatment_received] [varchar](20) NULL,
+	[hipo] [varchar](20) NULL,
+	[related_movs] [varchar](400) NULL,
+	[profile_type] [varchar](100) NULL,
+	[profile_no] [varchar](40) NULL,
+	[profile] [varchar](1000) NULL,
+	[vessel_barge] [varchar](200) NULL,
+	[business_line] [varchar](100) NULL,
+	[area] [varchar](100) NULL,
+	[project_name] [varchar](500) NULL,
+	[project_number] [varchar](50) NULL,
+	[incident_title] [varchar](2000) NULL,
+	[hospitalization_type] [varchar](50) NULL,
+	[description] [varchar](8000) NULL,
+	[injury_or_illness] [varchar](50) NULL,
+	[number_of_people_impacted] [varchar](100) NULL,
+	[immediate_action] [varchar](8000) NULL,
+	[external_agency_notification_required] [varchar](40) NULL,
+	[specify_agency] [varchar](300) NULL,
+	[specify_other] [varchar](300) NULL,
+	[worker_type] [varchar](40) NULL,
+	[does_employee_exist_in_the_system] [varchar](40) NULL,
+	[employee_id2] [varchar](50) NULL,
+	[first_name] [varchar](500) NULL,
+	[last_name] [varchar](500) NULL,
+	[did_the_incident_occur_during_rework] [varchar](20) NULL,
+	[potential_risk_reporting_level] [varchar](50) NULL,
+	[potential_severity_level] [varchar](50) NULL,
+	[actual_severity_level] [varchar](200) NULL,
+	[reported_by] [varchar](500) NULL,
+	[stop_work_authority_applied] [varchar](20) NULL,
+	[work_related_injury_illness] [varchar](20) NULL,
+	[impacted_person_sent_offsite_for_evaluation_or_treatment] [varchar](20) NULL,
+	[drug_and_or_alcohol_test_required] [varchar](20) NULL,
+	[local_news_media_involvement] [varchar](20) NULL,
+	[incident_reported_by] [varchar](500) NULL,
+	[created_by] [varchar](500) NULL,
+	[date_created] [datetime] NULL,
+	[assign_investigator] [varchar](500) NULL,
+	[comments] [varchar](5000) NULL,
+	[workers_comp] [varchar](200) NULL,
+	[workers_comp_comments] [varchar](5000) NULL,
+	[shift_details] [varchar](20) NULL,
+	[hours_into_shift] [varchar](100) NULL,
+	[shift_duration] [varchar](100) NULL,
+	[privacy_case] [varchar](100) NULL,
+	[events_exposures] [varchar](3000) NULL,
+	[source_of_injury_illness] [varchar](8000) NULL,
+	[source_details] [varchar](8000) NULL,
+	[body_part] [varchar](5000) NULL,
+	[injury_illness] [varchar](5000) NULL,
+	[initial_treatment] [varchar](1000) NULL,
+	[who_provided_treatment] [varchar](500) NULL,
+	[hospitalized] [varchar](40) NULL,
+	[recordable] [varchar](40) NULL,
+	[recordable_classification] [varchar](400) NULL,
+	[start_date_and_time_of_investigation] [datetime] NULL,
+	[end_date_and_time_of_investigation] [datetime] NULL,
+	[investigator] [varchar](500) NULL,
+	[additional_investigators] [varchar](8000) NULL,
+	[hipo_2] [varchar](20) NULL,
+	[incident_owner] [varchar](500) NULL,
+	[total_number_of_days_away] [int] NULL,
+	[total_number_of_job_transfer] [int] NULL,
+	[total_number_of_restricted_days] [int] NULL,
+	[total_number_of_restricted_or_job_transfer_days] [int] NULL,
+	[date_approved] [datetime] NULL,
+	[approvers_comment] [varchar](8000) NULL,
+	[approved_by] [varchar](500) NULL,
+	[workflowcurrent_stage] [varchar](200) NULL,
+	[workflowworkflow_status] [varchar](40) NULL,
+	[workflowstatus] [varchar](40) NULL,
+	[workflowcurrent_person_responsible] [varchar](500) NULL,
+	[hash_code] [varchar](8000) NULL,
+	[rk_failure_info] [varchar](5000) NULL,
+	[created_date_time] [datetime] NULL
+)
+WITH
+(
+	DISTRIBUTION = ROUND_ROBIN,
+	CLUSTERED COLUMNSTORE INDEX
+)
+GO
+
+

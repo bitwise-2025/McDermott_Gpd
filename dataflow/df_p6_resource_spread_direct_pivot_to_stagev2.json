@@ -1,0 +1,39 @@
+{
+	"name": "df_p6_resource_spread_direct_pivot_to_stagev2",
+	"properties": {
+		"description": "Dataflow to convert P6 Engineering data with unpivot per date",
+		"folder": {
+			"name": "Projects/NCSA/P6 Engineering"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_resource_spread_direct_p6_stage_initial",
+						"type": "DatasetReference"
+					},
+					"name": "SrcP6ResourceSpread"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_P6_resource_spread_direct_stage",
+						"type": "DatasetReference"
+					},
+					"name": "SnkP6ResourceSpread"
+				}
+			],
+			"transformations": [
+				{
+					"name": "dcGetProjectPrime"
+				},
+				{
+					"name": "FltIncorrectActivity"
+				}
+			],
+			"script": "source(output(\n\t\thid as string,\n\t\t{project no} as string,\n\t\t{project description} as string,\n\t\t{Activity ID} as string,\n\t\t{Activity Name} as string,\n\t\t{Original Duration} as string,\n\t\t{Actual Duration} as string,\n\t\t{Remaining Duration} as string,\n\t\tStart as string,\n\t\tFinish as string,\n\t\t{Actual Start} as string,\n\t\t{Actual Finish} as string,\n\t\tCalendar as string,\n\t\t{Budgeted Units} as string,\n\t\t{Actual Units} as string,\n\t\t{Remaining Units} as string,\n\t\tWBS as string,\n\t\t{WBS Name} as string,\n\t\t{Cost Account} as string,\n\t\tRole as string,\n\t\t{Resource ID} as string,\n\t\t{Resource ID Name} as string,\n\t\t{Resource Name} as string,\n\t\t{Resource Type} as string,\n\t\t{Total Float} as string,\n\t\t{Free Float} as string,\n\t\t{BL Project Start} as string,\n\t\t{BL Project Finish} as string,\n\t\tCritical as string,\n\t\t{Activity Type} as string,\n\t\t{Longest Path} as string,\n\t\t{Primary Constraint Date} as string,\n\t\t{Secondary Constraint Date} as string,\n\t\t{Primary Constraint} as string,\n\t\t{Secondary Constraint} as string,\n\t\t{Expected Finish} as string,\n\t\t{Suspend Date} as string,\n\t\t{Resume Date} as string,\n\t\t{BL Project Labor Units} as string,\n\t\t{Earned Value Labor Units} as string,\n\t\t{Planned Value Labor Units} as string,\n\t\t{BL Project Duration} as string,\n\t\t{Physical Percent Complete} as string,\n\t\tPredecessors as string,\n\t\tSuccessors as string,\n\t\t{Predecessor Details} as string,\n\t\t{Successors Details} as string,\n\t\t{Late Start} as string,\n\t\t{Late Finish} as string,\n\t\t{GLOBAL - CHANGE MANAGEMENT} as string,\n\t\t{GLOBAL - EXECUTED BY TYPE} as string,\n\t\t{GLOBAL - FUNCTION} as string,\n\t\t{GLOBAL - MILESTONES} as string,\n\t\t{GLOBAL - OFFICE} as string,\n\t\t{GLOBAL - PHASE} as string,\n\t\t{GLOBAL - PRIME (GCOA V11)} as string,\n\t\t{GLOBAL - PRIME (GCOA V13)} as string,\n\t\t{GLOBAL - REGION} as string,\n\t\t{GLOBAL - SCHEDULE RISK ASSESSMENT} as string,\n\t\t{GLOBAL - STORAGE SOLUTIONS} as string,\n\t\t{GLOBAL - SUBPRIME (GCOA V11)} as string,\n\t\t{GLOBAL - SUBPRIME (GCOA V13)} as string,\n\t\t{GLOBAL - SUPPLY CHAIN} as string,\n\t\t{Spreadsheet Field} as string,\n\t\tPeriod as string,\n\t\t{Period Value} as string,\n\t\t{created date time} as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false) ~> SrcP6ResourceSpread\nFltIncorrectActivity derive(PRIME = coalesce({GLOBAL - PRIME (GCOA V11)},{GLOBAL - PRIME (GCOA V13)}),\n\t\tSUBPRIME = coalesce({GLOBAL - SUBPRIME (GCOA V11)},{GLOBAL - SUBPRIME (GCOA V13)}),\n\t\t{Activity ID} = trim({Activity ID})) ~> dcGetProjectPrime\nSrcP6ResourceSpread filter(!({Activity ID}=='No Activity ID'||isNull({Activity Name}))) ~> FltIncorrectActivity\ndcGetProjectPrime sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['p6_resource_spread_direct.csv'],\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tmapColumn(\n\t\thid,\n\t\t{project no},\n\t\t{project description},\n\t\t{Activity ID},\n\t\t{Activity Name},\n\t\t{Original Duration},\n\t\t{Actual Duration},\n\t\t{Remaining Duration},\n\t\tStart,\n\t\tFinish,\n\t\t{Actual Start},\n\t\t{Actual Finish},\n\t\tCalendar,\n\t\t{Budgeted Units},\n\t\t{Actual Units},\n\t\t{Remaining Units},\n\t\tWBS,\n\t\t{WBS Name},\n\t\t{Cost Account},\n\t\tRole,\n\t\t{Resource ID},\n\t\t{Resource ID Name},\n\t\t{Resource Name},\n\t\t{Resource Type},\n\t\t{Total Float},\n\t\t{Free Float},\n\t\t{BL Project Start},\n\t\t{BL Project Finish},\n\t\tCritical,\n\t\t{Activity Type},\n\t\t{Longest Path},\n\t\t{Primary Constraint Date},\n\t\t{Secondary Constraint Date},\n\t\t{Primary Constraint},\n\t\t{Secondary Constraint},\n\t\t{Expected Finish},\n\t\t{Suspend Date},\n\t\t{Resume Date},\n\t\t{BL Project Labor Units},\n\t\t{Earned Value Labor Units},\n\t\t{Planned Value Labor Units},\n\t\t{BL Project Duration},\n\t\t{Physical Percent Complete},\n\t\tPredecessors,\n\t\tSuccessors,\n\t\t{Predecessor Details},\n\t\t{Successors Details},\n\t\t{Late Start},\n\t\t{Late Finish},\n\t\t{GLOBAL - CHANGE MANAGEMENT},\n\t\t{GLOBAL - EXECUTED BY TYPE},\n\t\t{GLOBAL - FUNCTION},\n\t\t{GLOBAL - MILESTONES},\n\t\t{GLOBAL - OFFICE},\n\t\t{GLOBAL - PHASE},\n\t\t{GLOBAL - PRIME (GCOA V11)},\n\t\t{GLOBAL - PRIME (GCOA V13)},\n\t\t{GLOBAL - REGION},\n\t\t{GLOBAL - SCHEDULE RISK ASSESSMENT},\n\t\t{GLOBAL - STORAGE SOLUTIONS},\n\t\t{GLOBAL - SUBPRIME (GCOA V11)},\n\t\t{GLOBAL - SUBPRIME (GCOA V13)},\n\t\t{GLOBAL - SUPPLY CHAIN},\n\t\t{Spreadsheet Field},\n\t\tPeriod,\n\t\t{Period Value},\n\t\t{created date time},\n\t\tPRIME,\n\t\tSUBPRIME\n\t),\n\tpartitionBy('hash', 1)) ~> SnkP6ResourceSpread"
+		}
+	}
+}

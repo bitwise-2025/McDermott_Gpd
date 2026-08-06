@@ -1,0 +1,36 @@
+{
+	"name": "df_coconsole_checksheet_stage_to_raw",
+	"properties": {
+		"description": "Data Flow to pull data from ADLS Stg to ADLS Raw.\nNo schema defined in source or Target, Schema drift was used along with column rules to direct data into Sink.",
+		"folder": {
+			"name": "Projects/NCSA/Co Console"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_coconsole_checksheet_stg",
+						"type": "DatasetReference"
+					},
+					"name": "srcCheckSheetReportStage"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_coconsole_checksheet_raw",
+						"type": "DatasetReference"
+					},
+					"name": "snkCheckSheetRptRaw"
+				}
+			],
+			"transformations": [
+				{
+					"name": "setFileName"
+				}
+			],
+			"script": "parameters{\n\tWildPath as string,\n\tFileName as string\n}\nsource(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\trowUrlColumn: 'Filename',\n\twildcardPaths:[($WildPath + $FileName + '.csv')]) ~> srcCheckSheetReportStage\nsrcCheckSheetReportStage derive(Filename = concat($WildPath,substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',$FileName,'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv')) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\trowUrlColumn:'Filename',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: []) ~> snkCheckSheetRptRaw"
+		}
+	}
+}

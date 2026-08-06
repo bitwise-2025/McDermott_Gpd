@@ -1,0 +1,89 @@
+{
+	"name": "pl_yardkpi_idocs_loop_project",
+	"properties": {
+		"description": "An idocs pipeline that loops through valid Project folders, which provide the source files needed by underlying ADF.",
+		"activities": [
+			{
+				"name": "iDocs Doc Master Fab",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_yardkpi_idocs_doc_master_fab_master_pipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "iDocs All Revision Fab",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_yardkpi_idocs_all_rev_master_fab_master_pipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "iDocs Milestone Master Fab",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "iDocs Doc Master Fab",
+						"dependencyConditions": [
+							"Completed"
+						]
+					},
+					{
+						"activity": "iDocs All Revision Fab",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_yardkpi_idocs_ms_master_fab_master_pipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			}
+		],
+		"variables": {
+			"v_allrev_src_start_time": {
+				"type": "String"
+			},
+			"v_allrev_raw_start_time": {
+				"type": "String"
+			},
+			"v_docmas_src_start_time": {
+				"type": "String"
+			},
+			"v_docmas_raw_start_time": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/YARD KPI/iDocs"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-12-27T06:02:07Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

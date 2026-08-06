@@ -1,0 +1,36 @@
+{
+	"name": "df_iDocs_P21A_SpoolStatus_raw_to_synapse",
+	"properties": {
+		"description": "Data Flow to pull data from ADLS RAW to Synapse database\nData Transformation used to update PROJECTNO and create SPOOLNUMBER",
+		"folder": {
+			"name": "Projects/iDocs"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_iDocs_P21A_raw_latest_file",
+						"type": "DatasetReference"
+					},
+					"name": "srcSpoolStatusReportRAWLatest"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_AzureSynapseAnalytics_iDocs_P21A_SpoolStatus",
+						"type": "DatasetReference"
+					},
+					"name": "snkSpoolStatusRptSynapse"
+				}
+			],
+			"transformations": [
+				{
+					"name": "DataTransformation"
+				}
+			],
+			"script": "source(output(\n\t\tPROJNAME as string,\n\t\tPROJNO as string,\n\t\tDOC_ID as string,\n\t\t{DOCUMENT NUMBER} as string,\n\t\tREVISION as string,\n\t\t{REVISION DATE} as string,\n\t\tTITLE as string,\n\t\t{ISSUE STATE} as string,\n\t\t{TRANSMITTAL NUMBER} as string,\n\t\t{TRANSMITTAL DATE} as string,\n\t\tDELIVERABLE as string,\n\t\t{IDOCS FOLDER} as string,\n\t\t{REF DOC} as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false) ~> srcSpoolStatusReportRAWLatest\nsrcSpoolStatusReportRAWLatest derive(PROJNO = concat('99',PROJNO),\n\t\tISONumber = (regexExtract({DOCUMENT NUMBER}, '[\\\\d]{3}-PI[\\\\d]{2}-[A-Z]{1,3}[0-9]{0,2}-[A-Z0-9]*-[\\\\d]{2}',0))) ~> DataTransformation\nDataTransformation sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tinput(\n\t\tstage_idoc_P21A_SpoolStatus_id as integer,\n\t\tPROJNAME as string,\n\t\tPROJNO as string,\n\t\tDOC_ID as string,\n\t\tDocumentNumber as string,\n\t\tRevision as string,\n\t\tRevisionDate as string,\n\t\tTitle as string,\n\t\tIssueState as string,\n\t\tTransmittalNumber as string,\n\t\tTransmittalDate as string,\n\t\tDeliverable as string,\n\t\tISONumber as string,\n\t\tiDocsFolder as string,\n\t\tRefDoc as string\n\t),\n\tdeletable:false,\n\tinsertable:true,\n\tupdateable:false,\n\tupsertable:false,\n\ttruncate:true,\n\tformat: 'table',\n\tstaged: true,\n\tallowCopyCommand: true,\n\terrorHandlingOption: 'stopOnFirstError',\n\tmapColumn(\n\t\tPROJNAME,\n\t\tPROJNO,\n\t\tDOC_ID,\n\t\tDocumentNumber = {DOCUMENT NUMBER},\n\t\tRevision = REVISION,\n\t\tRevisionDate = {REVISION DATE},\n\t\tTitle = TITLE,\n\t\tIssueState = {ISSUE STATE},\n\t\tTransmittalNumber = {TRANSMITTAL NUMBER},\n\t\tTransmittalDate = {TRANSMITTAL DATE},\n\t\tDeliverable = DELIVERABLE,\n\t\tISONumber,\n\t\tiDocsFolder = {IDOCS FOLDER},\n\t\tRefDoc = {REF DOC}\n\t)) ~> snkSpoolStatusRptSynapse"
+		}
+	}
+}

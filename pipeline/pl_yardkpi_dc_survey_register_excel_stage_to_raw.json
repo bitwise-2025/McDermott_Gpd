@@ -1,0 +1,418 @@
+{
+	"name": "pl_yardkpi_dc_survey_register_excel_stage_to_raw",
+	"properties": {
+		"activities": [
+			{
+				"name": "lk_get_pipeline_parameters",
+				"description": "Get the parameters to be used in this pipeline",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": {
+									"value": "NetworkFolder",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "cp_Combine_Files",
+				"description": "Copy all the files created since the last start date and combine them into one file to be processed into Synapse.",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Set last_run_start_date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"additionalColumns": [
+							{
+								"name": "dc_function",
+								"value": "$$FILEPATH"
+							}
+						],
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": true,
+							"modifiedDatetimeStart": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.last_run_start_date",
+								"type": "Expression"
+							},
+							"wildcardFileName": {
+								"value": "@concat('*_',activity('lk_get_pipeline_parameters').output.firstRow.file_name,'_*.csv')",
+								"type": "Expression"
+							}
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings",
+							"copyBehavior": "MergeFiles"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": "ts_itime_combined.csv"
+						}
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_yardkpi_dc_wildcard",
+						"type": "DatasetReference",
+						"parameters": {
+							"Directory": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+								"type": "Expression"
+							},
+							"FileSystem": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_yardkpi_dc_generic_header",
+						"type": "DatasetReference",
+						"parameters": {
+							"Directory": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+								"type": "Expression"
+							},
+							"File": {
+								"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'TEMP.csv')",
+								"type": "Expression"
+							},
+							"FileSystem": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.output_file_system",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "Check Combined File non zero Bytes",
+				"description": "Check if the combined file has any data to be loaded.",
+				"type": "GetMetadata",
+				"dependsOn": [
+					{
+						"activity": "cp_Combine_Files",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_yardkpi_dc_generic_header",
+						"type": "DatasetReference",
+						"parameters": {
+							"Directory": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+								"type": "Expression"
+							},
+							"File": {
+								"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'TEMP.csv')",
+								"type": "Expression"
+							},
+							"FileSystem": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.output_file_system",
+								"type": "Expression"
+							}
+						}
+					},
+					"fieldList": [
+						"size",
+						"exists"
+					],
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true
+					},
+					"formatSettings": {
+						"type": "DelimitedTextReadSettings"
+					}
+				}
+			},
+			{
+				"name": "if_File_Exists_Copy_to_Raw",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Check Combined File non zero Bytes",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@greater(activity('Check Combined File non zero Bytes').output.size, 2)",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "DFlow_STG_to_RAW",
+							"type": "ExecuteDataFlow",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "1.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataflow": {
+									"referenceName": "df_yardkpi_dc_survey_register_stage_to_raw",
+									"type": "DataFlowReference",
+									"datasetParameters": {
+										"DCStage": {
+											"Directory": {
+												"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+												"type": "Expression"
+											},
+											"File": {
+												"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'TEMP.csv')",
+												"type": "Expression"
+											},
+											"FileSystem": {
+												"value": "@activity('lk_get_pipeline_parameters').output.firstRow.output_file_system",
+												"type": "Expression"
+											}
+										},
+										"DCRaw": {
+											"Directory": {
+												"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+												"type": "Expression"
+											},
+											"FileSystem": {
+												"value": "@activity('lk_get_pipeline_parameters').output.firstRow.output_file_system",
+												"type": "Expression"
+											},
+											"FileName": {
+												"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+												"type": "Expression"
+											}
+										}
+									}
+								},
+								"compute": {
+									"coreCount": 16,
+									"computeType": "General"
+								},
+								"traceLevel": "Fine",
+								"continueOnError": true
+							}
+						},
+						{
+							"name": "Delete stage Files",
+							"description": "After the data has been loaded, clear the combined file from the ADLSV2 ",
+							"type": "Delete",
+							"dependsOn": [
+								{
+									"activity": "DFlow_STG_to_RAW",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataset": {
+									"referenceName": "ds_adlsg2_csv_yardkpi_dc_generic_header",
+									"type": "DatasetReference",
+									"parameters": {
+										"Directory": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+											"type": "Expression"
+										},
+										"File": {
+											"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'TEMP.csv')",
+											"type": "Expression"
+										},
+										"FileSystem": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+											"type": "Expression"
+										}
+									}
+								},
+								"enableLogging": false,
+								"storeSettings": {
+									"type": "AzureBlobFSReadSettings",
+									"recursive": true,
+									"wildcardFileName": {
+										"value": "*",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Set last_run_start_date",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_dc_raw_start_time",
+					"value": {
+						"value": "@formatDateTime(utcNow(),'yyyy-MM-dd HH:mm:ss')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "sp_Update_Parameter",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "if_File_Exists_Copy_to_Raw",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": {
+						"value": "[dbo].[updateIncrementPipelineParameterValue]",
+						"type": "Expression"
+					},
+					"storedProcedureParameters": {
+						"pParameterCode": {
+							"value": {
+								"value": "last_run_start_date",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pParameterValue": {
+							"value": {
+								"value": "@variables('v_dc_raw_start_time')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": {
+								"value": "NetworkFolder",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseAnalytics",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"variables": {
+			"v_dc_raw_start_time": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/YARD KPI/DC Survey Register/Excel"
+		},
+		"annotations": [],
+		"lastPublishTime": "2024-03-21T14:53:17Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

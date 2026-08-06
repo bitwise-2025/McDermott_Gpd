@@ -1,0 +1,152 @@
+{
+	"name": "pl_doc_milestone_seq_synstg_to_dim",
+	"properties": {
+		"description": "'Data Lake Standard Milestone Name' updated from Synapse Stage into Dimension table.",
+		"activities": [
+			{
+				"name": "St_cleanup_project_null_values",
+				"description": "update single column '[Data Lake Standard Milestone Name] ' within the dim_ent_document_status_milestone table using the stage entries.",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.01:00:00",
+					"retry": 1,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "NonQuery",
+							"text": "--Update the dim_ent_document_mileston_sequence table with latest conversion values for data_lake_standard_milestone_name\n\n  UPDATE t1\n  SET t1.[data_lake_standard_milestone_name] = t2.[data_lake_standard_milestone_name]\n  FROM [dbo].[dim_ent_document_milestone_sequence] AS t1\n  INNER JOIN [gpd].[NCSA_datalake_milestone_seq] AS t2\n  ON t1.[milestone_gate_name] = t2.[milestone_gate_name]\n  WHERE t1.active = 1;"
+						}
+					]
+				}
+			},
+			{
+				"name": "lk_get_pipeline_parameters",
+				"description": "Use the lookup procedure to get the last run details to be used in the next steps",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.01:00:00",
+					"retry": 1,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.p_pl_pipelineCode",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.p_pl_pipelineSubCode",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "sp_Update_Parameter",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "St_cleanup_project_null_values",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.01:00:00",
+					"retry": 1,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+					"storedProcedureParameters": {
+						"pParameterValue": {
+							"value": {
+								"value": "@formatDateTime(utcnow(),'yyyy-MM-dd HH:mm:ss.fff')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().parameters.p_pl_pipelineCode",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": {
+								"value": "@pipeline().parameters.p_pl_pipelineSubCode",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pParameterCode": {
+							"value": "last_run_start_date",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseDB_DEV",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"parameters": {
+			"p_pl_pipelineCode": {
+				"type": "string"
+			},
+			"p_pl_pipelineSubCode": {
+				"type": "string",
+				"defaultValue": "NetworkFolder"
+			}
+		},
+		"folder": {
+			"name": "Projects/NCSA/19. Datalake Milestone Sequence"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-06-17T05:24:48Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

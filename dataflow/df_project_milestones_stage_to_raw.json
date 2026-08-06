@@ -1,0 +1,33 @@
+{
+	"name": "df_project_milestones_stage_to_raw",
+	"properties": {
+		"description": "df_project_milestones_stage_to_raw",
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_project_milestones_Stage",
+						"type": "DatasetReference"
+					},
+					"name": "srcdfProjectMilestonesStage"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_project_milestones_raw",
+						"type": "DatasetReference"
+					},
+					"name": "snkProjectMilestonesRaw"
+				}
+			],
+			"transformations": [
+				{
+					"name": "setFileName"
+				}
+			],
+			"script": "source(output(\n\t\t{Activity ID} as string,\n\t\t{Activity Status} as string,\n\t\t{Activity Name} as string,\n\t\tStart as string,\n\t\tFinish as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\trowUrlColumn: 'FileName',\n\twildcardPaths:['Project_Data/NCSA/P6/Project_Milestones/project_milestones*.csv']) ~> srcdfProjectMilestonesStage\nsrcdfProjectMilestonesStage derive(FileName = concat('Project_Data/NCSA/P6/Project_Milestones/',substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/','project_milestones_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv')) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tinput(\n\t\t{Project ID } as string,\n\t\t{Activity ID} as string,\n\t\t{Activity Status} as string,\n\t\t{Activity Name} as string,\n\t\t{Original Duration} as string,\n\t\tStart as string,\n\t\tFinish as string,\n\t\t{Current date} as string,\n\t\t{% Complete} as string,\n\t\tResource as string\n\t),\n\trowUrlColumn:'FileName',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> snkProjectMilestonesRaw"
+		}
+	}
+}

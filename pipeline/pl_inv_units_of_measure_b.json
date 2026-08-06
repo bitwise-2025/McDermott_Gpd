@@ -1,0 +1,1513 @@
+{
+	"name": "pl_inv_units_of_measure_b",
+	"properties": {
+		"activities": [
+			{
+				"name": "lk_get_pipeline_parameters",
+				"description": "Get the parameters to be used in this pipeline",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": {
+									"value": "NetworkFolder",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Set last_run_date - one day",
+				"description": "Sets start and current date",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "lk_get_pipeline_parameters_2",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_end_date",
+					"value": {
+						"value": "@if(equals(activity('lk_get_pipeline_parameters').output.firstRow.end_date,'currdate'),formatDateTime(utcNow(),'yyyy-MM-dd'),formatDateTime(activity('lk_get_pipeline_parameters').output.firstRow.end_date,'yyyy-MM-dd'))",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Run Until start date equals to end date",
+				"type": "Until",
+				"dependsOn": [
+					{
+						"activity": "Set last_run_date - one day",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "GetClientId",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "GetClientSecret",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@greaterOrEquals(activity('lk_get_pipeline_parameters_to_lookup_dates').output.firstRow.start_date,if(equals(activity('lk_get_pipeline_parameters').output.firstRow.end_date,'currdate'),formatDateTime(utcNow(),'yyyy-MM-dd HH:mm:ss'),formatDateTime(activity('lk_get_pipeline_parameters').output.firstRow.end_date,'yyyy-MM-dd HH:mm:ss')))",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "CP_Inv_Units_Of_Measure_B_Src_to_Stage",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "Get Access Token",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "BinarySource",
+									"storeSettings": {
+										"type": "HttpReadSettings",
+										"requestMethod": "POST",
+										"additionalHeaders": {
+											"value": "@concat('Authorization: Bearer ', activity('Get Access Token').output.access_token,'\nContent-Type: application/soap+xml;charset=UTF-8\nContent-Length: 649\nConnection: Keep-Alive\nUser-Agent: Apache-HttpClient/4.1.1 (java 1.5)\n')",
+											"type": "Expression"
+										},
+										"requestBody": {
+											"value": "@concat('<ns1:Envelope xmlns:ns1=\"http://www.w3.org/2003/05/soap-envelope\">\n<ns1:Body>\n<ns2:runReport xmlns:ns2=\"http://xmlns.oracle.com/oxp/service/PublicReportService\">\n<ns2:reportRequest>\n<ns2:attributeFormat>xml</ns2:attributeFormat>\n<ns2:parameterNameValues>\n<ns2:item>\n<ns2:name>P_FROM_DATE</ns2:name>\n<ns2:values>\n<ns2:item>',variables('v_start_date'),'</ns2:item>\n</ns2:values>\n</ns2:item>\n<ns2:item>\n<ns2:name>P_TO_DATE</ns2:name>\n<ns2:values>\n<ns2:item>',variables('v_end_date'),'</ns2:item>\n</ns2:values>\n</ns2:item>\n</ns2:parameterNameValues>\n<ns2:reportAbsolutePath>/Custom/Oracle R2P Integrations/MDR PO and Receipts Details/INV_UNITS_OF_MEASURE_B.xdo</ns2:reportAbsolutePath>\n<ns2:sizeOfDataChunkDownload>-1</ns2:sizeOfDataChunkDownload>\n</ns2:reportRequest>\n</ns2:runReport>\n</ns1:Body>\n</ns1:Envelope>')",
+											"type": "Expression"
+										},
+										"requestTimeout": ""
+									},
+									"formatSettings": {
+										"type": "BinaryReadSettings"
+									}
+								},
+								"sink": {
+									"type": "BinarySink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									}
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_http_binary_inv_units_of_measure_b_source",
+									"type": "DatasetReference"
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_adlsg2_binary_inv_units_of_measure_b_source_stage",
+									"type": "DatasetReference"
+								}
+							]
+						},
+						{
+							"name": "df_inv_units_of_measure_b_decoding",
+							"type": "ExecuteDataFlow",
+							"dependsOn": [
+								{
+									"activity": "CP_Inv_Units_Of_Measure_B_Src_to_Stage",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataflow": {
+									"referenceName": "df_inv_units_of_measure_b_decoding",
+									"type": "DataFlowReference"
+								},
+								"compute": {
+									"coreCount": 32,
+									"computeType": "MemoryOptimized"
+								},
+								"traceLevel": "Fine"
+							}
+						},
+						{
+							"name": "df_inv_units_of_measure_b_flattening",
+							"type": "ExecuteDataFlow",
+							"dependsOn": [
+								{
+									"activity": "df_inv_units_of_measure_b_decoding",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataflow": {
+									"referenceName": "df_inv_units_of_measure_b_flattening",
+									"type": "DataFlowReference"
+								},
+								"compute": {
+									"coreCount": 32,
+									"computeType": "MemoryOptimized"
+								},
+								"traceLevel": "Fine"
+							}
+						},
+						{
+							"name": "Copy Latest Data To Synapse Stage Table",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "df_inv_units_of_measure_b_flattening",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": false,
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "SqlDWSink",
+									"preCopyScript": "truncate table [rpy].[Inv_Units_Of_Measure_B_stage]",
+									"allowCopyCommand": true,
+									"disableMetricsCollection": false
+								},
+								"enableStaging": true,
+								"stagingSettings": {
+									"linkedServiceName": {
+										"referenceName": "ADLSG2 TimeAnalytics DEV",
+										"type": "LinkedServiceReference"
+									},
+									"path": "mdr-raw-data/Polybase_Staging_Space"
+								},
+								"enableSkipIncompatibleRow": true,
+								"logSettings": {
+									"enableCopyActivityLog": true,
+									"copyActivityLogSettings": {
+										"logLevel": "Warning",
+										"enableReliableLogging": false
+									},
+									"logLocationSettings": {
+										"linkedServiceName": {
+											"referenceName": "ADGLS2 SRCDEST DEV",
+											"type": "LinkedServiceReference"
+										}
+									}
+								},
+								"translator": {
+									"type": "TabularTranslator",
+									"mappings": [
+										{
+											"source": {
+												"name": "UNIT_OF_MEASURE_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "UNIT_OF_MEASURE_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "DERIVED_UNIT_PARENT_CODE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "DERIVED_UNIT_PARENT_CODE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "UOM_CODE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "UOM_CODE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "LAST_UPDATED_BY",
+												"type": "String"
+											},
+											"sink": {
+												"name": "LAST_UPDATED_BY",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "LAST_UPDATE_DATE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "LAST_UPDATE_DATE",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "CREATED_BY",
+												"type": "String"
+											},
+											"sink": {
+												"name": "CREATED_BY",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "CREATION_DATE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "CREATION_DATE",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "LAST_UPDATE_LOGIN",
+												"type": "String"
+											},
+											"sink": {
+												"name": "LAST_UPDATE_LOGIN",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "OBJECT_VERSION_NUMBER",
+												"type": "String"
+											},
+											"sink": {
+												"name": "OBJECT_VERSION_NUMBER",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "UOM_CLASS",
+												"type": "String"
+											},
+											"sink": {
+												"name": "UOM_CLASS",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "BASE_UOM_FLAG",
+												"type": "String"
+											},
+											"sink": {
+												"name": "BASE_UOM_FLAG",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "STANDARD_PACK_FLAG",
+												"type": "String"
+											},
+											"sink": {
+												"name": "STANDARD_PACK_FLAG",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "DISABLE_DATE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "DISABLE_DATE",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "HAS_GENERATED_CODE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "HAS_GENERATED_CODE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ATTRIBUTE_CATEGORY",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ATTRIBUTE_CATEGORY",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ATTRIBUTE1",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ATTRIBUTE1",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ATTRIBUTE2",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ATTRIBUTE2",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ATTRIBUTE3",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ATTRIBUTE3",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ATTRIBUTE4",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ATTRIBUTE4",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ATTRIBUTE5",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ATTRIBUTE5",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ATTRIBUTE6",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ATTRIBUTE6",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ATTRIBUTE7",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ATTRIBUTE7",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ATTRIBUTE8",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ATTRIBUTE8",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ATTRIBUTE9",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ATTRIBUTE9",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ATTRIBUTE10",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ATTRIBUTE10",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ATTRIBUTE11",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ATTRIBUTE11",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ATTRIBUTE12",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ATTRIBUTE12",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ATTRIBUTE13",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ATTRIBUTE13",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ATTRIBUTE14",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ATTRIBUTE14",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ATTRIBUTE15",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ATTRIBUTE15",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE_CATEGORY",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE_CATEGORY",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE1",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE1",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE2",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE2",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE3",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE3",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE4",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE4",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE5",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE5",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE6",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE6",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE7",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE7",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE8",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE8",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE9",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE9",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE10",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE10",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE11",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE11",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE12",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE12",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE13",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE13",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE14",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE14",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE15",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE15",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE16",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE16",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE17",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE17",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE18",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE18",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE19",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE19",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE20",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE20",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE_NUMBER1",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE_NUMBER1",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE_NUMBER2",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE_NUMBER2",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE_NUMBER3",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE_NUMBER3",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE_NUMBER4",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE_NUMBER4",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE_NUMBER5",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE_NUMBER5",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE_DATE1",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE_DATE1",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE_DATE2",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE_DATE2",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE_DATE3",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE_DATE3",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE_DATE4",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE_DATE4",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE_DATE5",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE_DATE5",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "REQUEST_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "REQUEST_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "JOB_DEFINITION_NAME",
+												"type": "String"
+											},
+											"sink": {
+												"name": "JOB_DEFINITION_NAME",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "JOB_DEFINITION_PACKAGE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "JOB_DEFINITION_PACKAGE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "source_name",
+												"type": "String"
+											},
+											"sink": {
+												"name": "source_name",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "sub_source_name",
+												"type": "String"
+											},
+											"sink": {
+												"name": "sub_source_name",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "created_date_time",
+												"type": "String"
+											},
+											"sink": {
+												"name": "created_date_time",
+												"type": "DateTime"
+											}
+										}
+									]
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_adlsg2_csv_inv_units_of_measure_b_source_stage_final_flatten_csv",
+									"type": "DatasetReference"
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_AzureSynapseAnalytics_inv_units_of_measure_b",
+									"type": "DatasetReference"
+								}
+							]
+						},
+						{
+							"name": "Set Start Date",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "lk_get_pipeline_parameters_to_lookup_dates",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "v_start_date",
+								"value": {
+									"value": "@activity('lk_get_pipeline_parameters_to_lookup_dates').output.firstRow.start_date",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Set End Date",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Set Start Date",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "v_end_date",
+								"value": {
+									"value": "@formatDateTime(addDays(activity('lk_get_pipeline_parameters_to_lookup_dates').output.firstRow.start_date,int(activity('lk_get_pipeline_parameters_to_lookup_dates').output.firstRow.number_of_days)),'yyyy-MM-dd HH:mm:ss')",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Increment Start Date",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Insert from stage to final table",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+								"storedProcedureParameters": {
+									"pParameterValue": {
+										"value": {
+											"value": "@formatDateTime(addDays(activity('lk_get_pipeline_parameters_to_lookup_dates').output.firstRow.start_date,int(activity('lk_get_pipeline_parameters_to_lookup_dates').output.firstRow.number_of_days)),'yyyy-MM-dd HH:mm:ss')",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"pPipelineCode": {
+										"value": {
+											"value": "@pipeline().Pipeline",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"pPipelineSubCode": {
+										"value": "NetworkFolder",
+										"type": "String"
+									},
+									"pParameterCode": {
+										"value": "start_date",
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "AzureSynapseDB_DEV",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "Insert from stage to final table",
+							"type": "Script",
+							"dependsOn": [
+								{
+									"activity": "Delete NULL Inv_Units_Of_Measure_B",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"linkedServiceName": {
+								"referenceName": "linkedservice_DEV_entanalytics_synapse",
+								"type": "LinkedServiceReference"
+							},
+							"typeProperties": {
+								"scripts": [
+									{
+										"type": "NonQuery",
+										"text": "insert into [rpy].[Inv_Units_Of_Measure_B] select * from [rpy].[Inv_Units_Of_Measure_B_stage]"
+									}
+								],
+								"scriptBlockExecutionTimeout": "02:00:00"
+							}
+						},
+						{
+							"name": "lk_get_pipeline_parameters_to_lookup_dates",
+							"description": "Get the parameters to be used in this pipeline",
+							"type": "Lookup",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SqlDWSource",
+									"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+									"storedProcedureParameters": {
+										"pPipelineCode": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().Pipeline",
+												"type": "Expression"
+											}
+										},
+										"pPipeLineSubCode": {
+											"type": "String",
+											"value": {
+												"value": "NetworkFolder",
+												"type": "Expression"
+											}
+										}
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "ds_azure_synapse_parameter",
+									"type": "DatasetReference"
+								}
+							}
+						},
+						{
+							"name": "Delete NULL Inv_Units_Of_Measure_B",
+							"type": "Script",
+							"dependsOn": [
+								{
+									"activity": "Copy Latest Data To Synapse Stage Table",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"linkedServiceName": {
+								"referenceName": "linkedservice_DEV_entanalytics_synapse",
+								"type": "LinkedServiceReference"
+							},
+							"typeProperties": {
+								"scripts": [
+									{
+										"type": "NonQuery",
+										"text": "delete from [rpy].[Inv_Units_Of_Measure_B_stage] where UNIT_OF_MEASURE_ID is NULL"
+									}
+								],
+								"scriptBlockExecutionTimeout": "02:00:00"
+							}
+						},
+						{
+							"name": "Increment Start Date_copy1",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "CP_Inv_Units_Of_Measure_B_Src_to_Stage",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+								"storedProcedureParameters": {
+									"pParameterValue": {
+										"value": {
+											"value": "@formatDateTime(addDays(activity('lk_get_pipeline_parameters_to_lookup_dates').output.firstRow.start_date,int(activity('lk_get_pipeline_parameters_to_lookup_dates').output.firstRow.number_of_days)),'yyyy-MM-dd HH:mm:ss')",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"pPipelineCode": {
+										"value": {
+											"value": "@pipeline().Pipeline",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"pPipelineSubCode": {
+										"value": "NetworkFolder",
+										"type": "String"
+									},
+									"pParameterCode": {
+										"value": "start_date",
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "AzureSynapseDB_DEV",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "Get Access Token",
+							"type": "WebActivity",
+							"dependsOn": [
+								{
+									"activity": "Set End Date",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"method": "POST",
+								"headers": {
+									"Content-Type": {
+										"value": "application/x-www-form-urlencoded",
+										"type": "Expression"
+									}
+								},
+								"url": {
+									"value": "@activity('lk_get_pipeline_parameters_to_lookup_dates').output.firstRow.token_url",
+									"type": "Expression"
+								},
+								"body": {
+									"value": "grant_type=client_credentials&client_id=@{activity('GetClientId').output.value}&client_secret=@{activity('GetClientSecret').output.value}&scope=@{activity('lk_get_pipeline_parameters').output.firstRow.scope}",
+									"type": "Expression"
+								}
+							}
+						}
+					],
+					"timeout": "6.12:00:00"
+				}
+			},
+			{
+				"name": "Update Start Date with max LAST_UPDATE_DATE",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Lookup to get max LAST_UPDATE_DATE",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+					"storedProcedureParameters": {
+						"pParameterValue": {
+							"value": {
+								"value": "@formatDateTime(activity('Lookup to get max LAST_UPDATE_DATE').output.firstRow.last_update_date,'yyyy-MM-dd HH:mm:ss')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": "NetworkFolder",
+							"type": "String"
+						},
+						"pParameterCode": {
+							"value": "start_date",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseDB_DEV",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Lookup to get max LAST_UPDATE_DATE",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Run Until start date equals to end date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderQuery": "select max(LAST_UPDATE_DATE) as last_update_date from [rpy].[Inv_Units_Of_Measure_B]",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "AzureSynapseAnalyticsDB",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Send Email On Failure",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Run Until start date equals to end date",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "POST",
+					"headers": {
+						"Content-Type": "application/json"
+					},
+					"url": "https://prod-31.eastus.logic.azure.com:443/workflows/03d7da5abbab4215a05aeaceae3b96fa/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=asuyutHtoSxGFURsj1-A6AKRiNLdXZ4mTnZvZ17_8hI",
+					"connectVia": {
+						"referenceName": "integrationRuntimeEast2",
+						"type": "IntegrationRuntimeReference"
+					},
+					"body": {
+						"value": "{\n    \"DataFactoryName\": \"@{pipeline().DataFactory}\",\n    \"PipelineName\": \"@{pipeline().Pipeline}\",\n    \"ErrorMessage\": \"Pipeline Failed\",\n    \"EmailTo\": \"@{activity('lk_get_pipeline_parameters_2').output.firstRow.ncsa_master_pipeline_email_to}\",\n    \"Activity\":  \"pl_inv_units_of_measure_b\"\n}",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "lk_get_pipeline_parameters_2",
+				"description": "Get the parameters to be used in this pipeline",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": "pl_ncsa_master_pipelines"
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "EMAIL"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "GetClientId",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "GET",
+					"url": {
+						"value": "@activity('lk_get_pipeline_parameters').output.firstRow.client_id",
+						"type": "Expression"
+					},
+					"authentication": {
+						"type": "MSI",
+						"resource": {
+							"value": "@concat(split(activity('lk_get_pipeline_parameters').output.firstRow.client_id, '/secrets')[0], '/')",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "GetClientSecret",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "GET",
+					"url": {
+						"value": "@activity('lk_get_pipeline_parameters').output.firstRow.client_secret",
+						"type": "Expression"
+					},
+					"authentication": {
+						"type": "MSI",
+						"resource": {
+							"value": "@concat(split(activity('lk_get_pipeline_parameters').output.firstRow.client_secret, '/secrets')[0], '/')",
+							"type": "Expression"
+						}
+					}
+				}
+			}
+		],
+		"variables": {
+			"v_end_date": {
+				"type": "String"
+			},
+			"v_start_date": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/Payment Dashboard"
+		},
+		"annotations": []
+	}
+}

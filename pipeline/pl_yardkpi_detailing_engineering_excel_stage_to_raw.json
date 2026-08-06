@@ -1,0 +1,127 @@
+{
+	"name": "pl_yardkpi_detailing_engineering_excel_stage_to_raw",
+	"properties": {
+		"activities": [
+			{
+				"name": "lk_get_pipeline_parameters",
+				"description": "Get the parameters to be used in this pipeline",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": {
+									"value": "NetworkFolder",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "DF_STG_to_RAW",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "1.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "df_yardkpi_detailing_engineering_stage_to_raw",
+						"type": "DataFlowReference",
+						"parameters": {
+							"directory": {
+								"value": "'@{activity('lk_get_pipeline_parameters').output.firstRow.directory}'",
+								"type": "Expression"
+							},
+							"input_filename": {
+								"value": "'@{activity('lk_get_pipeline_parameters').output.firstRow.input_file_name}'",
+								"type": "Expression"
+							}
+						},
+						"datasetParameters": {
+							"DESource": {
+								"Directory": {
+									"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+									"type": "Expression"
+								},
+								"File": {
+									"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.input_file_name,'.csv')",
+									"type": "Expression"
+								},
+								"FileSystem": {
+									"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+									"type": "Expression"
+								}
+							},
+							"DESink": {
+								"Directory": {
+									"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+									"type": "Expression"
+								},
+								"File": {
+									"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.input_file_name,'.csv')",
+									"type": "Expression"
+								},
+								"FileSystem": {
+									"value": "@activity('lk_get_pipeline_parameters').output.firstRow.output_file_system",
+									"type": "Expression"
+								}
+							}
+						}
+					},
+					"compute": {
+						"coreCount": 16,
+						"computeType": "General"
+					},
+					"traceLevel": "Fine",
+					"continueOnError": true
+				}
+			}
+		],
+		"folder": {
+			"name": "Projects/YARD KPI/Detailing Engineering"
+		},
+		"annotations": [],
+		"lastPublishTime": "2024-01-12T10:37:09Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

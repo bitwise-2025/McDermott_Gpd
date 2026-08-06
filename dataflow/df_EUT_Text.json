@@ -1,0 +1,85 @@
+{
+	"name": "df_EUT_Text",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_filesystem_network_txt_stg",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_eut_raw",
+						"type": "DatasetReference"
+					},
+					"name": "sinkeut"
+				}
+			],
+			"transformations": [
+				{
+					"name": "derivedColumn1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          JSON_Attribute as string,",
+				"          FileName as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> source1",
+				"source1 derive(Col1 = substringIndex(JSON_Attribute,' ',1),",
+				"          Col2 = substringIndex(substringIndex(JSON_Attribute,' ',2),' ',-1),",
+				"          Col3 = substringIndex(substringIndex(JSON_Attribute,' ',3),' ',-1),",
+				"          Usage_Date = substringIndex(substringIndex(JSON_Attribute,' ',9),' ',-5),",
+				"          Col5 = substringIndex(substringIndex(JSON_Attribute,' ',10),' ',-1),",
+				"          Application = substringIndex(substringIndex(JSON_Attribute,' ',11),' ',-1),",
+				"          User = substringIndex(substringIndex(JSON_Attribute,' ',16),' ',-1),",
+				"          vendor = 'Aveva',",
+				"          CreatedDateTime = currentTimestamp(),",
+				"          FileName = FileName) ~> derivedColumn1",
+				"derivedColumn1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          JSON_Attribute as string,",
+				"          Col1 as string,",
+				"          Col2 as string,",
+				"          Col3 as string,",
+				"          Usage_Date as string,",
+				"          Col5 as string,",
+				"          Application as string,",
+				"          User as string,",
+				"          vendor as string,",
+				"          CreatedDateTime as string,",
+				"          FileName as string",
+				"     ),",
+				"     partitionFileNames:['Aveva_license_file.csv'],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     mapColumn(",
+				"          JSON_Attribute,",
+				"          Col1,",
+				"          Col2,",
+				"          Col3,",
+				"          Usage_Date,",
+				"          Col5,",
+				"          Application,",
+				"          User,",
+				"          vendor,",
+				"          CreatedDateTime,",
+				"          FileName",
+				"     ),",
+				"     partitionBy('hash', 1)) ~> sinkeut"
+			]
+		}
+	}
+}

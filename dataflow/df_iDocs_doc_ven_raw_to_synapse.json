@@ -1,0 +1,35 @@
+{
+	"name": "df_iDocs_doc_ven_raw_to_synapse",
+	"properties": {
+		"folder": {
+			"name": "Projects/NCSA/iDocs/Doc Master Ven"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_idocs_doc_ven_raw_latest",
+						"type": "DatasetReference"
+					},
+					"name": "srcDocVenRaw"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_AzureSynapseAnalytics_idocs_doc_ven",
+						"type": "DatasetReference"
+					},
+					"name": "snkDocVenSynapse"
+				}
+			],
+			"transformations": [
+				{
+					"name": "DataTransform"
+				}
+			],
+			"script": "source(output(\n\t\t{PROJECT NO.} as string,\n\t\t{PROJECT ID} as string,\n\t\t{PROJECT NAME} as string,\n\t\t{CLIENT NAME} as string,\n\t\t{SUPPLIER NAME} as string,\n\t\t{REQ_PO NO.} as string,\n\t\tDELIVERABLE as string,\n\t\t{DOC ID} as string,\n\t\t{TYPE CLASS} as string,\n\t\t{DOCUMENT NUMBER} as string,\n\t\t{SUPPLIER DOC. NO.} as string,\n\t\tTITLE as string,\n\t\t{REVISION NO.} as string,\n\t\t{SUPPLIER REVISION} as string,\n\t\t{RECEIVED DATE} as string,\n\t\t{RETURN DATE} as string,\n\t\t{REVISION DATE} as string,\n\t\t{ISSUE STATE} as string,\n\t\t{OFFICE LOCATION} as string,\n\t\tDISCIPLINE as string,\n\t\t{DOCUMENT CLASS} as string,\n\t\t{SDR CODE} as string,\n\t\t{TOTAL CURRENT PROGRESS} as string,\n\t\t{SUPERSEDED BY} as string,\n\t\tFACILITY_PLANT_UNIT as string,\n\t\tEWP as string,\n\t\tCWA as string,\n\t\tCWP as string,\n\t\tHOLD as string,\n\t\t{TAG_EQUIPMENT NUMBER} as string,\n\t\t{REQUISITION ENGINEER} as string,\n\t\t{REASON FOR CHANGE SUPPLIER} as string,\n\t\tEXPEDITOR as string,\n\t\tSUPPLIER_RECEIVED_ACTIVITY_ID as string,\n\t\tAPPROVED_WCOMMENTS_ACTIVITY_ID as string,\n\t\tAPPROVED_ACTIVITY_ID as string,\n\t\t{CONTRACT NO.} as string,\n\t\t{IDOCS FOLDER} as string,\n\t\t{IDOCS URL} as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['Project_Data/NCSA/iDocs/Doc_Master_Ven/Latest_iDocs_doc_ven.csv']) ~> srcDocVenRaw\nsrcDocVenRaw derive(WORK_PACKAGE = iif(\r\n    isNull(CWP),\r\n    'null',\r\n    regexExtract(CWP,`(\\d+-[a-zA-Z]{2}\\d+)`,1)\r\n)) ~> DataTransform\nDataTransform sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tinput(\n\t\tstage_idoc_doc_ven_id as integer,\n\t\tPROJECT_NAME as string,\n\t\tPROJECT_NUMBER as string,\n\t\tPROJECT_ID as string,\n\t\tCLIENT_NAME as string,\n\t\tSUPPLIER_NAME as string,\n\t\tREQ_PO_NUMBER as string,\n\t\tDOC_ID as string,\n\t\tDELIVERABLE as string,\n\t\tTYPE_CLASS as string,\n\t\tDOCUMENT_NUMBER as string,\n\t\tSUPPLIER_DOC_NUMBER as string,\n\t\tTitle as string,\n\t\tRevision_Number as string,\n\t\tSUPPLIER_REVISION as string,\n\t\tReceived_Date as string,\n\t\tReturn_Date as string,\n\t\tRevision_Date as string,\n\t\tIssue_State as string,\n\t\tDISCIPLINE as string,\n\t\tOFFICE_LOCATION as string,\n\t\tDOCUMENT_CLASS as string,\n\t\tSDR_Code as string,\n\t\tTOTAL_CURRENT_PROGRESS as string,\n\t\tSUPERSEDED_BY as string,\n\t\tFACILITY_PLANT_UNIT as string,\n\t\tEWP as string,\n\t\tCWA as string,\n\t\tCWP as string,\n\t\tHOLDS as string,\n\t\tTAG_EQUIPMENT_NUMBER as string,\n\t\tREQUISITION_ENGINEER as string,\n\t\tReason_for_change as string,\n\t\tEXPEDITOR as string,\n\t\tSUPPLIER_RECEIVED_ACTIVITY_ID as string,\n\t\tAPPROVED_WCOMMENTS_ACTIVITY_ID as string,\n\t\tAPPROVED_ACTIVITY_ID as string,\n\t\tCONTRACT_NO as string,\n\t\tIDOCS_FOLDER as string,\n\t\tIDOCS_URL as string,\n\t\tWORK_PACKAGE as string\n\t),\n\tdeletable:false,\n\tinsertable:true,\n\tupdateable:false,\n\tupsertable:false,\n\ttruncate:true,\n\tformat: 'table',\n\tstaged: true,\n\tallowCopyCommand: true,\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\terrorHandlingOption: 'stopOnFirstError',\n\tmapColumn(\n\t\tPROJECT_NUMBER = {PROJECT NO.},\n\t\tPROJECT_ID = {PROJECT ID},\n\t\tPROJECT_NAME = {PROJECT NAME},\n\t\tCLIENT_NAME = {CLIENT NAME},\n\t\tSUPPLIER_NAME = {SUPPLIER NAME},\n\t\tREQ_PO_NUMBER = {REQ_PO NO.},\n\t\tDELIVERABLE,\n\t\tDOC_ID = {DOC ID},\n\t\tTYPE_CLASS = {TYPE CLASS},\n\t\tDOCUMENT_NUMBER = {DOCUMENT NUMBER},\n\t\tSUPPLIER_DOC_NUMBER = {SUPPLIER DOC. NO.},\n\t\tTitle = TITLE,\n\t\tRevision_Number = {REVISION NO.},\n\t\tSUPPLIER_REVISION = {SUPPLIER REVISION},\n\t\tReceived_Date = {RECEIVED DATE},\n\t\tReturn_Date = {RETURN DATE},\n\t\tRevision_Date = {REVISION DATE},\n\t\tIssue_State = {ISSUE STATE},\n\t\tOFFICE_LOCATION = {OFFICE LOCATION},\n\t\tDISCIPLINE,\n\t\tDOCUMENT_CLASS = {DOCUMENT CLASS},\n\t\tSDR_Code = {SDR CODE},\n\t\tTOTAL_CURRENT_PROGRESS = {TOTAL CURRENT PROGRESS},\n\t\tSUPERSEDED_BY = {SUPERSEDED BY},\n\t\tFACILITY_PLANT_UNIT,\n\t\tEWP,\n\t\tCWA,\n\t\tCWP,\n\t\tHOLDS = HOLD,\n\t\tTAG_EQUIPMENT_NUMBER = {TAG_EQUIPMENT NUMBER},\n\t\tREQUISITION_ENGINEER = {REQUISITION ENGINEER},\n\t\tReason_for_change = {REASON FOR CHANGE SUPPLIER},\n\t\tEXPEDITOR,\n\t\tWORK_PACKAGE,\n\t\tSUPPLIER_RECEIVED_ACTIVITY_ID,\n\t\tAPPROVED_WCOMMENTS_ACTIVITY_ID,\n\t\tAPPROVED_ACTIVITY_ID,\n\t\tCONTRACT_NO = {CONTRACT NO.},\n\t\tIDOCS_FOLDER = {IDOCS FOLDER},\n\t\tIDOCS_URL = {IDOCS URL}\n\t)) ~> snkDocVenSynapse"
+		}
+	}
+}

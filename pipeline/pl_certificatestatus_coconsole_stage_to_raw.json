@@ -1,0 +1,396 @@
+{
+	"name": "pl_certificatestatus_coconsole_stage_to_raw",
+	"properties": {
+		"description": "Pipeline to create template to load Common STG - RAW data without dataflow.",
+		"activities": [
+			{
+				"name": "Check File Exists",
+				"description": "Checking if the Stage file is available before progressing to the next activity.",
+				"type": "GetMetadata",
+				"dependsOn": [
+					{
+						"activity": "Set filename",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set folderpath",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.01:00:00",
+					"retry": 1,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_parameter_generic",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_ds_filename": {
+								"value": "@coalesce(null)",
+								"type": "Expression"
+							},
+							"p_ds_folderpath": {
+								"value": "@variables('v_folderpath')",
+								"type": "Expression"
+							},
+							"p_ds_first_row_header": true,
+							"p_ds_filesystem": "mdr-staging-data"
+						}
+					},
+					"fieldList": [
+						"childItems"
+					],
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true
+					},
+					"formatSettings": {
+						"type": "DelimitedTextReadSettings"
+					}
+				}
+			},
+			{
+				"name": "Set_File_Exists_status",
+				"description": "Compare the results of the GetMetadata against the file present in the Stage location",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Check File Exists",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "p_pl_fileexists",
+					"value": {
+						"value": "@greaterOrEquals(indexof(string(activity('Check File Exists').output.childItems),variables('v_filename')),0)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Run copy if File Exists",
+				"description": "Execute if a valid stage file is present",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Set_File_Exists_status",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@variables('p_pl_fileexists')",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "sp_Update_Parameter",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "cp_STG_to_RAW",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+								"storedProcedureParameters": {
+									"pParameterValue": {
+										"value": {
+											"value": "@formatDateTime(utcnow(),'yyyy-MM-dd HH:mm:ss.fff')",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"pPipelineCode": {
+										"value": {
+											"value": "@pipeline().Pipeline",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"pPipelineSubCode": {
+										"value": "NetworkFolder",
+										"type": "String"
+									},
+									"pParameterCode": {
+										"value": "lastrundate",
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "AzureSynapseDB_DEV",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "cp_STG_to_RAW",
+							"description": "Copy the Stage file into the RAW container at the same folder hierarchy but with additional timestamps ",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "1.00:00:00",
+								"retry": 1,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": true,
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "DelimitedTextSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings",
+										"copyBehavior": "MergeFiles"
+									},
+									"formatSettings": {
+										"type": "DelimitedTextWriteSettings",
+										"quoteAllText": true,
+										"fileExtension": ".txt"
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_adlsg2_csv_parameter_generic",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_ds_filename": {
+											"value": "@concat(variables('v_filename'),'.csv')",
+											"type": "Expression"
+										},
+										"p_ds_folderpath": {
+											"value": "@concat(variables('v_folderpath'),'/')",
+											"type": "Expression"
+										},
+										"p_ds_first_row_header": true,
+										"p_ds_filesystem": "mdr-staging-data"
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_adlsg2_csv_parameter_generic",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_ds_filename": {
+											"value": "@{concat('/',formatDateTime(utcnow(),'yyyy'),'/',formatDateTime(utcnow(),'MM'),'/',formatDateTime(utcnow(),'dd'),'/',variables('v_filename'), '_', formatDateTime(utcnow(),'yyyy-MM-dd THHmmss'), '.csv')  }",
+											"type": "Expression"
+										},
+										"p_ds_folderpath": {
+											"value": "@variables('v_folderpath')",
+											"type": "Expression"
+										},
+										"p_ds_first_row_header": true,
+										"p_ds_filesystem": "mdr-raw-data"
+									}
+								}
+							]
+						},
+						{
+							"name": "Cleanup_stage",
+							"description": "Cleanup Stage container of the stage file. So a fresh file is loaded next time",
+							"type": "Delete",
+							"dependsOn": [
+								{
+									"activity": "cp_STG_to_RAW",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "1.00:00:00",
+								"retry": 1,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataset": {
+									"referenceName": "ds_adlsg2_csv_parameter_generic",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_ds_filename": {
+											"value": "@concat(variables('v_filename'),'.csv')",
+											"type": "Expression"
+										},
+										"p_ds_folderpath": {
+											"value": "@concat(variables('v_folderpath'),'/')",
+											"type": "Expression"
+										},
+										"p_ds_first_row_header": true,
+										"p_ds_filesystem": "mdr-staging-data"
+									}
+								},
+								"enableLogging": false,
+								"storeSettings": {
+									"type": "AzureBlobFSReadSettings",
+									"recursive": true,
+									"enablePartitionDiscovery": false
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "lk_get_pipeline_parameters",
+				"description": "Lookup the parameters required for this pipeline:\nfile_name\nfolder_path",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.01:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "NetworkFolder"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Set filename",
+				"description": "Set the variable v_filename either from the lookupoutput or direct string assignment.",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_filename",
+					"value": {
+						"value": "@activity('lk_get_pipeline_parameters').output.firstRow.file_name",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set folderpath",
+				"description": "Set the variable v_folderpath either from the lookupoutput or direct string assignment.",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_folderpath",
+					"value": {
+						"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"variables": {
+			"p_pl_fileexists": {
+				"type": "Boolean"
+			},
+			"v_filename": {
+				"type": "String"
+			},
+			"v_folderpath": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/NCSA/14 Co Console/Certificate Status"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-07-19T08:16:53Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

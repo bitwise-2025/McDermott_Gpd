@@ -1,0 +1,113 @@
+{
+	"name": "df_toolhound_transact_stage_to_raw",
+	"properties": {
+		"folder": {
+			"name": "Projects/YARD KPI/Toolhound"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_yardkpi_toolhound_generic_wildcard",
+						"type": "DatasetReference"
+					},
+					"name": "SrcToolhoundStage"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_yardkpi_toolhound_generic_wildcard",
+						"type": "DatasetReference"
+					},
+					"name": "SinkToolhoundRaw"
+				}
+			],
+			"transformations": [
+				{
+					"name": "SetFileName",
+					"description": "Creating/updating the columns"
+				},
+				{
+					"name": "SelectColumns"
+				}
+			],
+			"scriptLines": [
+				"parameters{",
+				"     folder_path as string,",
+				"     input_file_name as string",
+				"}",
+				"source(output(",
+				"          TransactionNo as string,",
+				"          LocationName as string,",
+				"          TransactionDate as string,",
+				"          FirstName as string,",
+				"          LastName as string,",
+				"          EntityId as string,",
+				"          EmployeeNo as string,",
+				"          craft as string,",
+				"          partNo as string,",
+				"          Description as string,",
+				"          ident as string,",
+				"          ItemID as string,",
+				"          TransactionType as string,",
+				"          varReturnStatus as string,",
+				"          Qty as string,",
+				"          UnitCost as string,",
+				"          TotalCost as string,",
+				"          DueDate as string,",
+				"          Job as string,",
+				"          SubJob as string,",
+				"          CostCode as string,",
+				"          CostCodeDesc as string,",
+				"          Reference as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: true,",
+				"     purgeFiles: true,",
+				"     rowUrlColumn: 'file_path',",
+				"     wildcardPaths:[($folder_path+'/'+$input_file_name+'_*.csv')]) ~> SrcToolhoundStage",
+				"SrcToolhoundStage derive(file_path = concat(concat(trim(substringIndex(file_path,'/',5),'/'),'/'),substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',substringIndex(split(file_path,'/')[6],'_',2),'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv'),",
+				"          Employee_Name = concat(FirstName, ' ', LastName),",
+				"          Description = replace(replace(Description, '\\n', ' '),'  ','')) ~> SetFileName",
+				"SetFileName select(mapColumn(",
+				"          TransactionNo,",
+				"          LocationName,",
+				"          TransactionDate,",
+				"          Employee_Name,",
+				"          EntityID = EntityId,",
+				"          EmployeeNo,",
+				"          craft,",
+				"          partNo,",
+				"          Description,",
+				"          ident,",
+				"          ItemID,",
+				"          TransactionType,",
+				"          varReturnStatus,",
+				"          Qty,",
+				"          UnitCost,",
+				"          TotalCost,",
+				"          DueDate,",
+				"          Job,",
+				"          SubJob,",
+				"          CostCode,",
+				"          CostCodeDesc,",
+				"          Reference,",
+				"          file_path",
+				"     ),",
+				"     skipDuplicateMapInputs: false,",
+				"     skipDuplicateMapOutputs: false) ~> SelectColumns",
+				"SelectColumns sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     rowUrlColumn:'file_path',",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> SinkToolhoundRaw"
+			]
+		}
+	}
+}

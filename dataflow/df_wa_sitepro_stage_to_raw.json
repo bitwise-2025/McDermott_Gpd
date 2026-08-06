@@ -1,0 +1,32 @@
+{
+	"name": "df_wa_sitepro_stage_to_raw",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adls2_sitepro_bb3_stagetoraw",
+						"type": "DatasetReference"
+					},
+					"name": "srcStageToRaw"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_wa_sitepro_raw",
+						"type": "DatasetReference"
+					},
+					"name": "destWARaw"
+				}
+			],
+			"transformations": [
+				{
+					"name": "setFileName"
+				}
+			],
+			"script": "source(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\twildcardPaths:['Project_Data/NCSA/SitePro/WA/sitepro_wa.csv']) ~> srcStageToRaw\nsrcStageToRaw derive(FileName = concat( 'Project_Data/NCSA/SitePro/WA/',        substring(toString(currentTimestamp()),1,4),        '/',substring(toString(currentTimestamp()),6,2),        '/',substring(toString(currentTimestamp()),9,2),        '/',        'Wa_sitepro_',        replace(replace(toString(currentTimestamp()),'.',''),':',''),        '.csv')) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\trowUrlColumn:'FileName',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> destWARaw"
+		}
+	}
+}

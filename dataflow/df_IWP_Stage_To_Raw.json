@@ -1,0 +1,28 @@
+{
+	"name": "df_IWP_Stage_To_Raw",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_iwp_sitepro_stagetoraw",
+						"type": "DatasetReference"
+					},
+					"name": "srcStageToRawIWP"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_iwp_raw",
+						"type": "DatasetReference"
+					},
+					"name": "destStageToRawIWP"
+				}
+			],
+			"transformations": [],
+			"script": "source(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\twildcardPaths:['Project_Data/NCSA/SitePro/IWP/sitepro_iwp.csv']) ~> srcStageToRawIWP\nsrcStageToRawIWP sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tfilePattern:(concat(substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/','iwp_sitepro_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv')),\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> destStageToRawIWP"
+		}
+	}
+}

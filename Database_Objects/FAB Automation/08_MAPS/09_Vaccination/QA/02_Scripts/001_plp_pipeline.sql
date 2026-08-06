@@ -1,0 +1,5 @@
+insert into plp_pipeline (pipeline_code,subject_area_code,description,comment,active,touched_by,touched_dtm,sec_sa_id) Values('pl_maps_vaccination_source_to_stage','NCSA','pl_maps_vaccination_source_to_stage',NULL,'1','aditya.anand2@mcdermott.com','2023-04-06 06:42:19.043',47)
+insert into plp_pipeline (pipeline_code,subject_area_code,description,comment,active,touched_by,touched_dtm,sec_sa_id) Values('pl_maps_vaccination_stage_to_raw','NCSA','pl_maps_vaccination_stage_to_raw',NULL,'1','aditya.anand2@mcdermott.com','2023-04-06 06:42:19.043',47)
+insert into plp_pipeline (pipeline_code,subject_area_code,description,comment,active,touched_by,touched_dtm,sec_sa_id) Values('pl_maps_vaccination_raw_to_synapse','NCSA','pl_maps_vaccination_raw_to_synapse',NULL,'1','aditya.anand2@mcdermott.com','2023-04-06 06:42:19.043',47)
+insert into plp_pipeline (pipeline_code,subject_area_code,description,comment,active,touched_by,touched_dtm,sec_sa_id) Values('pl_maps_vaccination_master_pipeline','NCSA','pl_maps_vaccination_master_pipeline',NULL,'1','aditya.anand2@mcdermott.com','2023-04-06 06:42:19.043',47)
+

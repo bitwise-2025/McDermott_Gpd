@@ -1,0 +1,826 @@
+{
+	"name": "pl_Fabrication_PARS_All_Projects",
+	"properties": {
+		"activities": [
+			{
+				"name": "lk_get_pipeline_parameters",
+				"description": "Get the parameters to be used in this pipeline",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": "pl_ncsa_master_pipelines"
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "EMAIL"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "lk_get_pipeline_parameters_2",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "NetworkFolder"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "SP Update Control Table Last Run Date_copy2",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "ForEach1",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+					"storedProcedureParameters": {
+						"pParameterCode": {
+							"value": "start_date",
+							"type": "String"
+						},
+						"pParameterValue": {
+							"value": {
+								"value": "@formatDateTime(activity('lk_get_pipeline_parameters_2').output.firstRow.run_start_datetime,'yyyy-MM-dd HH:mm:ss')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": "NetworkFolder",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "linkedservice_DEV_entanalytics_synapse",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Get Metadata1",
+				"type": "GetMetadata",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "lk_get_pipeline_parameters_2",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_Fabrication_PARS_get_Parentfolders",
+						"type": "DatasetReference"
+					},
+					"fieldList": [
+						"childItems"
+					],
+					"storeSettings": {
+						"type": "FileServerReadSettings",
+						"recursive": true,
+						"enablePartitionDiscovery": false
+					},
+					"formatSettings": {
+						"type": "DelimitedTextReadSettings"
+					}
+				}
+			},
+			{
+				"name": "ForEach1",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Get Metadata1",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get Metadata1').output.childItems",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Get Metadata2",
+							"type": "GetMetadata",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataset": {
+									"referenceName": "ds_Fabrication_PARS_get_Subfolders",
+									"type": "DatasetReference",
+									"parameters": {
+										"path": {
+											"value": "@item().name",
+											"type": "Expression"
+										}
+									}
+								},
+								"fieldList": [
+									"childItems"
+								],
+								"storeSettings": {
+									"type": "FileServerReadSettings",
+									"recursive": true,
+									"enablePartitionDiscovery": false
+								},
+								"formatSettings": {
+									"type": "DelimitedTextReadSettings"
+								}
+							}
+						},
+						{
+							"name": "Filter1",
+							"type": "Filter",
+							"dependsOn": [
+								{
+									"activity": "Get Metadata2",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"items": {
+									"value": "@activity('Get Metadata2').output.childItems",
+									"type": "Expression"
+								},
+								"condition": {
+									"value": "@equals(item().name,activity('lk_get_pipeline_parameters_2').output.firstRow.source_directory)",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "If Condition2",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "If Condition1",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@and(greater(length(activity('Filter1').output.value), 0),greater(length(activity('Get Metadata3').output.childItems), 0))\n",
+									"type": "Expression"
+								},
+								"ifTrueActivities": [
+									{
+										"name": "Copy data Csv",
+										"type": "Copy",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "0.07:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"source": {
+												"type": "DelimitedTextSource",
+												"additionalColumns": [
+													{
+														"name": "CreatedDateTime",
+														"value": {
+															"value": "@addHours(utcNow(),4)",
+															"type": "Expression"
+														}
+													},
+													{
+														"name": "SourceFileName",
+														"value": "$$FILENAME"
+													}
+												],
+												"storeSettings": {
+													"type": "FileServerReadSettings",
+													"recursive": true,
+													"modifiedDatetimeStart": {
+														"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.start_date",
+														"type": "Expression"
+													},
+													"wildcardFileName": {
+														"value": "*.csv",
+														"type": "Expression"
+													},
+													"enablePartitionDiscovery": false
+												},
+												"formatSettings": {
+													"type": "DelimitedTextReadSettings"
+												}
+											},
+											"sink": {
+												"type": "SqlDWSink",
+												"preCopyScript": {
+													"value": "@{concat('truncate table',' ','epr.',activity('lk_get_pipeline_parameters_2').output.firstRow.table_name)}",
+													"type": "Expression"
+												},
+												"allowCopyCommand": true,
+												"disableMetricsCollection": false
+											},
+											"enableStaging": true,
+											"stagingSettings": {
+												"linkedServiceName": {
+													"referenceName": "ADLSG2 TimeAnalytics DEV",
+													"type": "LinkedServiceReference"
+												},
+												"path": "mdr-staging-data/Ruya11"
+											},
+											"enableSkipIncompatibleRow": true,
+											"logSettings": {
+												"enableCopyActivityLog": true,
+												"copyActivityLogSettings": {
+													"logLevel": "Warning",
+													"enableReliableLogging": false
+												},
+												"logLocationSettings": {
+													"linkedServiceName": {
+														"referenceName": "ADGLS2 SRCDEST DEV",
+														"type": "LinkedServiceReference"
+													},
+													"path": ""
+												}
+											},
+											"translator": {
+												"type": "TabularTranslator",
+												"mappings": [
+													{
+														"source": {
+															"name": "Category",
+															"type": "String"
+														},
+														"sink": {
+															"name": "Category",
+															"type": "String"
+														}
+													},
+													{
+														"source": {
+															"name": "Parent Transaction Type",
+															"type": "String"
+														},
+														"sink": {
+															"name": "Parent Transaction Type",
+															"type": "String"
+														}
+													},
+													{
+														"source": {
+															"name": "Transaction Type",
+															"type": "String"
+														},
+														"sink": {
+															"name": "Transaction Type",
+															"type": "String"
+														}
+													},
+													{
+														"source": {
+															"name": "Metrics",
+															"type": "String"
+														},
+														"sink": {
+															"name": "Metrics",
+															"type": "String"
+														}
+													},
+													{
+														"source": {
+															"name": "Physical Location",
+															"type": "String"
+														},
+														"sink": {
+															"name": "Physical Location",
+															"type": "String"
+														}
+													},
+													{
+														"source": {
+															"name": "Username",
+															"type": "String"
+														},
+														"sink": {
+															"name": "Username",
+															"type": "String"
+														}
+													},
+													{
+														"source": {
+															"name": "Contract",
+															"type": "String"
+														},
+														"sink": {
+															"name": "Contract",
+															"type": "String"
+														}
+													},
+													{
+														"source": {
+															"name": "Entity",
+															"type": "String"
+														},
+														"sink": {
+															"name": "Entity",
+															"type": "String"
+														}
+													},
+													{
+														"source": {
+															"name": "Job Number",
+															"type": "String"
+														},
+														"sink": {
+															"name": "Job Number",
+															"type": "String"
+														}
+													},
+													{
+														"source": {
+															"name": "Sub-function",
+															"type": "String"
+														},
+														"sink": {
+															"name": "Sub-function",
+															"type": "String"
+														}
+													},
+													{
+														"source": {
+															"name": "Activity Code",
+															"type": "String"
+														},
+														"sink": {
+															"name": "Activity Code",
+															"type": "String"
+														}
+													},
+													{
+														"source": {
+															"name": "Unit",
+															"type": "String"
+														},
+														"sink": {
+															"name": "Unit",
+															"type": "String"
+														}
+													},
+													{
+														"source": {
+															"name": "Quantity",
+															"type": "String"
+														},
+														"sink": {
+															"name": "Quantity",
+															"type": "String"
+														}
+													},
+													{
+														"source": {
+															"name": "Man Hours",
+															"type": "String"
+														},
+														"sink": {
+															"name": "Man Hours",
+															"type": "String"
+														}
+													},
+													{
+														"source": {
+															"name": "Percentage",
+															"type": "String"
+														},
+														"sink": {
+															"name": "Percentage",
+															"type": "String"
+														}
+													},
+													{
+														"source": {
+															"name": "Effective Year",
+															"type": "String"
+														},
+														"sink": {
+															"name": "Effective Year",
+															"type": "String"
+														}
+													},
+													{
+														"source": {
+															"name": "Effective Month",
+															"type": "String"
+														},
+														"sink": {
+															"name": "Effective Month",
+															"type": "String"
+														}
+													},
+													{
+														"source": {
+															"name": "Effective Date",
+															"type": "String"
+														},
+														"sink": {
+															"name": "Effective Date",
+															"type": "String"
+														}
+													},
+													{
+														"source": {
+															"name": "Revision",
+															"type": "String"
+														},
+														"sink": {
+															"name": "Revision",
+															"type": "String"
+														}
+													},
+													{
+														"source": {
+															"name": "CreatedDateTime",
+															"type": "String"
+														},
+														"sink": {
+															"name": "CreatedDateTime",
+															"type": "String"
+														}
+													},
+													{
+														"source": {
+															"name": "SourceFileName",
+															"type": "String"
+														},
+														"sink": {
+															"name": "SourceFileName",
+															"type": "String"
+														}
+													}
+												]
+											}
+										},
+										"inputs": [
+											{
+												"referenceName": "ds_Fabrication_PARS_get_Subfolders",
+												"type": "DatasetReference",
+												"parameters": {
+													"path": {
+														"value": "@concat(variables('currentfoldername'), '/', activity('lk_get_pipeline_parameters_2').output.firstRow.source_directory)",
+														"type": "Expression"
+													}
+												}
+											}
+										],
+										"outputs": [
+											{
+												"referenceName": "AzureSynapseAnalyticsPool",
+												"type": "DatasetReference",
+												"parameters": {
+													"schema": "epr",
+													"TableName": {
+														"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.table_name",
+														"type": "Expression"
+													}
+												}
+											}
+										]
+									},
+									{
+										"name": "Delete_old_file_data",
+										"type": "Script",
+										"dependsOn": [
+											{
+												"activity": "Copy data Csv",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "0.12:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"linkedServiceName": {
+											"referenceName": "AzureSynapseAnalytics",
+											"type": "LinkedServiceReference"
+										},
+										"typeProperties": {
+											"scripts": [
+												{
+													"type": "Query",
+													"text": "delete from [epr].[Fabrication_PARS_All_Projects]\nwhere SourceFileName in (select distinct SourceFileName from [epr].[Fabrication_PARS_All_Projects_Stage])\n"
+												}
+											],
+											"scriptBlockExecutionTimeout": "02:00:00"
+										}
+									},
+									{
+										"name": "Insert_to_main_table",
+										"type": "Script",
+										"dependsOn": [
+											{
+												"activity": "Delete_old_file_data",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "0.12:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"linkedServiceName": {
+											"referenceName": "AzureSynapseAnalytics",
+											"type": "LinkedServiceReference"
+										},
+										"typeProperties": {
+											"scripts": [
+												{
+													"type": "Query",
+													"text": "insert into [epr].[Fabrication_PARS_All_Projects]\nselect * from [epr].[Fabrication_PARS_All_Projects_Stage]\n"
+												}
+											],
+											"scriptBlockExecutionTimeout": "02:00:00"
+										}
+									},
+									{
+										"name": "Send Email On Source copy activity",
+										"type": "WebActivity",
+										"dependsOn": [
+											{
+												"activity": "Copy data Csv",
+												"dependencyConditions": [
+													"Failed"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"method": "POST",
+											"headers": {
+												"Content-Type": "application/json"
+											},
+											"url": "https://prod-31.eastus.logic.azure.com:443/workflows/03d7da5abbab4215a05aeaceae3b96fa/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=asuyutHtoSxGFURsj1-A6AKRiNLdXZ4mTnZvZ17_8hI",
+											"connectVia": {
+												"referenceName": "integrationRuntimeEast2",
+												"type": "IntegrationRuntimeReference"
+											},
+											"body": {
+												"value": "{\n    \"DataFactoryName\": \"@{pipeline().DataFactory}\",\n    \"PipelineName\": \"@{pipeline().Pipeline}\",\n    \"ErrorMessage\": \"Pipeline Failed - Source File Validation Error\",\n    \"EmailTo\": \"@{activity('lk_get_pipeline_parameters').output.firstRow.ncsa_master_pipeline_email_to}\",\n    \"Activity\":  \"pl_Fabrication_PARS_All_Projects\"\n}",
+												"type": "Expression"
+											}
+										}
+									}
+								]
+							}
+						},
+						{
+							"name": "Set variable1",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Filter1",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "currentfoldername",
+								"value": {
+									"value": "@item().name",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "If Condition1",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "Set variable1",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@greater(length(activity('Filter1').output.value), 0)",
+									"type": "Expression"
+								},
+								"ifTrueActivities": [
+									{
+										"name": "Get Metadata3",
+										"type": "GetMetadata",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "0.12:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"dataset": {
+												"referenceName": "ds_Fabrication_PARS_get_Subfolders",
+												"type": "DatasetReference",
+												"parameters": {
+													"path": {
+														"value": "@concat(variables('currentfoldername'), '/', activity('lk_get_pipeline_parameters_2').output.firstRow.source_directory)",
+														"type": "Expression"
+													}
+												}
+											},
+											"fieldList": [
+												"childItems"
+											],
+											"storeSettings": {
+												"type": "FileServerReadSettings",
+												"recursive": true,
+												"modifiedDatetimeStart": {
+													"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.start_date",
+													"type": "Expression"
+												},
+												"enablePartitionDiscovery": false
+											},
+											"formatSettings": {
+												"type": "DelimitedTextReadSettings"
+											}
+										}
+									}
+								]
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Send Email On Failure if condtion",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "ForEach1",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "POST",
+					"headers": {
+						"Content-Type": "application/json"
+					},
+					"url": "https://prod-31.eastus.logic.azure.com:443/workflows/03d7da5abbab4215a05aeaceae3b96fa/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=asuyutHtoSxGFURsj1-A6AKRiNLdXZ4mTnZvZ17_8hI",
+					"connectVia": {
+						"referenceName": "integrationRuntimeEast2",
+						"type": "IntegrationRuntimeReference"
+					},
+					"body": {
+						"value": "{\n    \"DataFactoryName\": \"@{pipeline().DataFactory}\",\n    \"PipelineName\": \"@{pipeline().Pipeline}\",\n    \"ErrorMessage\": \"Pipeline Failed - Source File Validation Error\",\n    \"EmailTo\": \"@{activity('lk_get_pipeline_parameters').output.firstRow.ncsa_master_pipeline_email_to}\",\n    \"Activity\":  \"pl_Fabrication_PARS_All_Projects\"\n}",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"variables": {
+			"currentfoldername": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/NCSA/Fabrication_PARS"
+		},
+		"annotations": []
+	}
+}

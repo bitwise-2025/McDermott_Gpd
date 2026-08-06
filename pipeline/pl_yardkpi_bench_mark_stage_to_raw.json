@@ -1,0 +1,168 @@
+{
+	"name": "pl_yardkpi_bench_mark_stage_to_raw",
+	"properties": {
+		"activities": [
+			{
+				"name": "Check File Exists",
+				"type": "GetMetadata",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_Src_snk_adgls2_src_ykpi",
+						"type": "DatasetReference",
+						"parameters": {
+							"FileSystem": {
+								"value": "@variables('Filesystem')",
+								"type": "Expression"
+							},
+							"Directory": {
+								"value": "@variables('Directory')",
+								"type": "Expression"
+							},
+							"Header": true
+						}
+					},
+					"fieldList": [
+						"childItems"
+					],
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true,
+						"enablePartitionDiscovery": false
+					},
+					"formatSettings": {
+						"type": "DelimitedTextReadSettings"
+					}
+				}
+			},
+			{
+				"name": "Set_File_Exists_status",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Check File Exists",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "p_pl_fileexists",
+					"value": {
+						"value": "@greaterOrEquals(indexof(string(activity('Check File Exists').output.childItems),'Bench_Mark'),0)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Run Data Flow if File Exists",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Set_File_Exists_status",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@variables('p_pl_fileexists')",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "df_yardkpi_bench_mark_stage_to_raw",
+							"type": "ExecuteDataFlow",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "1.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataflow": {
+									"referenceName": "df_yardkpi_bench_mark_stage_to_raw",
+									"type": "DataFlowReference",
+									"datasetParameters": {
+										"srcYardKPIBenchMark": {
+											"FileSystem": {
+												"value": "@variables('Filesystem')",
+												"type": "Expression"
+											},
+											"Directory": {
+												"value": "@variables('Directory')",
+												"type": "Expression"
+											},
+											"Header": true
+										},
+										"snkYardKPIBenchMark": {
+											"FileSystem": {
+												"value": "@variables('FileSystemDest')",
+												"type": "Expression"
+											},
+											"Directory": {
+												"value": "@variables('DirectoryDest')",
+												"type": "Expression"
+											},
+											"Header": true
+										}
+									}
+								},
+								"compute": {
+									"coreCount": 8,
+									"computeType": "General"
+								},
+								"traceLevel": "Fine"
+							}
+						}
+					]
+				}
+			}
+		],
+		"variables": {
+			"p_pl_fileexists": {
+				"type": "Boolean"
+			},
+			"Filesystem": {
+				"type": "String",
+				"defaultValue": "mdr-staging-data"
+			},
+			"Directory": {
+				"type": "String",
+				"defaultValue": "Project_Data/YARDKPI/Bench_Mark"
+			},
+			"FileSystemDest": {
+				"type": "String",
+				"defaultValue": "mdr-raw-data"
+			},
+			"DirectoryDest": {
+				"type": "String",
+				"defaultValue": "Project_Data/YARDKPI/Bench_Mark"
+			}
+		},
+		"folder": {
+			"name": "Projects/YARD KPI/Bench_Mark"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-03-20T06:55:33Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

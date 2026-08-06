@@ -1,0 +1,86 @@
+{
+	"name": "df_payment_accounting_data_flattening",
+	"properties": {
+		"folder": {
+			"name": "Projects/Payment Dashboard/Payment Accounting Data"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_xml_payment_accounting_data_source_stage_decoded_xml",
+						"type": "DatasetReference"
+					},
+					"name": "SrcXMl"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_payment_accounting_data_source_stage_final_csv",
+						"type": "DatasetReference"
+					},
+					"name": "SnkCsv"
+				}
+			],
+			"transformations": [
+				{
+					"name": "XmlToCsvflatten"
+				},
+				{
+					"name": "addLoadDetails"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          DATA_DS as (G_1 as (ACCOUNT as long, ACCOUNTED_CREDIT_INV_CURR as double, ACCOUNTED_DEBIT_INV_CURR as double, ACCOUNTING_PERIOD as string, ACCOUNTING_SEQUENCE_NAME as string, ACCOUNTING_SEQUENCE_NUMBER as integer, ACC_CLASS as string, ACC_DATE as string, BAL_TYPE as string, ENTERED_CREDIT_USD as double, ENTERED_DEBIT_USD as double, EVENT as string, EVENT_DATE as string, EVENT_ID as integer, GL_TRANSFER_DATE as string, JOURNAL_BATCH as string, JOURNAL_ENTRY as string, JOURNAL_LINE_NUMBER as short, LEGAL_ENTITY_ID as long, LEGAL_ENTITY_NAME as string, LINE as short, LINE_DESCRIPTION as string)[])",
+				"     ),",
+				"     allowSchemaDrift: false,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     validationMode: 'none',",
+				"     namespaces: true) ~> SrcXMl",
+				"SrcXMl foldDown(unroll(DATA_DS.G_1),",
+				"     mapColumn(",
+				"          ACCOUNT = DATA_DS.G_1.ACCOUNT,",
+				"          ACCOUNTED_CREDIT_INV_CURR = DATA_DS.G_1.ACCOUNTED_CREDIT_INV_CURR,",
+				"          ACCOUNTED_DEBIT_INV_CURR = DATA_DS.G_1.ACCOUNTED_DEBIT_INV_CURR,",
+				"          ACCOUNTING_PERIOD = DATA_DS.G_1.ACCOUNTING_PERIOD,",
+				"          ACCOUNTING_SEQUENCE_NAME = DATA_DS.G_1.ACCOUNTING_SEQUENCE_NAME,",
+				"          ACCOUNTING_SEQUENCE_NUMBER = DATA_DS.G_1.ACCOUNTING_SEQUENCE_NUMBER,",
+				"          ACC_CLASS = DATA_DS.G_1.ACC_CLASS,",
+				"          ACC_DATE = DATA_DS.G_1.ACC_DATE,",
+				"          BAL_TYPE = DATA_DS.G_1.BAL_TYPE,",
+				"          ENTERED_CREDIT_USD = DATA_DS.G_1.ENTERED_CREDIT_USD,",
+				"          ENTERED_DEBIT_USD = DATA_DS.G_1.ENTERED_DEBIT_USD,",
+				"          EVENT = DATA_DS.G_1.EVENT,",
+				"          EVENT_DATE = DATA_DS.G_1.EVENT_DATE,",
+				"          EVENT_ID = DATA_DS.G_1.EVENT_ID,",
+				"          GL_TRANSFER_DATE = DATA_DS.G_1.GL_TRANSFER_DATE,",
+				"          JOURNAL_BATCH = DATA_DS.G_1.JOURNAL_BATCH,",
+				"          JOURNAL_ENTRY = DATA_DS.G_1.JOURNAL_ENTRY,",
+				"          JOURNAL_LINE_NUMBER = DATA_DS.G_1.JOURNAL_LINE_NUMBER,",
+				"          LEGAL_ENTITY_ID = DATA_DS.G_1.LEGAL_ENTITY_ID,",
+				"          LEGAL_ENTITY_NAME = DATA_DS.G_1.LEGAL_ENTITY_NAME,",
+				"          LINE = DATA_DS.G_1.LINE,",
+				"          LINE_DESCRIPTION = DATA_DS.G_1.LINE_DESCRIPTION",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> XmlToCsvflatten",
+				"XmlToCsvflatten derive(source_name = 'SYSTEM',",
+				"          sub_source_name = 'R2P',",
+				"          created_date_time = currentUTC()) ~> addLoadDetails",
+				"addLoadDetails sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     partitionFileNames:['Payment_Accounting_Data.csv'],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> SnkCsv"
+			]
+		}
+	}
+}

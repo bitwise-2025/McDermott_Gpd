@@ -1,0 +1,35 @@
+{
+	"name": "df_yardkpi_smat_stage_to_raw",
+	"properties": {
+		"folder": {
+			"name": "Projects/YARD KPI/SMAT"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_yardkpi_smat_wildcard_generic",
+						"type": "DatasetReference"
+					},
+					"name": "srcSMATStage"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_yardkpi_smat_wildcard_generic",
+						"type": "DatasetReference"
+					},
+					"name": "snkSMATRaw"
+				}
+			],
+			"transformations": [
+				{
+					"name": "setFileName"
+				}
+			],
+			"script": "parameters{\n\tfolder_path as string,\n\tinput_file_name as string\n}\nsource(output(\n\t\tPROJECT_ID as string,\n\t\tREQUISITION_NO as string,\n\t\tREQ_REV as string,\n\t\tREQ_CREATED_DATE as string,\n\t\tREQ_ORIGINATOR as string,\n\t\tREQ_APPROVER as string,\n\t\tRELEASED_TO_PROC as string,\n\t\tPROC_ACK_DATE as string,\n\t\tMATL_WRK_GRP as string,\n\t\tMATL_WRK_DESC as string,\n\t\tPO_NUMBER as string,\n\t\tPO_REV as string,\n\t\tPO_TITLE as string,\n\t\tPO_STATUS as string,\n\t\tSTATUS_DATE as string,\n\t\tREV0_PO_ISSUE_DATE as string,\n\t\tPO_APPROVED_DATE as string,\n\t\tPO_ISSUE_DATE as string,\n\t\tSUPPLIER_CODE as string,\n\t\tSUPPLIER_NAME as string,\n\t\tSUPPLIER_LOCATION as string,\n\t\tPURCHASER as string,\n\t\tBUYER as string,\n\t\tSELECT_CODE as string,\n\t\tPAYMENT_MODE as string,\n\t\tITEMS_COUNT_PO as string,\n\t\tPO_TOTAL_WITHOUT_TAX as string,\n\t\tTOTAL_COST_PO as string,\n\t\tCURRENCY_PO as string,\n\t\tTOTAL_IN_USD as string,\n\t\tACCOUNT_CODE_PO as string,\n\t\tREQ_BUDGET as string,\n\t\tAGREEMENT_BUDGET as string,\n\t\tREVISION_0_PO_VALUE_IN_USD as string,\n\t\tPROJECT_TITLE as string,\n\t\tLAST_MODIFIED_PR as string,\n\t\tLAST_MODIFIED_PO as string,\n\t\tsource_name as string,\n\t\tsub_source_name as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: true,\n\tpurgeFiles: true,\n\trowUrlColumn: 'File_Path',\n\twildcardPaths:[($folder_path+'/'+$input_file_name+'_*.csv')]) ~> srcSMATStage\nsrcSMATStage derive(File_Path = concat(concat(trim(substringIndex(File_Path,'/',4),'/'),'/'),substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',$input_file_name,'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv')) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tinput(\n\t\tPROJECT_ID as string,\n\t\tREQUISITION_NO as string,\n\t\tREQ_REV as string,\n\t\tREQ_CREATED_DATE as string,\n\t\tREQ_ORIGINATOR as string,\n\t\tREQ_APPROVER as string,\n\t\tRELEASED_TO_PROC as string,\n\t\tPROC_ACK_DATE as string,\n\t\tMATL_WRK_GRP as string,\n\t\tMATL_WRK_DESC as string,\n\t\tPO_NUMBER as string,\n\t\tPO_REV as string,\n\t\tPO_TITLE as string,\n\t\tPO_STATUS as string,\n\t\tSTATUS_DATE as string,\n\t\tREV0_PO_ISSUE_DATE as string,\n\t\tPO_APPROVED_DATE as string,\n\t\tPO_ISSUE_DATE as string,\n\t\tSUPPLIER_CODE as string,\n\t\tSUPPLIER_NAME as string,\n\t\tSUPPLIER_LOCATION as string,\n\t\tPURCHASER as string,\n\t\tBUYER as string,\n\t\tSELECT_CODE as string,\n\t\tPAYMENT_MODE as string,\n\t\tITEMS_COUNT_PO as string,\n\t\tPO_TOTAL_WITHOUT_TAX as string,\n\t\tTOTAL_COST_PO as string,\n\t\tCURRENCY_PO as string,\n\t\tTOTAL_IN_USD as string,\n\t\tACCOUNT_CODE_PO as string,\n\t\tREQ_BUDGET as string,\n\t\tAGREEMENT_BUDGET as string,\n\t\tREVISION_0_PO_VALUE_IN_USD as string,\n\t\tPROJECT_TITLE as string,\n\t\tLAST_MODIFIED_PR as string,\n\t\tLAST_MODIFIED_PO as string,\n\t\tsource_name as string,\n\t\tsub_source_name as string\n\t),\n\trowUrlColumn:'File_Path',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> snkSMATRaw"
+		}
+	}
+}

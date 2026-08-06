@@ -1,0 +1,223 @@
+{
+	"name": "pl_yardkpi_toolhound_transaction_source_to_stage",
+	"properties": {
+		"activities": [
+			{
+				"name": "Set last_run_start_date",
+				"description": "Sets start and current date.",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_src_start_time",
+					"value": {
+						"value": "@formatDateTime(utcNow(),'yyyy-MM-dd HH:mm:ss')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "cp_source_to_stage",
+				"description": "Copies data from source to stage.",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Set last_run_start_date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"sqlReaderQuery": {
+							"value": "@concat('select tranact.varTransactionNo as TransactionNo,\t\t\t\t\t\t\t\n       invLocationtxt.varLocationName as LocationName,\t\t\t\t\t\t\t\n       tranact.dteTransactionDate as TransactionDate,\t\t\t\t\t\t\t\n       usertxt.varFirstName as FirstName, usertxt.varLastName as LastName,\n      entity.varEntityID as EntityId,\t\t\t\t\n       usertxt.varEmployeeNo as EmployeeNo,\t\t\t\t\t\t\t\n       crafttxt.varCraft as craft,\t\n       partno.varPartNo as partNo,\t\t\t\t\t\t\t\n       parttxt.varDescription as Description,\t\t\t\t\t\t\t\n       parttxt.varUserField1 as ident,\t\t\t\t\t\t\t\n       invID.varInventoryID as ItemID,\t\t\t\t\t\t\t\n       TranTyTx.varTransactionType as TransactionType, \t\t\t\n       retStatTxt.varReturnStatus as varReturnStatus,\t\t\t\t\t\t\n       tranactDtl.intQty as Qty,\t\t\t\t\t\t\t\n       tranactDtl.decUnitCost as UnitCost, \t\t\t\t\t\t\t\n       tranactDtl.decTotalCost as TotalCost,\t\t\t\t\t\t\t\n       tranactDtl.dteDueDateTime as DueDate,\t\t\t\t\t\t\n       jobtxt.varJobNumber as Job,\t\t\t\t\n       subjobtxt.varsubJobNumber as SubJob,\t\t\t\t\t\n       costcodetxt.varCostcodeNumber as CostCode,\t\t\t\t\t\n       costcodetxt.varCostCode as CostCodeDesc,\t\t\t\t\t\t\t\n      \t\t\t\t\t\n       tranact.varReference as Reference\t\t\t\t\t\nfrom [dbo].[tblTransaction] tranact\t\t\t\t\t\t\t\n  inner join [dbo].[tblLocationText] invLocationtxt on tranact.intLocationID = invLocationtxt.intLocationID\t\t\t\t\t\t\t\n  inner join [dbo].[tblTransactionDetail] tranactDtl on tranact.intTransactionID = tranactDtl.intTransactionID\t\t\t\t\t\t\t\n  inner join [dbo].[tblInventoryID] invID on tranactDtl.intInventoryIdID = invID.intInventoryIdID\t\t\t\t\t\t\t\n  inner join [dbo].[tblInventory] partno on  invID.intInventoryID = partno.intInventoryID \t\t\t\t\t\t\t\n  inner join [dbo].[tblInventoryText] parttxt on parttxt.intInventoryID = partno.intInventoryID\t\t\t\t\t\t\t\n  inner join [dbo].[tblTransactionTypeText] TranTyTx on parttxt.varLocaleID = TranTyTx.varLocaleID  and tranactDtl.intTransactionTypeID = TranTyTx.intTransactionTypeID\t\t\t\t\t\t\t\n  inner join [dbo].[tblPersonnel] puser on tranact.intCreatedUserID = puser.intPersonnelID\t\t\t\t\t\t\t\n  inner join [dbo].[tblPersonnelText] usertxt on tranact.intCreatedUserID = usertxt.intPersonnelID\t\t\t\t\t\t\t\n  left join [dbo].[tblCraftText] crafttxt on parttxt.varlocaleID = crafttxt.VarLocaleID and puser.intCraftID = crafttxt.intCraftID\t\t\t\t\t\t\t\n  left join [dbo].[tblReturnStatusText] retStatTxt on parttxt.varlocaleID = retStatTxt.VarLocaleID and tranactDtl.intReturnStatusID = retStatTxt.intReturnStatusID\t\t\t\t\t\t\t\n  left join [dbo].[tblJobtext] jobtxt on parttxt.varlocaleID = jobtxt.VarLocaleID and tranact.intJobID = jobtxt.intJobID\t\t\t\t\t\t\t\n  left join [dbo].[tblSubJobtext] subjobtxt on parttxt.varlocaleID = subjobtxt.VarLocaleID and tranact.intsubJobID = subjobtxt.intsubJobID\t\t\t\t\t\t\t\n  left join [dbo].[tblCostCodeText] costcodetxt on parttxt.varlocaleID = costcodetxt.VarLocaleID and tranact.intCostCodeID = costcodetxt.intCostCodeID\t\t\t\t\t\t\t\n  left join [dbo].[tblEntity] entity on tranact.intEntityID = entity.intEntityID\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t\nwhere tranact.dteModifiedDate >= ''', activity('lk_get_pipeline_parameters').output.firstRow.last_run_start_date,'''')",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_sql_query_yardkpi_toolhound_source",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_yardkpi_toolhound_generic",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_ds_filesystem": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.file_system",
+								"type": "Expression"
+							},
+							"p_ds_directory": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+								"type": "Expression"
+							},
+							"p_ds_filename": {
+								"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'_',variables('v_src_start_time'),'.csv')",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "sp_update_parameter",
+				"description": "Updates the parameters and it's values",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "cp_source_to_stage",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": {
+						"value": "[dbo].[updateIncrementPipelineParameterValue]",
+						"type": "Expression"
+					},
+					"storedProcedureParameters": {
+						"pParameterCode": {
+							"value": {
+								"value": "last_run_start_date",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pParameterValue": {
+							"value": {
+								"value": "@variables('v_src_start_time')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": {
+								"value": "Toolhound",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseAnalytics",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "lk_get_pipeline_parameters",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": {
+									"value": "Toolhound",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			}
+		],
+		"variables": {
+			"v_src_start_time": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/YARD KPI/Toolhound/Transaction"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-11-17T05:36:04Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

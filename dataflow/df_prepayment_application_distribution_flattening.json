@@ -1,0 +1,109 @@
+{
+	"name": "df_prepayment_application_distribution_flattening",
+	"properties": {
+		"folder": {
+			"name": "Projects/Payment Dashboard/Prepayment Application Distribution"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_xml_prepayment_application_distribution_source_stage_decoded_xml",
+						"type": "DatasetReference"
+					},
+					"name": "SrcXMl"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_prepayment_application_distribution_source_stage_final_csv",
+						"type": "DatasetReference"
+					},
+					"name": "SnkCsv"
+				}
+			],
+			"transformations": [
+				{
+					"name": "XmlToCsvflatten"
+				},
+				{
+					"name": "addLoadDetails"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          DATA_DS as (G_1 as (ACCOUNTING_EVENT_ID as string, AMOUNT as string, AMOUNT_VARIANCE as string, AWT_RELATED_ID as string, BASE_AMOUNT as string, BASE_AMT_AT_PREPAY_CLR_XRATE as string, BASE_AMT_AT_PREPAY_PAY_XRATE as string, BASE_AMT_AT_PREPAY_XRATE as string, BC_EVENT_ID as string, CREATED_BY as string, CREATION_DATE as string, INVOICE_BASE_AMT_VARIANCE as string, INVOICE_BASE_QTY_VARIANCE as string, INVOICE_DISTRIBUTION_ID as string, JOB_DEFINITION_NAME as string, JOB_DEFINITION_PACKAGE as string, LAST_UPDATED_BY as string, LAST_UPDATE_DATE as string, LAST_UPDATE_LOGIN as string, OBJECT_VERSION_NUMBER as string, PA_ADDITION_FLAG as string, PREPAY_APP_DISTRIBUTION_ID as string, PREPAY_APP_DIST_ID as string, PREPAY_CLR_EXCHANGE_DATE as string, PREPAY_CLR_EXCHANGE_RATE as string, PREPAY_CLR_EXCHANGE_RATE_TYPE as string, PREPAY_DIST_LOOKUP_CODE as string, PREPAY_EXCHANGE_DATE as string, PREPAY_EXCHANGE_RATE as string, PREPAY_EXCHANGE_RATE_TYPE as string, PREPAY_HISTORY_ID as string, PREPAY_PAY_EXCHANGE_DATE as string, PREPAY_PAY_EXCHANGE_RATE as string, PREPAY_PAY_EXCHANGE_RATE_TYPE as string, PROGRAM_APPLICATION_ID as string, PROGRAM_ID as string, PROGRAM_UPDATE_DATE as string, QUANTITY_VARIANCE as string, RELEASE_INV_DIST_DERIVED_FROM as string, REQUEST_ID as string, REVERSED_PREPAY_APP_DIST_ID as string, ROUNDING_AMT as string, ROUND_AMT_AT_PREPAY_CLR_XRATE as string, ROUND_AMT_AT_PREPAY_PAY_XRATE as string, ROUND_AMT_AT_PREPAY_XRATE as string)[])",
+				"     ),",
+				"     allowSchemaDrift: false,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     validationMode: 'none',",
+				"     namespaces: true) ~> SrcXMl",
+				"SrcXMl foldDown(unroll(DATA_DS.G_1),",
+				"     mapColumn(",
+				"          ACCOUNTING_EVENT_ID = DATA_DS.G_1.ACCOUNTING_EVENT_ID,",
+				"          AMOUNT = DATA_DS.G_1.AMOUNT,",
+				"          AMOUNT_VARIANCE = DATA_DS.G_1.AMOUNT_VARIANCE,",
+				"          AWT_RELATED_ID = DATA_DS.G_1.AWT_RELATED_ID,",
+				"          BASE_AMOUNT = DATA_DS.G_1.BASE_AMOUNT,",
+				"          BASE_AMT_AT_PREPAY_CLR_XRATE = DATA_DS.G_1.BASE_AMT_AT_PREPAY_CLR_XRATE,",
+				"          BASE_AMT_AT_PREPAY_PAY_XRATE = DATA_DS.G_1.BASE_AMT_AT_PREPAY_PAY_XRATE,",
+				"          BASE_AMT_AT_PREPAY_XRATE = DATA_DS.G_1.BASE_AMT_AT_PREPAY_XRATE,",
+				"          BC_EVENT_ID = DATA_DS.G_1.BC_EVENT_ID,",
+				"          CREATED_BY = DATA_DS.G_1.CREATED_BY,",
+				"          CREATION_DATE = DATA_DS.G_1.CREATION_DATE,",
+				"          INVOICE_BASE_AMT_VARIANCE = DATA_DS.G_1.INVOICE_BASE_AMT_VARIANCE,",
+				"          INVOICE_BASE_QTY_VARIANCE = DATA_DS.G_1.INVOICE_BASE_QTY_VARIANCE,",
+				"          INVOICE_DISTRIBUTION_ID = DATA_DS.G_1.INVOICE_DISTRIBUTION_ID,",
+				"          JOB_DEFINITION_NAME = DATA_DS.G_1.JOB_DEFINITION_NAME,",
+				"          JOB_DEFINITION_PACKAGE = DATA_DS.G_1.JOB_DEFINITION_PACKAGE,",
+				"          LAST_UPDATED_BY = DATA_DS.G_1.LAST_UPDATED_BY,",
+				"          LAST_UPDATE_DATE = DATA_DS.G_1.LAST_UPDATE_DATE,",
+				"          LAST_UPDATE_LOGIN = DATA_DS.G_1.LAST_UPDATE_LOGIN,",
+				"          OBJECT_VERSION_NUMBER = DATA_DS.G_1.OBJECT_VERSION_NUMBER,",
+				"          PA_ADDITION_FLAG = DATA_DS.G_1.PA_ADDITION_FLAG,",
+				"          PREPAY_APP_DISTRIBUTION_ID = DATA_DS.G_1.PREPAY_APP_DISTRIBUTION_ID,",
+				"          PREPAY_APP_DIST_ID = DATA_DS.G_1.PREPAY_APP_DIST_ID,",
+				"          PREPAY_CLR_EXCHANGE_DATE = DATA_DS.G_1.PREPAY_CLR_EXCHANGE_DATE,",
+				"          PREPAY_CLR_EXCHANGE_RATE = DATA_DS.G_1.PREPAY_CLR_EXCHANGE_RATE,",
+				"          PREPAY_CLR_EXCHANGE_RATE_TYPE = DATA_DS.G_1.PREPAY_CLR_EXCHANGE_RATE_TYPE,",
+				"          PREPAY_DIST_LOOKUP_CODE = DATA_DS.G_1.PREPAY_DIST_LOOKUP_CODE,",
+				"          PREPAY_EXCHANGE_DATE = DATA_DS.G_1.PREPAY_EXCHANGE_DATE,",
+				"          PREPAY_EXCHANGE_RATE = DATA_DS.G_1.PREPAY_EXCHANGE_RATE,",
+				"          PREPAY_EXCHANGE_RATE_TYPE = DATA_DS.G_1.PREPAY_EXCHANGE_RATE_TYPE,",
+				"          PREPAY_HISTORY_ID = DATA_DS.G_1.PREPAY_HISTORY_ID,",
+				"          PREPAY_PAY_EXCHANGE_DATE = DATA_DS.G_1.PREPAY_PAY_EXCHANGE_DATE,",
+				"          PREPAY_PAY_EXCHANGE_RATE = DATA_DS.G_1.PREPAY_PAY_EXCHANGE_RATE,",
+				"          PREPAY_PAY_EXCHANGE_RATE_TYPE = DATA_DS.G_1.PREPAY_PAY_EXCHANGE_RATE_TYPE,",
+				"          PROGRAM_APPLICATION_ID = DATA_DS.G_1.PROGRAM_APPLICATION_ID,",
+				"          PROGRAM_ID = DATA_DS.G_1.PROGRAM_ID,",
+				"          PROGRAM_UPDATE_DATE = DATA_DS.G_1.PROGRAM_UPDATE_DATE,",
+				"          QUANTITY_VARIANCE = DATA_DS.G_1.QUANTITY_VARIANCE,",
+				"          RELEASE_INV_DIST_DERIVED_FROM = DATA_DS.G_1.RELEASE_INV_DIST_DERIVED_FROM,",
+				"          REQUEST_ID = DATA_DS.G_1.REQUEST_ID,",
+				"          REVERSED_PREPAY_APP_DIST_ID = DATA_DS.G_1.REVERSED_PREPAY_APP_DIST_ID,",
+				"          ROUNDING_AMT = DATA_DS.G_1.ROUNDING_AMT,",
+				"          ROUND_AMT_AT_PREPAY_CLR_XRATE = DATA_DS.G_1.ROUND_AMT_AT_PREPAY_CLR_XRATE,",
+				"          ROUND_AMT_AT_PREPAY_PAY_XRATE = DATA_DS.G_1.ROUND_AMT_AT_PREPAY_PAY_XRATE,",
+				"          ROUND_AMT_AT_PREPAY_XRATE = DATA_DS.G_1.ROUND_AMT_AT_PREPAY_XRATE",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> XmlToCsvflatten",
+				"XmlToCsvflatten derive(source_name = 'SYSTEM',",
+				"          sub_source_name = 'R2P',",
+				"          created_date_time = currentUTC()) ~> addLoadDetails",
+				"addLoadDetails sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     partitionFileNames:['Prepayment_Application_Distribution.csv'],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> SnkCsv"
+			]
+		}
+	}
+}

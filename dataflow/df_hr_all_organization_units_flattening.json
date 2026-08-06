@@ -1,0 +1,67 @@
+{
+	"name": "df_hr_all_organization_units_flattening",
+	"properties": {
+		"folder": {
+			"name": "Projects/Payment Dashboard/HR All Organization Units"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_xml_hr_all_organization_units_source_stage_decoded_xml",
+						"type": "DatasetReference"
+					},
+					"name": "SrcXMl"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_hr_all_organization_units_source_stage_final_csv",
+						"type": "DatasetReference"
+					},
+					"name": "SnkCsv"
+				}
+			],
+			"transformations": [
+				{
+					"name": "XmlToCsvflatten"
+				},
+				{
+					"name": "addLoadDetails"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          DATA_DS as (G_1 as (LAST_UPDATE_DATE as string, NAME as string, ORGANIZATION_ID as string)[])",
+				"     ),",
+				"     allowSchemaDrift: false,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     validationMode: 'none',",
+				"     namespaces: true) ~> SrcXMl",
+				"SrcXMl foldDown(unroll(DATA_DS.G_1),",
+				"     mapColumn(",
+				"          LAST_UPDATE_DATE = DATA_DS.G_1.LAST_UPDATE_DATE,",
+				"          NAME = DATA_DS.G_1.NAME,",
+				"          ORGANIZATION_ID = DATA_DS.G_1.ORGANIZATION_ID",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> XmlToCsvflatten",
+				"XmlToCsvflatten derive(source_name = 'SYSTEM',",
+				"          sub_source_name = 'R2P',",
+				"          created_date_time = currentUTC()) ~> addLoadDetails",
+				"addLoadDetails sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     partitionFileNames:['HR_ALL_ORGANIZATION_UNITS.csv'],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> SnkCsv"
+			]
+		}
+	}
+}

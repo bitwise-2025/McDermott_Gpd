@@ -1,0 +1,738 @@
+{
+	"name": "pl_Weekly_progress_summary_Ruya11_D7507",
+	"properties": {
+		"activities": [
+			{
+				"name": "lk_get_pipeline_parameters_2",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "NetworkFolder"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "lk_get_pipeline_parameters",
+				"description": "Get the parameters to be used in this pipeline",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": "pl_ncsa_master_pipelines"
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "EMAIL"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Send Email On Failure",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "ForEach1",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "POST",
+					"headers": {
+						"Content-Type": "application/json"
+					},
+					"url": "https://prod-31.eastus.logic.azure.com:443/workflows/03d7da5abbab4215a05aeaceae3b96fa/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=asuyutHtoSxGFURsj1-A6AKRiNLdXZ4mTnZvZ17_8hI",
+					"connectVia": {
+						"referenceName": "integrationRuntimeEast2",
+						"type": "IntegrationRuntimeReference"
+					},
+					"body": {
+						"value": "{\n    \"DataFactoryName\": \"@{pipeline().DataFactory}\",\n    \"PipelineName\": \"@{pipeline().Pipeline}\",\n    \"ErrorMessage\": \"Pipeline Failed\",\n    \"EmailTo\": \"@{activity('lk_get_pipeline_parameters').output.firstRow.ncsa_master_pipeline_email_to}\",\n    \"Activity\":  \"pl_Weekly_progress_summary_Ruya11_D7507\"\n}",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "SP Update Control Table Last Run Date",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "ForEach1",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+					"storedProcedureParameters": {
+						"pParameterCode": {
+							"value": "start_date",
+							"type": "String"
+						},
+						"pParameterValue": {
+							"value": {
+								"value": "@formatDateTime(activity('lk_get_pipeline_parameters_2').output.firstRow.run_start_datetime,'yyyy-MM-dd HH:mm:ss')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": "NetworkFolder",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "linkedservice_DEV_entanalytics_synapse",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Get Metadata1",
+				"type": "GetMetadata",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters_2",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_filesystem_network_excel_get_subfolders_sheetname",
+						"type": "DatasetReference",
+						"parameters": {
+							"path": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.source_directory",
+								"type": "Expression"
+							},
+							"file_name": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.file_name",
+								"type": "Expression"
+							},
+							"Sheetname": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.sheetname",
+								"type": "Expression"
+							},
+							"range": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.range",
+								"type": "Expression"
+							}
+						}
+					},
+					"fieldList": [
+						"childItems"
+					],
+					"storeSettings": {
+						"type": "FileServerReadSettings",
+						"recursive": true,
+						"enablePartitionDiscovery": false
+					}
+				}
+			},
+			{
+				"name": "ForEach1",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Get Metadata1",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get Metadata1').output.childItems",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "If Condition1",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "Get Metadata2",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@greater(ticks(activity('Get Metadata2').output.lastModified),ticks(activity('lk_get_pipeline_parameters_2').output.firstRow.start_date) )",
+									"type": "Expression"
+								},
+								"ifTrueActivities": [
+									{
+										"name": "cp_copy_first_sheet_from_source_to_synapse",
+										"type": "Copy",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "0.07:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"source": {
+												"type": "ExcelSource",
+												"additionalColumns": [
+													{
+														"name": "file_name",
+														"value": "$$FILEPATH"
+													},
+													{
+														"name": "CreatedDateTime",
+														"value": {
+															"value": "@addHours(utcNow(),4 )",
+															"type": "Expression"
+														}
+													},
+													{
+														"name": "project_number",
+														"value": {
+															"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.project_number",
+															"type": "Expression"
+														}
+													}
+												],
+												"storeSettings": {
+													"type": "FileServerReadSettings",
+													"recursive": true,
+													"modifiedDatetimeStart": {
+														"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.start_date",
+														"type": "Expression"
+													},
+													"modifiedDatetimeEnd": "2050-11-30T00:00:00.000Z",
+													"enablePartitionDiscovery": false
+												}
+											},
+											"sink": {
+												"type": "SqlDWSink",
+												"preCopyScript": {
+													"value": "@{concat('truncate table',' ','epr.',activity('lk_get_pipeline_parameters_2').output.firstRow.table_name)} ",
+													"type": "Expression"
+												},
+												"allowCopyCommand": true,
+												"disableMetricsCollection": false
+											},
+											"enableStaging": true,
+											"stagingSettings": {
+												"linkedServiceName": {
+													"referenceName": "ADLSG2 TimeAnalytics DEV",
+													"type": "LinkedServiceReference"
+												},
+												"path": "mdr-staging-data/Ruya11"
+											}
+										},
+										"inputs": [
+											{
+												"referenceName": "ds_filesystem_network_excel_get_subfolders_sheetname",
+												"type": "DatasetReference",
+												"parameters": {
+													"path": {
+														"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.source_directory",
+														"type": "Expression"
+													},
+													"file_name": {
+														"value": "@activity('Get Metadata2').output.itemName",
+														"type": "Expression"
+													},
+													"Sheetname": {
+														"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.sheetname",
+														"type": "Expression"
+													},
+													"range": {
+														"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.range",
+														"type": "Expression"
+													}
+												}
+											}
+										],
+										"outputs": [
+											{
+												"referenceName": "ds_excel_loads_AzureSynapseAnalytics",
+												"type": "DatasetReference",
+												"parameters": {
+													"TableName": {
+														"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.table_name",
+														"type": "Expression"
+													}
+												}
+											}
+										]
+									},
+									{
+										"name": "cp_copy_level2_sheet_from_source_to_synapse",
+										"type": "Copy",
+										"dependsOn": [
+											{
+												"activity": "cp_copy_first_sheet_from_source_to_synapse",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "0.07:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"source": {
+												"type": "ExcelSource",
+												"additionalColumns": [
+													{
+														"name": "project_number",
+														"value": {
+															"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.project_number",
+															"type": "Expression"
+														}
+													},
+													{
+														"name": "CreatedDateTime",
+														"value": {
+															"value": "@addHours(utcNow(),4)",
+															"type": "Expression"
+														}
+													},
+													{
+														"name": "file_name",
+														"value": "$$FILEPATH"
+													}
+												],
+												"storeSettings": {
+													"type": "FileServerReadSettings",
+													"recursive": true,
+													"modifiedDatetimeStart": {
+														"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.start_date",
+														"type": "Expression"
+													},
+													"modifiedDatetimeEnd": "2050-11-30T00:00:00.000Z",
+													"enablePartitionDiscovery": false
+												}
+											},
+											"sink": {
+												"type": "SqlDWSink",
+												"preCopyScript": {
+													"value": "@{concat('truncate table',' ','epr.',activity('lk_get_pipeline_parameters_2').output.firstRow.table_name1)} ",
+													"type": "Expression"
+												},
+												"allowCopyCommand": true,
+												"disableMetricsCollection": false
+											},
+											"enableStaging": true,
+											"stagingSettings": {
+												"linkedServiceName": {
+													"referenceName": "ADLSG2 TimeAnalytics DEV",
+													"type": "LinkedServiceReference"
+												},
+												"path": "mdr-staging-data/Ruya11"
+											}
+										},
+										"inputs": [
+											{
+												"referenceName": "ds_filesystem_network_excel_get_subfolders_sheetname",
+												"type": "DatasetReference",
+												"parameters": {
+													"path": {
+														"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.source_directory",
+														"type": "Expression"
+													},
+													"file_name": {
+														"value": "@activity('Get Metadata2').output.itemName",
+														"type": "Expression"
+													},
+													"Sheetname": {
+														"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.sheetname1",
+														"type": "Expression"
+													},
+													"range": {
+														"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.range1",
+														"type": "Expression"
+													}
+												}
+											}
+										],
+										"outputs": [
+											{
+												"referenceName": "ds_excel_loads_AzureSynapseAnalytics",
+												"type": "DatasetReference",
+												"parameters": {
+													"TableName": {
+														"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.table_name1",
+														"type": "Expression"
+													}
+												}
+											}
+										]
+									},
+									{
+										"name": "Script_after_run",
+										"type": "Script",
+										"dependsOn": [
+											{
+												"activity": "cp_copy_level2_sheet_from_source_to_synapse",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "0.12:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"linkedServiceName": {
+											"referenceName": "AzureSynapseAnalytics",
+											"type": "LinkedServiceReference"
+										},
+										"typeProperties": {
+											"scripts": [
+												{
+													"type": "Query",
+													"text": "update [epr].[Weekly_progress_summary_L1_Ruya11_D7507_Stage] \nset current_cuttoff = b.Prop_4\nfrom [epr].[Weekly_progress_summary_L1_Ruya11_D7507_Stage] a,\n(select * from [epr].[Weekly_progress_summary_L1_Ruya11_D7507_Stage]\n where Prop_3 = 'Cut off :') b\n where a.file_name = b.file_name ;\n\nupdate [epr].[Weekly_progress_summary_L1_Ruya11_D7507_Stage] \nset previous_cuttoff = b.Prop_17\nfrom [epr].[Weekly_progress_summary_L1_Ruya11_D7507_Stage] a,\n(select * from [epr].[Weekly_progress_summary_L1_Ruya11_D7507_Stage]\n where Prop_15 = 'Cut off :') b\n where a.file_name = b.file_name ;\n\n update [epr].[Weekly_progress_summary_L1_Ruya11_D7507_Stage] \nset [S.No] = Prop_0,\n\t[Description] = Prop_1,\n\t[Overall W.F] = Prop_2,\n\t[Weekly_Plan] = Prop_4,\n\t[Weekly_Forecast Plan] = Prop_5,\n\t[Weekly_Actual]  = Prop_6,\n\t[Weekly_Plan Var.] = Prop_7 ,\n\t[Weekly_Forecast var.] = Prop_8 ,\n\t[Cumulative_Plan] = Prop_9,\n\t[Cumulative_Forecast Plan] = Prop_10,\n\t[Cumulative_Actual] = Prop_11,\n\t[Cumulative_Plan Var.] = Prop_12,\n\t[Cumulative_Forecast var.] = Prop_13,\n\t[Previous_week_Plan] = Prop_15,\n\t[Previous_week_Forecast Plan] = Prop_16,\n\t[Previous_week_Actual] = Prop_17,\n\t[Previous_week_Plan Var.] = Prop_18,\n\t[Previous_week_Forecast var.] = Prop_19  ;\n\n\tdelete from [epr].[Weekly_progress_summary_L1_Ruya11_D7507_Stage] where isnull(Prop_0,'') = ''  ;\n\n\tdelete from [epr].[Weekly_progress_summary_L1_Ruya11_D7507_Stage] where isnull(Prop_0,'') = 'S.No'  ;\n\n\tdelete from [epr].[Weekly_progress_summary_L1_Ruya11_D7507_Stage] where isnull(Prop_0,'') = 'Level-I Progress Summary'  ;\n\n\tupdate [epr].[Weekly_progress_summary_L1_Ruya11_D7507_Stage] set [Description] = [S.No] where [S.No] = 'OVERALL PROJECT'  ;\n\n\tupdate [epr].[Weekly_progress_summary_L1_Ruya11_D7507_Stage] set [S.No] = 'Total' where [Description] = 'OVERALL PROJECT'  ;\n"
+												}
+											],
+											"scriptBlockExecutionTimeout": "02:00:00"
+										}
+									},
+									{
+										"name": "Script_after_run_copy1",
+										"type": "Script",
+										"dependsOn": [
+											{
+												"activity": "Script_after_run",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "0.12:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"linkedServiceName": {
+											"referenceName": "AzureSynapseAnalytics",
+											"type": "LinkedServiceReference"
+										},
+										"typeProperties": {
+											"scripts": [
+												{
+													"type": "Query",
+													"text": "update [epr].[Weekly_progress_summary_L2_Ruya11_D7507_Stage] \nset current_cuttoff = b.Prop_3\nfrom [epr].[Weekly_progress_summary_L2_Ruya11_D7507_Stage] a,\n(select * from [epr].[Weekly_progress_summary_L2_Ruya11_D7507_Stage]\n where Prop_2 = 'Cut off :') b\n where a.file_name = b.file_name ;\n\nupdate [epr].[Weekly_progress_summary_L2_Ruya11_D7507_Stage] \nset previous_cuttoff = FORMAT(dateadd(d,-7,cast(current_cuttoff as datetime)),'yyyy-MM-dd','en-US') ;\n\ndelete from [epr].[Weekly_progress_summary_L2_Ruya11_D7507_Stage]  where isnull(Prop_0,'') = '' ;\n\ndelete from [epr].[Weekly_progress_summary_L2_Ruya11_D7507_Stage]  where isnull(Prop_0,'') = 'S.No' ;\n\ndelete from [epr].[Weekly_progress_summary_L2_Ruya11_D7507_Stage]  where isnull(Prop_0,'') = 'Level-II Progress Summary' ;\n\nupdate [epr].[Weekly_progress_summary_L2_Ruya11_D7507_Stage] set \n\t[S.No] = Prop_0,\n\t[Description] = Prop_1,\n\t[Overall W.F L1] = Prop_2,\n\t[Overall W.F L2] = Prop_3,\n\t[Weekly_Plan] = Prop_4,\n\t[Weekly_Forecast Plan] = Prop_5,\n\t[Weekly_Actual] = Prop_6,\n\t[Weekly_Plan Var.] = Prop_7,\n\t[Weekly_Forecast var.] = Prop_8,\n\t[Cumulative_Plan] = Prop_9,\n\t[Cumulative_Forecast Plan] = Prop_10,\n\t[Cumulative_Actual] = Prop_11,\n\t[Cumulative_Plan Var.] = Prop_12,\n\t[Cumulative_Forecast var.] = Prop_13,\n\t[Delay Justification] = Prop_14,\n\t[Previous_week_Plan] = Prop_16,\n\t[Previous_week_Forecast Plan] = Prop_17,\n\t[Previous_week_Actual] = Prop_18,\n\t[Previous_week_Plan Var.] = Prop_19\n"
+												}
+											],
+											"scriptBlockExecutionTimeout": "02:00:00"
+										}
+									},
+									{
+										"name": "Delete_old_file_data",
+										"type": "Script",
+										"dependsOn": [
+											{
+												"activity": "Script_after_run_copy1",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "0.12:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"linkedServiceName": {
+											"referenceName": "AzureSynapseAnalytics",
+											"type": "LinkedServiceReference"
+										},
+										"typeProperties": {
+											"scripts": [
+												{
+													"type": "Query",
+													"text": "delete from epr.Weekly_progress_summary_L1_Ruya11_D7507\nwhere file_name in (select distinct file_name from epr.Weekly_progress_summary_L1_Ruya11_D7507_Stage)\n"
+												}
+											],
+											"scriptBlockExecutionTimeout": "02:00:00"
+										}
+									},
+									{
+										"name": "Insert_to_main_table",
+										"type": "Script",
+										"dependsOn": [
+											{
+												"activity": "Delete_old_file_data",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "0.12:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"linkedServiceName": {
+											"referenceName": "AzureSynapseAnalytics",
+											"type": "LinkedServiceReference"
+										},
+										"typeProperties": {
+											"scripts": [
+												{
+													"type": "Query",
+													"text": "insert into epr.Weekly_progress_summary_L1_Ruya11_D7507\n(\"Prop_0\",\"Prop_1\",\"Prop_2\",\"Prop_3\",\"Prop_4\",\"Prop_5\",\"Prop_6\",\"Prop_7\",\"Prop_8\",\"Prop_9\",\"Prop_10\",\"Prop_11\",\"Prop_12\",\"Prop_13\",\"Prop_14\",\"Prop_15\",\"Prop_16\",\"Prop_17\",\"Prop_18\",\"Prop_19\",\"project_number\",\"file_name\",\"CreatedDateTime\",\"Current_Cuttoff\",\"Previous_Cuttoff\",\"S.No\",\"Description\",\"Overall W.F\",\"Weekly_Plan\",\"Weekly_Forecast Plan\",\"Weekly_Actual\",\"Weekly_Plan Var.\",\"Weekly_Forecast var.\",\"Cumulative_Plan\",\"Cumulative_Forecast Plan\",\"Cumulative_Actual\",\"Cumulative_Plan Var.\",\"Cumulative_Forecast var.\",\"Previous_week_Plan\",\"Previous_week_Forecast Plan\",\"Previous_week_Actual\",\"Previous_week_Plan Var.\",\"Previous_week_Forecast var.\")\nselect \"Prop_0\",\"Prop_1\",\"Prop_2\",\"Prop_3\",\"Prop_4\",\"Prop_5\",\"Prop_6\",\"Prop_7\",\"Prop_8\",\"Prop_9\",\"Prop_10\",\"Prop_11\",\"Prop_12\",\"Prop_13\",\"Prop_14\",\"Prop_15\",\"Prop_16\",\"Prop_17\",\"Prop_18\",\"Prop_19\",\"project_number\",\"file_name\",\"CreatedDateTime\",\"Current_Cuttoff\",\"Previous_Cuttoff\",\"S.No\",\"Description\",\"Overall W.F\",\"Weekly_Plan\",\"Weekly_Forecast Plan\",\"Weekly_Actual\",\"Weekly_Plan Var.\",\"Weekly_Forecast var.\",\"Cumulative_Plan\",\"Cumulative_Forecast Plan\",\"Cumulative_Actual\",\"Cumulative_Plan Var.\",\"Cumulative_Forecast var.\",\"Previous_week_Plan\",\"Previous_week_Forecast Plan\",\"Previous_week_Actual\",\"Previous_week_Plan Var.\",\"Previous_week_Forecast var.\" from epr.Weekly_progress_summary_L1_Ruya11_D7507_Stage\n"
+												}
+											],
+											"scriptBlockExecutionTimeout": "02:00:00"
+										}
+									},
+									{
+										"name": "Delete_old_file_data1",
+										"type": "Script",
+										"dependsOn": [
+											{
+												"activity": "Insert_to_main_table",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "0.12:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"linkedServiceName": {
+											"referenceName": "AzureSynapseAnalytics",
+											"type": "LinkedServiceReference"
+										},
+										"typeProperties": {
+											"scripts": [
+												{
+													"type": "Query",
+													"text": "delete from epr.Weekly_progress_summary_L2_Ruya11_D7507\nwhere file_name in (select distinct file_name from epr.Weekly_progress_summary_L2_Ruya11_D7507_Stage)\n"
+												}
+											],
+											"scriptBlockExecutionTimeout": "02:00:00"
+										}
+									},
+									{
+										"name": "Insert_to_main_table1",
+										"type": "Script",
+										"dependsOn": [
+											{
+												"activity": "Delete_old_file_data1",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "0.12:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"linkedServiceName": {
+											"referenceName": "AzureSynapseAnalytics",
+											"type": "LinkedServiceReference"
+										},
+										"typeProperties": {
+											"scripts": [
+												{
+													"type": "Query",
+													"text": "insert into epr.Weekly_progress_summary_L2_Ruya11_D7507\n(\"Prop_0\",\"Prop_1\",\"Prop_2\",\"Prop_3\",\"Prop_4\",\"Prop_5\",\"Prop_6\",\"Prop_7\",\"Prop_8\",\"Prop_9\",\"Prop_10\",\"Prop_11\",\"Prop_12\",\"Prop_13\",\"Prop_14\",\"Prop_15\",\"Prop_16\",\"Prop_17\",\"Prop_18\",\"Prop_19\",\"project_number\",\"file_name\",\"CreatedDateTime\",\"Current_Cuttoff\",\"Previous_Cuttoff\",\"S.No\",\"Description\",\"Overall W.F L1\",\"Overall W.F L2\",\"Weekly_Plan\",\"Weekly_Forecast Plan\",\"Weekly_Actual\",\"Weekly_Plan Var.\",\"Weekly_Forecast var.\",\"Cumulative_Plan\",\"Cumulative_Forecast Plan\",\"Cumulative_Actual\",\"Cumulative_Plan Var.\",\"Cumulative_Forecast var.\",\"Delay Justification\",\"Previous_week_Plan\",\"Previous_week_Forecast Plan\",\"Previous_week_Actual\",\"Previous_week_Plan Var.\")\nselect \"Prop_0\",\"Prop_1\",\"Prop_2\",\"Prop_3\",\"Prop_4\",\"Prop_5\",\"Prop_6\",\"Prop_7\",\"Prop_8\",\"Prop_9\",\"Prop_10\",\"Prop_11\",\"Prop_12\",\"Prop_13\",\"Prop_14\",\"Prop_15\",\"Prop_16\",\"Prop_17\",\"Prop_18\",\"Prop_19\",\"project_number\",\"file_name\",\"CreatedDateTime\",\"Current_Cuttoff\",\"Previous_Cuttoff\",\"S.No\",\"Description\",\"Overall W.F L1\",\"Overall W.F L2\",\"Weekly_Plan\",\"Weekly_Forecast Plan\",\"Weekly_Actual\",\"Weekly_Plan Var.\",\"Weekly_Forecast var.\",\"Cumulative_Plan\",\"Cumulative_Forecast Plan\",\"Cumulative_Actual\",\"Cumulative_Plan Var.\",\"Cumulative_Forecast var.\",\"Delay Justification\",\"Previous_week_Plan\",\"Previous_week_Forecast Plan\",\"Previous_week_Actual\",\"Previous_week_Plan Var.\" from epr.Weekly_progress_summary_L2_Ruya11_D7507_Stage\n"
+												}
+											],
+											"scriptBlockExecutionTimeout": "02:00:00"
+										}
+									}
+								]
+							}
+						},
+						{
+							"name": "Get Metadata2",
+							"type": "GetMetadata",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataset": {
+									"referenceName": "ds_filesystem_network_excel_get_subfolders_sheetname",
+									"type": "DatasetReference",
+									"parameters": {
+										"path": {
+											"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.source_directory",
+											"type": "Expression"
+										},
+										"file_name": {
+											"value": "@item().name",
+											"type": "Expression"
+										},
+										"Sheetname": {
+											"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.sheetname",
+											"type": "Expression"
+										},
+										"range": {
+											"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.range",
+											"type": "Expression"
+										}
+									}
+								},
+								"fieldList": [
+									"lastModified",
+									"itemName"
+								],
+								"storeSettings": {
+									"type": "FileServerReadSettings",
+									"recursive": true,
+									"enablePartitionDiscovery": false
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"variables": {
+			"v_error_message": {
+				"type": "Array"
+			},
+			"v_pipelinedetails": {
+				"type": "Array"
+			},
+			"date": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/NCSA/Ruya_D7507"
+		},
+		"annotations": [],
+		"lastPublishTime": "2024-04-30T07:33:42Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

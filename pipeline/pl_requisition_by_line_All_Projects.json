@@ -1,0 +1,317 @@
+{
+	"name": "pl_requisition_by_line_All_Projects",
+	"properties": {
+		"activities": [
+			{
+				"name": "lk_get_pipeline_parameters",
+				"description": "Get the parameters to be used in this pipeline",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": "pl_ncsa_master_pipelines"
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "EMAIL"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "lk_get_pipeline_parameters_2",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "NetworkFolder"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "cp_copy_first_sheet_from_source_to_synapse",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Update_Week_end_date_copy1",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "OracleSource",
+						"additionalColumns": [
+							{
+								"name": "CreatedDateTime",
+								"value": {
+									"value": "@addHours(utcNow(),4 )",
+									"type": "Expression"
+								}
+							}
+						],
+						"oracleReaderQuery": {
+							"value": "SELECT DISTINCT \n  r.proj_id, r.r_code, rn.description, r.r_supp supplement, decode(actual_ind, 'Y', 'P', 'I') inq_pur_ind, r.approved_date, rli.RLI_POS itemno, rli.RLI_sub_POS itemsub  \n, i.IDENT_CODE ident, cc.commodity_code, i.input_1, i.input_2, i.input_3, i.input_4, i.input_5\n, substr(UPPER(m_pck_std_custom.ident_desc(rli.ident, 1)),1,400) IDENT_DESCRIPTION\n, to_char(rli.TOTAL_RELEASE_QTY) total_qty  \n, to_char(nvl(rli.total_release_qty,0) - NVL(rli.last_total_release_qty,0)) increased_qty\n, m_pck_req_custom.WEIGHT(rli.ident) unit_weight\n, upper(u2.unit_code) weight_code      \n, job_number accountcode\n, upper(u1.unit_code) qty_unit\n, dd.dd_code \"Delivery Designation\"\n, rli.estimated_ros_date ROS_Date                                                       \n, rli.tag_number  tag_number     \n--, client_code \n, m_abb_pck_bom.ident_cc_layout2(i.ident,'L',1) \"Long Description\"\n, nvl(rli.rli_comment, '') \"Comment\"\nFROM \n  m_sys.m_reqs r,\n  m_sys.m_req_line_items rli,\n  m_sys.m_req_status rst,\n  m_sys.m_req_nls rn,\n  m_sys.m_jobs j,\n  m_sys.m_units u1,                                                  \n  m_sys.M_UNITS u2,  \n  m_sys.m_idents i,\n  m_sys.m_commodity_codes cc,\n  m_sys.m_delv_desigs dd\nWHERE 1=1\n  AND r.r_id = rli.r_id\n  AND r.rst_id = rst.rst_id \n  AND r.r_id = rn.r_id \n  AND rli.dd_id = dd.dd_id \n  AND rli.job_id = j.job_id (+) \n  AND rli.ident =  i.ident  \n  AND i.commodity_id = cc.commodity_id  \n  AND u1.unit_id = rli.qty_unit_id \n  AND upper(u2.unit_id) = rli.weight_UNIT_ID\n  AND r.approved_date is not null  -- not needed Moses, 19-Nov \n  AND r.proj_id = '@{pipeline().parameters.proj_id}'\n  ORDER BY r.r_code,r.r_supp,rli.rli_pos,rli.rli_sub_pos",
+							"type": "Expression"
+						},
+						"partitionOption": "None",
+						"convertDecimalToInteger": false,
+						"queryTimeout": "02:00:00"
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"allowCopyCommand": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ADLSG2 TimeAnalytics DEV",
+							"type": "LinkedServiceReference"
+						},
+						"path": "mdr-staging-data/Ruya11"
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_smat_11_extracts",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_excel_loads_AzureSynapseAnalytics",
+						"type": "DatasetReference",
+						"parameters": {
+							"TableName": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.table_name",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "Send Email On Failure",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "cp_copy_first_sheet_from_source_to_synapse",
+						"dependencyConditions": [
+							"Failed"
+						]
+					},
+					{
+						"activity": "Update_Week_end_date",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "POST",
+					"headers": {
+						"Content-Type": "application/json"
+					},
+					"url": "https://prod-31.eastus.logic.azure.com:443/workflows/03d7da5abbab4215a05aeaceae3b96fa/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=asuyutHtoSxGFURsj1-A6AKRiNLdXZ4mTnZvZ17_8hI",
+					"connectVia": {
+						"referenceName": "integrationRuntimeEast2",
+						"type": "IntegrationRuntimeReference"
+					},
+					"body": {
+						"value": "{\n    \"DataFactoryName\": \"@{pipeline().DataFactory}\",\n    \"PipelineName\": \"@{pipeline().Pipeline}\",\n    \"ErrorMessage\": \"Pipeline Failed\",\n    \"EmailTo\": \"@{activity('lk_get_pipeline_parameters').output.firstRow.ncsa_master_pipeline_email_to}\",\n    \"Activity\":  \"pl_planning_milestone_Ruya11_D7507\"\n}",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Update_Week_end_date",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "cp_copy_first_sheet_from_source_to_synapse",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseAnalytics",
+					"type": "LinkedServiceReference"
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"parameters": [
+								{
+									"name": "proj_id",
+									"type": "String",
+									"value": {
+										"value": "@pipeline().parameters.proj_id",
+										"type": "Expression"
+									},
+									"direction": "Input"
+								}
+							],
+							"type": "Query",
+							"text": {
+								"value": "@concat('update [epr].[',activity('lk_get_pipeline_parameters_2').output.firstRow.table_name,']','\nset week_end_date =\n(case when DATENAME(WEEKDAY, getdate()) = ','''','Saturday','''',' then cast(getdate() + 6 as date)\nelse\ncase when DATENAME(WEEKDAY, getdate()) = ','''','Sunday','''',' then cast(getdate() + 5  as date)\nelse\ncase when DATENAME(WEEKDAY, getdate()) = ','''','Monday','''',' then cast(getdate() + 4 as date)\nelse\ncase when DATENAME(WEEKDAY, getdate()) = ','''','Tuesday','''',' then cast(getdate() + 3 as date)\nelse\ncase when DATENAME(WEEKDAY, getdate()) = ','''','Wednesday','''',' then cast(getdate() + 2 as date)\nelse\ncase when DATENAME(WEEKDAY, getdate()) = ','''','Thursday','''',' then cast(getdate() + 1 as date)\nelse\ncase when DATENAME(WEEKDAY, getdate()) = ','''','Friday','''',' then cast(getdate() as date)\nend\nend\nend\nend\nend\nend\nend)\nwhere week_end_date is NULL\nand PROJ_ID = ','''',pipeline().parameters.proj_id,'''')",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "Update_Week_end_date_copy1",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "lk_get_pipeline_parameters_2",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseAnalytics",
+					"type": "LinkedServiceReference"
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"parameters": [
+								{
+									"name": "proj_id",
+									"type": "String",
+									"value": {
+										"value": "@pipeline().parameters.proj_id",
+										"type": "Expression"
+									},
+									"direction": "Input"
+								}
+							],
+							"type": "Query",
+							"text": {
+								"value": "@concat('delete from [epr].[',activity('lk_get_pipeline_parameters_2').output.firstRow.table_name,']',' where (week_end_date =\n(case when DATENAME(WEEKDAY, getdate()) = ',\n'''',\n'Saturday','''',' then cast(getdate() + 6 as date)\nelse\ncase when DATENAME(WEEKDAY, getdate()) = ','''','Sunday','''',' then cast(getdate() + 5  as date)\nelse\ncase when DATENAME(WEEKDAY, getdate()) = ','''','Monday','''',' then cast(getdate() + 4 as date)\nelse\ncase when DATENAME(WEEKDAY, getdate()) = ','''','Tuesday','''',' then cast(getdate() + 3 as date)\nelse\ncase when DATENAME(WEEKDAY, getdate()) = ','''','Wednesday','''',' then cast(getdate() + 2 as date)\nelse\ncase when DATENAME(WEEKDAY, getdate()) = ','''','Thursday','''',' then cast(getdate() + 1 as date)\nelse\ncase when DATENAME(WEEKDAY, getdate()) = ','''','Friday','''',' then cast(getdate() as date)\nend\nend\nend\nend\nend\nend\nend)\nor week_end_date is null)\nand PROJ_ID = ','''',pipeline().parameters.proj_id,'''')",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			}
+		],
+		"parameters": {
+			"proj_id": {
+				"type": "string",
+				"defaultValue": "D7507"
+			}
+		},
+		"variables": {
+			"v_error_message": {
+				"type": "Array"
+			},
+			"v_pipelinedetails": {
+				"type": "Array"
+			},
+			"date": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/NCSA/Ruya_D7507"
+		},
+		"annotations": [],
+		"lastPublishTime": "2024-04-30T07:33:42Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

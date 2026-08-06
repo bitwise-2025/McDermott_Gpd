@@ -1,0 +1,75 @@
+{
+	"name": "df_egp_categories_tl_flattening",
+	"properties": {
+		"folder": {
+			"name": "Projects/Payment Dashboard/Egp Categories Tl"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_xml_egp_categories_tl_source_stage_decoded_xml",
+						"type": "DatasetReference"
+					},
+					"name": "SrcXMl"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_egp_categories_tl_source_stage_final_csv",
+						"type": "DatasetReference"
+					},
+					"name": "SnkCsv"
+				}
+			],
+			"transformations": [
+				{
+					"name": "XmlToCsvflatten"
+				},
+				{
+					"name": "addLoadDetails"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          DATA_DS as (G_1 as (CATEGORY_ID as long, CATEGORY_NAME as string, CREATED_BY as string, CREATION_DATE as string, DESCRIPTION as string, LANGUAGE as string, LAST_UPDATED_BY as string, LAST_UPDATE_DATE as string, LAST_UPDATE_LOGIN as string, OBJECT_VERSION_NUMBER as boolean, SOURCE_LANG as string)[])",
+				"     ),",
+				"     allowSchemaDrift: false,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     validationMode: 'none',",
+				"     namespaces: true) ~> SrcXMl",
+				"SrcXMl foldDown(unroll(DATA_DS.G_1),",
+				"     mapColumn(",
+				"          CATEGORY_ID = DATA_DS.G_1.CATEGORY_ID,",
+				"          CATEGORY_NAME = DATA_DS.G_1.CATEGORY_NAME,",
+				"          CREATED_BY = DATA_DS.G_1.CREATED_BY,",
+				"          CREATION_DATE = DATA_DS.G_1.CREATION_DATE,",
+				"          DESCRIPTION = DATA_DS.G_1.DESCRIPTION,",
+				"          LANGUAGE = DATA_DS.G_1.LANGUAGE,",
+				"          LAST_UPDATED_BY = DATA_DS.G_1.LAST_UPDATED_BY,",
+				"          LAST_UPDATE_DATE = DATA_DS.G_1.LAST_UPDATE_DATE,",
+				"          LAST_UPDATE_LOGIN = DATA_DS.G_1.LAST_UPDATE_LOGIN,",
+				"          OBJECT_VERSION_NUMBER = DATA_DS.G_1.OBJECT_VERSION_NUMBER,",
+				"          SOURCE_LANG = DATA_DS.G_1.SOURCE_LANG",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> XmlToCsvflatten",
+				"XmlToCsvflatten derive(source_name = 'SYSTEM',",
+				"          sub_source_name = 'R2P',",
+				"          created_date_time = currentUTC()) ~> addLoadDetails",
+				"addLoadDetails sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     partitionFileNames:['Egp_Categories_Tl.csv'],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> SnkCsv"
+			]
+		}
+	}
+}

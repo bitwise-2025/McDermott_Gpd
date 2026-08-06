@@ -1,0 +1,36 @@
+{
+	"name": "df_iDocs_ClosedM_stage_to_raw",
+	"properties": {
+		"description": "Data Flow to pull data from ADLS Stg to ADLS Raw.\n",
+		"folder": {
+			"name": "Projects/NCSA/iDocs/Closed Master"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_iDocs_ClosedM_stage",
+						"type": "DatasetReference"
+					},
+					"name": "srcClosedMStage"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_iDocs_ClosedM_raw",
+						"type": "DatasetReference"
+					},
+					"name": "snkClosedMRaw"
+				}
+			],
+			"transformations": [
+				{
+					"name": "setFileName"
+				}
+			],
+			"script": "parameters{\n\tWildPath as string,\n\tFileName as string\n}\nsource(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\trowUrlColumn: 'Filename',\n\twildcardPaths:[($WildPath + $FileName + '.csv')]) ~> srcClosedMStage\nsrcClosedMStage derive(Filename = concat($WildPath,substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',$FileName,'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv')) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\trowUrlColumn:'Filename',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: []) ~> snkClosedMRaw"
+		}
+	}
+}

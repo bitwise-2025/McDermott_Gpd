@@ -1,0 +1,73 @@
+{
+	"name": "df_oracle_data_count_summary_report_flattening",
+	"properties": {
+		"folder": {
+			"name": "Projects/Payment Dashboard/Oracle Data Count Summary Report"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_xml_oracle_data_count_summary_report_source_stage_decoded_xml",
+						"type": "DatasetReference"
+					},
+					"name": "SrcXMl"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_oracle_data_count_summary_report_source_stage_final_csv",
+						"type": "DatasetReference"
+					},
+					"name": "SnkCsv"
+				}
+			],
+			"transformations": [
+				{
+					"name": "XmlToCsvflatten"
+				},
+				{
+					"name": "addLoadDetails"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          DATA_DS as (G_1 as (DATA_COUNT as short, LAST_UPDATE_DATE as string, LAST_UPDATE_DATE_DD as short, LAST_UPDATE_DATE_MM as short, LAST_UPDATE_DATE_YYYY as short, SOURCE as string, TABLE_NAME as string)[], P_FROM_DATE as timestamp, P_TO_DATE as timestamp)",
+				"     ),",
+				"     allowSchemaDrift: false,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     validationMode: 'none',",
+				"     namespaces: true) ~> SrcXMl",
+				"SrcXMl foldDown(unroll(DATA_DS.G_1),",
+				"     mapColumn(",
+				"          DATA_COUNT = DATA_DS.G_1.DATA_COUNT,",
+				"          LAST_UPDATE_DATE = DATA_DS.G_1.LAST_UPDATE_DATE,",
+				"          LAST_UPDATE_DATE_DD = DATA_DS.G_1.LAST_UPDATE_DATE_DD,",
+				"          LAST_UPDATE_DATE_MM = DATA_DS.G_1.LAST_UPDATE_DATE_MM,",
+				"          LAST_UPDATE_DATE_YYYY = DATA_DS.G_1.LAST_UPDATE_DATE_YYYY,",
+				"          SOURCE = DATA_DS.G_1.SOURCE,",
+				"          TABLE_NAME = DATA_DS.G_1.TABLE_NAME,",
+				"          P_FROM_DATE = DATA_DS.P_FROM_DATE,",
+				"          P_TO_DATE = DATA_DS.P_TO_DATE",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> XmlToCsvflatten",
+				"XmlToCsvflatten derive(source_name = 'SYSTEM',",
+				"          sub_source_name = 'R2P',",
+				"          created_date_time = currentUTC()) ~> addLoadDetails",
+				"addLoadDetails sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     partitionFileNames:['Oracle_Data_Count_Summary_Report.csv'],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> SnkCsv"
+			]
+		}
+	}
+}

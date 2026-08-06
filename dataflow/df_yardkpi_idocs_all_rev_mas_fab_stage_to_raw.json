@@ -1,0 +1,35 @@
+{
+	"name": "df_yardkpi_idocs_all_rev_mas_fab_stage_to_raw",
+	"properties": {
+		"folder": {
+			"name": "Projects/YARD KPI/iDocs/All Revision Master Fab"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_yardkpi_idocs_wildcard_generic",
+						"type": "DatasetReference"
+					},
+					"name": "srcAllRevMasFabStage"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_yardkpi_idocs_wildcard_generic",
+						"type": "DatasetReference"
+					},
+					"name": "snkAllRevMasFabRaw"
+				}
+			],
+			"transformations": [
+				{
+					"name": "setFileName"
+				}
+			],
+			"script": "parameters{\n\tfolder_path as string,\n\tinput_file_name as string,\n\tfile_name as string\n}\nsource(output(\n\t\t{PROJECT NO.} as string,\n\t\t{PROJECT ID} as string,\n\t\t{PROJECT NAME} as string,\n\t\tDELIVERABLE as string,\n\t\t{DL IMPORT} as string,\n\t\t{DOC ID} as string,\n\t\t{DOCUMENT NUMBER} as string,\n\t\t{TYPE CLASS} as string,\n\t\t{VERSION NO.} as string,\n\t\t{REVISION NO.} as string,\n\t\t{REVISION DATE} as string,\n\t\t{ISSUE STATE} as string,\n\t\tContract_No as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: true,\n\tpurgeFiles: true,\n\trowUrlColumn: 'File_Path',\n\twildcardPaths:[($folder_path+'/'+'*'+$input_file_name+'*.CSV')]) ~> srcAllRevMasFabStage\nsrcAllRevMasFabStage derive(File_Path = concat(concat(trim(substringIndex(File_Path,'/',5),'/'),'/'),substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',$file_name,'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv'),\n\t\tContract_No = split(Contract_No,'_')[2]) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\trowUrlColumn:'File_Path',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> snkAllRevMasFabRaw"
+		}
+	}
+}

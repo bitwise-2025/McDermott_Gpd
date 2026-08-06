@@ -1,0 +1,53 @@
+CREATE TABLE [gpd].[Marine_Campaign_Readiness_PMR_JSON]
+(
+	[rssk] [bigint] IDENTITY(1,1) NOT NULL,
+	[JSON_Attribute] [varchar](8000) NULL
+)
+WITH
+(
+	DISTRIBUTION = ROUND_ROBIN,
+	CLUSTERED COLUMNSTORE INDEX
+)
+GO
+
+
+CREATE TABLE [gpd].[Marine_Progress_PMR_JSON]
+(
+	[rssk] [bigint] IDENTITY(1,1) NOT NULL,
+	[JSON_Attribute] [varchar](8000) NULL
+)
+WITH
+(
+	DISTRIBUTION = ROUND_ROBIN,
+	CLUSTERED COLUMNSTORE INDEX
+)
+GO
+
+
+CREATE TABLE [gpd].[ScheduleAnalytics_PMR_JSON]
+(
+	[rssk] [bigint] IDENTITY(1,1) NOT NULL,
+	[JSON_Attribute] [varchar](8000) NULL
+)
+WITH
+(
+	DISTRIBUTION = ROUND_ROBIN,
+	CLUSTERED COLUMNSTORE INDEX
+)
+GO
+
+
+
+CREATE TABLE [gpd].[Marine_Spreadrate_PMR_JSON]
+(
+	[rssk] [bigint] IDENTITY(1,1) NOT NULL,
+	[JSON_Attribute] [varchar](8000) NULL
+)
+WITH
+(
+	DISTRIBUTION = ROUND_ROBIN,
+	CLUSTERED COLUMNSTORE INDEX
+)
+GO
+
+

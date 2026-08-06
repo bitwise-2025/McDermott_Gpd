@@ -1,0 +1,32 @@
+{
+	"name": "df_iDocs_closed_m_raw_to_synapse",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_idocs_closed_m_raw_latest",
+						"type": "DatasetReference"
+					},
+					"name": "srcClosedMasterRAWLatest"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_AzureSynapseAnalytics_idocs_closed_m",
+						"type": "DatasetReference"
+					},
+					"name": "snkClosedMSynapse"
+				}
+			],
+			"transformations": [
+				{
+					"name": "DataTransformationClosedM"
+				}
+			],
+			"script": "source(output(\n\t\t{PROJECT NO.} as string,\n\t\t{PROJECT ID} as string,\n\t\t{PROJECT NAME} as string,\n\t\t{DOC ID} as string,\n\t\tDELIVERABLE as string,\n\t\t{DOCUMENT NUMBER} as string,\n\t\t{EXPEDITED ISSUE STATE} as string,\n\t\t{TYPE CLASS} as string,\n\t\t{EXPEDITED VERSION} as string,\n\t\t{EXPEDITED REVISION} as string,\n\t\t{CURRENT VERSION} as string,\n\t\t{CURRENT REVISION} as string,\n\t\t{USER TYPE} as string,\n\t\tRECIPIENT as string,\n\t\tCOMPANY as string,\n\t\t{EXPEDITING START} as string,\n\t\t{EXPEDITING DUE} as string,\n\t\t{EXPEDITING FORECAST} as string,\n\t\t{EXPEDITING ACTUAL} as string,\n\t\t{RESPONSE STATUS} as string,\n\t\t{CLIENT RETURN TRANS. DATE} as string,\n\t\t{EXP ID} as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true) ~> srcClosedMasterRAWLatest\nsrcClosedMasterRAWLatest derive({PROJECT NO.} = iif(length(regexSplit({PROJECT NO.},'[-]')[1])>5,concat('99',regexSplit({PROJECT NO.},'[-]')[1]),regexSplit({PROJECT NO.},'[-]')[1])) ~> DataTransformationClosedM\nDataTransformationClosedM sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tdeletable:false,\n\tinsertable:true,\n\tupdateable:false,\n\tupsertable:false,\n\ttruncate:true,\n\tformat: 'table',\n\tstaged: true,\n\tallowCopyCommand: true,\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\terrorHandlingOption: 'stopOnFirstError',\n\tmapColumn(\n\t\tproject_number = {PROJECT NO.},\n\t\tproject_id = {PROJECT ID},\n\t\tproject_name = {PROJECT NAME},\n\t\tdocument_id = {DOC ID},\n\t\tdeliverable = DELIVERABLE,\n\t\tdocument_number = {DOCUMENT NUMBER},\n\t\tdocument_status = {EXPEDITED ISSUE STATE},\n\t\ttype_class = {TYPE CLASS},\n\t\texpedited_version = {EXPEDITED VERSION},\n\t\texpedited_revision = {EXPEDITED REVISION},\n\t\tcurrent_version = {CURRENT VERSION},\n\t\tcurrent_revision = {CURRENT REVISION},\n\t\tuser_type = {USER TYPE},\n\t\trecipient = RECIPIENT,\n\t\tcompany = COMPANY,\n\t\texpediting_start = {EXPEDITING START},\n\t\texpediting_due = {EXPEDITING DUE},\n\t\texpediting_forecast = {EXPEDITING FORECAST},\n\t\texpediting_actual = {EXPEDITING ACTUAL},\n\t\tresponse_status = {RESPONSE STATUS},\n\t\tclient_return_date = {CLIENT RETURN TRANS. DATE},\n\t\texpediting_id = {EXP ID}\n\t)) ~> snkClosedMSynapse"
+		}
+	}
+}

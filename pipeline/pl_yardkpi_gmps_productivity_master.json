@@ -1,0 +1,227 @@
+{
+	"name": "pl_yardkpi_gmps_productivity_master",
+	"properties": {
+		"activities": [
+			{
+				"name": "Source to Stage",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_yardkpi_gmps_productivity_source_to_stage",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "Stage to Raw",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Source to Stage",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_yardkpi_gmps_productivity_stage_to_raw",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "Raw to Synapse",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Stage to Raw",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_yardkpi_gmps_productivity_raw_to_synapse",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "Append SRC to STG Error",
+				"type": "AppendVariable",
+				"dependsOn": [
+					{
+						"activity": "Source to Stage",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_error_message",
+					"value": {
+						"value": "@concat('Source to Stage Failure: ',\nactivity('Source to Stage').error.message,'|',\nactivity('Source to Stage').output.pipelineName,'|',\nactivity('Source to Stage').output.pipelineRunId,'|')\n\n",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Append STG to RAW Error",
+				"type": "AppendVariable",
+				"dependsOn": [
+					{
+						"activity": "Stage to Raw",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_error_message",
+					"value": {
+						"value": "@concat('Stage to Raw Failure: ',\nactivity('Stage to Raw').error.message ,'|',\nactivity('Stage to Raw').output.pipelineName,'|',\nactivity('Stage to Raw').output.pipelineRunId,'|')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Append RAW to SYN",
+				"type": "AppendVariable",
+				"dependsOn": [
+					{
+						"activity": "Raw to Synapse",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_error_message",
+					"value": {
+						"value": "@concat('Raw to Synapse Failure: ',\nactivity('Raw to Synapse').error.message ,'|',\nactivity('Raw to Synapse').output.pipelineName,'|',\nactivity('Raw to Synapse').output.pipelineRunId,'|')\n",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "ADF_Log",
+				"description": "SPU to log the details of the Pipeline run",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Raw to Synapse",
+						"dependencyConditions": [
+							"Completed",
+							"Skipped"
+						]
+					},
+					{
+						"activity": "Append RAW to SYN",
+						"dependencyConditions": [
+							"Skipped",
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[usp_InsertADFLogs]",
+					"storedProcedureParameters": {
+						"DataFactoryName": {
+							"value": {
+								"value": "@pipeline().DataFactory",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"Error_pipeline_name": {
+							"value": {
+								"value": "@if(empty(variables('v_error_message')),\nconcat(activity('Source to Stage').output.pipelineName,';',\nactivity('Stage to Raw').output.pipelineName,';',\nactivity('Raw to Synapse').output.pipelineName)\n,split(join(variables('v_error_message'),';'),'|' )[1])",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"Error_pipeline_runid": {
+							"value": {
+								"value": "@if(empty(variables('v_error_message')),NULL,split(join(variables('v_error_message'),';'),'|' )[2])",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"ErrorMessage": {
+							"value": {
+								"value": "@if(empty(variables('v_error_message')),NULL,split(join(variables('v_error_message'),';'),'|' )[0])",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"PipelineName": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"runid": {
+							"value": {
+								"value": "@pipeline().RunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"status": {
+							"value": {
+								"value": "@if(empty(variables('v_error_message')),'Success','Failed')",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"variables": {
+			"v_error_message": {
+				"type": "Array"
+			}
+		},
+		"folder": {
+			"name": "Projects/YARD KPI/GMPS/Productivity"
+		},
+		"annotations": [],
+		"lastPublishTime": "2024-01-12T10:37:09Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

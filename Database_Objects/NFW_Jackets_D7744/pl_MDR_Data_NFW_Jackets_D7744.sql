@@ -1,0 +1,160 @@
+
+CREATE  TABLE [epr].[MDR_Data_NFW_Jackets_D7744]
+(
+[File Name]   varchar(200) NULL,
+[Deliverable]   varchar(200) NULL,
+[Early Deliverables]   varchar(200) NULL,
+[Final Deliverables]   varchar(200) NULL,
+[Unique ID]   varchar(200) NULL,
+[PCM Input]   varchar(200) NULL,
+[Document Type]   varchar(200) NULL,
+[Sub Doc. Type Code & Description]   varchar(200) NULL,
+[Discipline (CC)]   varchar(200) NULL,
+[Discipline (Folder)]   varchar(200) NULL,
+[Discipline (Folder) Override]   varchar(200) NULL,
+[Sub Discipline Code & Description]   varchar(200) NULL,
+[CRS No.]   varchar(200) NULL,
+[Profile Type]   varchar(200) NULL,
+[Name]   varchar(200) NULL,
+[Revision]   varchar(200) NULL,
+[Revision Date]   varchar(200) NULL,
+[State]   varchar(200) NULL,
+[Deliverable Type]   varchar(200) NULL,
+"Scope Strategy[D1/BM]"  varchar(200) NULL,
+[Client Doc. Type]   varchar(200) NULL,
+[Company Document Number]   varchar(200) NULL,
+[Client Discipline]   varchar(200) NULL,
+[Title]   varchar(500) NULL,
+[Document Class]   varchar(200) NULL,
+[Facility]   varchar(200) NULL,
+[Facility (PIMS)]   varchar(200) NULL,
+[Total (Current) Progress]   varchar(200) NULL,
+[Location]   varchar(200) NULL,
+[Thirty Percent Design Review]   varchar(200) NULL,
+[Sixty Percent Design Review]   varchar(200) NULL,
+[Ninety Percent Design Review]   varchar(200) NULL,
+[New/Existing]   varchar(200) NULL,
+[Asset]   varchar(200) NULL,
+[Contractor]   varchar(200) NULL,
+[Regulatory Review]   varchar(200) NULL,
+[Third Party Review]   varchar(200) NULL,
+[System Number]   varchar(200) NULL,
+[System No.(PIMS)]   varchar(200) NULL,
+[Unit Number]   varchar(200) NULL,
+[Unit/Wellhead Descr(PIMS)]   varchar(200) NULL,
+[Train/Area]   varchar(200) NULL,
+[Scope of Work]   varchar(200) NULL,
+[Native file req for Handover]   varchar(200) NULL,
+[Handover Category]   varchar(200) NULL,
+[Document Group]   varchar(200) NULL,
+[GPCA Cost Code]   varchar(200) NULL,
+[GPCA Cost Code Description]   varchar(200) NULL,
+[GPCA Prime Description]   varchar(200) NULL,
+[GPCA Sub Prime Description]   varchar(200) NULL,
+[SD_Budget-Progress Base]   varchar(200) NULL,
+[SD_Budget-Original]   varchar(200) NULL,
+[SD_Budget-Forecast]   varchar(200) NULL,
+[SD_Budget-Revised]   varchar(200) NULL,
+[Start Activity Id]   varchar(200) NULL,
+[IDC Activity Id]   varchar(200) NULL,
+[IDC Completed Activity ID]   varchar(200) NULL,
+[IFR Activity ID]   varchar(200) NULL,
+[IFA Activity ID]   varchar(200) NULL,
+[IFH Activity Id]   varchar(200) NULL,
+[IFI Activity Id]   varchar(200) NULL,
+[Start Original]   varchar(200) NULL,
+[Start Plan]   varchar(200) NULL,
+[Start Forecast]   varchar(200) NULL,
+[Start Actual]   varchar(200) NULL,
+[IDC Original]   varchar(200) NULL,
+[IDC Plan]   varchar(200) NULL,
+[IDC Forecast]   varchar(200) NULL,
+[IDC Actual]   varchar(200) NULL,
+[IDC Complete Original]   varchar(200) NULL,
+[IDC Complete Plan]   varchar(200) NULL,
+[IDC Complete Forecast]   varchar(200) NULL,
+[IDC Complete Actual]   varchar(200) NULL,
+[IFR Original]   varchar(200) NULL,
+[IFR Plan]   varchar(200) NULL,
+[IFR Forecast]   varchar(200) NULL,
+[IFR Actual]   varchar(200) NULL,
+[RCA-IFR Code C Original]   varchar(200) NULL,
+[RCA-IFR Code C Planned]   varchar(200) NULL,
+[RCA-IFR Code C Forecast]   varchar(200) NULL,
+[RCA-IFR Code C Actual]   varchar(200) NULL,
+[RCA-IFR Code A/B Original]   varchar(200) NULL,
+[RCA-IFR Code A/B Planned]   varchar(200) NULL,
+[RCA-IFR Code A/B Forecast]   varchar(200) NULL,
+[RCA-IFR Code A/B Actual]   varchar(200) NULL,
+[IFA Original]   varchar(200) NULL,
+[IFA Plan]   varchar(200) NULL,
+[IFA Forecast]   varchar(200) NULL,
+[IFA Actual]   varchar(200) NULL,
+[RCA-IFA Code C Original]   varchar(200) NULL,
+[RCA-IFA Code C Planned]   varchar(200) NULL,
+[RCA-IFA Code C Forecast]   varchar(200) NULL,
+[RCA-IFA Code C Actual]   varchar(200) NULL,
+[RCA-IFA Code A/B Original]   varchar(200) NULL,
+[RCA-IFA Code A/B Planned]   varchar(200) NULL,
+[RCA-IFA Code A/B Forecast]   varchar(200) NULL,
+[RCA-IFA Code A/B Actual]   varchar(200) NULL,
+[AFD Original]   varchar(200) NULL,
+[AFD Plan]   varchar(200) NULL,
+[AFD Forecast]   varchar(200) NULL,
+[AFD Actual]   varchar(200) NULL,
+[RCA-AFD Code B Original]   varchar(200) NULL,
+[RCA-AFD Code B Planned]   varchar(200) NULL,
+[RCA-AFD Code B Forecast]   varchar(200) NULL,
+[RCA-AFD Code B Actual]   varchar(200) NULL,
+[RCA-AFD Code A Original]   varchar(200) NULL,
+[RCA-AFD Code A Planned]   varchar(200) NULL,
+[RCA-AFD Code A Forecast]   varchar(200) NULL,
+[RCA-AFD Code A Actual]   varchar(200) NULL,
+[IFI Original]   varchar(200) NULL,
+[IFI Plan]   varchar(200) NULL,
+[IFI Forecast]   varchar(200) NULL,
+[IFI Actual]   varchar(200) NULL,
+[Internal Transmittal No.]   varchar(200) NULL,
+[Internal Transmittal Date]   varchar(200) NULL,
+[Transmittal Number]   varchar(200) NULL,
+[Transmittal Date]   varchar(200) NULL,
+[Company Transmittal Number]   varchar(200) NULL,
+[Company Return Date]   varchar(200) NULL,
+[Review Return Code]   varchar(200) NULL,
+[GTA4: Gate 4 Deliverables]   varchar(200) NULL,
+[GTA5: Gate 5 Deliverables]   varchar(200) NULL,
+[Working Copy Number]   varchar(200) NULL,
+[Expeditor Comments]   varchar(200) NULL,
+[30-60-90 Days]   varchar(200) NULL,
+[Client Document Class_Planning]   varchar(200) NULL,
+[project_number] [varchar](200) NULL,
+[CreatedDateTime] [varchar](200) NULL,
+[file_name] [varchar](200) NULL
+)
+WITH
+(
+	DISTRIBUTION = ROUND_ROBIN,
+	HEAP
+)
+GO
+
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) values ('pl_MDR_Data_NFW_Jackets_D7744','NetworkFolder','start_date','1','start_date','IN','NULL','1','sundararaju.batta@mcdermott.com','2025-03-19 10:26:55.957')
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) values ('pl_MDR_Data_NFW_Jackets_D7744','NetworkFolder','end_date','2','end_date','IN','NULL','1','sundararaju.batta@mcdermott.com','2025-03-19 10:26:55.957')
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) values ('pl_MDR_Data_NFW_Jackets_D7744','NetworkFolder','source_directory','3','source_directory','IN','NULL','1','sundararaju.batta@mcdermott.com','2025-03-19 10:26:55.957')
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) values ('pl_MDR_Data_NFW_Jackets_D7744','NetworkFolder','table_name','4','table_name','IN','NULL','1','sundararaju.batta@mcdermott.com','2025-03-19 10:26:55.957')
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) values ('pl_MDR_Data_NFW_Jackets_D7744','NetworkFolder','logicapp_url','5','logicapp_url','IN','NULL','1','sundararaju.batta@mcdermott.com','2025-03-19 10:26:55.957')
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) values ('pl_MDR_Data_NFW_Jackets_D7744','NetworkFolder','file_name','6','file_name','IN','NULL','1','sundararaju.batta@mcdermott.com','2025-03-19 10:26:55.957')
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) values ('pl_MDR_Data_NFW_Jackets_D7744','NetworkFolder','project_number','7','project_number','IN','NULL','1','sundararaju.batta@mcdermott.com','2025-03-19 10:26:55.957')
+
+
+
+insert into [dbo].[plp_parameter_value] (parameter_code,parameter_value,active,touched_by,touched_dtm,pipeline_code,pipeline_sub_code) values ('table_name','MDR_Data_NFW_Jackets_D7744','1','sundararaju.batta@mcdermott.com','2025-03-19 10:26:55.957','pl_MDR_Data_NFW_Jackets_D7744','NetworkFolder')
+insert into [dbo].[plp_parameter_value] (parameter_code,parameter_value,active,touched_by,touched_dtm,pipeline_code,pipeline_sub_code) values ('logicapp_url','https://prod-56.eastus.logic.azure.com:443/workflows/3cff41a53ba14a82a9b7cc8d6d2bfe56/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=c7BCbv69x4tk7w5oqGQNOPlpIXvqBQi_Zwm8wkww0WQ','1','sundararaju.batta@mcdermott.com','2025-03-19 10:26:55.957','pl_MDR_Data_NFW_Jackets_D7744','NetworkFolder')
+insert into [dbo].[plp_parameter_value] (parameter_code,parameter_value,active,touched_by,touched_dtm,pipeline_code,pipeline_sub_code) values ('end_date','currdate','1','sundararaju.batta@mcdermott.com','2025-03-19 10:26:55.957','pl_MDR_Data_NFW_Jackets_D7744','NetworkFolder')
+insert into [dbo].[plp_parameter_value] (parameter_code,parameter_value,active,touched_by,touched_dtm,pipeline_code,pipeline_sub_code) values ('source_directory','011. D7744 - NFW Jkts\01. MDR','1','sundararaju.batta@mcdermott.com','2025-03-19 10:26:55.957','pl_MDR_Data_NFW_Jackets_D7744','NetworkFolder')
+insert into [dbo].[plp_parameter_value] (parameter_code,parameter_value,active,touched_by,touched_dtm,pipeline_code,pipeline_sub_code) values ('project_number','D7744','1','sundararaju.batta@mcdermott.com','2025-03-19 10:26:55.957','pl_MDR_Data_NFW_Jackets_D7744','NetworkFolder')
+insert into [dbo].[plp_parameter_value] (parameter_code,parameter_value,active,touched_by,touched_dtm,pipeline_code,pipeline_sub_code) values ('start_date','2025-01-01 11:23:20','1','sundararaju.batta@mcdermott.com','2025-03-19 10:26:55.957','pl_MDR_Data_NFW_Jackets_D7744','NetworkFolder')
+insert into [dbo].[plp_parameter_value] (parameter_code,parameter_value,active,touched_by,touched_dtm,pipeline_code,pipeline_sub_code) values ('file_name','P10 - MDR Data Export.CSV','1','sundararaju.batta@mcdermott.com','2025-03-19 10:26:55.957','pl_MDR_Data_NFW_Jackets_D7744','NetworkFolder')
+
+
+insert into plp_pipeline (pipeline_code,subject_area_code,description,comment,active,touched_by,touched_dtm,sec_sa_id) Values('pl_MDR_Data_NFW_Jackets_D7744','NCSA','Manual Excel File Direct Source To Synapse',NULL,'1','sundararaju.batta@mcdermott.com','2025-03-19 10:26:55.957',9)

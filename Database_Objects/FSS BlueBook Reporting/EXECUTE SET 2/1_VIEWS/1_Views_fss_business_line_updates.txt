@@ -1,0 +1,260 @@
+
+/**********FACT  VIEW ************/
+
+CREATE VIEW fact_fss_businessline_updates_v
+AS SELECT * FROM [dbo].[fact_fss_businessline_updates] 
+
+CREATE VIEW dim_entp_fss_project_v
+AS SELECT * FROM [dbo].[dim_entp_fss_project] WHERE active=1
+
+/**********PROJECT VIEW*********/
+/****** Object:  View [fss].[stage_fss_project_v]    Script Date: 1/9/2024 6:16:23 PM ******/
+SET ANSI_NULLS ON
+GO
+ 
+SET QUOTED_IDENTIFIER ON
+GO
+ 
+CREATE VIEW [fss].[stage_fss_project_v] AS select distinct
+   ROW_NUMBER() over(ORDER BY Project_No ASC) as  stage_fss_project_id,
+   source_Code,
+sub_source_Code,
+      Project_No,
+      trim(Project_Title) as Project_Title,
+	  trim(Project_Description) as Project_Description
+from
+(SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Project No.] as varchar(200)),'') as Project_No
+                ,ISNULL(cast(trim([project title]) as varchar(500)),'') as Project_Title
+				,ISNULL(cast(trim([project title]) as varchar(500)),'') AS Project_Description 
+      FROM
+  fss.stage_fss_neworders_v  
+  where isnull([Project Title],'')<>''-- and isnull([Project no.],'')<>''
+  and isnull([Business Line],'')<>''
+ 
+  union 
+  SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Project No.] as varchar(200)),'') as Project_No
+                ,ISNULL(cast(trim([project title]) as varchar(500)),'') as Project_Title
+				,ISNULL(cast(trim([project title]) as varchar(500)),'') AS Project_Description 
+      FROM
+  fss.stage_fss_revenue_v
+  where isnull([Project Title],'')<>'' --and isnull([Project no.],'')<>''
+  and isnull([Business Line],'')<>''
+
+ 
+  union 
+  SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Project No.] as varchar(200)),'') as Project_No
+                ,ISNULL(cast(trim([project title]) as varchar(500)),'') as Project_Title
+				,ISNULL(cast(trim([project title]) as varchar(500)),'') AS Project_Description 
+      FROM
+  fss.stage_fss_gross_profit_v
+  where isnull([Project Title],'')<>'' --and isnull([Project no.],'')<>'' 
+  and isnull([Business Line],'')<>''
+ 
+    union 
+  SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Project No.] as varchar(200)),'') as Project_No
+                ,ISNULL(cast(trim([project title]) as varchar(500)),'') as Project_Title
+				,ISNULL(cast(trim([project title]) as varchar(500)),'') AS Project_Description 
+      FROM
+  fss.stage_fss_Backlog_Revenue_Rolloff_v
+  where isnull([Project Title],'')<>''-- and isnull([Project no.],'')<>''
+  and isnull([Business Line],'')<>''
+/* 
+  union
+   SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Project No.] as varchar(200)),'') as Project_No
+                ,ISNULL(cast(trim([project title]) as varchar(500)),'') as Project_Title
+				,ISNULL(cast(trim([project title]) as varchar(500)),'') AS Project_Description 
+      FROM
+  fss.[stage_fss_revenue_mb_v]
+  where isnull([Project Title],'')<>'' --and isnull([Project no.],'')<>'' 
+  and isnull([Business Line],'')<>''
+ 
+   union 
+  SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Project No.] as varchar(200)),'') as Project_No
+                ,ISNULL(cast(trim([project title]) as varchar(500)),'') as Project_Title
+				,ISNULL(cast(trim([project title]) as varchar(500)),'') AS Project_Description 
+      FROM
+  fss.stage_fss_gross_profit_mb_v
+  where isnull([Project Title],'')<>''-- and isnull([Project no.],'')<>'' 
+  and isnull([Business Line],'')<>''
+union 
+  SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Project No.] as varchar(200)),'') as Project_No
+                ,ISNULL(cast(trim([project title]) as varchar(500)),'') as Project_Title
+				,ISNULL(cast(trim([project title]) as varchar(500)),'') AS Project_Description 
+      FROM
+  fss.stage_fss_neworders_mb_v  
+  where isnull([Project Title],'')<>'' --and isnull([Project no.],'')<>''
+  and isnull([Business Line],'')<>''
+ 
+  union 
+  SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Project No.] as varchar(200)),'') as Project_No
+                ,ISNULL(cast(trim([project title]) as varchar(500)),'') as Project_Title
+				,ISNULL(cast(trim([project title]) as varchar(500)),'') AS Project_Description 
+      FROM
+  fss.stage_fss_project_eac_v  
+  where isnull([Project Title],'')<>'' --and isnull([Project no.],'')<>'' 
+  and isnull([Business Line],'')<>''
+union 
+SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Project No.] as varchar(200)),'') as Project_No
+                ,ISNULL(cast(trim([project title]) as varchar(500)),'') as Project_Title
+				,ISNULL(cast(trim([project title]) as varchar(500)),'') AS Project_Description 
+      FROM
+  fss.stage_fss_CI_R_O_v  
+  where isnull([Project Title],'')<>'' --and isnull([Project no.],'')<>'' 
+  and isnull([Business Line],'')<>''
+ 
+  
+union 
+SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Project No.] as varchar(200)),'') as Project_No
+                ,ISNULL(cast(trim([Project No.]) as varchar(500)),'') as Project_Title
+				,ISNULL(cast(trim([Project No.]) as varchar(500)),'') AS Project_Description 
+      FROM
+  fss.stage_fss_Activity_by_Project_v
+  where --isnull([Project Title],'')<>'' and
+  isnull([Project no.],'')<>'' --and isnull([Business Line],'')<>''
+  union
+  SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Project Number] as varchar(200)),'') as Project_No
+                ,ISNULL(cast(trim([Project Name]) as varchar(500)),'') as Project_Title
+				,ISNULL(cast(trim([Project Name]) as varchar(500)),'') AS Project_Description
+
+ 
+      FROM
+  fss.stage_fss_wc_by_comp_by_proj_v
+  where --isnull([Project Title],'')<>'' and
+  isnull([Project Name],'')<>'' and isnull([Business Line],'')<>''
+ 
+   union
+  SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Project No.] as varchar(200)),'') as Project_No
+                ,ISNULL(cast(trim([Project Title]) as varchar(500)),'') as Project_Title
+				,ISNULL(cast(trim([Project Title]) as varchar(500)),'') AS Project_Description 
+    FROM fss.stage_fss_loss_projects_v
+  where isnull([Project Title],'')<>'' 
+  --and isnull([Project No.],'')<>''
+  and isnull([Business Line],'')<>''
+ 
+  union
+  SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Project No] as varchar(200)),'') as Project_No
+                ,ISNULL(cast(trim([Project Desc]) as varchar(500)),'') as Project_Title
+				,ISNULL(cast(trim([Project Desc]) as varchar(500)),'') AS Project_Description 
+    FROM fss.stage_fss_direct_cashflow_v
+  where isnull([Project Desc],'')<>'' 
+-- and isnull([Project No],'')<>'' 
+and isnull([Business Line],'')<>''
+ 
+  union
+  SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Project No.] as varchar(200)),'') as Project_No
+                ,ISNULL(cast(trim([Project Title]) as varchar(500)),'') as Project_Title
+				,ISNULL(cast(trim([Project Title]) as varchar(500)),'') AS Project_Description 
+    FROM fss.stage_fss_actual_eac_changes_v
+  where isnull([Project Title],'')<>'' --and
+-- isnull([Project No.],'')<>''
+  and isnull([Business Line],'')<>''
+ 
+  union
+  SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Project No.] as varchar(200)),'') as Project_No
+                ,ISNULL(cast(trim([Project Title]) as varchar(500)),'') as Project_Title
+				,ISNULL(cast(trim([Project Title]) as varchar(500)),'') AS Project_Description 
+    FROM fss.stage_fss_UCO_v
+  where isnull([Project Title],'')<>'' --and
+-- isnull([Project No.],'')<>'' 
+and isnull([Business Line],'')<>''
+ 
+  union
+  SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Project No.] as varchar(200)),'') as Project_No
+                ,ISNULL(cast(trim([Project Title]) as varchar(500)),'') as Project_Title
+				,ISNULL(cast(trim([Project Title]) as varchar(500)),'') AS Project_Description 
+    FROM fss.stage_fss_AR_Aging_v
+  where isnull([Project Title],'')<>''-- and
+-- isnull([Project No.],'')<>'' 
+and isnull([Business Line],'')<>''
+  union
+  SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Project No.] as varchar(200)),'') as Project_No
+                ,ISNULL(cast(trim([Project Title]) as varchar(500)),'') as Project_Title
+				,ISNULL(cast(trim([Project Title]) as varchar(500)),'') AS Project_Description 
+    FROM fss.stage_fss_contracts_WIP_v
+  where isnull([Project Title],'')<>''-- and
+-- isnull([Project No.],'')<>'' 
+and isnull([Business Line],'')<>''
+   union
+  SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Project No.] as varchar(200)),'') as Project_No
+                ,ISNULL(cast(trim([Project Title]) as varchar(500)),'') as Project_Title
+				,ISNULL(cast(trim([Project Title]) as varchar(500)),'') AS Project_Description 
+   FROM fss.stage_fss_gp_changes_in_estimates_v
+  where isnull([Project Title],'')<>''-- and isnull([Project No.],'')<>'' 
+  and isnull([Business Line],'')<>''
+*/
+  ) M
+where NOT EXISTS(select 1 from dim_entp_fss_project_v P where --M.PROJECT_NO = P.PROJECT_NO AND
+trim(M.PROJECT_TITLE) =trim(P.PROJECT_TITLE) and (isnull(trim(Project_Title),'')<>'' )--and isnull(Project_No,'')<>'') 
+);
+GO
+
+
+
+
+/********REPROCESS PROJECT TABLE *************/
+
+/****** Object:  Table [fss].[reprocess_fss_project]    Script Date: 8/23/2023 12:04:13 PM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE TABLE [fss].[reprocess_fss_project]
+(
+	[rssk] [bigint] IDENTITY(1,1) NOT NULL,
+	[source_code] [varchar](50) NOT NULL,
+	[sub_source_code] [varchar](50) NOT NULL,
+	[Project_No] [varchar](200) NULL,
+	[Project_Title] [varchar](500) NULL,
+	[hash_code] [varchar](8000) NOT NULL,
+	[rk_failure_info] [varchar](5000) NULL,
+	[created_date_time] [datetime] NOT NULL,
+  Project_Description varchar(500) NULL,
+ CONSTRAINT [PK_rssk] PRIMARY KEY NONCLUSTERED 
+	(
+		[rssk] ASC
+	) NOT ENFORCED 
+)
+WITH
+(
+	DISTRIBUTION = ROUND_ROBIN,
+	CLUSTERED COLUMNSTORE INDEX
+)
+GO

@@ -1,0 +1,97 @@
+{
+	"name": "df_oracle_data_count_detail_report_flattening",
+	"properties": {
+		"folder": {
+			"name": "Projects/Payment Dashboard/Oracle Data Count Detail Report"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_xml_oracle_data_count_detail_report_source_stage_decoded_xml",
+						"type": "DatasetReference"
+					},
+					"name": "SrcXMl"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_oracle_data_count_detail_report_source_stage_final_csv",
+						"type": "DatasetReference"
+					},
+					"name": "SnkCsv"
+				}
+			],
+			"transformations": [
+				{
+					"name": "XmlToCsvflatten"
+				},
+				{
+					"name": "addLoadDetails"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          DATA_DS as (G_1 as (ACCOUNT as string, BU_NAME as string, CHECK_ID as string, CODE_COMBINATION_ID as string, CONVERSION_DATE as string, CONVERSION_TYPE as string, DATA_COUNT as short, EVENT_ID as string, EXPENDITURE_TYPE_ID as string, FROM_CURRENCY as string, INVOICE_ID as string, INVOICE_PAYMENT_ID as string, JOURNAL_LINE_NUMBER as string, LAST_UPDATE_DATE as string, LAST_UPDATE_DATE_DD as short, LAST_UPDATE_DATE_MM as short, LAST_UPDATE_DATE_YYYY as short, LINE as string, ORG_ID as long, PARTY_ID as long, PARTY_SITE_ID as long, PAYMENT_HISTORY_ID as string, PAYMENT_NUM as string, PREPAY_APP_DIST_ID as string, PREPAY_HISTORY_ID as string, PROJECT_ID as string, PROJ_ELEMENT_ID as string, SOURCE as string, TABLENAME as string, TO_CURRENCY as string, USER_ROLE_DATA_ASSIGNMENT_ID as string)[], P_FROM_DATE as timestamp, P_TO_DATE as timestamp)",
+				"     ),",
+				"     allowSchemaDrift: false,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     validationMode: 'none',",
+				"     namespaces: true) ~> SrcXMl",
+				"SrcXMl foldDown(unroll(DATA_DS.G_1),",
+				"     mapColumn(",
+				"          ACCOUNT = DATA_DS.G_1.ACCOUNT,",
+				"          BU_NAME = DATA_DS.G_1.BU_NAME,",
+				"          CHECK_ID = DATA_DS.G_1.CHECK_ID,",
+				"          CODE_COMBINATION_ID = DATA_DS.G_1.CODE_COMBINATION_ID,",
+				"          CONVERSION_DATE = DATA_DS.G_1.CONVERSION_DATE,",
+				"          CONVERSION_TYPE = DATA_DS.G_1.CONVERSION_TYPE,",
+				"          DATA_COUNT = DATA_DS.G_1.DATA_COUNT,",
+				"          EVENT_ID = DATA_DS.G_1.EVENT_ID,",
+				"          EXPENDITURE_TYPE_ID = DATA_DS.G_1.EXPENDITURE_TYPE_ID,",
+				"          FROM_CURRENCY = DATA_DS.G_1.FROM_CURRENCY,",
+				"          INVOICE_ID = DATA_DS.G_1.INVOICE_ID,",
+				"          INVOICE_PAYMENT_ID = DATA_DS.G_1.INVOICE_PAYMENT_ID,",
+				"          JOURNAL_LINE_NUMBER = DATA_DS.G_1.JOURNAL_LINE_NUMBER,",
+				"          LAST_UPDATE_DATE = DATA_DS.G_1.LAST_UPDATE_DATE,",
+				"          LAST_UPDATE_DATE_DD = DATA_DS.G_1.LAST_UPDATE_DATE_DD,",
+				"          LAST_UPDATE_DATE_MM = DATA_DS.G_1.LAST_UPDATE_DATE_MM,",
+				"          LAST_UPDATE_DATE_YYYY = DATA_DS.G_1.LAST_UPDATE_DATE_YYYY,",
+				"          LINE = DATA_DS.G_1.LINE,",
+				"          ORG_ID = DATA_DS.G_1.ORG_ID,",
+				"          PARTY_ID = DATA_DS.G_1.PARTY_ID,",
+				"          PARTY_SITE_ID = DATA_DS.G_1.PARTY_SITE_ID,",
+				"          PAYMENT_HISTORY_ID = DATA_DS.G_1.PAYMENT_HISTORY_ID,",
+				"          PAYMENT_NUM = DATA_DS.G_1.PAYMENT_NUM,",
+				"          PREPAY_APP_DIST_ID = DATA_DS.G_1.PREPAY_APP_DIST_ID,",
+				"          PREPAY_HISTORY_ID = DATA_DS.G_1.PREPAY_HISTORY_ID,",
+				"          PROJECT_ID = DATA_DS.G_1.PROJECT_ID,",
+				"          PROJ_ELEMENT_ID = DATA_DS.G_1.PROJ_ELEMENT_ID,",
+				"          SOURCE = DATA_DS.G_1.SOURCE,",
+				"          TABLENAME = DATA_DS.G_1.TABLENAME,",
+				"          TO_CURRENCY = DATA_DS.G_1.TO_CURRENCY,",
+				"          USER_ROLE_DATA_ASSIGNMENT_ID = DATA_DS.G_1.USER_ROLE_DATA_ASSIGNMENT_ID,",
+				"          P_FROM_DATE = DATA_DS.P_FROM_DATE,",
+				"          P_TO_DATE = DATA_DS.P_TO_DATE",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> XmlToCsvflatten",
+				"XmlToCsvflatten derive(source_name = 'SYSTEM',",
+				"          sub_source_name = 'R2P',",
+				"          created_date_time = currentUTC()) ~> addLoadDetails",
+				"addLoadDetails sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     partitionFileNames:['Oracle_Data_Count_Detail_Report.csv'],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> SnkCsv"
+			]
+		}
+	}
+}

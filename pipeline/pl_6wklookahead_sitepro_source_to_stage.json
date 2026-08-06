@@ -1,0 +1,230 @@
+{
+	"name": "pl_6wklookahead_sitepro_source_to_stage",
+	"properties": {
+		"activities": [
+			{
+				"name": "cp_getjdepaytypesdata",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"sqlReaderQuery": {
+							"value": "@concat('select ',\npipeline().parameters.p_pl_projectid, ' project_code, ',\n'''',activity('lk_get_pipeline_parameters').output.firstRow.function_code,'''',' function_code,','''',\nactivity('lk_get_pipeline_parameters').output.firstRow.source_code,'''',' source_code,','''',\nactivity('lk_get_pipeline_parameters').output.firstRow.sub_source_code,'''',' sub_source_code,','''',\nactivity('lk_get_pipeline_parameters').output.firstRow.data_class_code,'''',' data_class_code,','''',\nactivity('lk_get_pipeline_parameters').output.firstRow.data_sub_class_code,'''',' data_sub_class_code,',\n'''',activity('lk_get_pipeline_parameters').output.firstRow.unit_of_measure,'''',' unit_of_measure,',\n'ph.Code phase_code,\nsr.Code schedule_resource_code,\nu.Code work_unit_code,\nwa.Code work_area_code,\nac.Activity activity_code,\ncw.Name IWP_Code,\nac.CWP CWP_Code,\nisnull(a.WK1,0) WK1,\nisnull(a.WK2,0) WK2,\nisnull(a.WK3,0) WK3,\nisnull(a.WK4,0) WK4,\nisnull(a.WK5,0) WK5,\nisnull(a.WK6,0) WK6,',\n'dateadd(Day,0,','''', activity('lk_get_pipeline_parameters').output.firstRow.start_date,'''',') eff_date_wk1,',\n'dateadd(Day,7,','''', activity('lk_get_pipeline_parameters').output.firstRow.start_date,'''',') eff_date_wk2,',\n'dateadd(Day,14,','''',activity('lk_get_pipeline_parameters').output.firstRow.start_date,'''',') eff_date_wk3,',\n'dateadd(Day,21,','''',activity('lk_get_pipeline_parameters').output.firstRow.start_date,'''',') eff_date_wk4,',\n'dateadd(Day,28,','''',activity('lk_get_pipeline_parameters').output.firstRow.start_date,'''',') eff_date_wk5,',\n'dateadd(Day,35,','''',activity('lk_get_pipeline_parameters').output.firstRow.start_date,'''',') eff_date_wk6',\n',\ngetdate() process_date from [dbo].[fntbl_6WeekLookAhead](','''',activity('lk_get_pipeline_parameters').output.firstRow.start_date,'''',',','''','All','''',') a,\n [dbo].[SP_ConstructionWorkPack] cw,\n [dbo].PM_Activity ac,\n SP_ScheduleResource sr,\n SP_WorkArea wa,\n SP_Unit u,\n SP_Phases ph\nwhere a.L3ID_CWPNum = cw.Name\nand cw.ActivityID = ac.ID\nand cw.ScheduleResourceID = sr.ID\nand ac.ScheduleWorkArea = wa.Code\nand wa.UnitID = u.ID\nand wa.PhaseID = ph.ID',\n' union all ',\n' select ',\npipeline().parameters.p_pl_projectid, ' project_code, ',\n'''',activity('lk_get_pipeline_parameters').output.firstRow.function_code,'''',' function_code,','''',\nactivity('lk_get_pipeline_parameters').output.firstRow.source_code,'''',' source_code,','''',\nactivity('lk_get_pipeline_parameters').output.firstRow.sub_source_code,'''',' sub_source_code,','''',\nactivity('lk_get_pipeline_parameters').output.firstRow.data_class_code,'''',' data_class_code,','''',\nactivity('lk_get_pipeline_parameters').output.firstRow.data_sub_class_code,'''',' data_sub_class_code,',\n'''',activity('lk_get_pipeline_parameters').output.firstRow.unit_of_measure,'''',' unit_of_measure,',\n'ph.Code phase_code,\nsr.Code schedule_resource_code,\nu.Code work_unit_code,\nwa.Code work_area_code,\nac.Activity activity_code,','''',\n'','''',' IWP_Code,\nac.CWP CWP_Code,\nisnull(a.WK1,0) WK1,\nisnull(a.WK2,0) WK2,\nisnull(a.WK3,0) WK3,\nisnull(a.WK4,0) WK4,\nisnull(a.WK5,0) WK5,\nisnull(a.WK6,0) WK6,',\n'dateadd(Day,0,','''', activity('lk_get_pipeline_parameters').output.firstRow.start_date,'''',') eff_date_wk1,',\n'dateadd(Day,7,','''', activity('lk_get_pipeline_parameters').output.firstRow.start_date,'''',') eff_date_wk2,',\n'dateadd(Day,14,','''',activity('lk_get_pipeline_parameters').output.firstRow.start_date,'''',') eff_date_wk3,',\n'dateadd(Day,21,','''',activity('lk_get_pipeline_parameters').output.firstRow.start_date,'''',') eff_date_wk4,',\n'dateadd(Day,28,','''',activity('lk_get_pipeline_parameters').output.firstRow.start_date,'''',') eff_date_wk5,',\n'dateadd(Day,35,','''',activity('lk_get_pipeline_parameters').output.firstRow.start_date,'''',') eff_date_wk6',\n',getdate() process_date from [dbo].[fntbl_6WeekLookAhead](','''',activity('lk_get_pipeline_parameters').output.firstRow.start_date,'''',',','''','All','''',') a,\n  [dbo].PM_Activity ac,\n SP_ScheduleResource sr,\n SP_WorkArea wa,\n SP_Unit u,\n SP_Phases ph\nwhere a.L3ID_CWPNum = ac.Activity\nand ac.ScheduleResourceID = sr.ID\nand ac.ScheduleWorkArea = wa.Code\nand wa.UnitID = u.ID\nand wa.PhaseID = ph.ID\nand (select count(*) from [dbo].[SP_ConstructionWorkPack] cw where cw.Name = a.L3ID_CWPNum) = 0')",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_sitepro_prod",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_ds_dbname": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.databaseName",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_generic",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_ds_filesystem": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.file_system",
+								"type": "Expression"
+							},
+							"p_ds_directory": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+								"type": "Expression"
+							},
+							"p_ds_filename": {
+								"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+								"type": "Expression"
+							},
+							"p_ds_first_row_header": true
+						}
+					}
+				]
+			},
+			{
+				"name": "lk_get_pipeline_parameters",
+				"description": "",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.p_pl_projectid",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Set data pull date time",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "cp_getjdepaytypesdata",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_next_date",
+					"value": {
+						"value": "@adddays(activity('lk_get_pipeline_parameters').output.firstRow.start_date,7)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "sp_Update_Parameter",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Set data pull date time",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+					"storedProcedureParameters": {
+						"pParameterValue": {
+							"value": {
+								"value": "@formatDateTime(variables('v_next_date'),'yyyy-MM-dd HH:mm:ss')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": {
+								"value": "@pipeline().parameters.p_pl_projectid",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pParameterCode": {
+							"value": "start_date",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseDB_DEV",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"parameters": {
+			"p_pl_projectid": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"v_run_start": {
+				"type": "String"
+			},
+			"v_next_date": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/NCSA/Six WK LAhead"
+		},
+		"annotations": [],
+		"lastPublishTime": "2021-12-15T07:13:48Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

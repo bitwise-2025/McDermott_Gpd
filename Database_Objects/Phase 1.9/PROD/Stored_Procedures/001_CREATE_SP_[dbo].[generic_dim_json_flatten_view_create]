@@ -1,0 +1,132 @@
+/****** Object:  StoredProcedure [dbo].[generic_dim_json_flatten_view_create]    Script Date: 9/30/2022 1:19:09 PM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE PROC [dbo].[generic_dim_json_flatten_view_create] @p_dim_table_name [varchar](120),@p_dim_table_sk_name [varchar](120),@p_dim_table_gnk_name [varchar](120),@p_delimiter [varchar](1) AS
+
+begin
+	exec('if exists (select 1 from '+@p_dim_table_name+' where  isjson(json_attribute_for_view) = 0) begin select * from '+@p_dim_table_name+' where isjson(json_attribute_for_view) = 0; throw 51002, ''JSON Validation Failed'', 1;  end');
+
+	begin try
+		drop table #temp_md_json_table;
+	end try
+	begin catch
+	end catch;
+
+	create table #temp_md_json_table (	md_rowid			int, 
+										md_column_name		varchar(5000), 
+										md_column_data_type varchar(200), 
+										md_column_key_type	varchar(200));
+    
+	-- all columns other than SK
+	declare @isql varchar(8000) = '
+	insert into #temp_md_json_table 
+	select	row_number() over (order by x.col1),
+			col1,
+			col2,
+			col3
+	from (
+		select
+			a.target_column_name			col1,
+			a.stage_column_data_type		col2,
+			a.stage_column_key_type			col3
+		from (select distinct	target_column_name, 
+								stage_column_data_type, 
+								stage_column_key_type 
+				from generic_load_detail 
+				where active_flag = ''Y''
+				and target_column_name != ''json_attribute''
+				and load_name in (	select load_name 
+									from generic_load_header 
+									where target_table_name = '''+@p_dim_table_name+'''
+									and active_flag = ''Y'')) a
+		union all		
+		select z1, 
+				''varchar(5000)'',
+				''JA''
+		from (
+		select z1
+		from (
+			select distinct ltrim(rtrim(substring(aa.c1, charindex('''+@p_delimiter+''', aa.c1)+1, len(aa.c1)))) z1
+			from (	select replace(replace(value, ''{'', ''''), ''"'', '''')  c1
+					from (select * from '+@p_dim_table_name+' where active = 1 ) a cross apply string_split(replace(a.json_attribute, ''" : "'', ''~''), ''~'')
+				 ) aa
+			where aa.c1 not like ''%}'' ) z
+		group by z1) zz
+	) x';
+
+	exec(@isql);
+
+	--SK 
+	declare @total_rows int = 0;
+	select @total_rows = count(*) from #temp_md_json_table;
+
+	set @total_rows = @total_rows + 1;
+	insert into #temp_md_json_table 
+	select @total_rows, @p_dim_table_sk_name, 'bigint', 'SK';
+
+	set @total_rows = @total_rows + 1;
+	insert into #temp_md_json_table 
+	select @total_rows, @p_dim_table_gnk_name, 'bigint', 'GNK';
+
+-- select * from  #temp_md_json_table;
+
+	-- browsing the MD
+	declare @total_rows_ctr int = 1;
+	declare @rstr varchar(max) = '';
+	declare @jstr varchar(max) = '';
+
+	while @total_rows_ctr <= @total_rows
+	begin
+		declare @md_column_name varchar(200);
+		declare @md_column_data_type varchar(200);
+		declare @md_column_key_type varchar(200);
+
+		select	@md_column_name = md_column_name,
+				@md_column_data_type = md_column_data_type,
+				@md_column_key_type = md_column_key_type
+		from	#temp_md_json_table
+		where	md_rowid = @total_rows_ctr;
+
+		if @md_column_key_type = 'JA'
+		begin
+			if @jstr != ''
+			begin
+				set @jstr = @jstr + ',';
+			end;
+			set @jstr = @jstr + 'JSON_VALUE(json_attribute_for_view, ''$."'+@md_column_name+'"'') '+replace(@md_column_name,' ', '_');
+		end
+		else
+		begin
+			if @rstr != ''
+			begin
+				set @rstr = @rstr + ',';
+			end;
+			set @rstr = @rstr + @md_column_name;
+		end;
+		set @total_rows_ctr = @total_rows_ctr + 1;
+	end;
+
+	declare @final_sql varchar(max) = 'select '+@rstr+','+@jstr+' from '+@p_dim_table_name+' where active = 1';
+	set @final_sql = 'create view '+@p_dim_table_name+'_active_v as '+@final_sql;
+
+-- select @final_sql;
+
+	-- dropping the view, if exists
+	begin try
+		exec('drop view '+@p_dim_table_name+'_active_v');
+	end try
+	begin catch
+	end catch;
+
+	--creating the view
+	exec(@final_sql);
+
+select @final_sql;
+end;
+GO
+
+

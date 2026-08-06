@@ -1,0 +1,34 @@
+{
+	"name": "df_hdms_progress_data_stage_to_raw",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_hdms_progress_stage",
+						"type": "DatasetReference"
+					},
+					"name": "sourceHDMSProgress",
+					"description": "Import data from ds_adlsg2_csv_hdms_progress_stage"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_hdms_progress_raw",
+						"type": "DatasetReference"
+					},
+					"name": "snkHDMSProgressRaw",
+					"description": "Export data to ds_adlsg2_csv_hdms_progress_raw"
+				}
+			],
+			"transformations": [
+				{
+					"name": "setFileName"
+				}
+			],
+			"script": "source(output(\n\t\tActID as string,\n\t\tUpdateHistoryID as string,\n\t\tContractNo as string,\n\t\tSFN as string,\n\t\tActivity_Id as string,\n\t\tWork_Description_ID as string,\n\t\tSystemCode as string,\n\t\tSystem as string,\n\t\tSubSystemCode as string,\n\t\tSubSystem as string,\n\t\tWork_Description as string,\n\t\tActivities as string,\n\t\tScope as string,\n\t\tJobno as string,\n\t\tVessel as string,\n\t\tDiscipline as string,\n\t\tTaskSheet_No as string,\n\t\tTask_Name as string,\n\t\tCampaignCode as string,\n\t\tCampaign as string,\n\t\tScopeCategory as string,\n\t\tProgress_Date as string,\n\t\tDeck as string,\n\t\tPeriod as string,\n\t\tWork_Type as string,\n\t\tProgress as string,\n\t\tCumEarned as string,\n\t\tManhours as string,\n\t\tPrevious_Progress as string,\n\t\tProgress_Grouping as string,\n\t\tLabel1 as string,\n\t\tLabel2 as string,\n\t\tLabel3 as string,\n\t\tLabel4 as string,\n\t\tLabel5 as string,\n\t\tLabel6 as string,\n\t\tGate1 as string,\n\t\tGate2 as string,\n\t\tGate3 as string,\n\t\tGate4 as string,\n\t\tGate5 as string,\n\t\tGate6 as string,\n\t\tQtyG1 as string,\n\t\tQtyG2 as string,\n\t\tQtyG3 as string,\n\t\tQtyG4 as string,\n\t\tQtyG5 as string,\n\t\tQtyG6 as string,\n\t\tContractID as string,\n\t\tItemQty as string,\n\t\tWorkTypeID as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\twildcardPaths:['Project_Data/NCSA/HDMS/HDMS_Progress/HDMS_Progress.csv']) ~> sourceHDMSProgress\nsourceHDMSProgress derive(FileName = concat( 'Project_Data/NCSA/HDMS/HDMS_Progress/',        substring(toString(currentTimestamp()),1,4),        '/',substring(toString(currentTimestamp()),6,2),        '/',substring(toString(currentTimestamp()),9,2),        '/',        'HDMS_Progress_',        replace(replace(toString(currentTimestamp()),'.',''),':',''),        '.csv')) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\trowUrlColumn:'FileName',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tmapColumn(\n\t\tActID,\n\t\tUpdateHistoryID,\n\t\tContractNo,\n\t\tSFN,\n\t\tActivity_Id,\n\t\tWork_Description_ID,\n\t\tSystemCode,\n\t\tSystem,\n\t\tSubSystemCode,\n\t\tSubSystem,\n\t\tWork_Description,\n\t\tActivities,\n\t\tScope,\n\t\tJobno,\n\t\tVessel,\n\t\tDiscipline,\n\t\tTaskSheet_No,\n\t\tTask_Name,\n\t\tCampaignCode,\n\t\tCampaign,\n\t\tScopeCategory,\n\t\tProgress_Date,\n\t\tDeck,\n\t\tPeriod,\n\t\tWork_Type,\n\t\tProgress,\n\t\tCumEarned,\n\t\tManhours,\n\t\tPrevious_Progress,\n\t\tProgress_Grouping,\n\t\tLabel1,\n\t\tLabel2,\n\t\tLabel3,\n\t\tLabel4,\n\t\tLabel5,\n\t\tLabel6,\n\t\tGate1,\n\t\tGate2,\n\t\tGate3,\n\t\tGate4,\n\t\tGate5,\n\t\tGate6,\n\t\tQtyG1,\n\t\tQtyG2,\n\t\tQtyG3,\n\t\tQtyG4,\n\t\tQtyG5,\n\t\tQtyG6,\n\t\tContractID,\n\t\tItemQty,\n\t\tWorkTypeID,\n\t\tFileName\n\t)) ~> snkHDMSProgressRaw"
+		}
+	}
+}

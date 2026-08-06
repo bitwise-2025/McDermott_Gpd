@@ -1,0 +1,3 @@
+insert into [promt].[dim_ent_promt_risk_status] ([dim_ent_risk_status_nk],[risk_status],[start_date],[end_date],[hash_code],[active],[created_date_time],[modified_date_time],[late_arrival_flag],[risk_status_description]) values(19,'','2024-02-17 09:04:38.343','2050-12-30 00:00:00.000','JªÇ85öí',1,'2024-02-17 09:04:38.343',NULL,'N','')
+insert into [promt].[dim_ent_promt_mit_fully_avoided] ([dim_ent_mit_fully_avoided_nk],[mit_fully_avoided],[start_date],[end_date],[hash_code],[active],[created_date_time],[modified_date_time],[late_arrival_flag],[mit_fully_avoided_description]) values(18,'Y','2024-02-19 09:04:38.343','2050-12-30 00:00:00.000','SD85fgh',1,'2024-02-19 09:04:38.343',NULL,'N','Yes')
+

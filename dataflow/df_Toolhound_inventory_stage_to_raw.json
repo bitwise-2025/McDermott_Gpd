@@ -1,0 +1,94 @@
+{
+	"name": "df_Toolhound_inventory_stage_to_raw",
+	"properties": {
+		"description": "Import data from ds_adlsg2_csv_yardkpi_toolhound_generic",
+		"folder": {
+			"name": "Projects/YARD KPI/Toolhound"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_yardkpi_toolhound_inventory",
+						"type": "DatasetReference"
+					},
+					"name": "SrcToolhoundStage",
+					"description": "Import data from ds_adlsg2_csv_yardkpi_toolhound_generic"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_yardkpi_toolhound_inventory_wildcard",
+						"type": "DatasetReference"
+					},
+					"name": "SinkToolhoundRaw"
+				}
+			],
+			"transformations": [
+				{
+					"name": "SetFileName"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          partNo as string,",
+				"          Description as string,",
+				"          ident as string,",
+				"          ItemID as string,",
+				"          category as string,",
+				"          subcategory as string,",
+				"          InventoryType as string,",
+				"          LocationName as string,",
+				"          BinShelf as string,",
+				"          MinOnHand as string,",
+				"          MaxOnHand as string,",
+				"          QtyOnHand as string,",
+				"          Issued as string,",
+				"          TransitInBound as string,",
+				"          Reserved as string,",
+				"          InKit as string,",
+				"          Total as string,",
+				"          InTransitOutBound as string,",
+				"          OnPurchaseOrder as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     rowUrlColumn: 'file_path') ~> SrcToolhoundStage",
+				"SrcToolhoundStage derive(file_path = concat(concat(trim(substringIndex(file_path,'/',5),'/'),'/'),substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',split(split(file_path,'/')[6],'.')[1],'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv'),",
+				"          Description = trim(replace(Description,\"\\n\",\" \"))) ~> SetFileName",
+				"SetFileName sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          partNo as string,",
+				"          Description as string,",
+				"          ident as string,",
+				"          ItemID as string,",
+				"          category as string,",
+				"          subcategory as string,",
+				"          InventoryType as string,",
+				"          LocationName as string,",
+				"          BinShelf as string,",
+				"          MinOnHand as string,",
+				"          MaxOnHand as string,",
+				"          QtyOnHand as string,",
+				"          Issued as string,",
+				"          TransitInBound as string,",
+				"          Reserved as string,",
+				"          InKit as string,",
+				"          Total as string,",
+				"          InTransitOutBound as string,",
+				"          OnPurchaseOrder as string",
+				"     ),",
+				"     rowUrlColumn:'file_path',",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> SinkToolhoundRaw"
+			]
+		}
+	}
+}

@@ -1,0 +1,320 @@
+{
+	"name": "pl_mcpmdata_progressitems_historical_master_pipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "Get_week_dates",
+				"description": "Get all the possible Week_start and Week_end dates between start and end date.",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.01:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderQuery": {
+							"value": "@concat('select DISTINCT week_start_date,week_end_date from [dbo].[dim_ent_date] where week_start_date >= ', '''', activity('lk_get_pipeline_parameters').output.firstRow.start_date, '''', ' and week_end_date <= ', '''', if(equals(activity('lk_get_pipeline_parameters').output.firstRow.end_date, 'currdate') ,formatDateTime(utcnow(), 'yyyy-MM-dd'),formatDateTime(activity('lk_get_pipeline_parameters').output.firstRow.end_date, 'yyyy-MM-dd')), '''', ' order by 1 ')",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "ForEach_Cutoff",
+				"description": "Loop through the SRC-STG and STG-RAW for each cutoff date",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Get_week_dates",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get_week_dates').output.value",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "sp_Update_Parameter_SD",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+								"storedProcedureParameters": {
+									"pParameterValue": {
+										"value": {
+											"value": "@formatDateTime(item().week_start_date,'yyyy-MM-dd HH:mm:ss')",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"pPipelineCode": {
+										"value": "pl_mcpmdata_progressitems_source_to_stage",
+										"type": "String"
+									},
+									"pPipelineSubCode": {
+										"value": "MCPM",
+										"type": "String"
+									},
+									"pParameterCode": {
+										"value": "start_date",
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "AzureSynapseDB_DEV",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "sp_Update_Parameter_ED",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+								"storedProcedureParameters": {
+									"pParameterValue": {
+										"value": {
+											"value": "@formatDateTime(item().week_end_date,'yyyy-MM-dd HH:mm:ss')",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"pPipelineCode": {
+										"value": "pl_mcpmdata_progressitems_source_to_stage",
+										"type": "String"
+									},
+									"pPipelineSubCode": {
+										"value": "MCPM",
+										"type": "String"
+									},
+									"pParameterCode": {
+										"value": "end_date",
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "AzureSynapseDB_DEV",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "Source to Stage",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "sp_Update_Parameter_SD",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "sp_Update_Parameter_ED",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [
+								{
+									"name": "up_Cutoff_Date",
+									"value": "@concat(formatDateTime(item().week_start_date,'yyyy-MM-dd'),' | ',formatDateTime(item().week_end_date,'yyyy-MM-dd'))"
+								}
+							],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "pl_mcpmdata_progressitems_source_to_stage",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true
+							}
+						},
+						{
+							"name": "Stage to Raw",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Source to Stage",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "pl_mcpmdata_progressitems_stage_to_raw",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "lk_get_pipeline_parameters",
+				"description": "Get the parameters to be used in this pipeline",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "MCPM"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "sp_Update_Parameter_currdate",
+				"description": "Update the appropriate parameter back to currdate",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Raw to Synapse",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.01:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+					"storedProcedureParameters": {
+						"pParameterValue": {
+							"value": "currdate",
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": "pl_mcpmdata_progressitems_source_to_stage",
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": "MCPM",
+							"type": "String"
+						},
+						"pParameterCode": {
+							"value": "end_date",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Raw to Synapse",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "ForEach_Cutoff",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_mcpmdata_progressitems_raw_to_synapse_stage",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			}
+		],
+		"folder": {
+			"name": "Projects/NCSA/MCPM Progress Items"
+		},
+		"annotations": [],
+		"lastPublishTime": "2021-12-16T05:45:21Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

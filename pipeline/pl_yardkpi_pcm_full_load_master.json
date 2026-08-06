@@ -1,0 +1,488 @@
+{
+	"name": "pl_yardkpi_pcm_full_load_master",
+	"properties": {
+		"activities": [
+			{
+				"name": "pl_yardkpi_pcm_certification_package_full_load",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "pl_yardkpi_pcm_dl_master_defect_master_pipeline",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "pl_yardkpi_pcm_dl_master_weld_process_master_pipeline",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "pl_yardkpi_pcm_dl_master_job_item_master_pipeline",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "pl_yardkpi_pcm_welder_information_master_pipeline",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_yardkpi_pcm_certification_package_full_load",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_src_pipeline_pcm_contract": {
+							"value": "@pipeline().parameters.pcm_contract",
+							"type": "Expression"
+						},
+						"p_src_pipeline_pcm_fab_code": {
+							"value": "@pipeline().parameters.pcm_fab_code",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "pl_yardkpi_pcm_inprocess_inspection_full_load",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "pl_yardkpi_pcm_certification_package_full_load",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_yardkpi_pcm_inprocess_inspection_full_load",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_src_pipeline_pcm_contract": {
+							"value": "@pipeline().parameters.pcm_contract",
+							"type": "Expression"
+						},
+						"p_src_pipeline_pcm_fab_code": {
+							"value": "@pipeline().parameters.pcm_fab_code",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "pl_yardkpi_pcm_ndt_details_full_load",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "pl_yardkpi_pcm_inprocess_inspection_full_load",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_yardkpi_pcm_ndt_details_full_load",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_src_pipeline_pcm_contract": {
+							"value": "@pipeline().parameters.pcm_contract",
+							"type": "Expression"
+						},
+						"p_src_pipeline_pcm_fab_code": {
+							"value": "@pipeline().parameters.pcm_fab_code",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "pl_yardkpi_pcm_dl_master_defect_master_pipeline",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_yardkpi_pcm_dl_master_defect_master_pipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_pipeline_pcm_fab_code": {
+							"value": "@pipeline().parameters.pcm_fab_code",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "pl_yardkpi_pcm_dl_master_job_item_master_pipeline",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_yardkpi_pcm_dl_master_job_item_master_pipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_pipeline_pcm_fab_code": {
+							"value": "@pipeline().parameters.pcm_fab_code",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "pl_yardkpi_pcm_dl_master_weld_process_master_pipeline",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_yardkpi_pcm_dl_master_weld_process_master_pipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_pipeline_pcm_fab_code": {
+							"value": "@pipeline().parameters.pcm_fab_code",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "pl_yardkpi_pcm_paint_details_full_load",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "pl_yardkpi_pcm_ndt_details_full_load",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_yardkpi_pcm_paint_details_full_load",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_src_pipeline_pcm_contract": {
+							"value": "@pipeline().parameters.pcm_contract",
+							"type": "Expression"
+						},
+						"p_src_pipeline_pcm_fab_code": {
+							"value": "@pipeline().parameters.pcm_fab_code",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "pl_yardkpi_pcm_weld_details_full_load",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "pl_yardkpi_pcm_paint_details_full_load",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_yardkpi_pcm_weld_details_full_load",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_src_pipeline_pcm_contract": {
+							"value": "@pipeline().parameters.pcm_contract",
+							"type": "Expression"
+						},
+						"p_src_pipeline_pcm_fab_code": {
+							"value": "@pipeline().parameters.pcm_fab_code",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "pl_yardkpi_pcm_welder_activity_full_load",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "pl_yardkpi_pcm_weld_details_full_load",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_yardkpi_pcm_welder_activity_full_load",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_src_pipeline_pcm_contract": {
+							"value": "@pipeline().parameters.pcm_contract",
+							"type": "Expression"
+						},
+						"p_src_pipeline_pcm_fab_code": {
+							"value": "@pipeline().parameters.pcm_fab_code",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "pl_yardkpi_pcm_welder_information_master_pipeline",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_yardkpi_pcm_welder_information_master_pipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_pipeline_pcm_fab_code": {
+							"value": "@pipeline().parameters.pcm_fab_code",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "pl_yardkpi_pcm_certification_package_del_full_load",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "pl_yardkpi_pcm_welder_activity_full_load",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_yardkpi_pcm_certification_package_del_full_load",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_src_pipeline_pcm_contract": {
+							"value": "@pipeline().parameters.pcm_contract",
+							"type": "Expression"
+						},
+						"p_src_pipeline_pcm_fab_code": {
+							"value": "@pipeline().parameters.pcm_fab_code",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "pl_yardkpi_pcm_ndt_details_del_full_load",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "pl_yardkpi_pcm_certification_package_del_full_load",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_yardkpi_pcm_ndt_details_del_full_load",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_src_pipeline_pcm_contract": {
+							"value": "@pipeline().parameters.pcm_contract",
+							"type": "Expression"
+						},
+						"p_src_pipeline_pcm_fab_code": {
+							"value": "@pipeline().parameters.pcm_fab_code",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "pl_yardkpi_pcm_paint_details_del_full_load",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "pl_yardkpi_pcm_ndt_details_del_full_load",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_yardkpi_pcm_paint_details_del_full_load",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_src_pipeline_pcm_contract": {
+							"value": "@pipeline().parameters.pcm_contract",
+							"type": "Expression"
+						},
+						"p_src_pipeline_pcm_fab_code": {
+							"value": "@pipeline().parameters.pcm_fab_code",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "pl_yardkpi_pcm_weld_details_del_full_load",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "pl_yardkpi_pcm_paint_details_del_full_load",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_yardkpi_pcm_weld_details_del_full_load",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_src_pipeline_pcm_contract": {
+							"value": "@pipeline().parameters.pcm_contract",
+							"type": "Expression"
+						},
+						"p_src_pipeline_pcm_fab_code": {
+							"value": "@pipeline().parameters.pcm_fab_code",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "pl_yardkpi_pcm_welder_activity_del_full_load",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "pl_yardkpi_pcm_weld_details_del_full_load",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_yardkpi_pcm_welder_activity_del_full_load",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_src_pipeline_pcm_contract": {
+							"value": "@pipeline().parameters.pcm_contract",
+							"type": "Expression"
+						},
+						"p_src_pipeline_pcm_fab_code": {
+							"value": "@pipeline().parameters.pcm_fab_code",
+							"type": "Expression"
+						}
+					}
+				}
+			}
+		],
+		"parameters": {
+			"pcm_contract": {
+				"type": "string"
+			},
+			"pcm_fab_code": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "Projects/YARD KPI/PCM"
+		},
+		"annotations": []
+	}
+}

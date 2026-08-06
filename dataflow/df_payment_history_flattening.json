@@ -1,0 +1,126 @@
+{
+	"name": "df_payment_history_flattening",
+	"properties": {
+		"folder": {
+			"name": "Projects/Payment Dashboard/Payment History"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_xml_payment_history_source_stage_decoded_xml",
+						"type": "DatasetReference"
+					},
+					"name": "SrcXMl"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_payment_history_source_stage_final_csv",
+						"type": "DatasetReference"
+					},
+					"name": "SnkCsv"
+				}
+			],
+			"transformations": [
+				{
+					"name": "XmlToCsvflatten"
+				},
+				{
+					"name": "addLoadDetails"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          DATA_DS as (G_1 as (ACCOUNTING_DATE as string, ACCOUNTING_EVENT_ID as string, BANK_CURRENCY_CODE as string, BANK_TO_BASE_XRATE as string, BANK_TO_BASE_XRATE_DATE as string, BANK_TO_BASE_XRATE_TYPE as string, CHARGES_BANK_AMOUNT as string, CHARGES_BASE_AMOUNT as string, CHARGES_PMT_AMOUNT as string, CHARGE_AMOUNT as string, CHECK_ID as string, CREATED_BY as string, CREATION_DATE as string, CURRENCY_CODE as string, ERRORS_BANK_AMOUNT as string, ERRORS_BASE_AMOUNT as string, ERRORS_PMT_AMOUNT as string, ERROR_AMOUNT as string, GAIN_LOSS_INDICATOR as string, HISTORICAL_FLAG as string, INVOICE_ADJUSTMENT_EVENT_ID as string, JOB_DEFINITION_NAME as string, JOB_DEFINITION_PACKAGE as string, LAST_UPDATED_BY as string, LAST_UPDATE_DATE as string, LAST_UPDATE_LOGIN as string, MATCHED_FLAG as string, MRC_BANK_TO_BASE_XRATE as string, MRC_BANK_TO_BASE_XRATE_DATE as string, MRC_BANK_TO_BASE_XRATE_TYPE as string, MRC_CHARGES_BASE_AMOUNT as string, MRC_ERRORS_BASE_AMOUNT as string, MRC_EXCHANGE_RATE as string, MRC_EXCHANGE_RATE_DATE as string, MRC_EXCHANGE_RATE_TYPE as string, MRC_PMT_TO_BASE_XRATE as string, MRC_PMT_TO_BASE_XRATE_DATE as string, MRC_PMT_TO_BASE_XRATE_TYPE as string, MRC_TRX_BASE_AMOUNT as string, OBJECT_VERSION_NUMBER as short, ORG_ID as string, PAYMENT_HISTORY_ID as string, PMT_CURRENCY_CODE as string, PMT_TO_BANK_XRATE as string, PMT_TO_BANK_XRATE_DATE as string, PMT_TO_BANK_XRATE_TYPE as string, PMT_TO_BASE_XRATE as string, PMT_TO_BASE_XRATE_DATE as string, PMT_TO_BASE_XRATE_TYPE as string, POSTED_FLAG as string, PROGRAM_APPLICATION_ID as string, PROGRAM_ID as string, PROGRAM_UPDATE_DATE as string, RELATED_EVENT_ID as string, REQUEST_ID as string, REV_PMT_HIST_ID as string, TRANSACTION_AMOUNT as string, TRANSACTION_DATE as string, TRANSACTION_TYPE as string, TRX_BANK_AMOUNT as string, TRX_BASE_AMOUNT as string, TRX_PMT_AMOUNT as string)[])",
+				"     ),",
+				"     allowSchemaDrift: false,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     validationMode: 'none',",
+				"     namespaces: true) ~> SrcXMl",
+				"SrcXMl foldDown(unroll(DATA_DS.G_1),",
+				"     mapColumn(",
+				"          ACCOUNTING_DATE = DATA_DS.G_1.ACCOUNTING_DATE,",
+				"          ACCOUNTING_EVENT_ID = DATA_DS.G_1.ACCOUNTING_EVENT_ID,",
+				"          BANK_CURRENCY_CODE = DATA_DS.G_1.BANK_CURRENCY_CODE,",
+				"          BANK_TO_BASE_XRATE = DATA_DS.G_1.BANK_TO_BASE_XRATE,",
+				"          BANK_TO_BASE_XRATE_DATE = DATA_DS.G_1.BANK_TO_BASE_XRATE_DATE,",
+				"          BANK_TO_BASE_XRATE_TYPE = DATA_DS.G_1.BANK_TO_BASE_XRATE_TYPE,",
+				"          CHARGES_BANK_AMOUNT = DATA_DS.G_1.CHARGES_BANK_AMOUNT,",
+				"          CHARGES_BASE_AMOUNT = DATA_DS.G_1.CHARGES_BASE_AMOUNT,",
+				"          CHARGES_PMT_AMOUNT = DATA_DS.G_1.CHARGES_PMT_AMOUNT,",
+				"          CHARGE_AMOUNT = DATA_DS.G_1.CHARGE_AMOUNT,",
+				"          CHECK_ID = DATA_DS.G_1.CHECK_ID,",
+				"          CREATED_BY = DATA_DS.G_1.CREATED_BY,",
+				"          CREATION_DATE = DATA_DS.G_1.CREATION_DATE,",
+				"          CURRENCY_CODE = DATA_DS.G_1.CURRENCY_CODE,",
+				"          ERRORS_BANK_AMOUNT = DATA_DS.G_1.ERRORS_BANK_AMOUNT,",
+				"          ERRORS_BASE_AMOUNT = DATA_DS.G_1.ERRORS_BASE_AMOUNT,",
+				"          ERRORS_PMT_AMOUNT = DATA_DS.G_1.ERRORS_PMT_AMOUNT,",
+				"          ERROR_AMOUNT = DATA_DS.G_1.ERROR_AMOUNT,",
+				"          GAIN_LOSS_INDICATOR = DATA_DS.G_1.GAIN_LOSS_INDICATOR,",
+				"          HISTORICAL_FLAG = DATA_DS.G_1.HISTORICAL_FLAG,",
+				"          INVOICE_ADJUSTMENT_EVENT_ID = DATA_DS.G_1.INVOICE_ADJUSTMENT_EVENT_ID,",
+				"          JOB_DEFINITION_NAME = DATA_DS.G_1.JOB_DEFINITION_NAME,",
+				"          JOB_DEFINITION_PACKAGE = DATA_DS.G_1.JOB_DEFINITION_PACKAGE,",
+				"          LAST_UPDATED_BY = DATA_DS.G_1.LAST_UPDATED_BY,",
+				"          LAST_UPDATE_DATE = DATA_DS.G_1.LAST_UPDATE_DATE,",
+				"          LAST_UPDATE_LOGIN = DATA_DS.G_1.LAST_UPDATE_LOGIN,",
+				"          MATCHED_FLAG = DATA_DS.G_1.MATCHED_FLAG,",
+				"          MRC_BANK_TO_BASE_XRATE = DATA_DS.G_1.MRC_BANK_TO_BASE_XRATE,",
+				"          MRC_BANK_TO_BASE_XRATE_DATE = DATA_DS.G_1.MRC_BANK_TO_BASE_XRATE_DATE,",
+				"          MRC_BANK_TO_BASE_XRATE_TYPE = DATA_DS.G_1.MRC_BANK_TO_BASE_XRATE_TYPE,",
+				"          MRC_CHARGES_BASE_AMOUNT = DATA_DS.G_1.MRC_CHARGES_BASE_AMOUNT,",
+				"          MRC_ERRORS_BASE_AMOUNT = DATA_DS.G_1.MRC_ERRORS_BASE_AMOUNT,",
+				"          MRC_EXCHANGE_RATE = DATA_DS.G_1.MRC_EXCHANGE_RATE,",
+				"          MRC_EXCHANGE_RATE_DATE = DATA_DS.G_1.MRC_EXCHANGE_RATE_DATE,",
+				"          MRC_EXCHANGE_RATE_TYPE = DATA_DS.G_1.MRC_EXCHANGE_RATE_TYPE,",
+				"          MRC_PMT_TO_BASE_XRATE = DATA_DS.G_1.MRC_PMT_TO_BASE_XRATE,",
+				"          MRC_PMT_TO_BASE_XRATE_DATE = DATA_DS.G_1.MRC_PMT_TO_BASE_XRATE_DATE,",
+				"          MRC_PMT_TO_BASE_XRATE_TYPE = DATA_DS.G_1.MRC_PMT_TO_BASE_XRATE_TYPE,",
+				"          MRC_TRX_BASE_AMOUNT = DATA_DS.G_1.MRC_TRX_BASE_AMOUNT,",
+				"          OBJECT_VERSION_NUMBER = DATA_DS.G_1.OBJECT_VERSION_NUMBER,",
+				"          ORG_ID = DATA_DS.G_1.ORG_ID,",
+				"          PAYMENT_HISTORY_ID = DATA_DS.G_1.PAYMENT_HISTORY_ID,",
+				"          PMT_CURRENCY_CODE = DATA_DS.G_1.PMT_CURRENCY_CODE,",
+				"          PMT_TO_BANK_XRATE = DATA_DS.G_1.PMT_TO_BANK_XRATE,",
+				"          PMT_TO_BANK_XRATE_DATE = DATA_DS.G_1.PMT_TO_BANK_XRATE_DATE,",
+				"          PMT_TO_BANK_XRATE_TYPE = DATA_DS.G_1.PMT_TO_BANK_XRATE_TYPE,",
+				"          PMT_TO_BASE_XRATE = DATA_DS.G_1.PMT_TO_BASE_XRATE,",
+				"          PMT_TO_BASE_XRATE_DATE = DATA_DS.G_1.PMT_TO_BASE_XRATE_DATE,",
+				"          PMT_TO_BASE_XRATE_TYPE = DATA_DS.G_1.PMT_TO_BASE_XRATE_TYPE,",
+				"          POSTED_FLAG = DATA_DS.G_1.POSTED_FLAG,",
+				"          PROGRAM_APPLICATION_ID = DATA_DS.G_1.PROGRAM_APPLICATION_ID,",
+				"          PROGRAM_ID = DATA_DS.G_1.PROGRAM_ID,",
+				"          PROGRAM_UPDATE_DATE = DATA_DS.G_1.PROGRAM_UPDATE_DATE,",
+				"          RELATED_EVENT_ID = DATA_DS.G_1.RELATED_EVENT_ID,",
+				"          REQUEST_ID = DATA_DS.G_1.REQUEST_ID,",
+				"          REV_PMT_HIST_ID = DATA_DS.G_1.REV_PMT_HIST_ID,",
+				"          TRANSACTION_AMOUNT = DATA_DS.G_1.TRANSACTION_AMOUNT,",
+				"          TRANSACTION_DATE = DATA_DS.G_1.TRANSACTION_DATE,",
+				"          TRANSACTION_TYPE = DATA_DS.G_1.TRANSACTION_TYPE,",
+				"          TRX_BANK_AMOUNT = DATA_DS.G_1.TRX_BANK_AMOUNT,",
+				"          TRX_BASE_AMOUNT = DATA_DS.G_1.TRX_BASE_AMOUNT,",
+				"          TRX_PMT_AMOUNT = DATA_DS.G_1.TRX_PMT_AMOUNT",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> XmlToCsvflatten",
+				"XmlToCsvflatten derive(source_name = 'SYSTEM',",
+				"          sub_source_name = 'R2P',",
+				"          created_date_time = currentUTC()) ~> addLoadDetails",
+				"addLoadDetails sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     partitionFileNames:['Payment_History.csv'],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> SnkCsv"
+			]
+		}
+	}
+}

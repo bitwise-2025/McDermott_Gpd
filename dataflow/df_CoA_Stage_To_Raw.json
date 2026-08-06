@@ -1,0 +1,105 @@
+{
+	"name": "df_CoA_Stage_To_Raw",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_CoA_staging",
+						"type": "DatasetReference"
+					},
+					"name": "srcStageToRaw"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_CoA_raw",
+						"type": "DatasetReference"
+					},
+					"name": "destWARaw"
+				}
+			],
+			"transformations": [
+				{
+					"name": "setFileName",
+					"description": "Creating/updating the columns 'FileName'"
+				}
+			],
+			"scriptLines": [
+				"parameters{",
+				"     WildPath as string,",
+				"     FileName as string",
+				"}",
+				"source(output(",
+				"          Domain as string,",
+				"          CoA as string,",
+				"          Coa_Title as string,",
+				"          CostCode as string,",
+				"          CostCode_Title as string,",
+				"          CostType as string,",
+				"          SCT as string,",
+				"          WBS as string,",
+				"          WBS_Title as string,",
+				"          WBSLevel2 as string,",
+				"          WBSLevel2_Title as string,",
+				"          WBSLevel3 as string,",
+				"          WBSLevel3_Title as string,",
+				"          WBSLevel4 as string,",
+				"          WBSLevel4_Title as string,",
+				"          KeyUoMImperial as string,",
+				"          KeyUoMMetric as string,",
+				"          PSRLevel1 as string,",
+				"          PSRLevel2 as string,",
+				"          PSRLevel1_Title as string,",
+				"          PSRLevel2_Title as string,",
+				"          Phase as string,",
+				"          Phase_Title as string,",
+				"          domain_code_ct as string,",
+				"          Source as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: true,",
+				"     purgeFiles: true,",
+				"     multiLineRow: true,",
+				"     wildcardPaths:[($WildPath+$FileName+'.csv')]) ~> srcStageToRaw",
+				"srcStageToRaw derive(FileName = concat($WildPath,substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',$FileName,'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv'),",
+				"          WBSLevel3 = trim(replace(WBSLevel3, '\\n', ' ')),",
+				"          WBSLevel3_Title = trim(replace(WBSLevel3, '\\n', ' ')),",
+				"          Domain = trim(replace(Domain, '\\n', ' ')),",
+				"          CoA = trim(replace(CoA, '\\n', ' ')),",
+				"          Coa_Title = trim(replace(Coa_Title, '\\n', ' ')),",
+				"          CostCode = trim(replace(CostCode, '\\n', ' ')),",
+				"          CostCode_Title = trim(replace(CostCode_Title, '\\n', ' ')),",
+				"          CostType = trim(replace(CostType, '\\n', ' ')),",
+				"          SCT = trim(replace(SCT, '\\n', ' ')),",
+				"          WBS = trim(replace(WBS, '\\n', ' ')),",
+				"          WBS_Title = trim(replace(WBS_Title, '\\n', ' ')),",
+				"          WBSLevel2 = trim(replace(WBSLevel2, '\\n', ' ')),",
+				"          WBSLevel2_Title = trim(replace(WBSLevel2_Title, '\\n', ' ')),",
+				"          WBSLevel4 = trim(replace(WBSLevel4, '\\n', ' ')),",
+				"          WBSLevel4_Title = trim(replace(WBSLevel4_Title, '\\n', ' ')),",
+				"          KeyUoMImperial = trim(replace(KeyUoMImperial, '\\n', ' ')),",
+				"          KeyUoMMetric = trim(replace(KeyUoMMetric, '\\n', ' ')),",
+				"          PSRLevel1 = trim(replace(PSRLevel1, '\\n', ' ')),",
+				"          PSRLevel2 = trim(replace(PSRLevel2, '\\n', ' ')),",
+				"          PSRLevel1_Title = trim(replace(PSRLevel1_Title, '\\n', ' ')),",
+				"          PSRLevel2_Title = trim(replace(PSRLevel2_Title, '\\n', ' ')),",
+				"          Phase = trim(replace(Phase, '\\n', ' ')),",
+				"          domain_code_ct = trim(replace(domain_code_ct, '\\n', ' ')),",
+				"          Phase_Title = trim(replace(Phase_Title, '\\n', ' ')),",
+				"          Source = trim(replace(Source, '\\n', ' '))) ~> setFileName",
+				"setFileName sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     rowUrlColumn:'FileName',",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> destWARaw"
+			]
+		}
+	}
+}

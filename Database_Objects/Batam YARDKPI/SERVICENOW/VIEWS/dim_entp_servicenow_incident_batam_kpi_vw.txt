@@ -1,0 +1,103 @@
+--Object:  View [dbo].[dim_entp_servicenow_incident_batam_kpi_vw]    Script Date: 2/11/2025 11:50:31 AM
+DROP VIEW [dbo].[dim_entp_servicenow_incident_batam_kpi_vw]
+GO
+
+--Object:  View [dbo].[dim_entp_servicenow_incident_batam_kpi_vw]    Script Date: 2/11/2025 11:50:31 AM
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE VIEW [dbo].[dim_entp_servicenow_incident_batam_kpi_vw]
+AS select
+      resolved_by,  
+      time_worked,  
+      made_sla,      
+      inc_number,    
+      additional_assignee_list,  
+      category,      
+      severity,      
+      due_date,      
+      sys_tags,      
+      upon_approval,
+      follow_up,    
+      company,      
+      inc_active,    
+      calendar_duration,  
+      sys_created_on,      
+      rfc,    
+      i_order,      
+      sys_updated_on,      
+      closed_at,    
+      work_start,    
+      i_location,    
+      business_duration,  
+      assignment_group,
+      sys_class_name as Ticket_type,    
+      case
+            when incident_state = 1 then 'New'
+            when incident_state = 2 then 'Active'
+            when incident_state = 3 then 'Awaiting Problem'
+            when incident_state = 4 then 'Awaiting User Info'
+            when incident_state = 5 then 'Awaiting Evidence'
+            when incident_state = 6 then 'Resolved'
+            when incident_state = 7 then 'Closed'
+            when incident_state = 8 then 'Cancelled'
+              else 'Unknown'
+      end as incident_state,
+      knowledge,
+         case
+            when i_priority = 1 then 'Critical'
+         when i_priority = 2 then 'High'
+         when i_priority = 3 then 'Moderate'
+         when i_priority = 4 then 'Low'
+         when i_priority = 5 then 'Minor'
+              else 'Unknown'
+         end as i_priority ,      
+      expected_start,      
+      parent,
+      sla_due,      
+      calendar_stc,  
+         case
+          when urgency = 1 then 'High'
+          when urgency = 2 then 'Medium'
+          when urgency = 3 then 'Low'
+          when urgency = 4 then 'Planned'
+          when urgency = 5 then 'Planned on request'
+          when urgency = 6 then 'Planned on request'
+          when urgency = 7 then 'Regular need'
+          when urgency = 8 then 'Planned on request'
+          else 'Unknown'
+         end as urgency,
+      group_list,    
+      correlation_id,      
+         case
+           when notify = 1 then 'Do Not Notify'
+        when notify = 2 then 'Send Email'
+        when notify = 3 then 'Telephone'
+        else 'Unknown'
+      end as notify,
+      closed_by,    
+      activity_due,  
+      close_code,    
+      opened_at,    
+      business_stc,  
+      case
+            when i_state = 1 then 'New'
+            when i_state = 2 then 'Active'
+            when i_state = 3 then 'Awaiting Problem'
+            when i_state = 4 then 'Awaiting User Info'
+            when i_state = 5 then 'Awaiting Evidence'
+            when i_state = 6 then 'Resolved'
+            when i_state = 7 then 'Closed'
+            when i_state = 8 then 'Cancelled'
+              else 'Unknown'
+      end as i_state,
+         resolved_at,      
+      reopen_count ,
+u_type
+from [dbo].[dim_entp_servicenow_incident]
+Where Active = 1    
+and incident_state = 7;
+GO

@@ -1,0 +1,368 @@
+{
+	"name": "pl_yardkpi_pcm_master_of_master",
+	"properties": {
+		"activities": [
+			{
+				"name": "pl_yardkpi_pcm_dl_master_defect_master_pipeline",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_yardkpi_pcm_dl_master_defect_master_pipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_pipeline_pcm_fab_code": {
+							"value": "@pipeline().parameters.p_pcm_fab_code",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "pl_yardkpi_pcm_dl_master_weld_process_master_pipeline",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_yardkpi_pcm_dl_master_weld_process_master_pipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_pipeline_pcm_fab_code": {
+							"value": "@pipeline().parameters.p_pcm_fab_code",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "pl_yardkpi_pcm_dl_master_job_item_master_pipeline",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_yardkpi_pcm_dl_master_job_item_master_pipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_pipeline_pcm_fab_code": {
+							"value": "@pipeline().parameters.p_pcm_fab_code",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "pl_yardkpi_pcm_certification_package_master",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "pl_yardkpi_pcm_dl_master_defect_master_pipeline",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "pl_yardkpi_pcm_dl_master_job_item_master_pipeline",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "pl_yardkpi_pcm_dl_master_weld_process_master_pipeline",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_yardkpi_pcm_certification_package_master",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_pipeline_pcm_fab_code": {
+							"value": "@pipeline().parameters.p_pcm_fab_code",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "pl_yardkpi_pcm_inprocess_inspection_master",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "pl_yardkpi_pcm_dl_master_defect_master_pipeline",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "pl_yardkpi_pcm_dl_master_job_item_master_pipeline",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "pl_yardkpi_pcm_dl_master_weld_process_master_pipeline",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_yardkpi_pcm_inprocess_inspection_master",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_pipeline_pcm_fab_code": {
+							"value": "@pipeline().parameters.p_pcm_fab_code",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "pl_yardkpi_pcm_ndt_details_master",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "pl_yardkpi_pcm_dl_master_weld_process_master_pipeline",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "pl_yardkpi_pcm_dl_master_job_item_master_pipeline",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "pl_yardkpi_pcm_dl_master_defect_master_pipeline",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "pl_yardkpi_pcm_welder_information_master_pipeline",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_yardkpi_pcm_ndt_details_master",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_pipeline_pcm_fab_code": {
+							"value": "@pipeline().parameters.p_pcm_fab_code",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "pl_yardkpi_pcm_paint_details_master",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "pl_yardkpi_pcm_certification_package_master",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_yardkpi_pcm_paint_details_master",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_pipeline_pcm_fab_code": {
+							"value": "@pipeline().parameters.p_pcm_fab_code",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "pl_yardkpi_pcm_weld_details_master",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "pl_yardkpi_pcm_inprocess_inspection_master",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_yardkpi_pcm_weld_details_master",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_pipeline_pcm_fab_code": {
+							"value": "@pipeline().parameters.p_pcm_fab_code",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "pl_yardkpi_pcm_welder_activity_master",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "pl_yardkpi_pcm_ndt_details_master",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_yardkpi_pcm_welder_activity_master",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_pipeline_pcm_fab_code": {
+							"value": "@pipeline().parameters.p_pcm_fab_code",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "pl_yardkpi_pcm_del_master_of_master",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "pl_yardkpi_pcm_paint_details_master",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "pl_yardkpi_pcm_weld_details_master",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "pl_yardkpi_pcm_welder_activity_master",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_yardkpi_pcm_del_master_of_master",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_pcm_fab_code": {
+							"value": "@pipeline().parameters.p_pcm_fab_code",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "pl_yardkpi_pcm_welder_information_master_pipeline",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_yardkpi_pcm_welder_information_master_pipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_pipeline_pcm_fab_code": {
+							"value": "@pipeline().parameters.p_pcm_fab_code",
+							"type": "Expression"
+						}
+					}
+				}
+			}
+		],
+		"parameters": {
+			"p_pcm_fab_code": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"v_error_message": {
+				"type": "Array"
+			}
+		},
+		"folder": {
+			"name": "Projects/YARD KPI/PCM"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-11-17T05:36:07Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

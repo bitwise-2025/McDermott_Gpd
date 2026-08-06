@@ -1,0 +1,922 @@
+{
+	"name": "pl_welder_qualification_raw_to_synapse",
+	"properties": {
+		"activities": [
+			{
+				"name": "Check Combined File non zero Bytes",
+				"description": "Check if the combined file has any data to be loaded.",
+				"type": "GetMetadata",
+				"dependsOn": [
+					{
+						"activity": "cp_Get_Latest_File",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_welder_qual_raw_latest",
+						"type": "DatasetReference"
+					},
+					"fieldList": [
+						"size",
+						"exists"
+					],
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true
+					},
+					"formatSettings": {
+						"type": "DelimitedTextReadSettings"
+					}
+				}
+			},
+			{
+				"name": "Set start date",
+				"description": "Set the last stage run date to the variable as start date.",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lkup_Get_Pipeline_parameters_getlrd",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_lrd_src_to_stage",
+					"value": {
+						"value": "@activity('lkup_Get_Pipeline_parameters_getlrd').output.firstRow.start_date",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "cp_Get_Latest_File",
+				"description": "Copy all the files created since the last start date and combine them into one file to be processed into Synapse.",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Set start date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.09:00:00",
+					"retry": 3,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": true,
+							"modifiedDatetimeStart": {
+								"value": "@variables('v_lrd_src_to_stage')",
+								"type": "Expression"
+							},
+							"wildcardFolderPath": "Project_Data/NCSA/FAB Automation/Welder Qualification/*/*/*",
+							"wildcardFileName": "welder_qualification*.csv"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings",
+							"copyBehavior": "MergeFiles"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_clinic_fab_automation_raw",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_welder_qual_raw_latest",
+						"type": "DatasetReference"
+					}
+				]
+			},
+			{
+				"name": "if_File_Exists_Copy_to_Synapse",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Check Combined File non zero Bytes",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@greater(activity('Check Combined File non zero Bytes').output.size, 2)",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "Delete Temp combined File",
+							"description": "After the data has been loaded, clear the combined latest file from the ADLSV2 ",
+							"type": "Delete",
+							"dependsOn": [
+								{
+									"activity": "cp_copy_from_adlsg2_to_Synapse",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataset": {
+									"referenceName": "ds_adlsg2_csv_welder_qual_raw_latest",
+									"type": "DatasetReference"
+								},
+								"enableLogging": false,
+								"storeSettings": {
+									"type": "AzureBlobFSReadSettings",
+									"recursive": true,
+									"enablePartitionDiscovery": false
+								}
+							}
+						},
+						{
+							"name": "cp_copy_from_adlsg2_to_Synapse",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 3,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"additionalColumns": [
+										{
+											"name": "load_date",
+											"value": {
+												"value": "@utcnow()",
+												"type": "Expression"
+											}
+										}
+									],
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": true,
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "SqlDWSink",
+									"preCopyScript": "truncate table [gpd].[stage_welding_process]",
+									"allowPolyBase": true,
+									"polyBaseSettings": {
+										"rejectValue": 0,
+										"rejectType": "value",
+										"useTypeDefault": true
+									},
+									"disableMetricsCollection": false
+								},
+								"enableStaging": true,
+								"stagingSettings": {
+									"linkedServiceName": {
+										"referenceName": "ADLSG2 TimeAnalytics DEV",
+										"type": "LinkedServiceReference"
+									},
+									"path": "mdr-staging-data/Project_Data/NCSA/PLM/InboxTask/Logs"
+								},
+								"translator": {
+									"type": "TabularTranslator",
+									"mappings": [
+										{
+											"source": {
+												"name": "fab_code",
+												"type": "String"
+											},
+											"sink": {
+												"name": "fab_code",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "welder",
+												"type": "String"
+											},
+											"sink": {
+												"name": "welder",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "welder_name",
+												"type": "String"
+											},
+											"sink": {
+												"name": "welder_name",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "welding_process",
+												"type": "String"
+											},
+											"sink": {
+												"name": "process",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "process_title",
+												"type": "String"
+											},
+											"sink": {
+												"name": "process_title",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "discipline",
+												"type": "String"
+											},
+											"sink": {
+												"name": "discipline",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "first_qual_date",
+												"type": "String"
+											},
+											"sink": {
+												"name": "first_qual_date",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "qual_expiry_date",
+												"type": "String"
+											},
+											"sink": {
+												"name": "qual_expiry_date",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "certificate_num",
+												"type": "String"
+											},
+											"sink": {
+												"name": "certificate_num",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "position",
+												"type": "String"
+											},
+											"sink": {
+												"name": "position",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "witness",
+												"type": "String"
+											},
+											"sink": {
+												"name": "witness",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "weld_code",
+												"type": "String"
+											},
+											"sink": {
+												"name": "weld_code",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "training_reg_date",
+												"type": "String"
+											},
+											"sink": {
+												"name": "training_reg_date",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "training_start_date",
+												"type": "String"
+											},
+											"sink": {
+												"name": "training_start_date",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "ndt_test_date",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ndt_test_date",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "ndt_status",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ndt_status",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "training_end_date",
+												"type": "String"
+											},
+											"sink": {
+												"name": "training_end_date",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "wqt_date",
+												"type": "String"
+											},
+											"sink": {
+												"name": "wqt_date",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "mech_lab_submit_date",
+												"type": "String"
+											},
+											"sink": {
+												"name": "mech_lab_submit_date",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "mech_test_receive_date",
+												"type": "String"
+											},
+											"sink": {
+												"name": "mech_test_receive_date",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "mech_status",
+												"type": "String"
+											},
+											"sink": {
+												"name": "mech_status",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Jcc_no",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Jcc_no",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "jcc_submit_date",
+												"type": "String"
+											},
+											"sink": {
+												"name": "jcc_submit_date",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "jcc_sign_date",
+												"type": "String"
+											},
+											"sink": {
+												"name": "jcc_sign_date",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "jcc_receive_date",
+												"type": "String"
+											},
+											"sink": {
+												"name": "jcc_receive_date",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "jcc_expiry_date",
+												"type": "String"
+											},
+											"sink": {
+												"name": "jcc_expiry_date",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "prod_weld_flag",
+												"type": "String"
+											},
+											"sink": {
+												"name": "prod_weld_flag",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Prod_weld_required",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Prod_weld_required",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "Prod_weld_completed",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Prod_weld_completed",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "prod_weld_completion_date",
+												"type": "String"
+											},
+											"sink": {
+												"name": "prod_weld_completion_date",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "rec_source",
+												"type": "String"
+											},
+											"sink": {
+												"name": "rec_source",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "contract_id",
+												"type": "String"
+											},
+											"sink": {
+												"name": "contract_id",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "load_date",
+												"type": "String"
+											},
+											"sink": {
+												"name": "load_date",
+												"type": "String"
+											}
+										}
+									]
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_adlsg2_csv_welder_qual_raw_latest",
+									"type": "DatasetReference"
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_azuresynapseanalytics_welder_qual",
+									"type": "DatasetReference"
+								}
+							]
+						}
+					]
+				}
+			},
+			{
+				"name": "lkup_Get_Pipeline_parameters_getlrd",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "NetworkFolder"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "sp_Update_Parameter",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "sp_generic_procedure_dim_load_welder_qualification",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+					"storedProcedureParameters": {
+						"pParameterValue": {
+							"value": {
+								"value": "@formatDateTime(activity('lkup_Get_Pipeline_parameters_getlrd').output.firstRow.run_start_datetime,'yyyy-MM-dd HH:mm:ss.fff')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": "NetworkFolder",
+							"type": "String"
+						},
+						"pParameterCode": {
+							"value": "start_date",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseDB_DEV",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "sp_generic_procedure_dim_load_welder",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "if_File_Exists_Copy_to_Synapse",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[generic_load_dim_v2]",
+					"storedProcedureParameters": {
+						"debug_flag": {
+							"value": "N",
+							"type": "String"
+						},
+						"execute_flag": {
+							"value": "Y",
+							"type": "String"
+						},
+						"load_name": {
+							"value": "dim_ent_welder",
+							"type": "String"
+						},
+						"rkValidationRequired": {
+							"value": "Y",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "sp_generic_procedure_dim_load_welder_jcc",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "sp_generic_procedure_dim_load_welder",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[generic_load_dim_v2]",
+					"storedProcedureParameters": {
+						"debug_flag": {
+							"value": "N",
+							"type": "String"
+						},
+						"execute_flag": {
+							"value": "Y",
+							"type": "String"
+						},
+						"load_name": {
+							"value": "dim_ent_jcc",
+							"type": "String"
+						},
+						"rkValidationRequired": {
+							"value": "Y",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "sp_generic_procedure_dim_load_welder_contract",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "sp_generic_procedure_dim_load_welder_jcc",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[generic_load_dim_v2]",
+					"storedProcedureParameters": {
+						"debug_flag": {
+							"value": "N",
+							"type": "String"
+						},
+						"execute_flag": {
+							"value": "Y",
+							"type": "String"
+						},
+						"load_name": {
+							"value": "dim_ent_welder_contract",
+							"type": "String"
+						},
+						"rkValidationRequired": {
+							"value": "Y",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "sp_generic_procedure_dim_load_welder_process",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "sp_generic_procedure_dim_load_welder_contract",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[generic_load_dim_v2]",
+					"storedProcedureParameters": {
+						"debug_flag": {
+							"value": "N",
+							"type": "String"
+						},
+						"execute_flag": {
+							"value": "Y",
+							"type": "String"
+						},
+						"load_name": {
+							"value": "dim_ent_welder_process",
+							"type": "String"
+						},
+						"rkValidationRequired": {
+							"value": "Y",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "sp_generic_procedure_dim_load_welder_qualification",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "sp_generic_procedure_dim_load_welder_process",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[generic_load_dim_v2]",
+					"storedProcedureParameters": {
+						"debug_flag": {
+							"value": "N",
+							"type": "String"
+						},
+						"execute_flag": {
+							"value": "Y",
+							"type": "String"
+						},
+						"load_name": {
+							"value": "dim_ent_welder_qual",
+							"type": "String"
+						},
+						"rkValidationRequired": {
+							"value": "Y",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"variables": {
+			"v_lrd_src_to_stage": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/NCSA/FAB Automation/Welder Qualification"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-11-29T11:52:18Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

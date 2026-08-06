@@ -1,0 +1,274 @@
+CREATE VIEW [dbo].[dim_entp_pcm_ndt_details_vw] AS Select a.*,b.job,b.job_title,b.item,b.item_title,c.contract_number  From dbo.dim_entp_pcm_ndt_details a left join dbo.dim_entp_pcm_job_item_vw b
+on a.dim_entp_pcm_job_item_nk= b.dim_entp_pcm_job_item_nk 
+left join dbo.dim_ent_contract_active_v c on a.dim_ent_contract_nk=c.dim_ent_contract_nk
+Where a.active=1 AND a.fab_code = 'BTY';
+
+CREATE VIEW [dbo].[dim_entp_pcm_paint_detail_vw]
+AS Select * from dbo.dim_entp_pcm_paint_detail
+where Active=1 AND fab_code = 'BTY';
+
+CREATE VIEW [dbo].[dim_entp_pcm_Weld_details_v] AS Select a.*,b.job,b.job_title,b.item,b.item_title,c.contract_number From dbo.dim_entp_pcm_Weld_details a left join dbo.dim_entp_pcm_job_item_vw b
+on a.dim_entp_pcm_job_item_nk= b.dim_entp_pcm_job_item_nk
+left join dbo.dim_ent_contract_active_v c on a.dim_ent_contract_nk=c.dim_ent_contract_nk
+Where a.active=1 AND a.fab_code = 'BTY';
+
+CREATE VIEW [dbo].[dim_entp_pcm_welder_activity_vw] AS Select a.*,b.job,b.job_title,b.item,b.item_title,c.contract_number  From dbo.dim_entp_pcm_welder_activity a left join dbo.dim_entp_pcm_job_item_vw b
+on a.dim_entp_pcm_job_item_nk= b.dim_entp_pcm_job_item_nk
+left join dbo.dim_ent_contract_active_v c on a.dim_ent_contract_nk=c.dim_ent_contract_nk
+Where a.active=1 AND a.fab_code = 'BTY';
+
+CREATE VIEW [dbo].[dim_entp_pcm_job_item_vw]
+AS Select * from dbo.dim_entp_pcm_job_item
+where Active=1 AND fab_code = 'BTY' ;
+
+CREATE VIEW [dbo].[dim_entp_pcm_certification_package_vw]
+AS Select * from dbo.dim_entp_pcm_certification_package
+where Active=1 AND fab_code = 'BTY';
+
+
+/*****************************************************************/
+CREATE VIEW [dbo].[dim_entp_pcm_inprocess_inspection_vw] as
+Select * From dbo.dim_entp_pcm_inprocess_inspection
+	Where active=1
+
+DROP VIEW  [yardkpi].[stage_ent_contract_pcm_vw]
+CREATE VIEW [yardkpi].[stage_ent_contract_pcm_vw] AS 
+select 
+  ROW_NUMBER() over(
+    ORDER BY 
+      contract ASC
+  ) as rowID, 
+  source_code, 
+  sub_source_code, 
+  contract, 
+  contract_title, 
+  contract as project_number, 
+  LastUpdate 
+from 
+  (
+    select 
+      distinct 'SYSTEM' as source_code, 
+      'PCM' as sub_source_code, 
+      contract, 
+      contract_title, 
+      contract as project_number, 
+      getdate() LastUpdate 
+    from 
+      [yardkpi].[stage_entp_pcm_Weld_details] dcsr 
+    where 
+      not exists (
+        select 
+          1 
+        from 
+          dbo.dim_ent_contract 
+        where 
+          contract_number = dcsr.contract 
+          and active = 1
+      ) 
+    Union 
+    select 
+      distinct 'SYSTEM' as source_code, 
+      'PCM' as sub_source_code, 
+      contract, 
+      contract_title, 
+      contract as project_number, 
+      getdate() LastUpdate 
+    from 
+      [yardkpi].[stage_entp_pcm_Welder_activity] dcsr 
+    where 
+      not exists (
+        select 
+          1 
+        from 
+          dbo.dim_ent_contract 
+        where 
+          contract_number = dcsr.contract 
+          and active = 1
+      ) 
+    union 
+    select 
+      distinct 'SYSTEM' as source_code, 
+      'PCM' as sub_source_code, 
+      contract, 
+      contract_title, 
+      contract as project_number, 
+      getdate() LastUpdate 
+    from 
+      [yardkpi].[stage_entp_pcm_ndt_details] dcsr 
+    where 
+      not exists (
+        select 
+          1 
+        from 
+          dbo.dim_ent_contract 
+        where 
+          contract_number = dcsr.contract 
+          and active = 1
+      ) 
+    union 
+    select 
+      distinct 'SYSTEM' as source_code, 
+      'PCM' as sub_source_code, 
+      contract, 
+      contract_title, 
+      contract as project_number, 
+      getdate() LastUpdate 
+    from 
+      [yardkpi].[stage_entp_pcm_certification_package] dcsr 
+    where 
+      not exists (
+        select 
+          1 
+        from 
+          dbo.dim_ent_contract 
+        where 
+          contract_number = dcsr.contract 
+          and active = 1
+      ) 
+    union 
+    select 
+      distinct 'SYSTEM' as source_code, 
+      'PCM' as sub_source_code, 
+      contract, 
+      contract_title, 
+      contract as project_number, 
+      getdate() LastUpdate 
+    from 
+      [yardkpi].[stage_entp_pcm_paint_detail] dcsr 
+    where 
+      not exists (
+        select 
+          1 
+        from 
+          dbo.dim_ent_contract 
+        where 
+          contract_number = dcsr.contract 
+          and active = 1
+      )
+	    union 
+    select 
+      distinct 'SYSTEM' as source_code, 
+      'PCM' as sub_source_code, 
+      contract, 
+      contract_title, 
+      contract as project_number, 
+      getdate() LastUpdate 
+    from 
+      [yardkpi].[stage_entp_pcm_inprocess_inspection] dcsr 
+    where 
+      not exists (
+        select 
+          1 
+        from 
+          dbo.dim_ent_contract 
+        where 
+          contract_number = dcsr.contract 
+          and active = 1
+      )
+  ) disa;
+
+
+DROP VIEW [yardkpi].[stage_entp_pcm_job_item_vw]
+  
+CREATE VIEW [yardkpi].[stage_entp_pcm_job_item_vw]
+AS
+  SELECT Row_number()
+           OVER(
+             ORDER BY job ASC) AS rowID,
+         job,
+         job_title,
+         item,
+         item_title,
+         fab_code,
+         contract,
+         contract_title,
+         include_in_rr_calc,
+         lastupdate
+  FROM   (SELECT DISTINCT job,
+                          job_title,
+                          item,
+                          item_title,
+                          fab_code,
+                          contract,
+                          contract_title,
+                          include_in_rr_calc,
+                          Getdate() LastUpdate
+          FROM   [yardkpi].[stage_entp_pcm_weld_details] dcsr
+          WHERE  NOT EXISTS(SELECT 1
+                            FROM   dbo.dim_entp_pcm_job_item_vw dm
+                            WHERE  dm.job = dcsr.job
+                                   AND dm.item = dcsr.item
+                                   AND dm.fab_code = dcsr.fab_code
+                                   AND dm.contract = dcsr.contract)
+          UNION
+          SELECT DISTINCT job,
+                          job_title,
+                          item,
+                          item_title,
+                          fab_code,
+                          contract,
+                          contract_title,
+                          include_in_rr_calc,
+                          Getdate() LastUpdate
+          FROM   [yardkpi].[stage_entp_pcm_welder_activity] dcsr
+          WHERE  NOT EXISTS(SELECT 1
+                            FROM   dbo.dim_entp_pcm_job_item_vw dm
+                            WHERE  dm.job = dcsr.job
+                                   AND dm.item = dcsr.item
+                                   AND dm.fab_code = dcsr.fab_code
+                                   AND dm.contract = dcsr.contract)
+          UNION
+          SELECT DISTINCT job,
+                          job_title,
+                          item,
+                          item_title,
+                          fab_code,
+                          contract,
+                          contract_title,
+                          include_in_rr_calc,
+                          Getdate() LastUpdate
+          FROM   [yardkpi].[stage_entp_pcm_ndt_details] dcsr
+          WHERE  NOT EXISTS(SELECT 1
+                            FROM   dbo.dim_entp_pcm_job_item_vw dm
+                            WHERE  dm.job = dcsr.job
+                                   AND dm.item = dcsr.item
+                                   AND dm.fab_code = dcsr.fab_code
+                                   AND dm.contract = dcsr.contract)
+          UNION
+          SELECT DISTINCT job,
+                          job_title,
+                          item,
+                          item_title,
+                          fab_code,
+                          contract,
+                          contract_title,
+                          include_in_rr_calc,
+                          Getdate() LastUpdate
+          FROM   [yardkpi].[stage_entp_pcm_certification_package] dcsr
+          WHERE  NOT EXISTS(SELECT 1
+                            FROM   dbo.dim_entp_pcm_job_item_vw dm
+                            WHERE  dm.job = dcsr.job
+                                   AND dm.item = dcsr.item
+                                   AND dm.fab_code = dcsr.fab_code
+                                   AND dm.contract = dcsr.contract)
+		  UNION
+          SELECT DISTINCT job,
+                          job_title,
+                          item,
+                          item_title,
+                          fab_code,
+                          contract,
+                          contract_title,
+                          include_in_rr_calc,
+                          Getdate() LastUpdate
+          FROM   [yardkpi].[stage_entp_pcm_inprocess_inspection] dcsr
+          WHERE  NOT EXISTS(SELECT 1
+                            FROM   dbo.dim_entp_pcm_job_item_vw dm
+                            WHERE  dm.job = dcsr.job
+                                   AND dm.item = dcsr.item
+                                   AND dm.fab_code = dcsr.fab_code
+                                   AND dm.contract = dcsr.contract)) a ;
+								   
+								   
+	/*************************************************************************/							   
+								   

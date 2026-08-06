@@ -1,0 +1,196 @@
+
+/******** FACT TABLE **********/
+create table fact_fss_businessline_updates(
+fact_fss_reporting_sk    bigint IDENTITY(1,1)   NOT NULL 
+,dim_ent_source_nk    bigint    Not Null
+,dim_ent_sub_source_nk    bigint    NOT NULL
+,dim_entp_fss_project_nk    bigint    null
+,dim_ent_data_class_nk    Int    NOT NULL
+,dim_ent_data_sub_class_nk    Int    NOT NULL
+,dim_entp_fss_business_line_nk	Int	Not Null
+,[Data Source]    Varchar(500)       
+,NewCO    Varchar(500)    
+,NonJV    Varchar(500)   
+,BLPW VARCHAR(500)
+,Productline    Varchar(500)    
+,Customer    Varchar(500)    
+,[Seq No]    Int    
+,[Sub Title]    Varchar(200)    
+,Calculation    Varchar(200)    
+,Category    Varchar(200)    
+,Facility    Varchar(200)    
+,Commentary    Varchar(4000)
+,Commentary2    Varchar(4000)
+,TransactionDate    datetime    
+,[Quarter]    Varchar(10)    
+,[Month]    Int    
+,Amount    Money    
+,created_date_time    datetime    NOT NULL
+)
+
+/*********** DIM TABLE ************/
+/****** Object:  Table [dbo].[dim_entp_fss_project]    Script Date: 8/23/2023 11:58:00 AM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE TABLE [dbo].[dim_entp_fss_project]
+(
+	[dim_entp_fss_project_sk] [bigint] IDENTITY(1,1) NOT NULL,
+	[dim_entp_fss_project_nk] [bigint] NOT NULL,
+	[start_date] [datetime] NOT NULL,
+	[end_date] [datetime] NOT NULL,
+	[hash_code] [varchar](8000) NOT NULL,
+	[active] [int] NULL,
+	[created_date_time] [datetime] NULL,
+	[modified_date_time] [datetime] NULL,
+	[late_arrival_flag] [varchar](1) NOT NULL,
+	[dim_ent_source_nk] [bigint] NULL,
+	[dim_ent_sub_source_nk] [bigint] NULL,
+	[Project_No] [varchar](200) NULL,
+	[Project_Title] [varchar](500) NULL,
+  Project_Description varchar(500) NUll,
+ CONSTRAINT [PK_dim_entp_fss_project_sk] PRIMARY KEY NONCLUSTERED 
+	(
+		[dim_entp_fss_project_sk] ASC
+	) NOT ENFORCED 
+)
+WITH
+(
+	DISTRIBUTION = ROUND_ROBIN,
+	CLUSTERED COLUMNSTORE INDEX
+)
+GO
+
+
+
+/**********FACT  VIEW ************/
+
+CREATE VIEW fact_fss_businessline_updates_v
+AS SELECT * FROM [dbo].[fact_fss_businessline_updates] 
+
+CREATE VIEW dim_entp_fss_project_v
+AS SELECT * FROM [dbo].[dim_entp_fss_project] WHERE active=1
+
+/**********PROJECT VIEW*********/
+/****** Object:  View [fss].[stage_fss_project_v]    Script Date: 10/17/2023 6:52:47 AM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE VIEW [fss].[stage_fss_project_v]
+AS select distinct
+   ROW_NUMBER() over(ORDER BY Project_No ASC) as  stage_fss_project_id,
+   source_Code,
+sub_source_Code,
+      Project_No,
+      trim(Project_Title) as Project_Title,
+	  trim(Project_Description) as Project_Description
+from
+(SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Project No.] as varchar(200)),'') as Project_No
+                ,ISNULL(cast(trim([project title]) as varchar(500)),'') as Project_Title
+				,ISNULL(cast(trim([project title]) as varchar(500)),'') AS Project_Description 
+      FROM
+  fss.stage_fss_neworders_v  
+  where isnull([Project Title],'')<>'' and isnull([Project no.],'')<>'' and isnull([Business Line],'')<>''
+
+  union 
+  SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Project No.] as varchar(200)),'') as Project_No
+                ,ISNULL(cast(trim([project title]) as varchar(500)),'') as Project_Title
+				,ISNULL(cast(trim([project title]) as varchar(500)),'') AS Project_Description 
+      FROM
+  fss.stage_fss_revenue_v
+  where isnull([Project Title],'')<>'' and isnull([Project no.],'')<>'' and isnull([Business Line],'')<>''
+  
+
+  union 
+  SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Project No.] as varchar(200)),'') as Project_No
+                ,ISNULL(cast(trim([project title]) as varchar(500)),'') as Project_Title
+				,ISNULL(cast(trim([project title]) as varchar(500)),'') AS Project_Description 
+      FROM
+  fss.stage_fss_gross_profit_v
+  where isnull([Project Title],'')<>'' and isnull([Project no.],'')<>'' and isnull([Business Line],'')<>''
+
+    union 
+  SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Project No.] as varchar(200)),'') as Project_No
+                ,ISNULL(cast(trim([project title]) as varchar(500)),'') as Project_Title
+				,ISNULL(cast(trim([project title]) as varchar(500)),'') AS Project_Description 
+      FROM
+  fss.stage_fss_Backlog_Revenue_Rolloff_v
+  where isnull([Project Title],'')<>'' and isnull([Project no.],'')<>'' and isnull([Business Line],'')<>''
+
+  union
+   SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Project No.] as varchar(200)),'') as Project_No
+                ,ISNULL(cast(trim([project title]) as varchar(500)),'') as Project_Title
+				,ISNULL(cast(trim([project title]) as varchar(500)),'') AS Project_Description 
+      FROM
+  fss.[stage_fss_revenue_mb_v]
+  where isnull([Project Title],'')<>'' and isnull([Project no.],'')<>'' and isnull([Business Line],'')<>''
+
+   union 
+  SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Project No.] as varchar(200)),'') as Project_No
+                ,ISNULL(cast(trim([project title]) as varchar(500)),'') as Project_Title
+				,ISNULL(cast(trim([project title]) as varchar(500)),'') AS Project_Description 
+      FROM
+  fss.stage_fss_gross_profit_mb_v
+  where isnull([Project Title],'')<>'' and isnull([Project no.],'')<>'' and isnull([Business Line],'')<>''
+
+  ) M
+where NOT EXISTS(select 1 from dim_entp_fss_project_v P where M.PROJECT_NO = P.PROJECT_NO
+AND trim(M.PROJECT_TITLE) =trim(P.PROJECT_TITLE) and (isnull(trim(Project_Title),'')<>'' and isnull(Project_No,'')<>'') 
+);
+GO
+
+
+
+
+
+/********REPROCESS PROJECT TABLE *************/
+
+/****** Object:  Table [fss].[reprocess_fss_project]    Script Date: 8/23/2023 12:04:13 PM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE TABLE [fss].[reprocess_fss_project]
+(
+	[rssk] [bigint] IDENTITY(1,1) NOT NULL,
+	[source_code] [varchar](50) NOT NULL,
+	[sub_source_code] [varchar](50) NOT NULL,
+	[Project_No] [varchar](200) NULL,
+	[Project_Title] [varchar](500) NULL,
+	[hash_code] [varchar](8000) NOT NULL,
+	[rk_failure_info] [varchar](5000) NULL,
+	[created_date_time] [datetime] NOT NULL,
+  Project_Description varchar(500) NULL,
+ CONSTRAINT [PK_rssk] PRIMARY KEY NONCLUSTERED 
+	(
+		[rssk] ASC
+	) NOT ENFORCED 
+)
+WITH
+(
+	DISTRIBUTION = ROUND_ROBIN,
+	CLUSTERED COLUMNSTORE INDEX
+)
+GO
+
+

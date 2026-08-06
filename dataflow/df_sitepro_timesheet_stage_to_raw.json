@@ -1,0 +1,32 @@
+{
+	"name": "df_sitepro_timesheet_stage_to_raw",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_sitepro_timesheet_stage",
+						"type": "DatasetReference"
+					},
+					"name": "sourceSiteproTimesheetStage"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_timesheet_raw",
+						"type": "DatasetReference"
+					},
+					"name": "snkTimesheetSiteproRaw"
+				}
+			],
+			"transformations": [
+				{
+					"name": "setFileName"
+				}
+			],
+			"script": "source(output(\n\t\tProject_id as string,\n\t\tfunction_code as string,\n\t\tsource_name as string,\n\t\tsub_source_name as string,\n\t\tclass_name as string,\n\t\tsub_class_name as string,\n\t\tunit_of_measure as string,\n\t\tpim_code as string,\n\t\troc_code as string,\n\t\tPhase_Code as string,\n\t\tWorkArea_Code as string,\n\t\tWorkUnit_Code as string,\n\t\tScheduleResource_Code as string,\n\t\tcwp_code as string,\n\t\tActivity as string,\n\t\tiwp_Code as string,\n\t\tDateWorked as string,\n\t\tEmployeeID as string,\n\t\tcoa_value as string,\n\t\tSpent_Hours as double\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\twildcardPaths:['Project_Data/NCSA/Sitepro/SiteproTimesheet/Sitepro_Timesheet.csv']) ~> sourceSiteproTimesheetStage\nsourceSiteproTimesheetStage derive(FileName = concat( 'Project_Data/NCSA/SitePro/SiteproTimesheet/',        substring(toString(currentTimestamp()),1,4),        '/',substring(toString(currentTimestamp()),6,2),        '/',substring(toString(currentTimestamp()),9,2),        '/',        'Sitepro_Timesheet_',        replace(replace(toString(currentTimestamp()),'.',''),':',''),        '.csv')) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\trowUrlColumn:'FileName',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> snkTimesheetSiteproRaw"
+		}
+	}
+}

@@ -1,0 +1,90 @@
+{
+	"name": "pl_R2P_PO_Commitment_Details_D7507",
+	"properties": {
+		"description": "Master pipeline to run the three intermediate pipelines SRC-->STG-->RAW-->Synapse.",
+		"activities": [
+			{
+				"name": "Source to Stage",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_email_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_R2P_PO_Commitment_Details_source_to_stage",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"pl_project_number": "D7507"
+					}
+				}
+			},
+			{
+				"name": "lk_get_pipeline_email_parameters",
+				"description": "Get the parameters to be used in this pipeline",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "pl_yardkpi_master_pipelines",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "EMAIL"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			}
+		],
+		"variables": {
+			"v_error_message": {
+				"type": "Array"
+			},
+			"v_allrev_src_start_time": {
+				"type": "String"
+			},
+			"v_allrev_raw_start_time": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/NCSA/R2P_PO_Commitment_Details"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-03-20T06:55:35Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

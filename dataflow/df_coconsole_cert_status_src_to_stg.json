@@ -1,0 +1,77 @@
+{
+	"name": "df_coconsole_cert_status_src_to_stg",
+	"properties": {
+		"folder": {
+			"name": "Projects/NCSA/Co Console"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_coconsole_certstatus_stg",
+						"type": "DatasetReference"
+					},
+					"name": "SrcCertStatus"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_coconsole_certstatus_stg",
+						"type": "DatasetReference"
+					},
+					"name": "sinkCertStatus"
+				}
+			],
+			"transformations": [
+				{
+					"name": "dcGetProjectPrime"
+				},
+				{
+					"name": "unpivotCertificate"
+				}
+			],
+			"scriptLines": [
+				"parameters{",
+				"     p_df_path as string,",
+				"     p_df_wild_file as string",
+				"}",
+				"source(output(",
+				"          Project as string,",
+				"          System as string,",
+				"          {Sub System} as string,",
+				"          {Sub System Description} as string,",
+				"          SrcFileNam as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     purgeFiles: true,",
+				"     wildcardPaths:[($p_df_path + '/' + $p_df_wild_file)]) ~> SrcCertStatus",
+				"SrcCertStatus derive(Project = iif(length(trim(Project))>5,concat('99',trim(Project)),trim(Project)),",
+				"          each(match(not(in(['PROJECT','SYSTEM','SUB SYSTEM','SUB SYSTEM DESCRIPTION','SRCFILENAM'],upper(name)))), $$ = iif(length(rtrim($$,'-'))==0,toString(null()),rtrim($$,'-')))) ~> dcGetProjectPrime",
+				"dcGetProjectPrime unpivot(output(",
+				"          Certificate as string,",
+				"          Value as string",
+				"     ),",
+				"     ungroupBy(Project,",
+				"          System,",
+				"          {Sub System},",
+				"          {Sub System Description},",
+				"          SrcFileNam),",
+				"     lateral: false,",
+				"     ignoreNullPivots: true) ~> unpivotCertificate",
+				"unpivotCertificate sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     partitionFileNames:[(concat('Inter_', toString(currentUTC()),'.csv'))],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> sinkCertStatus"
+			]
+		}
+	}
+}

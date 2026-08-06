@@ -1,0 +1,164 @@
+{
+	"name": "pl_yardkpi_pcm_dl_master_defect_source_to_stage",
+	"properties": {
+		"activities": [
+			{
+				"name": "lk_get_pipeline_parameters",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": {
+									"value": "PCM",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "ForEach_PCM_Fab_Code",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@split(pipeline().parameters.p_src_pipeline_pcm_fab_code,',' )",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"activities": [
+						{
+							"name": "Copy PCM to Stage",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SqlServerSource",
+									"sqlReaderStoredProcedureName": "dbo.pcm_dl_master_data",
+									"storedProcedureParameters": {
+										"fab_code": {
+											"type": "String",
+											"value": {
+												"value": "@item()",
+												"type": "Expression"
+											}
+										},
+										"sp_dataset": {
+											"type": "String",
+											"value": {
+												"value": "@activity('lk_get_pipeline_parameters').output.firstRow.sp_dataset",
+												"type": "Expression"
+											}
+										}
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"sink": {
+									"type": "DelimitedTextSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									},
+									"formatSettings": {
+										"type": "DelimitedTextWriteSettings",
+										"quoteAllText": true,
+										"fileExtension": ".txt"
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_pcm_source_sql_server",
+									"type": "DatasetReference"
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_adlsg2_csv_yardkpi_pcm_master_generic",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_ds_filename": {
+											"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'_',item(),'.csv')",
+											"type": "Expression"
+										},
+										"p_ds_folderpath": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+											"type": "Expression"
+										},
+										"p_ds_filesystem": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.file_system",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"p_src_pipeline_pcm_fab_code": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "Projects/YARD KPI/PCM/dl_master_data/defect_master"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-03-09T05:53:35Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

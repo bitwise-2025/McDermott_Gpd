@@ -1,0 +1,6 @@
+Insert into [dbo].[generic_load_detail] values ('dim_ent_turnstyle_daily_punch','person_no_external','nvarchar(50)','TEXT','NK','person_no_external',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,10,'Y',NULL)
+Insert into [dbo].[generic_load_detail] values ('dim_ent_turnstyle_daily_punch','ts_date','date','DATE','NK','ts_date',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,20,'Y',NULL)
+Insert into [dbo].[generic_load_detail] values ('dim_ent_turnstyle_daily_punch','punch','time','FLOAT','NK','punch',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,30,'Y',NULL)
+Insert into [dbo].[generic_load_detail] values ('dim_ent_turnstyle_daily_punch','device_name','nvarchar(200)','TEXT','NK','device_name',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,40,'Y',NULL)
+Insert into [dbo].[generic_load_detail] values ('dim_ent_turnstyle_daily_punch','punch_type','varchar(100)','TEXT','NK','punch_type',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,50,'Y',NULL)
+Insert into [dbo].[generic_load_detail] values ('dim_ent_turnstyle_daily_punch','run_timestamp','datetime','DATETIME','NK','run_timestamp',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,60,'Y',NULL)

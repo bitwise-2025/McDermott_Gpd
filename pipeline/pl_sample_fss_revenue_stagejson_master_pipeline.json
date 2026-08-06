@@ -1,0 +1,972 @@
+{
+	"name": "pl_sample_fss_revenue_stagejson_master_pipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "ADF_Log",
+				"description": "SPU to log the details of the Pipeline run",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "ForEachProject",
+						"dependencyConditions": [
+							"Completed",
+							"Skipped"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 1,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[usp_InsertADFLogs]",
+					"storedProcedureParameters": {
+						"DataFactoryName": {
+							"value": {
+								"value": "@pipeline().DataFactory",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"Error_pipeline_name": {
+							"value": {
+								"value": "@if(empty(variables('v_error_message')),\nconcat(join(variables('v_pipelinedetails'),';'))\n,split(join(variables('v_error_message'),';'),'|' )[1])",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"Error_pipeline_runid": {
+							"value": {
+								"value": "@if(empty(variables('v_error_message')),NULL,split(join(variables('v_error_message'),';'),'|' )[2])",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"ErrorMessage": {
+							"value": {
+								"value": "@if(empty(variables('v_error_message')),\nif( empty(activity('val_Check_SourceFile_Availablity').output.childItems),\n'Source file unavailable for the current run'\n,NULL)\n,split(join(variables('v_error_message'),';'),'|' )[0])",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"PipelineName": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"runid": {
+							"value": {
+								"value": "@pipeline().RunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"status": {
+							"value": {
+								"value": "@if(empty(variables('v_error_message')),'Success','Failed')",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "If failure detected send mail",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "ADF_Log",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@if(empty(variables('v_error_message')),false,true)",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "Send Email On Failure",
+							"type": "WebActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"method": "POST",
+								"headers": {
+									"Content-Type": "application/json"
+								},
+								"url": "https://prod-31.eastus.logic.azure.com:443/workflows/03d7da5abbab4215a05aeaceae3b96fa/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=asuyutHtoSxGFURsj1-A6AKRiNLdXZ4mTnZvZ17_8hI",
+								"connectVia": {
+									"referenceName": "integrationRuntimeEast2",
+									"type": "IntegrationRuntimeReference"
+								},
+								"body": {
+									"value": "{\n    \"DataFactoryName\": \"@{pipeline().DataFactory}\",\n    \"PipelineName\": \"@{pipeline().Pipeline}\",\n    \"ErrorMessage\": \"@{replace(replace(join(variables('v_error_message'),';'),'\"',''),'\\','/')}\",\n\"EmailTo\": \"@{activity('lk_get_pipeline_parameters').output.firstRow.ncsa_master_pipeline_email_to}\",\n    \"Activity\":  \"@{if(empty(variables('v_error_message')),'',split(join(variables('v_error_message'),';'),'|' )[1])}\"\n}",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "ForEachProject",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Flt_xlsxFilesOnly",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "SP Update VersionNo",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Flt_xlsxFilesOnly').output.value",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Source to Stage",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "cp_copy_from_network_to_blob",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "pl_generic_Excel_to_JSONstage",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"p_pl_parent_pipeline": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Append SRC to STG Error",
+							"type": "AppendVariable",
+							"dependsOn": [
+								{
+									"activity": "Source to Stage",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "v_error_message",
+								"value": {
+									"value": "@concat('Source to SynapseStage Failure for ', item().name,': ',\nactivity('Source To Stage').error.message,'|',\nactivity('Source To Stage').output.pipelineName,'|',\nactivity('Source To Stage').output.pipelineRunId,'|')\n\n",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Append SRC to STG Pipeline Info",
+							"type": "AppendVariable",
+							"dependsOn": [
+								{
+									"activity": "Source to Stage",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "v_pipelinedetails",
+								"value": {
+									"value": "@concat(activity('Source To Stage').output.pipelineName)",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "cp_archive_fs_file",
+							"description": "Archive the Source file on the File server on file server location (Copy/Delete combined)",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "Source to Stage",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.01:00:00",
+								"retry": 1,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "BinarySource",
+									"storeSettings": {
+										"type": "FileServerReadSettings",
+										"recursive": false,
+										"deleteFilesAfterCompletion": false
+									},
+									"formatSettings": {
+										"type": "BinaryReadSettings"
+									}
+								},
+								"sink": {
+									"type": "BinarySink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									}
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_fs_binary_generic_file",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_ds_path": {
+											"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.source_directory",
+											"type": "Expression"
+										},
+										"p_ds_file": {
+											"value": "@{item().name}",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_adlsg2_binary_generic_file",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_ds_path": {
+											"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.folder_path",
+											"type": "Expression"
+										},
+										"p_ds_file": {
+											"value": "@{concat('/',formatDateTime(utcnow(),'yyyy'),'/',formatDateTime(utcnow(),'MM'),'/',formatDateTime(utcnow(),'dd'),'/','VersionNo-',string(add(int(activity('lk_get_pipeline_parameters_2').output.firstRow.version_no),1)), '_', formatDateTime(utcnow(),'yyyy-MM-dd THHmmss'),'_', item().name) }",
+											"type": "Expression"
+										},
+										"p_ds_filesystem": "mdr-raw-data"
+									}
+								}
+							]
+						},
+						{
+							"name": "INSERT_ADFExtFileLogs",
+							"description": "INSERT an entry into the log table [dbo].[ADFExtFileLogs] for every file process successfully.",
+							"type": "Script",
+							"dependsOn": [
+								{
+									"activity": "cp_archive_fs_file",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"linkedServiceName": {
+								"referenceName": "AzureSynapseDB_DEV",
+								"type": "LinkedServiceReference"
+							},
+							"typeProperties": {
+								"scripts": [
+									{
+										"type": "Query",
+										"text": {
+											"value": "@concat('INSERT INTO [dbo].[ADFExtFileLogs]  ([PipelineName]  ,[RunId]  ,[ExternalFilename]  ,[VersionNo]  ,[Archive_location]  ,[Uploaded_by]  ,[SourceRecords]  ,[CreatedDateTime]) ',\n' SELECT ''',pipeline().Pipeline,''' as PipelineName, ''',pipeline().RunId,''' as RunId, ''',item().name,''' as SrcFileName,'''\n,string(add(int(activity('lk_get_pipeline_parameters_2').output.firstRow.version_no),1)),''' as VersionNo, '''\n,concat(activity('lk_get_pipeline_parameters_2').output.firstRow.folder_path,'/',formatDateTime(utcnow(),'yyyy'),'/',formatDateTime(utcnow(),'MM'),'/',formatDateTime(utcnow(),'dd'),'/','VersionNo-',string(add(int(activity('lk_get_pipeline_parameters_2').output.firstRow.version_no),1)), '_', formatDateTime(utcnow(),'yyyy-MM-dd THHmmss'),'_', item().name),''' as Archive\n, NULL as UploadedBy,''', \nactivity('cp_copy_from_network_to_blob').output.rowsRead ,\n'''as RecordCount,''',activity('lk_get_pipeline_parameters_2').output.firstRow.run_start_datetime,''' as CreatedDateTime')",
+											"type": "Expression"
+										}
+									}
+								]
+							}
+						},
+						{
+							"name": "cp_copy_from_network_to_blob",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.07:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "ExcelSource",
+									"additionalColumns": [
+										{
+											"name": "zSourceFileName",
+											"value": "$$FILEPATH"
+										},
+										{
+											"name": "zCreatedDateTime",
+											"value": {
+												"value": "@utcnow('yyyy-MM-dd HH:mm:ss.fff')",
+												"type": "Expression"
+											}
+										},
+										{
+											"name": "zVersionNo",
+											"value": {
+												"value": "@{add(int(activity('lk_get_pipeline_parameters_2').output.firstRow.version_no),1)}",
+												"type": "Expression"
+											}
+										}
+									],
+									"storeSettings": {
+										"type": "FileServerReadSettings",
+										"recursive": false,
+										"fileFilter": {
+											"value": "@{item().name}",
+											"type": "Expression"
+										}
+									}
+								},
+								"sink": {
+									"type": "DelimitedTextSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings",
+										"copyBehavior": "MergeFiles"
+									},
+									"formatSettings": {
+										"type": "DelimitedTextWriteSettings",
+										"quoteAllText": true,
+										"fileExtension": ".txt"
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_filesystem_network_excel_fss",
+									"type": "DatasetReference",
+									"parameters": {
+										"path": {
+											"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.source_directory",
+											"type": "Expression"
+										},
+										"file": {
+											"value": "@concat('Initial_',activity('lk_get_pipeline_parameters_2').output.firstRow.input_file_name,'.csv')",
+											"type": "Expression"
+										},
+										"SheetName": {
+											"value": "@variables('SheetName')",
+											"type": "Expression"
+										},
+										"Range": {
+											"value": "@variables('Range')",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_adlsg2_csv_generic_File_StageJSON",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_ds_filename": {
+											"value": "@concat('Initial_',activity('lk_get_pipeline_parameters_2').output.firstRow.file_name,'.csv')",
+											"type": "Expression"
+										},
+										"p_ds_folder": {
+											"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.folder_path",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "Load Fact Table",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "sp_execute_fss_dim_fact_load_validate",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[usp_fact_fss_businessline_updates_load]",
+								"storedProcedureParameters": {
+									"sheetname": {
+										"value": {
+											"value": "@variables('SheetName')",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "AzureSynapseAnalytics",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "sp_execute_fss_sp_validate",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Source to Stage",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "usp_fss_dim_load_project"
+							},
+							"linkedServiceName": {
+								"referenceName": "AzureSynapseAnalytics",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "sp_execute_fss_dim_fact_load_validate",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "sp_execute_fss_sp_validate",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[usp_fss_dim_load_business_line]"
+							},
+							"linkedServiceName": {
+								"referenceName": "AzureSynapseAnalytics",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "Load Stage View",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Load Fact Table",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[usp_fss_load_stage_error_view]",
+								"storedProcedureParameters": {
+									"datasource": {
+										"value": "Revenue",
+										"type": "String"
+									},
+									"srcviewName": {
+										"value": "fss.stage_fss_revenue_v",
+										"type": "String"
+									},
+									"tgtviewName": {
+										"value": "fss.stage_fss_revenue_report_v",
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "AzureSynapseAnalytics",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "Load Error View",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Load Stage View",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[usp_fss_load_stage_error_view]",
+								"storedProcedureParameters": {
+									"datasource": {
+										"value": "Revenue",
+										"type": "String"
+									},
+									"srcviewName": {
+										"value": "fss.error_fss_revenue_v",
+										"type": "String"
+									},
+									"tgtviewName": {
+										"value": "fss.error_fss_revenue_report_v",
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "AzureSynapseAnalytics",
+								"type": "LinkedServiceReference"
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "lk_get_pipeline_parameters",
+				"description": "Get the parameters to be used in this pipeline",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "pl_sample_fss_reportingperiod_stagejson_master_pipeline",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": "pl_ncsa_master_pipelines"
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "EMAIL"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "lk_get_pipeline_parameters_2",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "pl_sample_fss_reportingperiod_stagejson_master_pipeline",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "NetworkFolder"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "val_Check_SourceFile_Availablity",
+				"description": "Check if the source file is available at the Dataset location. If not wait for the timeout period.",
+				"type": "Validation",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters_2",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_filesystem_network_excel_fss",
+						"type": "DatasetReference",
+						"parameters": {
+							"path": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.source_directory",
+								"type": "Expression"
+							},
+							"file": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.input_file_name",
+								"type": "Expression"
+							},
+							"SheetName": {
+								"value": "@variables('SheetName')",
+								"type": "Expression"
+							},
+							"Range": {
+								"value": "@variables('Range')",
+								"type": "Expression"
+							}
+						}
+					},
+					"timeout": "0.01:01:50",
+					"sleep": 90,
+					"childItems": true
+				}
+			},
+			{
+				"name": "GetFileList",
+				"type": "GetMetadata",
+				"dependsOn": [
+					{
+						"activity": "val_Check_SourceFile_Availablity",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.10:00:00",
+					"retry": 1,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_filesystem_network_excel_fss",
+						"type": "DatasetReference",
+						"parameters": {
+							"path": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.source_directory",
+								"type": "Expression"
+							},
+							"file": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.input_file_name",
+								"type": "Expression"
+							},
+							"SheetName": {
+								"value": "@variables('SheetName')",
+								"type": "Expression"
+							},
+							"Range": {
+								"value": "@variables('Range')",
+								"type": "Expression"
+							}
+						}
+					},
+					"fieldList": [
+						"childItems"
+					],
+					"storeSettings": {
+						"type": "FileServerReadSettings",
+						"recursive": true,
+						"enablePartitionDiscovery": false
+					}
+				}
+			},
+			{
+				"name": "Flt_xlsxFilesOnly",
+				"type": "Filter",
+				"dependsOn": [
+					{
+						"activity": "GetFileList",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('GetFileList').output.childItems",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@and(equals(item().type,'File'),and(endswith(item().name,'.xlsx'),not(endswith(item().name,'MB.xlsx'))))",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "SP Update VersionNo",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "GetFileList",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.01:00:00",
+					"retry": 1,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+					"storedProcedureParameters": {
+						"pParameterCode": {
+							"value": "version_no",
+							"type": "String"
+						},
+						"pParameterValue": {
+							"value": {
+								"value": "@{add(int(activity('lk_get_pipeline_parameters_2').output.firstRow.version_no),1)}",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": "NetworkFolder",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "linkedservice_DEV_entanalytics_synapse",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "SP Update Control Table Last Run Date",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "ForEachProject",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+					"storedProcedureParameters": {
+						"pParameterCode": {
+							"value": "start_date",
+							"type": "String"
+						},
+						"pParameterValue": {
+							"value": {
+								"value": "@formatDateTime(activity('lk_get_pipeline_parameters').output.firstRow.run_start_datetime,'yyyy-MM-dd HH:mm:ss')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": "NetworkFolder",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "linkedservice_DEV_entanalytics_synapse",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "pl_sample_fss_reportingperiod_stagejson_master_pipeline",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_sample_fss_reportingperiod_stagejson_master_pipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			}
+		],
+		"variables": {
+			"v_error_message": {
+				"type": "Array"
+			},
+			"v_pipelinedetails": {
+				"type": "Array"
+			},
+			"SheetName": {
+				"type": "String",
+				"defaultValue": "14) Revenue"
+			},
+			"Range": {
+				"type": "String",
+				"defaultValue": "A31:AZ162"
+			}
+		},
+		"folder": {
+			"name": "Projects/BLUEPRINT FSS"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-11-29T11:52:18Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

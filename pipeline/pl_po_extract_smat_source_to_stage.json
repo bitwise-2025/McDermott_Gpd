@@ -1,0 +1,203 @@
+{
+	"name": "pl_po_extract_smat_source_to_stage",
+	"properties": {
+		"description": "SMAT PO EXTRACT - Source to ADLS Stage Folder",
+		"activities": [
+			{
+				"name": "cp_getSMAT_PO_data",
+				"description": "Run the Custom query to fetch PO Extract data from SMAT server (source) and copy into the Stage ADLS2.",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Set data pull date time",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "OracleSource",
+						"oracleReaderQuery": {
+							"value": "select DISTINCT \n       poh.po_number PO_NBR\n     , poh.PO_SUPP PO_SUPPL\n     , pohn.description PO_DESCR\n     , poh.PO_ISSUE_DATE PO_ISSUE_DATE\n     , poh.approved_date PO_APPR_DATE\n     , sup.sup_code supplier_code\n     , c.company_name SUPPLIER_NAME\n     , CY.CY_CODE SUPPLIER_COUNTRY\n     , poli.poli_pos PO_ITEM_POS\n     , poli.poli_sub_pos PO_ITEM_SUB\n     , its.ish_pos ish_POS\n     , its.ish_sub_pos ITEM_SHIP_SUB\n     , replace( replace (replace (LTRIM(m_abb_sys.CONVERT_IMP_MET(its.ident,DECODE('@{activity('lk_get_pipeline_parameters').output.firstRow.P_ZX_IMP_MET}','I','IMPERIAL','METRIC'),@{activity('lk_get_pipeline_parameters').output.firstRow.p_nls_id})--P_ZX_IMP_MET--p_nls_id\n       ||'; '|| m_abb_pck_bom.ident_cc_layout2(its.ident, 's',@{activity('lk_get_pipeline_parameters').output.firstRow.p_nls_id}),--p_nls_id\n       '-; '),chr(13), ' '),chr(10)) ,'�',' ' ) ITEM_DESC\n    , its.ish_ident_code IDENT_CODE\n    , ic.ic_code CLIENT_IDENT_CODE\n     , its.ish_tag_number TAG_NO\n     , its.ish_commodity_code COMMODITY_CODE\n     , its.ish_input_1  size1\n     , its.ish_input_2  size2\n     , its.ish_input_3  size3\n     , its.ish_input_4  size4\n     , its.item_ship_id item_ship_id\n     , nvl(poli.poli_qty,0) TOTAL_POLI_QT\n     , its.ish_item_ship_qty ITEM_SHIP_QTY\n     ,   DECODE (NVL(ish1.cnt,0),0, nvl(its.ish_received_qty,0), \n          DECODE (its.master_ish_id,NULL,\n                  DECODE((nvl(ish1.tot_shipped,0) - nvl(ish1.tot_recv,0)),0,'999999999999999999999999999999',nvl(ish1.tot_recv,0)),\n                  nvl(its.ish_received_qty,0)) ) RECD_QTY\n     , unt.unit_code UOM\n     , poli.poli_unit_price UNIT_PRICE\n     , untC.unit_code CURRENCY\n     , dd.dd_code DELIVERY_DEIGNATION\n     , rm.rm_code ROUTING_METHOD\n     , its.ish_rev_FRT_CODE INCOTERM\n     , its.ish_rev_freight_value DELIVERY_PLACE\n     , to_char(its.ish_prom_contract_date,'DD-Mon-YYYY') PROM_CONTRACT\n     , to_char(its.ish_req_site_date,'DD-Mon-YYYY') ROS_DATE\n     , reln.reln_number RN_NUMBER\n     , to_char(reln.reln_date,'DD-Mon-YYYY') RN_DATE\n     , nvl(its.ish_reln_qty,0) RN_QTY\n     , reln.approved_date RB_APPR_DATE\n     , reln.delv_date RN_DELIV_DATE\n     , reln.READY_DATE RN_READY_DATE\n     , irc.irct_number\n     , irc.irct_date\n     , irc.insp_date\n     , its.ish_irc_qty IRC_QTY\n     , mcs.mcs_number MCS_NR\n     , TO_CHAR(mcs.mcs_date,'DD-Mon-YYYY') MCS_DATE\n     , itsw.ish_des_code_exwo HAND_OVER_DEST\n     , itsw.ish_planned_date_exwo HAND_OVER_PLAN\n     , itsw.ish_forecasted_date_exwo HAND_OVER_FCST\n     , itsw.ish_actual_date_exwo HAND_OVER_ACT\n     , itsw.ish_des_code_ship_1  SHIP_DEST_1\n     , itsw.ish_planned_date_ship_1 SHIP_PLAN_1\n     , itsw.ish_forecasted_date_ship_1 SHIP_FCST_1\n     , itsw.ish_actual_date_ship_1 SHIP_ACT_1\n     , itsw.ish_des_code_ship_2  SHIP_DEST_2\n     , itsw.ish_planned_date_ship_2 SHIP_PLAN_2\n     , itsw.ish_forecasted_date_ship_2 SHIP_FCST_2\n     , itsw.ish_actual_date_ship_2 SHIP_ACT_2\n     , itsw.ish_des_code_ship_3  SHIP_DEST_3\n     , itsw.ish_planned_date_ship_3 SHIP_PLAN_3\n     , itsw.ish_forecasted_date_ship_3 SHIP_FCST_3\n     , itsw.ish_actual_date_ship_3 SHIP_ACT_3\n     , itsw.ish_des_code_ta  TRAFF_ARR_DEST\n     , itsw.ish_planned_date_ta TRAFF_ARR_PLAN\n     , itsw.ish_forecasted_date_ta TRAFF_ARR_FCST\n     , itsw.ish_actual_date_ta TRAFF_ARR_ACT\n     , itsw.ish_des_code_aos  ARR_ON_SITE_DEST\n     , itsw.ish_planned_date_aos ARR_ON_SITE_PLAN\n     , itsw.ish_forecasted_date_aos ARR_ON_SITE_FCST\n     , itsw.ish_actual_date_aos ARR_ON_SITE_ACT\n     , csh.carrier_name MOC_CARRIER\n     , csh.voy_flt_num MOC_VOYFLT_NUM \n     , csh.vessel_name MOC_NAME_1\n     , csh.vessel2_name MOC_NAME_2\n     , to_char(csh.etd_date ,'DD-Mon-YYYY')  MOC_ETD\n     , to_char(csh.atd_date ,'DD-Mon-YYYY')  MOC_ATD\n     , to_char(csh.eta_date ,'DD-Mon-YYYY')  MOC_ETA \n     , to_char(csh.ata_date ,'DD-Mon-YYYY') MOC_ATA\n     , csh.loading_point MOC_LOADING_PT\n     , csh.unloading_point MOC_UNLOADING_POINT\n     , to_char(csh.awb_number ) MOC_BOL\n     , usrb.first_name ||' '||usrb.last_name BUYER\n     , usre.first_name ||' '||usre.last_name EXPEDITER\n     , its.ish_r_code REQUISITION\n     , its.ish_r_supp REQ_SUPP\n     , its.ish_rli_pos REQ_LI\n     , its.ish_rli_sub_pos REQ_SUB_LI\n     , jb.job_number ACCOUNT_NUMBER\n\n     , to_char(sd2.forecasted_date,'DD-Mon-YYYY')  forecasted_del_date\t--FORECASTED DEL DATE\n     , sd1.des_code irc_dest\t\t\t\t\t\t\t\t\t\t--IRC DEST\n     , to_char(sd1.planned_date,'DD-Mon-YYYY') irc_plan\t\t\t\t--IRC Plan date\n     , to_char(sd1.forecasted_date,'DD-Mon-YYYY') irc_fcst\t\t\t\t--IRC forecast date\n     , to_char(sd1.actual_date,'DD-Mon-YYYY') irc_act\t\t\t\t\t--IRC Actual date\n\nfrom m_sys.m_po_headers poh, m_sys.m_companies c, m_sys.m_suppliers sup, m_sys.m_po_header_nls pohn \n     ,m_sys.m_company_addrs padrs, m_sys.m_addr_types adrtypes, m_sys.m_countries cy\n     ,m_sys.m_po_line_items poli, m_sys.mvp_ish_all_reqs_workload its\n     ,m_sys.m_units unt, m_sys.m_units untC, m_sys.m_delv_desigs dd, m_sys.m_routing_methods rm\n     ,m_sys.MVP_ISH_WORKLOAD itsw\n     ,m_sys.m_release_notes reln, m_sys.mvp_csd_workload csh , m_sys.m_users usrb, m_sys.m_jobs jb, m_sys.m_users usre\n     ,m_sys.m_inspection_rel_certs irc\n     ,m_sys.m_mcs_numbers mcs \n     ,(Select * from m_sys.m_ident_companies\n           where company_id=@{activity('lk_get_pipeline_parameters').output.firstRow.a_company_id}) ic --a_company_id         \n     ,  (SELECT rp.base_poh_id,rp.r_id, rp.rli_id,rp.last_contact_date,rp.next_contact_date, rp.expediter,\n              apoli.proj_id,apoli.poli_id\n                FROM m_sys.m_actual_polis apoli,\n                      m_sys.m_req_li_to_polis rltp,\n                     m_sys.m_req_to_pos rp\n                    WHERE rp.rli_id IS NULL and\n                          rltp.r_id = rp.r_id\n                          AND apoli.poli_id = rltp.poli_id \n                          AND EXISTS\n                           (SELECT 1\n                              FROM m_sys.m_po_to_base_pos ptbp\n                             WHERE     ptbp.rp_id = rp.rp_id\n                                   AND ptbp.poh_id = rltp.poh_id)\n      ) all_rp\n\n   ,( select a.poli_id POLI_ID, SUM(a.item_ship_qty) TOT_SHIPPED, \n            SUM(a.recv_on_site_qty) TOT_RECV,COUNT(a.poli_id) cnt\n      from m_sys.m_item_ships a\n      where 1=1 and master_ish_id is not null\n       and a.proj_id = '@{activity('lk_get_pipeline_parameters').output.firstRow.p_proj_id}' --p_proj_id\n       group by a.poli_id) ish1\n\n   ,(   select item_ship_id,des.des_code, itsd.planned_date, itsd.forecasted_date, itsd.actual_date  --Start of new table 1\n            from m_sys.m_rm_schedules rms     \n                ,m_sys.m_item_ship_dates itsd ,m_sys.m_destinations des\n            where itsd.proj_id = '@{activity('lk_get_pipeline_parameters').output.firstRow.p_proj_id}'\t\t\t--p_proj_id\n           --   and itsd.item_ship_id = p_data.item_ship_id--27239004\n              and itsd.RMS_ID = rms.rms_id \n              and rms.des_id = des.des_id\n              and rms.exped_date_type= 'IRC' )  SD1\n  ,(   select isd.item_ship_id,isd.forecasted_date\n     from m_sys.m_item_ship_dates isd,\n          m_sys.m_rm_schedules rms\n         , m_sys.m_item_ships ish\n    where --ish.item_ship_id = p_data.item_ship_id and\n       rms.rm_id(+) = ish.rm_id\n      and rms.delv_date_ind(+) = 'Y'\n      and isd.proj_id = '@{activity('lk_get_pipeline_parameters').output.firstRow.p_proj_id}'\t\t\t\t--p_proj_id\t\t\t\n      and ish.proj_id = '@{activity('lk_get_pipeline_parameters').output.firstRow.p_proj_id}'\t\t\t--p_proj_id\n      and isd.item_ship_id = ish.item_ship_id\n      and isd.rms_id(+) = rms.rms_id) SD2\n\nwhere poh.proj_id = '@{activity('lk_get_pipeline_parameters').output.firstRow.p_proj_id}' --p_proj_id\nand poh.po_number like '@{activity('lk_get_pipeline_parameters').output.firstRow.A_EXP_PO}'--A_EXP_PO\nand sup.sup_id(+) = poh.sup_id\nand c.company_id(+) = sup.company_id\nand pohn.poh_id(+) = poh.poh_id\nand pohn.nls_id(+) = @{activity('lk_get_pipeline_parameters').output.firstRow.p_nls_id} --p_nls_id\nand adrtypes.address_type_code = 'MAIL TO'\nand padrs.company_id = c.company_id  \nand padrs.address_type_id = adrtypes.address_type_id \nand padrs.cy_id = cy.cy_id\nand poli.poh_id = poh.poh_id\nand its.poli_id = poli.poli_id\nand its.proj_id = poh.proj_id\nand NVL(its.ish_item_ship_qty,0)<>0 \nand ic.ident(+) = its.ident\nand unt.unit_id = its.qty_unit_id\nand untC.unit_id = poli.currency_id\nand dd.dd_id(+) = its.dd_id\nand rm.rm_id(+) = its.rm_id\nand itsw.item_ship_id(+) = its.item_ship_id\nand itsw.proj_id = '@{activity('lk_get_pipeline_parameters').output.firstRow.p_proj_id}'   --p_proj_id                           \nand reln.reln_id(+) = its.reln_id\nand csh.reln_id(+) = reln.reln_id\nand usrb.m_usr_id = poh.buyer\nand irc.irct_id (+)= its.irct_id  \nand mcs.mcs_id (+) = its.mcs_id \nand usre.m_usr_id(+) = all_rp.expediter                             \nand all_rp.proj_id(+) = its.proj_id\nand all_rp.poli_id(+) = its.poli_id\nand all_rp.base_poh_id = poh.base_poh_id\nand jb.job_id(+) = poli.job_id\nand its.poli_id = ish1.poli_id (+)\n\nand sd1.item_ship_id(+) = its.item_ship_id  --New table Join condition\nand sd2.item_ship_id(+) = its.item_ship_id   --New table Join condition\n\nand decode('@{activity('lk_get_pipeline_parameters').output.firstRow.A_PR_SUPP}','%','1',sup.sup_code)=decode('@{activity('lk_get_pipeline_parameters').output.firstRow.A_PR_SUPP}','%','1','@{activity('lk_get_pipeline_parameters').output.firstRow.A_PR_SUPP}') --A_PR_SUPP\nand ((reln.approved_date is not null and UPPER(SUBSTR('@{activity('lk_get_pipeline_parameters').output.firstRow.A_APPR_RN}' , 1, 1)) = 'Y')--A_APPR_RN\n      or (reln.approved_date is null and UPPER(SUBSTR('@{activity('lk_get_pipeline_parameters').output.firstRow.A_APPR_RN}' , 1, 1)) = 'N')--A_APPR_RN\t\n      or (1=1 and UPPER(SUBSTR('@{activity('lk_get_pipeline_parameters').output.firstRow.A_APPR_RN}' , 1, 1)) = '%')\n    )\nand ((itsw.ish_actual_date_aos is not null and UPPER(SUBSTR('@{activity('lk_get_pipeline_parameters').output.firstRow.A_AOS_ACT}' , 1, 1)) = 'Y')--A_AOS_ACT\n      or (itsw.ish_actual_date_aos is null and UPPER(SUBSTR('@{activity('lk_get_pipeline_parameters').output.firstRow.A_AOS_ACT}' , 1, 1)) = 'N')--A_AOS_ACT\n      or (1=1 and UPPER(SUBSTR('@{activity('lk_get_pipeline_parameters').output.firstRow.A_AOS_ACT}', 1, 1)) = '%')--A_AOS_ACT\n    )\norder by   \n    POH.PO_NUMBER,poli.poli_pos, poli.poli_sub_pos,its.ish_pos,its.ish_sub_pos,POH.PO_SUPP;",
+							"type": "Expression"
+						},
+						"partitionOption": "None",
+						"queryTimeout": "02:00:00"
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_oracle_SMP8_SMAT_src",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_smat_po_generic",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_ds_filesystem": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.file_system",
+								"type": "Expression"
+							},
+							"p_ds_directory": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+								"type": "Expression"
+							},
+							"p_ds_filename": {
+								"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+								"type": "Expression"
+							},
+							"p_ds_first_row_header": true
+						}
+					}
+				]
+			},
+			{
+				"name": "Set data pull date time",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_run_start_time",
+					"value": {
+						"value": "@utcnow()",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "lk_get_pipeline_parameters",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "SMAT"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "sp_Update_Parameter",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "cp_getSMAT_PO_data",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+					"storedProcedureParameters": {
+						"pParameterValue": {
+							"value": {
+								"value": "@formatDateTime(variables('v_run_start_time'),'yyyy-MM-dd HH:mm:ss')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": "SMAT",
+							"type": "String"
+						},
+						"pParameterCode": {
+							"value": "last_run_start_date",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseDB_DEV",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"variables": {
+			"v_run_start_time": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/NCSA/SMAT/PO EXTRACT"
+		},
+		"annotations": [],
+		"lastPublishTime": "2021-04-16T07:10:56Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

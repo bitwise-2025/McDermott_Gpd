@@ -1,0 +1,596 @@
+{
+	"name": "pl_yardkpi_bench_mark_raw_to_synapse",
+	"properties": {
+		"activities": [
+			{
+				"name": "lkup_Get_Pipeline_parameters_getlrd",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "[dbo].[getPipelineParametersValues]",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.pPipeLineSubCode",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "AzureSynapseAnalyticsDB",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Set start date",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lkup_Get_Pipeline_parameters_getlrd",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_lrd_stg_to_raw",
+					"value": {
+						"value": "@formatDateTime(utcNow(),'yyyy-MM-dd HH:mm:ss')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "cp_Get_Latest_File",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Set start date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": true,
+							"modifiedDatetimeStart": {
+								"value": "@activity('lkup_Get_Pipeline_parameters_getlrd').output.firstRow.start_date",
+								"type": "Expression"
+							},
+							"wildcardFolderPath": {
+								"value": "@concat(variables('Directory'),'/*/*/*')",
+								"type": "Expression"
+							},
+							"wildcardFileName": "*.csv",
+							"enablePartitionDiscovery": false
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings",
+							"skipLineCount": 1
+						}
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings",
+							"copyBehavior": "MergeFiles"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_Src_snk_adgls2_src_ykpi",
+						"type": "DatasetReference",
+						"parameters": {
+							"FileSystem": {
+								"value": "@variables('FileSystem')",
+								"type": "Expression"
+							},
+							"Directory": {
+								"value": "@variables('Directory')",
+								"type": "Expression"
+							},
+							"Header": true
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_adgl2_dev_ykpi",
+						"type": "DatasetReference",
+						"parameters": {
+							"source": {
+								"value": "@variables('FileSystem')",
+								"type": "Expression"
+							},
+							"directory": {
+								"value": "@concat(variables('Directory'),'/cmndBenchMark')",
+								"type": "Expression"
+							},
+							"file": {
+								"value": "@variables('File')",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "Check Combined File non zero Bytes",
+				"type": "GetMetadata",
+				"dependsOn": [
+					{
+						"activity": "cp_Get_Latest_File",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_adgl2_dev_ykpi",
+						"type": "DatasetReference",
+						"parameters": {
+							"source": {
+								"value": "@variables('FileSystem')",
+								"type": "Expression"
+							},
+							"directory": {
+								"value": "@concat(variables('Directory'),'/cmndBenchMark')",
+								"type": "Expression"
+							},
+							"file": {
+								"value": "@variables('File')",
+								"type": "Expression"
+							}
+						}
+					},
+					"fieldList": [
+						"exists",
+						"size"
+					],
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true,
+						"enablePartitionDiscovery": false
+					},
+					"formatSettings": {
+						"type": "DelimitedTextReadSettings"
+					}
+				}
+			},
+			{
+				"name": "if_File_Exists_Copy_to_Synapse",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Check Combined File non zero Bytes",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@greater(activity('Check Combined File non zero Bytes').output.size, 0)",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "Copy Raw Folder To Synapse Stage Table",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": true,
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "SqlDWSink",
+									"preCopyScript": "truncate table YardKPI.stage_bench_mark",
+									"allowCopyCommand": true,
+									"disableMetricsCollection": false
+								},
+								"enableStaging": true,
+								"stagingSettings": {
+									"linkedServiceName": {
+										"referenceName": "ADGLS2 SRCDEST DEV",
+										"type": "LinkedServiceReference"
+									}
+								},
+								"translator": {
+									"type": "TabularTranslator",
+									"mappings": [
+										{
+											"source": {
+												"name": "Welding_Process",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Welding_Process",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Weld_Joint_Type",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Weld_Joint_Type",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Thickness",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Thickness",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "BM_Weld_Length",
+												"type": "String"
+											},
+											"sink": {
+												"name": "BM_Weld_Length",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Area",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Area",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Discipline",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Discipline",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "From",
+												"type": "String"
+											},
+											"sink": {
+												"name": "YFrom",
+												"type": "Single"
+											}
+										},
+										{
+											"source": {
+												"name": "To",
+												"type": "String"
+											},
+											"sink": {
+												"name": "YTo",
+												"type": "Single"
+											}
+										},
+										{
+											"source": {
+												"name": "BM_Code1",
+												"type": "String"
+											},
+											"sink": {
+												"name": "BM_Code1",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "BM_Code2",
+												"type": "String"
+											},
+											"sink": {
+												"name": "BM_Code2",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "BM_Stnd_Multiplier",
+												"type": "String"
+											},
+											"sink": {
+												"name": "BM_Stnd_Multiplier",
+												"type": "Single"
+											}
+										}
+									]
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_adgl2_dev_ykpi",
+									"type": "DatasetReference",
+									"parameters": {
+										"source": {
+											"value": "@variables('FileSystem')",
+											"type": "Expression"
+										},
+										"directory": {
+											"value": "@concat(variables('Directory'),'/cmndBenchMark')",
+											"type": "Expression"
+										},
+										"file": {
+											"value": "@variables('File')",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "AzureSynapseAnalyticsPool",
+									"type": "DatasetReference",
+									"parameters": {
+										"schema": "YardKPI",
+										"TableName": "stage_bench_mark"
+									}
+								}
+							]
+						},
+						{
+							"name": "sp_execute_bench_mark_sp_validate",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Copy Raw Folder To Synapse Stage Table",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "usp_yardKPI_bench_mark_dim_fact_load_validate"
+							},
+							"linkedServiceName": {
+								"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+								"type": "LinkedServiceReference"
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Delete Temp combined File",
+				"type": "Delete",
+				"dependsOn": [
+					{
+						"activity": "if_File_Exists_Copy_to_Synapse",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_adgl2_dev_ykpi",
+						"type": "DatasetReference",
+						"parameters": {
+							"source": {
+								"value": "@variables('FileSystem')",
+								"type": "Expression"
+							},
+							"directory": {
+								"value": "@variables('Directory')",
+								"type": "Expression"
+							},
+							"file": {
+								"value": "@variables('File')",
+								"type": "Expression"
+							}
+						}
+					},
+					"enableLogging": false,
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true,
+						"enablePartitionDiscovery": false
+					}
+				}
+			},
+			{
+				"name": "SP Update Control Table Last Run Date",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "if_File_Exists_Copy_to_Synapse",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+					"storedProcedureParameters": {
+						"pParameterCode": {
+							"value": {
+								"value": "start_date",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pParameterValue": {
+							"value": {
+								"value": "@variables('v_lrd_stg_to_raw')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": {
+								"value": "@pipeline().parameters.pPipeLineSubCode",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseDB_DEV",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"parameters": {
+			"Sub_Source_SP": {
+				"type": "string",
+				"defaultValue": "YardKPI"
+			},
+			"Year_SP": {
+				"type": "string",
+				"defaultValue": "2020"
+			},
+			"pPipeLineSubCode": {
+				"type": "string",
+				"defaultValue": "YardKPI"
+			},
+			"pParameterCode": {
+				"type": "string",
+				"defaultValue": "'2022-07-28 09:19:10.278'"
+			}
+		},
+		"variables": {
+			"v_lrd_stg_to_raw": {
+				"type": "String"
+			},
+			"v_currdate": {
+				"type": "String"
+			},
+			"FileSystem": {
+				"type": "String",
+				"defaultValue": "mdr-raw-data"
+			},
+			"Directory": {
+				"type": "String",
+				"defaultValue": "Project_Data/YARDKPI/Bench_Mark"
+			},
+			"File": {
+				"type": "String",
+				"defaultValue": "CombinedYardKPIBenchMark.csv"
+			}
+		},
+		"folder": {
+			"name": "Projects/YARD KPI/Bench_Mark"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-09-13T17:45:38Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

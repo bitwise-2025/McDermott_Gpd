@@ -1,0 +1,724 @@
+{
+	"name": "pl_engr_man_hrs_histogram_raw_to_synapse",
+	"properties": {
+		"description": "P6 Engr Histogram - ADLS Raw to Synapse Stage table",
+		"activities": [
+			{
+				"name": "Check Combined File non zero Bytes",
+				"description": "Check if the combined file has any data to be loaded.",
+				"type": "GetMetadata",
+				"dependsOn": [
+					{
+						"activity": "cp_Get_Latest_File",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_engr_mhrs_histo_raw_latest",
+						"type": "DatasetReference"
+					},
+					"fieldList": [
+						"size",
+						"exists"
+					],
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true
+					},
+					"formatSettings": {
+						"type": "DelimitedTextReadSettings"
+					}
+				}
+			},
+			{
+				"name": "lkup_Get_Pipeline_parameters_getlrd",
+				"description": "Use the lookup procedure to get the last run details to be used in the next steps.",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 1,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "NetworkFolder"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Set start date",
+				"description": "Set the last stage run date to the variable as start date.",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lkup_Get_Pipeline_parameters_getlrd",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_lrd_src_to_stage",
+					"value": {
+						"value": "@activity('lkup_Get_Pipeline_parameters_getlrd').output.firstRow.lastrundate",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "cp_Get_Latest_File",
+				"description": "Copy all the files created since the last start date and combine them into one file to be processed into Synapse.",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Set start date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 1,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": true,
+							"modifiedDatetimeStart": {
+								"value": "@variables('v_lrd_src_to_stage')",
+								"type": "Expression"
+							},
+							"wildcardFolderPath": "Project_Data/NCSA/P6/Engineering_Histogram/*/*/*",
+							"wildcardFileName": "p6_engr_histo*.csv"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings",
+							"copyBehavior": "MergeFiles"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": "ts_itime_combined.csv"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "Contract",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Contract",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Phase",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Phase",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Office",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Office",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "TYPE",
+									"type": "String"
+								},
+								"sink": {
+									"name": "TYPE",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Prime",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Prime",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Sub Prime",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Sub Prime",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "SFN",
+									"type": "String"
+								},
+								"sink": {
+									"name": "SFN",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Activity Code",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Activity Code",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Discipline",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Discipline",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "PSRL1Code",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PSRL1Code",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "PSRL2Code",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PSRL2Code",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Period",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Period",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Units",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Units",
+									"type": "String"
+								}
+							}
+						]
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_engr_mhrs_histo_raw",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_engr_mhrs_histo_raw_latest",
+						"type": "DatasetReference"
+					}
+				]
+			},
+			{
+				"name": "if_File_Exists_Copy_to_Synapse",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Check Combined File non zero Bytes",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@greater(activity('Check Combined File non zero Bytes').output.size, 2)",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "Copy Latest Data To Synapse Stage Table",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.09:00:00",
+								"retry": 1,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"additionalColumns": [
+										{
+											"name": "data_class",
+											"value": {
+												"value": "@activity('lkup_Get_Pipeline_parameters_getlrd').output.firstRow.data_class",
+												"type": "Expression"
+											}
+										},
+										{
+											"name": "sub_source",
+											"value": {
+												"value": "@activity('lkup_Get_Pipeline_parameters_getlrd').output.firstRow.sub_source",
+												"type": "Expression"
+											}
+										},
+										{
+											"name": "source",
+											"value": {
+												"value": "@activity('lkup_Get_Pipeline_parameters_getlrd').output.firstRow.source",
+												"type": "Expression"
+											}
+										}
+									],
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "SqlDWSink",
+									"preCopyScript": "truncate table gpd.P6_engr_manhrs_histogram",
+									"allowPolyBase": true,
+									"polyBaseSettings": {
+										"rejectValue": 0,
+										"rejectType": "value",
+										"useTypeDefault": false
+									},
+									"disableMetricsCollection": false
+								},
+								"enableStaging": true,
+								"stagingSettings": {
+									"linkedServiceName": {
+										"referenceName": "ADLSG2 TimeAnalytics DEV",
+										"type": "LinkedServiceReference"
+									},
+									"path": "mdr-raw-data/Polybase_Staging_Space"
+								},
+								"translator": {
+									"type": "TabularTranslator",
+									"mappings": [
+										{
+											"source": {
+												"name": "Contract",
+												"type": "String"
+											},
+											"sink": {
+												"name": "project",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Office",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Office_Code",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "TYPE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Data_sub_class_code",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Prime",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Prime",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Sub Prime",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Sub_Prime",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "SFN",
+												"type": "String"
+											},
+											"sink": {
+												"name": "SFN",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Activity Code",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Activity_Code",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Discipline",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Discipline_code",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Period",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Period",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Units",
+												"type": "String"
+											},
+											"sink": {
+												"name": "units",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Phase",
+												"type": "String"
+											},
+											"sink": {
+												"name": "fx",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "data_class",
+												"type": "String"
+											},
+											"sink": {
+												"name": "data_class",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "sub_source",
+												"type": "String"
+											},
+											"sink": {
+												"name": "sub_source",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "source",
+												"type": "String"
+											},
+											"sink": {
+												"name": "source",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PSRL1Code",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PSRL1Code",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PSRL2Code",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PSRL2Code",
+												"type": "String"
+											}
+										}
+									]
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_adlsg2_csv_engr_mhrs_histo_raw_latest",
+									"type": "DatasetReference"
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_AzureSynapseAnalytics_p6_engr_histo",
+									"type": "DatasetReference"
+								}
+							]
+						}
+					]
+				}
+			},
+			{
+				"name": "Delete Temp combined File",
+				"description": "After the data has been loaded, clear the combined file from the ADLSV2 ",
+				"type": "Delete",
+				"dependsOn": [
+					{
+						"activity": "if_File_Exists_Copy_to_Synapse",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "1.00:00:00",
+					"retry": 1,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_engr_mhrs_histo_raw_latest",
+						"type": "DatasetReference"
+					},
+					"enableLogging": false,
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true
+					}
+				}
+			},
+			{
+				"name": "SP Update Control Table Last Run Date",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "sp_execute_fact_load",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+					"storedProcedureParameters": {
+						"pParameterCode": {
+							"value": "lastrundate",
+							"type": "String"
+						},
+						"pParameterValue": {
+							"value": {
+								"value": "@formatDateTime(activity('lkup_Get_Pipeline_parameters_getlrd').output.firstRow.run_start_datetime,'yyyy-MM-dd HH:mm:ss')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": "NetworkFolder",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "linkedservice_DEV_entanalytics_synapse",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "sp_execute_fact_validate",
+				"description": "SP call to validate data prior to FACT table. ",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Delete Temp combined File",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.01:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[load_NCSA_fact_P6_engr_mhrs_histogram_validate]"
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "sp_execute_fact_load",
+				"description": "SP call to load the validated into FACT table. ",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "sp_execute_fact_validate",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.01:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[load_NCSA_fact_P6_engr_mhrs_histogram_fact_load]"
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"variables": {
+			"v_lrd_src_to_stage": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/NCSA/P6 Engr Histogram"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-08-04T05:08:29Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

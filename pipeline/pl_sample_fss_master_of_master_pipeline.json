@@ -1,0 +1,245 @@
+{
+	"name": "pl_sample_fss_master_of_master_pipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "New Orders",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_sample_fss_neworders_stagejson_master_pipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "Revenue",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "New Orders",
+						"dependencyConditions": [
+							"Succeeded",
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_sample_fss_revenue_stagejson_master_pipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "Backlog Revenue RollOff",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "P and L YTD",
+						"dependencyConditions": [
+							"Succeeded",
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_sample_fss_Backlog_Revenue_Rolloff_stagejson_master_pipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "CapEx And DD",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Backlog Revenue RollOff",
+						"dependencyConditions": [
+							"Succeeded",
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_sample_fss_CapEx_And_DD_stagejson_master_pipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "DOE Breakdown",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "CapEx And DD",
+						"dependencyConditions": [
+							"Succeeded",
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_sample_fss_DOE_Breakdown_stagejson_master_pipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "Functional Support Cost",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "DOE Breakdown",
+						"dependencyConditions": [
+							"Succeeded",
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_sample_fss_functional_support_cost_stagejson_master_pipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "Gross DOE Changes",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Functional Support Cost",
+						"dependencyConditions": [
+							"Succeeded",
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_sample_fss_Gross_DOE_Changes_stagejson_master_pipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "Gross Profit",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Revenue",
+						"dependencyConditions": [
+							"Succeeded",
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_sample_fss_gross_profit_stagejson_master_pipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "P and L",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Gross Profit",
+						"dependencyConditions": [
+							"Succeeded",
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_sample_fss_PandL_stagejson_master_pipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "P and L YTD",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "P and L",
+						"dependencyConditions": [
+							"Succeeded",
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_sample_fss_PandL_YTD_stagejson_master_pipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			}
+		],
+		"folder": {
+			"name": "Projects/BLUEPRINT FSS"
+		},
+		"annotations": [],
+		"lastPublishTime": "2024-01-12T10:37:09Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

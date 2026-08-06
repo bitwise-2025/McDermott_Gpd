@@ -1,0 +1,356 @@
+{
+	"name": "pl_progress_sitepro_source_to_stage",
+	"properties": {
+		"activities": [
+			{
+				"name": "cp_get_progress_from_sitepro",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Set data pull date time",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set data pull date time_copy2_copy1",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"sqlReaderQuery": {
+							"value": "@variables('Query3')",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_sitepro_prod",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_ds_dbname": {
+								"value": "@pipeline().parameters.p_pl_dbname",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_generic",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_ds_filesystem": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.file_system",
+								"type": "Expression"
+							},
+							"p_ds_directory": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+								"type": "Expression"
+							},
+							"p_ds_filename": {
+								"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+								"type": "Expression"
+							},
+							"p_ds_first_row_header": true
+						}
+					}
+				]
+			},
+			{
+				"name": "Set data pull date time",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lk_lastrun_date_from_sitepro",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_run_start",
+					"value": {
+						"value": "@convertFromUtc(utcnow(),'Central Standard Time')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "lk_lastrun_date_from_sitepro",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"sqlReaderQuery": {
+							"value": "@concat('select max(Timestamp) max_date from ',pipeline().parameters.p_pl_dbname,'.dbo.SP_ProgressHistory  WITH (NOLOCK) ')",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_sitepro_prod",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_ds_dbname": "@pipeline().parameters.p_pl_dbname"
+						}
+					}
+				}
+			},
+			{
+				"name": "Set data pull date time_copy1",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lk_lastrun_date_from_sitepro",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "Query1",
+					"value": {
+						"value": "@concat('select (select  ',pipeline().parameters.p_pl_projectid,' project_code from [dbo].[PM_ProjectMasterData]  WITH (NOLOCK)) project_number ,',\n    '''',activity('lk_get_pipeline_parameters').output.firstRow.function_code,'''',' function_code ,',\n    '''',activity('lk_get_pipeline_parameters').output.firstRow.source_name,'''',' source_name,',\n    '''',activity('lk_get_pipeline_parameters').output.firstRow.sub_source_name,'''',' sub_source_name,',\n    '''',activity('lk_get_pipeline_parameters').output.firstRow.data_class_budget_name,'''',' data_class_budget_name,',\n    '''',activity('lk_get_pipeline_parameters').output.firstRow.data_class_Progress_name,'''',' data_class_Progress_name,',\n    '''',activity('lk_get_pipeline_parameters').output.firstRow.data_class_percentage_code,'''',' data_class_percentage_code,',\n    '''',activity('lk_get_pipeline_parameters').output.firstRow.data_class_quantity_name,'''',' data_class_quantity_name,',\n   '''',activity('lk_get_pipeline_parameters').output.firstRow.data_class_time_name,'''',' data_class_time_name,',\n    '''',activity('lk_get_pipeline_parameters').output.firstRow.sub_class_budget_hours_name,'''',' sub_class_budget_hours_name,',\n    '''',activity('lk_get_pipeline_parameters').output.firstRow.sub_class_budget_quantity_name,'''',' sub_class_budget_quantity_name,',\n    '''',activity('lk_get_pipeline_parameters').output.firstRow.sub_class_progress_hours_name,'''',' sub_class_progress_hours_name,',\n    '''',activity('lk_get_pipeline_parameters').output.firstRow.sub_class_progress_quantity_name,'''',' sub_class_progress_quantity_name,',\n    '''',activity('lk_get_pipeline_parameters').output.firstRow.sub_class_progress_installed_quantity_name,'''',' sub_class_progress_installed_quantity_name,',\n    '''',activity('lk_get_pipeline_parameters').output.firstRow.sub_class_percentage_code,'''',' sub_class_percentage_code,',\n    '''',activity('lk_get_pipeline_parameters').output.firstRow.unit_of_measure_Hours,'''',' unit_of_measure_Hours,',\n    '''',activity('lk_get_pipeline_parameters').output.firstRow.unit_of_measure_Quantity,'''',' unit_of_measure_Quantity,',\n    '''',activity('lk_get_pipeline_parameters').output.firstRow.unit_of_measure_code_percentage,'''',' unit_of_measure_code_percentage,',\n    '(select code from SP_Phases WITH (NOLOCK) where ID =   (select PhaseID from SP_WorkArea  WITH (NOLOCK) where Code = vc.Activity_ScheduleWorkArea)) phase_code,\n\tsr.Code schedule_resource_code\n\t,vc.Activity_Unit work_unit_code\n\t,vc.Activity_ScheduleWorkArea work_area_code\n\t,pa.activity activity_code\n\t,pa.CWP CWP_Code\n\t,vc.name IWP_Code\n\t,vc.StatusCode IWP_Status_Code\n\t,vc.StatusDescription IWP_StatusDescription\n\t,pi.PMID\n\t,replace(replace(replace(pi.Description,char(10),','''',' ','''','),char(34),','''',' ','''','),char(13),','''',' ','''',') PMID_Description\n\t,pi.Contract\n\t,pi.CostCode Cost_Code\n\t,replace(replace(replace(pi.CostCodeDescription,char(10),','''',' ','''','),char(34),','''',' ','''','),char(13),','''',' ','''',') Cost_Code_Description\n\t,pi.CostingCOA Costing_COA\n\t,replace(replace(replace(pi.DrawingNo,char(10),','''',' ','''','),char(34),','''',' ','''','),char(13),','''',' ','''',') Drawing_No\n\t,replace(replace(replace(pi.TagNo,char(10),','''',' ','''','),char(34),','''',' ','''','),char(13),','''',' ','''',') Tag_No\n\t,replace(replace(replace(pi.Spool,char(10),','''',' ','''','),char(34),','''',' ','''','),char(13),','''',' ','''',') spool\n\t,replace(replace(replace(pi.Line,char(10),','''',' ','''','),char(34),','''',' ','''','),char(13),','''',' ','''',') line\n\t,replace(replace(replace(pi.spec,char(10),','''',' ','''','),char(34),','''',' ','''','),char(13),','''',' ','''',') spec\n\t,pi.system\n\t,replace(replace(replace(pi.PieceMark,char(10),','''',' ','''','),char(34),','''',' ','''','),char(13),','''',' ','''',') Piece_Mark',\n                  ',pi.CostType Cost_Type\n\t,replace(replace(replace(pi.NumberOfPieces,char(10),','''',' ','''','),char(34),','''',' ','''','),char(13),','''',' ','''',') Number_Of_Pieces,\n\tpi.Subsystem,\n\treplace(replace(replace(pi.text5,char(10),','''',' ','''','),char(34),','''',' ','''','),char(13),','''',' ','''',') text5,\n\tpi.BomNodeID Bom_Node_ID,\n\tpi.DocID Doc_ID,\n\tpi.StagingReference Staging_Reference,\n\treplace(replace(replace(pi.Level6,char(10),','''',' ','''','),char(34),','''',' ','''','),char(13),','''',' ','''',') Level6,\n\tpiv.plannedStatus planned_Status,\n\tpiv.progressStatus progress_Status,\n    case when isnull(vc.CWPEarnedHours,0) = 0\n            then ','''','Not Started','''','  when vc.CWPEarnedHours/isnull(vc.CWPBudgetHours,0) > 0 and vc.CWPEarnedHours/isnull(vc.CWPBudgetHours,0) < 1\n            then ','''','In Progress','''',' when vc.CWPEarnedHours/isnull(vc.CWPBudgetHours,0) > = 1 then ','''','Completed','''',' end as ','''','workpack_status','''',',\n       case when (\n              select count(status) from dbo.dm_document  WITH (NOLOCK) where  dm_document.id IN \n              (select DocumentID from dbo.SP_ConstructionWorkPack_Documents spcd  WITH (NOLOCK)   \n                where vc.id = spcd.ConstructionWorkPackID and DM_Document.ID=spcd.DocumentID  and dm_document.Status  = \n                     (select status from dbo.SP_IFC_Status  WITH (NOLOCK)  where status = DM_Document.status and ifc=1 and dm_document.ischanged=','''','Y','''',') ))\n                     > 0 \n              then ','''','Rev Change',''''\n )",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set data pull date time_copy2",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Set data pull date time_copy1",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "Query2",
+					"value": {
+						"value": "@concat(' when     (\n              select count(status) from dbo.dm_document  WITH (NOLOCK) where  dm_document.id IN ',\n              '(select DocumentID from dbo.SP_ConstructionWorkPack_Documents spcd  WITH (NOLOCK) \n                where vc.id = spcd.ConstructionWorkPackID and DM_Document.ID=spcd.DocumentID  and dm_document.Status  = \n                     (select status from dbo.SP_IFC_Status  WITH (NOLOCK) where status = DM_Document.status and ifc=1 and dm_document.ischanged=','''','N','''',') ))\n                     > 0 then ','''','Yes','''',' when (select count(status) from dbo.dm_document  WITH (NOLOCK) where  dm_document.id IN \n              (select DocumentID from dbo.SP_ConstructionWorkPack_Documents spcd  WITH (NOLOCK) \n                where vc.id = spcd.ConstructionWorkPackID and DM_Document.ID=spcd.DocumentID  and dm_document.Status  = \n                     (select status from dbo.SP_IFC_Status  WITH (NOLOCK) where status = DM_Document.status and ifc=0 ) ))\n                     > 0 \n                     then ','''','No','''',' when (select count(status) from dbo.dm_document  WITH (NOLOCK) where  dm_document.id IN \n              (select DocumentID from dbo.SP_ConstructionWorkPack_Documents spcd  WITH (NOLOCK)  \n                where vc.id = spcd.ConstructionWorkPackID and DM_Document.ID=spcd.DocumentID)) = 0 \n               then ','''','No Dwg','''',' end  as ','''','IFC','''','\t,h.ID \n\t\tProgressHistoryID\n\t,pr.code \n\t\tROCCode\n\t,prs.Step\n\t,prs.IsDriving Is_Driving\n\t,prs.Name\n\t,h.CaptureOrigin Capture_Origin\n\t,u.UserName\n\t,h.Timestamp Progress_Entry_Date_Time\n\t,s.code\n\t\tTimestampShift\n\t,cast(h.ProgressDate as date)\t\t\n\t\tProgressDate\n\t,h.ProgressDelta*.01\t\t\t\n\t\tProgressDelta\n\t,SUM(h1.progressdelta)*.01 \t\t\n\t\tProgressCumulative\n\t,0 as Budget_Hrs\n\t,((((h.progressdelta)* prs.[Percentage])*.01)*(pi.Hours))*.01\n\t\tProgressed_Hrs\n\t,0 as\n\t\tBudget_Qty\n\t,((((h.progressdelta)* prs.[Percentage])*.01)*(pi.Quantity))*.01\n\t\tProgressed_Qty\n\t,case when prs.IsDriving = 1 then (((h.progressdelta)*.01)*(pi.Quantity)) else null end\n\t\tInstall_Qty,',\n'(select max(Timestamp) from ',pipeline().parameters.p_pl_dbname,'.dbo.SP_ProgressHistory  WITH (NOLOCK)) max_date\nfrom ',pipeline().parameters.p_pl_dbname,'.dbo.SP_ProgressItem_CWP c WITH (NOLOCK)\ninner join ',pipeline().parameters.p_pl_dbname,'.dbo.SP_ProgressHistory h WITH (NOLOCK)\t\ton c.ID = h.ProgressItemCWPID \nleft join  ',pipeline().parameters.p_pl_dbname,'.dbo.v_ConstructionWorkPack vc WITH (NOLOCK)\ton c.CWPID = vc.id \ninner join ',pipeline().parameters.p_pl_dbname,'.dbo.SP_ScheduleResource sr WITH (NOLOCK)\t\ton vc.ScheduleResourceID = sr.id \ninner join ',pipeline().parameters.p_pl_dbname,'.dbo.PM_ProgressItem pi WITH (NOLOCK)\t\ton c.ProgressItemID = pi.id \ninner join ',pipeline().parameters.p_pl_dbname,'.dbo.v_ProgressItem piv WITH (NOLOCK)\t\ton c.ProgressItemID = piv.id \ninner join ',pipeline().parameters.p_pl_dbname,'.dbo.PM_Activity pa WITH (NOLOCK)\t\t\ton vc.ActivityID = pa.id \ninner join ',pipeline().parameters.p_pl_dbname,'.dbo.PM_ROC pr WITH (NOLOCK)\t\t\t\ton c.ROCID = pr.id \nleft join  ',pipeline().parameters.p_pl_dbname,'.dbo.pm_rocs prs WITH (NOLOCK)\t\t\ton c.ROCSID = prs.id \ninner join ',pipeline().parameters.p_pl_dbname,'.dbo.US_User u WITH (NOLOCK)\t\t\t\ton h.UserId = u.ID \ninner join ',pipeline().parameters.p_pl_dbname,'.dbo.SP_ProgressHistory h1 WITH (NOLOCK)\t\ton h.id >= h1.id and h1.ProgressItemCWPID = c.ID \ninner join ',pipeline().parameters.p_pl_dbname,'.dbo.sp_shift s WITH (NOLOCK)\t\t\t\ton s.id = h.shiftid ',' where h.Timestamp >= ','''',activity('lk_get_pipeline_parameters').output.firstRow.start_date,'''',' group by\nsr.Code, vc.Activity_ScheduleWorkArea, vc.Activity_Unit, pa.SubPrime, vc.name, pi.pmid, prs.[Percentage], h.ID, prs.IsDriving,\npr.code, prs.Step, prs.Name,  h.ProgressDate, h.ProgressDelta, h.CaptureOrigin, u.UserName, s.code, h.Timestamp, pi.hours, pi.Quantity,\npi.Description,pi.Contract,pi.CostCode,pi.CostCodeDescription,pi.CostingCOA,pi.DrawingNo,pi.TagNo,pi.Spool,pi.Line,pi.Spec,pi.System,\npi.PieceMark,pi.CostType,pi.NumberOfPieces,pi.Subsystem,pi.Text5,pi.BomNodeID,pi.DocID,pi.StagingReference,pi.Level6,vc.CWPEarnedHours,vc.CWPBudgetHours,vc.id,\npiv.plannedStatus,piv.progressStatus,pa.activity,vc.StatusCode,vc.StatusDescription,pa.CWP\norder by h.ProgressDate')\n",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set data pull date time_copy2_copy1",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Set data pull date time_copy2",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "Query3",
+					"value": {
+						"value": "@concat(variables('Query1'),variables('Query2'))",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "lk_get_pipeline_parameters",
+				"description": "lookup the parameters needed for this pipeline",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "[dbo].[getPipelineParametersValues]",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": {
+									"value": "Sitepro",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "sp_Update_Parameter",
+				"description": "update the appropriate parameter with revised value. i.e Last run datetime",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "cp_get_progress_from_sitepro",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+					"storedProcedureParameters": {
+						"pParameterValue": {
+							"value": {
+								"value": "@formatDateTime(activity('lk_lastrun_date_from_sitepro').output.firstRow.max_date,'yyyy-MM-dd HH:mm:ss')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": "Sitepro",
+							"type": "String"
+						},
+						"pParameterCode": {
+							"value": "start_date",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseDB_DEV",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"parameters": {
+			"p_pl_dbname": {
+				"type": "string"
+			},
+			"p_pl_projectid": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"v_run_start": {
+				"type": "String"
+			},
+			"Query1": {
+				"type": "String"
+			},
+			"Query2": {
+				"type": "String"
+			},
+			"Query3": {
+				"type": "String"
+			},
+			"Query4": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/NCSA/Siteproprogress"
+		},
+		"annotations": [],
+		"lastPublishTime": "2021-12-15T07:13:48Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

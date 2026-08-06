@@ -1,0 +1,67 @@
+{
+	"name": "df_yardkpi_intelex_audit_questn_stage_to_raw",
+	"properties": {
+		"folder": {
+			"name": "Projects/YARD KPI/Intelex"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_yardkpi_intelex_generic",
+						"type": "DatasetReference"
+					},
+					"name": "IntelexAuditQustinSource"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_yardkpi_intelex_generic",
+						"type": "DatasetReference"
+					},
+					"name": "IntelexAuditQustinSink"
+				}
+			],
+			"transformations": [
+				{
+					"name": "setFileName"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          RowNum as string,",
+				"          Audit_x0020_Record_x0020_No as string,",
+				"          Audit_x0020_Title as string,",
+				"          Audit_x0020_Workflow_x0020_Status as string,",
+				"          Auditor as string,",
+				"          Questionnaire_x0020_Record_x0020_No_x0020_ as string,",
+				"          Checklist_x0020_Code as string,",
+				"          Checklist_x0020_Name as string,",
+				"          Checklist_x0020_Progress as string,",
+				"          Checklist_x0020_Status as string,",
+				"          Location as string,",
+				"          Checklist_x0020_Status2 as string,",
+				"          Button_x0020_Clicked as string,",
+				"          Date_x0020_Button_x0020_Clicked_x0020__x0028_Submit_x0029_ as string,",
+				"          Workflow_x0020_Status as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: true,",
+				"     rowUrlColumn: 'File_Path') ~> IntelexAuditQustinSource",
+				"IntelexAuditQustinSource derive(File_Path = concat(concat(trim(substringIndex(File_Path,'/',5),'/'),'/'),substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',split(substringIndex(File_Path,'/',-1),'.')[1],'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv'),",
+				"          Audit_x0020_Title = trim(replace(replace(replace(replace(replace(replace(replace(Audit_x0020_Title,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' '))) ~> setFileName",
+				"setFileName sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     rowUrlColumn:'File_Path',",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> IntelexAuditQustinSink"
+			]
+		}
+	}
+}

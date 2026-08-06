@@ -1,0 +1,618 @@
+{
+	"name": "pl_ced_oracle_edw_tags_reconstructed_done",
+	"properties": {
+		"activities": [
+			{
+				"name": "cd_src_to_stage",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_email_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "OracleSource",
+						"partitionOption": "None",
+						"numberPrecision": 38,
+						"numberScale": 18,
+						"queryTimeout": "02:00:00"
+					},
+					"sink": {
+						"type": "ParquetSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "ParquetWriteSettings"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "Tag Scraped"
+								},
+								"sink": {
+									"name": "Tag_Scraped",
+									"physicalType": "UTF8"
+								}
+							},
+							{
+								"source": {
+									"name": "Tag Reconstructed"
+								},
+								"sink": {
+									"name": "Tag_Reconstructed",
+									"physicalType": "UTF8"
+								}
+							},
+							{
+								"source": {
+									"name": "Reconstructed",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Reconstructed",
+									"type": "String",
+									"physicalType": "UTF8"
+								}
+							},
+							{
+								"source": {
+									"name": "Document Count",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "Document_Count",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "Reconstruct Method",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Reconstruct_Method",
+									"physicalType": "UTF8"
+								}
+							},
+							{
+								"source": {
+									"name": "Document Number",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Document_Number",
+									"physicalType": "UTF8"
+								}
+							}
+						],
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_CED_tennet_2gw_hag_oracledb02_spf09nlp",
+						"type": "DatasetReference",
+						"parameters": {
+							"table_schema": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.table_schema",
+								"type": "Expression"
+							},
+							"table_name": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.table_name",
+								"type": "Expression"
+							},
+							"server_name": "@activity('lk_get_pipeline_parameters').output.firstRow.server_name",
+							"port": "@activity('lk_get_pipeline_parameters').output.firstRow.port",
+							"database_name": "@activity('lk_get_pipeline_parameters').output.firstRow.database_name"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_adlsg2_parquet_generic",
+						"type": "DatasetReference",
+						"parameters": {
+							"file_system": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.file_system",
+								"type": "Expression"
+							},
+							"directory": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+								"type": "Expression"
+							},
+							"file_name": {
+								"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.parquet')",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "cd_stg_to_synapse",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "cd_src_to_stage",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "ParquetSource",
+						"additionalColumns": [
+							{
+								"name": "Load_date",
+								"value": {
+									"value": "@activity('lk_get_pipeline_parameters').output.firstRow.run_start_datetime",
+									"type": "Expression"
+								}
+							}
+						],
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": true,
+							"enablePartitionDiscovery": false
+						},
+						"formatSettings": {
+							"type": "ParquetReadSettings"
+						}
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"preCopyScript": {
+							"value": "INSERT INTO @{concat(activity('lk_get_pipeline_parameters').output.firstRow.target_table,'_archive')} SELECT * FROM @{activity('lk_get_pipeline_parameters').output.firstRow.target_table};\n\nTRUNCATE TABLE @{activity('lk_get_pipeline_parameters').output.firstRow.target_table};\n\nDELETE FROM @{concat(activity('lk_get_pipeline_parameters').output.firstRow.target_table,'_archive')}\nWHERE Load_date < DATEADD(MONTH, -6, GETDATE());",
+							"type": "Expression"
+						},
+						"allowCopyCommand": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ADLSG2 TimeAnalytics DEV",
+							"type": "LinkedServiceReference"
+						},
+						"path": "mdr-raw-data/ Polybase_Staging_Space",
+						"enableCompression": true
+					},
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "Tag_Scraped",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Tag_Scraped",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Tag_Reconstructed",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Tag_Reconstructed",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Reconstructed",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Reconstructed",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Document_Count",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "Document_Count",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "Reconstruct_Method",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Reconstruct_Method",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Document_Number",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Document_Number",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Load_date",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Load_date",
+									"type": "DateTime"
+								}
+							}
+						]
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_adlsg2_parquet_generic",
+						"type": "DatasetReference",
+						"parameters": {
+							"file_system": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.file_system",
+								"type": "Expression"
+							},
+							"directory": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+								"type": "Expression"
+							},
+							"file_name": {
+								"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.parquet')",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "AzureSynapseAnalyticsPool",
+						"type": "DatasetReference",
+						"parameters": {
+							"schema": {
+								"value": "@split(activity('lk_get_pipeline_parameters').output.firstRow.target_table,'.')[0]",
+								"type": "Expression"
+							},
+							"TableName": {
+								"value": "@split(activity('lk_get_pipeline_parameters').output.firstRow.target_table,'.')[1]",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "lk_get_pipeline_email_parameters",
+				"description": "Get the parameters to be used in this pipeline",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "pl_ced_master_email",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": {
+									"value": "CED",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Append STG to Synapse Error",
+				"type": "AppendVariable",
+				"dependsOn": [
+					{
+						"activity": "cd_stg_to_synapse",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_error_message",
+					"value": {
+						"value": "@concat('Stage to Synapse | ',\nactivity('cd_stg_to_synapse').output.errors[0].Code,' | ',\nactivity('cd_stg_to_synapse').output.errors[0].Message)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "If failure detected send mail",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "sp_dataload_status",
+						"dependencyConditions": [
+							"Skipped",
+							"Completed"
+						]
+					},
+					{
+						"activity": "Append SP Error",
+						"dependencyConditions": [
+							"Skipped",
+							"Completed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@if(empty(variables('v_error_message')),false,true)",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "Send Email On Failure",
+							"type": "WebActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"method": "POST",
+								"headers": {
+									"Content-Type": "application/json"
+								},
+								"url": "https://prod-31.eastus.logic.azure.com:443/workflows/03d7da5abbab4215a05aeaceae3b96fa/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=asuyutHtoSxGFURsj1-A6AKRiNLdXZ4mTnZvZ17_8hI",
+								"connectVia": {
+									"referenceName": "integrationRuntimeEast2",
+									"type": "IntegrationRuntimeReference"
+								},
+								"body": {
+									"value": "{\n    \"DataFactoryName\": \"@{pipeline().DataFactory}\",\n    \"PipelineName\": \"@{pipeline().Pipeline}\",\n    \"Activity\": \"@{split(replace(replace(join(variables('v_error_message'),';'),'\"',''),'\\','/'),'|')[0]}\",\n    \"ErrorMessage\": \"@{split(replace(replace(join(variables('v_error_message'),';'),'\"',''),'\\','/'),'|')[2]}\",\n\"EmailTo\": \"@{activity('lk_get_pipeline_email_parameters').output.firstRow.master_pipeline_email}\"\n}",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "lk_get_pipeline_parameters",
+				"description": "Get the parameters to be used in this pipeline",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": {
+									"value": "Oracle_DB",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Append SRC to STG Error",
+				"type": "AppendVariable",
+				"dependsOn": [
+					{
+						"activity": "cd_src_to_stage",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_error_message",
+					"value": {
+						"value": "@concat('Source to Stage | ',\nactivity('cd_src_to_stage').output.errors[0].Code,' | ',\nactivity('cd_src_to_stage').output.errors[0].Message)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "sp_dataload_status",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "cd_stg_to_synapse",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": {
+						"value": "[edw].data_warehouse_dataload_status",
+						"type": "Expression"
+					},
+					"storedProcedureParameters": {
+						"datasource": {
+							"value": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.database_name",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"description": {
+							"value": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.description",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"load_date_time": {
+							"value": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.run_start_datetime",
+								"type": "Expression"
+							},
+							"type": "DateTime"
+						},
+						"project_number": {
+							"value": {
+								"value": "@pipeline().parameters.pProjectNumber",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"table_name": {
+							"value": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.target_table",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "linkedservice_DEV_entanalytics_synapse",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Append SP Error",
+				"type": "AppendVariable",
+				"dependsOn": [
+					{
+						"activity": "sp_dataload_status",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_error_message",
+					"value": {
+						"value": "@concat('sp_dataload_status Failure: | |',\nactivity('sp_dataload_status').error.message)\n",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"pPipeLineSubCode": {
+				"type": "string",
+				"defaultValue": "Oracle_DB"
+			},
+			"pProjectNumber": {
+				"type": "string",
+				"defaultValue": "360536"
+			}
+		},
+		"variables": {
+			"v_error_message": {
+				"type": "Array"
+			}
+		},
+		"folder": {
+			"name": "Projects/Central Engineering Database/Oracle DB"
+		},
+		"annotations": []
+	}
+}

@@ -1,0 +1,1638 @@
+{
+	"name": "pl_iwp_sitepro_raw_to_synapse",
+	"properties": {
+		"activities": [
+			{
+				"name": "SPU_Load_dim_entp_IWP",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "usp_update_project_key",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[generic_load_dim_v2]",
+					"storedProcedureParameters": {
+						"debug_flag": {
+							"value": "N",
+							"type": "String"
+						},
+						"execute_flag": {
+							"value": "Y",
+							"type": "String"
+						},
+						"load_name": {
+							"value": "dim_entp_iwp",
+							"type": "String"
+						},
+						"rkValidationRequired": {
+							"value": "Y",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "linkedservice_DEV_entanalytics_synapse",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "lkup_Get_Pipeline_parameters_getlrd",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "Sitepro"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Set start date",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lkup_Get_Pipeline_parameters_getlrd",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_lrd_raw_to_synp",
+					"value": {
+						"value": "@activity('lkup_Get_Pipeline_parameters_getlrd').output.firstRow.start_date",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "cp_Get_Latest_File",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Set start date_Current_Date_Time",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": true,
+							"modifiedDatetimeStart": {
+								"value": "@variables('v_lrd_raw_to_synp')",
+								"type": "Expression"
+							},
+							"wildcardFolderPath": "Project_Data/NCSA/SitePro/IWP/*/*/*",
+							"wildcardFileName": "iwp_sitepro*.csv"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings",
+							"copyBehavior": "MergeFiles"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "project_id",
+									"type": "String"
+								},
+								"sink": {
+									"name": "project_id",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Activity_Code",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Activity_Code",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ScheduleResourceID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ScheduleResourceID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ActivityID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ActivityID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Schedule_Resource_Code",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Schedule_Resource_Code",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Name",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Name",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ScheduleOffset",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ScheduleOffset",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ScheduleDuration",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ScheduleDuration",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ROCID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ROCID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "CostCode",
+									"type": "String"
+								},
+								"sink": {
+									"name": "CostCode",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "UOM",
+									"type": "String"
+								},
+								"sink": {
+									"name": "UOM",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Description",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Description",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "PeriodID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PeriodID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ForemanID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ForemanID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Notes",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Notes",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Priority",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Priority",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "PeriodPriority",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PeriodPriority",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "IssuedByID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "IssuedByID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "IssuedDate",
+									"type": "String"
+								},
+								"sink": {
+									"name": "IssuedDate",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ExportedByID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ExportedByID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ExportedDate",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ExportedDate",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "CreatedByID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "CreatedByID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "CreatedDate",
+									"type": "String"
+								},
+								"sink": {
+									"name": "CreatedDate",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ModifiedByID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ModifiedByID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ModifiedDate",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ModifiedDate",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ParentID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ParentID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "DurationInDays",
+									"type": "String"
+								},
+								"sink": {
+									"name": "DurationInDays",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "CWPStartDate",
+									"type": "String"
+								},
+								"sink": {
+									"name": "CWPStartDate",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "CWPEndDate",
+									"type": "String"
+								},
+								"sink": {
+									"name": "CWPEndDate",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "PrelimDurationInHours",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PrelimDurationInHours",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "DurationInWorkDays",
+									"type": "String"
+								},
+								"sink": {
+									"name": "DurationInWorkDays",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "MatlPercAllocated",
+									"type": "String"
+								},
+								"sink": {
+									"name": "MatlPercAllocated",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "RestartDate",
+									"type": "String"
+								},
+								"sink": {
+									"name": "RestartDate",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "RemainingDuration",
+									"type": "String"
+								},
+								"sink": {
+									"name": "RemainingDuration",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ModifiedStartDate",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ModifiedStartDate",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ModifiedDuration",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ModifiedDuration",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "RestrictionID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "RestrictionID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "RestrictionPercentage",
+									"type": "String"
+								},
+								"sink": {
+									"name": "RestrictionPercentage",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "RestrictionNotes",
+									"type": "String"
+								},
+								"sink": {
+									"name": "RestrictionNotes",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Text1",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Text1",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Text2",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Text2",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Text3",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Text3",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Text4",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Text4",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Text5",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Text5",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ConstructionManagerID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ConstructionManagerID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "SuperID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "SuperID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "GeneralForemanID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "GeneralForemanID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "FieldEngineerID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "FieldEngineerID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "CoordinatorID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "CoordinatorID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "CompletedBy",
+									"type": "String"
+								},
+								"sink": {
+									"name": "CompletedBy",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "CompletedDate",
+									"type": "String"
+								},
+								"sink": {
+									"name": "CompletedDate",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "IWPStatusID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "IWPStatusID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "IWP_Status",
+									"type": "String"
+								},
+								"sink": {
+									"name": "IWP_Status",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Progress_Status",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Progress_Status",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Supervisor_Name",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Supervisor_Name",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Construction_Manager_Name",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Construction_Manager_Name",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Foreman_Name",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Foreman_Name",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Field_Engineer_Name",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Field_Engineer_Name",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Coordinator_Name",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Coordinator_Name",
+									"type": "String"
+								}
+							}
+						]
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_iwp_raw",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_iwp_sitepro_raw_ltst",
+						"type": "DatasetReference"
+					}
+				]
+			},
+			{
+				"name": "Check Combined File non zero Bytes",
+				"type": "GetMetadata",
+				"dependsOn": [
+					{
+						"activity": "cp_Get_Latest_File",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_iwp_sitepro_raw_ltst",
+						"type": "DatasetReference"
+					},
+					"fieldList": [
+						"size",
+						"exists"
+					],
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true
+					},
+					"formatSettings": {
+						"type": "DelimitedTextReadSettings"
+					}
+				}
+			},
+			{
+				"name": "if_File_Exists_Copy_to_Synapse",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Check Combined File non zero Bytes",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@greater(activity('Check Combined File non zero Bytes').output.Size, 2)",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "Copy Raw file To Synapse Stage Table",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": true
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "SqlDWSink",
+									"preCopyScript": "truncate table gpd.NCSA_IWP",
+									"allowPolyBase": true,
+									"polyBaseSettings": {
+										"rejectValue": 0,
+										"rejectType": "value",
+										"useTypeDefault": true
+									},
+									"disableMetricsCollection": false
+								},
+								"enableStaging": true,
+								"stagingSettings": {
+									"linkedServiceName": {
+										"referenceName": "ADLSG2 TimeAnalytics DEV",
+										"type": "LinkedServiceReference"
+									},
+									"path": "mdr-raw-data/Polybase_Staging_Space"
+								},
+								"translator": {
+									"type": "TabularTranslator",
+									"mappings": [
+										{
+											"source": {
+												"name": "ActivityID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ActivityID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ScheduleResourceID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ScheduleResourceID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Name",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Name",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ScheduleOffset",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ScheduleOffset",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ROCID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ROCID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PeriodID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PeriodID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ForemanID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ForemanID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Priority",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Priority",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PeriodPriority",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PeriodPriority",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "IssuedByID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "IssuedByID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "IssuedDate",
+												"type": "String"
+											},
+											"sink": {
+												"name": "IssuedDate",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ExportedByID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ExportedByID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ExportedDate",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ExportedDate",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "CreatedByID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "CreateByID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ModifiedByID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ModifiedByID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "CreatedDate",
+												"type": "String"
+											},
+											"sink": {
+												"name": "CreatedDate",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ModifiedDate",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ModifiedDate",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ParentID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ParentID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "DurationInDays",
+												"type": "String"
+											},
+											"sink": {
+												"name": "DurationInDays",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "CWPStartDate",
+												"type": "String"
+											},
+											"sink": {
+												"name": "CWPStartDate",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "CWPEndDate",
+												"type": "String"
+											},
+											"sink": {
+												"name": "CWPEndDate",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PrelimDurationInHours",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PrelimDurationInHours",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "DurationInWorkDays",
+												"type": "String"
+											},
+											"sink": {
+												"name": "DurationInWorkDays",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "RestartDate",
+												"type": "String"
+											},
+											"sink": {
+												"name": "RestartDate",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "RemainingDuration",
+												"type": "String"
+											},
+											"sink": {
+												"name": "RemainingDuration",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ModifiedStartDate",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ModifiedStartDate",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ModifiedDuration",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ModifiedDuration",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "RestrictionID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "RestrictionID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "RestrictionPercentage",
+												"type": "String"
+											},
+											"sink": {
+												"name": "RestrictionPercentage",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "RestrictionNotes",
+												"type": "String"
+											},
+											"sink": {
+												"name": "RestrictionNotes",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Text1",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Text1",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Text2",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Text2",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Text3",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Text3",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Text4",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Text4",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Text5",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Text5",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ConstructionManagerID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ConstructionManagerID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "SuperID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "SuperID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GeneralForemanID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GeneralForemanID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "FieldEngineerID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "FieldEngineerID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "CoordinatorID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "CoordinatorID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "CompletedBy",
+												"type": "String"
+											},
+											"sink": {
+												"name": "CompletedBy",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "CompletedDate",
+												"type": "String"
+											},
+											"sink": {
+												"name": "CompletedDate",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "IWPStatusID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "IWPStatusID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "project_id",
+												"type": "String"
+											},
+											"sink": {
+												"name": "project_id",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "MatlPercAllocated",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MatlPercAllocated",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "CostCode",
+												"type": "String"
+											},
+											"sink": {
+												"name": "CostCode",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "UOM",
+												"type": "String"
+											},
+											"sink": {
+												"name": "UOM",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Description",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Description",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Notes",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Notes",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Activity_Code",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Activity_Code",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Schedule_Resource_Code",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Schedule_Resource_Code",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "IWP_Status",
+												"type": "String"
+											},
+											"sink": {
+												"name": "IWP_Status",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Progress_Status",
+												"type": "String"
+											},
+											"sink": {
+												"name": "progress_status",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Supervisor_Name",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Supervisor_Name",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Construction_Manager_Name",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Construction_Manager_Name",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Foreman_Name",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Foreman_Name",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Field_Engineer_Name",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Field_Engineer_Name",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Coordinator_Name",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Coordinator_Name",
+												"type": "String"
+											}
+										}
+									]
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_adlsg2_csv_iwp_sitepro_raw_ltst",
+									"type": "DatasetReference"
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_AzureSynapseAnalytics_iwp_sitepro_stage",
+									"type": "DatasetReference"
+								}
+							]
+						}
+					]
+				}
+			},
+			{
+				"name": "Delete Temp combined File",
+				"type": "Delete",
+				"dependsOn": [
+					{
+						"activity": "if_File_Exists_Copy_to_Synapse",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_iwp_sitepro_raw_ltst",
+						"type": "DatasetReference"
+					},
+					"enableLogging": false,
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true
+					}
+				}
+			},
+			{
+				"name": "Set start date_Current_Date_Time",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Set start date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "currentdatetime",
+					"value": {
+						"value": "@string(utcnow())",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "usp_update_project_key",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Delete Temp combined File",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[usp_update_project_key_generic]",
+					"storedProcedureParameters": {
+						"project_id_name": {
+							"value": "project_id",
+							"type": "String"
+						},
+						"table_name": {
+							"value": "gpd.NCSA_IWP",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "linkedservice_DEV_entanalytics_synapse",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "SP Update Control Table Last Run Date",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "SPU_Load_dim_entp_IWP",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+					"storedProcedureParameters": {
+						"pParameterCode": {
+							"value": "start_date",
+							"type": "String"
+						},
+						"pParameterValue": {
+							"value": {
+								"value": "@formatDateTime(utcnow(),'yyyy-MM-dd HH:mm:ss')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": "Sitepro",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "linkedservice_DEV_entanalytics_synapse",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"variables": {
+			"v_lrd_raw_to_synp": {
+				"type": "String"
+			},
+			"currentdatetime": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/NCSA/7.IWP"
+		},
+		"annotations": [],
+		"lastPublishTime": "2021-04-16T07:10:43Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

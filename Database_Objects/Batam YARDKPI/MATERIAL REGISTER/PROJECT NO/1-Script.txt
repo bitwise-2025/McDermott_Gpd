@@ -1,0 +1,62 @@
+DECLARE @subsourcenk  INT
+IF NOT EXISTS(SELECT * FROM dim_ent_sub_source WHERE sub_source_name='SHAREPOINT')
+BEGIN
+SET @subsourcenk = (SELECT max(dim_ent_sub_source_nk) +1 from dim_ent_sub_source)
+
+insert into dim_ent_Sub_Source 
+(dim_ent_sub_source_nk,start_date,end_date,hash_code,active,created_date_time,
+modified_date_time,late_arrival_flag,dim_ent_source_nk,source_name,sub_source_name)
+values
+(@subsourcenk,'1900-01-01 00:00:00.000','2050-12-31 00:00:00.000','SHAREPOINT',1,
+'2023-01-23 08:22:12.643',NULL,'N',2,'SYSTEM','SHAREPOINT')
+
+END
+
+begin tran
+delete from plp_pipeline where pipeline_code IN 
+('pl_yardkpi_project_no_source_to_stage',
+'pl_yardkpi_project_no_raw_to_synapse',
+'pl_yardkpi_project_no_master_pipelines')
+
+delete from plp_pipeline_parameter where pipeline_code IN 
+('pl_yardkpi_project_no_source_to_stage',
+'pl_yardkpi_project_no_raw_to_synapse',
+'pl_yardkpi_project_no_master_pipelines')
+
+
+delete from plp_parameter_value where pipeline_code IN 
+('pl_yardkpi_project_no_source_to_stage',
+'pl_yardkpi_project_no_raw_to_synapse',
+'pl_yardkpi_project_no_master_pipelines')
+
+
+
+INSERT INTO plp_pipeline VALUES( 'pl_yardkpi_project_no_source_to_stage',	'YARDKPI', 'MR From source to Stage',	NULL,	1,	'chhaya.kotian@mcdermott.com',	'2022-08-09 10:55:00.000',	9	)
+INSERT INTO plp_pipeline VALUES( 'pl_yardkpi_project_no_raw_to_synapse',	'YARDKPI', 'MR From Raw to Synapse',	NULL,	1,	'chhaya.kotian@mcdermott.com',	'2022-08-09 05:58:00.000',	9	)
+INSERT INTO plp_pipeline VALUES( 'pl_yardkpi_project_no_master_pipelines',	'YARDKPI', 'MR From master pipeline',	NULL,	1,	'chhaya.kotian@mcdermott.com',	'2022-08-09 10:55:00.000',	9	)
+INSERT INTO plp_pipeline_parameter VALUES(	'pl_yardkpi_project_no_source_to_stage',	'YardKPI',	'end_date',	2,	'end_date',	'IN',	'NULL',	1,	'chhaya.kotian@mcdermott.com',	'2022-07-07 14:09:00.000'	)
+INSERT INTO plp_pipeline_parameter VALUES(	'pl_yardkpi_project_no_source_to_stage',	'YardKPI',	'sub_source_name',	8,	'sub_source_name',	'IN',	'NULL',	1,	'chhaya.kotian@mcdermott.com',	'2022-07-07 14:09:00.000'	)
+INSERT INTO plp_pipeline_parameter VALUES(	'pl_yardkpi_project_no_source_to_stage',	'YardKPI',	'start_date',	1,	'start_date',	'IN',	'NULL',	1,	'chhaya.kotian@mcdermott.com',	'2022-07-07 14:09:00.000'	)
+INSERT INTO plp_pipeline_parameter VALUES(	'pl_yardkpi_project_no_source_to_stage',	'YardKPI',	'source_name',	7,	'source_name',	'IN',	'NULL',	1,	'chhaya.kotian@mcdermott.com',	'2022-07-07 14:09:00.000'	)
+INSERT INTO plp_pipeline_parameter VALUES(	'pl_yardkpi_project_no_source_to_stage',	'YardKPI',	'file_name',	5,	'file_name',	'IN',	'NULL',	1,	'chhaya.kotian@mcdermott.com',	'2022-07-07 14:09:00.000'	)
+INSERT INTO plp_pipeline_parameter VALUES(	'pl_yardkpi_project_no_source_to_stage',	'YardKPI',	'file_system',	3,	'file_system',	'IN',	'NULL',	1,	'chhaya.kotian@mcdermott.com',	'2022-07-07 14:09:00.000'	)
+INSERT INTO plp_pipeline_parameter VALUES(	'pl_yardkpi_project_no_source_to_stage',	'YardKPI',	'file_merge_start_date',	6,	'file_merge_start_date',	'IN',	'NULL',	1,	'chhaya.kotian@mcdermott.com',	'2022-07-07 14:09:00.000'	)
+INSERT INTO plp_pipeline_parameter VALUES(	'pl_yardkpi_project_no_source_to_stage',	'YardKPI',	'folder_path',	4,	'folder_path',	'IN',	'NULL',	1,	'chhaya.kotian@mcdermott.com',	'2022-07-07 14:09:00.000'	)
+INSERT INTO plp_pipeline_parameter VALUES(	'pl_yardkpi_project_no_raw_to_synapse',	'YardKPI',	'end_date',	2,	'end_date',	'IN',	'NULL',	1,	'chhaya.kotian@mcdermott.com',	'2022-04-22 10:53:23.817'	)
+INSERT INTO plp_pipeline_parameter VALUES(	'pl_yardkpi_project_no_raw_to_synapse',	'YardKPI',	'start_date',	1,	'start_date',	'IN',	'NULL',	1,	'chhaya.kotian@mcdermott.com',	'2022-08-09 06:04:00.000'	)
+INSERT INTO plp_pipeline_parameter VALUES(	'pl_yardkpi_project_no_raw_to_synapse',	'YardKPI',	'sub_source_code',	3,	'sub_source_code',	'IN',	'NULL',	1,	'chhaya.kotian@mcdermott.com',	'2022-04-22 10:53:23.817'	)
+INSERT INTO plp_pipeline_parameter VALUES(	'pl_yardkpi_project_no_raw_to_synapse',	'YardKPI',	'processing_year',	4,	'processing_year',	'IN',	'NULL',	1,	'chhaya.kotian@mcdermott.com',	'2022-04-22 10:53:23.817'	)
+insert into plp_parameter_value values (	'end_date',	'currdate',	1,	'chhaya.kotian@mcdermott.com',	'2022-07-28 13:05:00.000',	'pl_yardkpi_project_no_source_to_stage',	'YardKPI'	)
+insert into plp_parameter_value values (	'file_system',	'mdr-staging-data',	1,	'chhaya.kotian@mcdermott.com',	'2022-07-07 14:21:00.000',	'pl_yardkpi_project_no_source_to_stage',	'YardKPI'	)
+insert into plp_parameter_value values (	'folder_path',	'Project_Data/YARDKPI/project_no',	1,	'chhaya.kotian@mcdermott.com',	'2022-07-07 14:21:00.000',	'pl_yardkpi_project_no_source_to_stage',	'YardKPI'	)
+insert into plp_parameter_value values (	'file_merge_start_date',	'2021-12-15T08:56:23.7227192Z',	1	,'chhaya.kotian@mcdermott.com',	'2022-07-07 14:21:00.000',	'pl_yardkpi_project_no_source_to_stage',	'YardKPI'	)
+insert into plp_parameter_value values (	'sub_source_name',	'YardKPI',	1	,'chhaya.kotian@mcdermott.com',	'2022-07-07 14:21:00.000',	'pl_yardkpi_project_no_source_to_stage',	'YardKPI'	)
+insert into plp_parameter_value values (	'source_name',	'SYSTEM',	1,	'chhaya.kotian@mcdermott.com',	'2022-07-07 14:21:00.000',	'pl_yardkpi_project_no_source_to_stage',	'YardKPI'	)
+insert into plp_parameter_value values (	'start_date',	'2022-05-05 11:29:56',	1,	'chhaya.kotian@mcdermott.com',	'2022-07-07 14:21:00.000',	'pl_yardkpi_project_no_source_to_stage',	'YardKPI'	)
+insert into plp_parameter_value values (	'file_name',	'project_no',	1	,'chhaya.kotian@mcdermott.com',	'2022-07-07 14:21:00.000',	'pl_yardkpi_project_no_source_to_stage',	'YardKPI'	)
+insert into plp_parameter_value values (	'start_date',	'2022-05-05 11:29:56',	1	,'chhaya.kotian@mcdermott.com',	'2022-01-26 00:25:58.137',	'pl_yardkpi_project_no_raw_to_synapse',	'YardKPI'	)
+insert into plp_parameter_value values (	'end_date',	'currdate',	1	,'chhaya.kotian@mcdermott.com',	'2022-01-26 00:25:58.137',	'pl_yardkpi_project_no_raw_to_synapse',	'YardKPI'	)
+insert into plp_parameter_value values (	'processing_year',	'2020',	1	,'chhaya.kotian@mcdermott.com',	'2022-01-26 00:25:58.137',	'pl_yardkpi_project_no_raw_to_synapse',	'YardKPI'	)
+insert into plp_parameter_value values (	'sub_source_name',	'YardKPI',	1	,'chhaya.kotian@mcdermott.com',	'2022-01-26 00:25:58.137',	'pl_yardkpi_project_no_raw_to_synapse',	'YardKPI'	)
+
+--commit

@@ -1,0 +1,36 @@
+{
+	"name": "df_rpsr_smat_stage_to_raw",
+	"properties": {
+		"description": "Data Flow to pull data from ADLS Stg to ADLS Raw.",
+		"folder": {
+			"name": "Projects/NCSA/SMAT"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_smat_rpsr_stg",
+						"type": "DatasetReference"
+					},
+					"name": "srcSMATRPSRReportStage"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_smat_rpsr_raw",
+						"type": "DatasetReference"
+					},
+					"name": "snkSMATRPSRRaw"
+				}
+			],
+			"transformations": [
+				{
+					"name": "setFileName"
+				}
+			],
+			"script": "parameters{\n\tWildPath as string,\n\tFileName as string\n}\nsource(output(\n\t\tECI_ID as string,\n\t\tPROJ_NB as string,\n\t\tR_CODE as string,\n\t\tR_SUPP as string,\n\t\tACTUAL_IND as string,\n\t\tORDER_SEQ as string,\n\t\tSHORT_DESC as string,\n\t\tSCHEDULED_DATE as string,\n\t\tPLANNED_DATE as string,\n\t\tACTUAL_DATE as string,\n\t\tECI_COMMENT as string,\n\t\tECI_ATTR_4 as string,\n\t\tDISCIPLINE as string,\n\t\tDEPARTMENT as string,\n\t\tPLANNED_BUYER as string,\n\t\tREQ_DESC as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\trowUrlColumn: 'Filename',\n\twildcardPaths:[($WildPath + $FileName + '.csv')]) ~> srcSMATRPSRReportStage\nsrcSMATRPSRReportStage derive(Filename = concat($WildPath,substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',$FileName,'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv')) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\trowUrlColumn:'Filename',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tmapColumn(\n\t\tECI_ID,\n\t\tPROJ_NB,\n\t\tR_CODE,\n\t\tR_SUPP,\n\t\tACTUAL_IND,\n\t\tORDER_SEQ,\n\t\tSHORT_DESC,\n\t\tSCHEDULED_DATE,\n\t\tPLANNED_DATE,\n\t\tACTUAL_DATE,\n\t\tECI_COMMENT,\n\t\tECI_ATTR_4,\n\t\tDISCIPLINE,\n\t\tDEPARTMENT,\n\t\tPLANNED_BUYER,\n\t\tREQ_DESC,\n\t\tFilename\n\t)) ~> snkSMATRPSRRaw"
+		}
+	}
+}

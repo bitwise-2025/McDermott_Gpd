@@ -1,0 +1,119 @@
+{
+	"name": "df_po_versions_flattening",
+	"properties": {
+		"folder": {
+			"name": "Projects/Payment Dashboard/Po Versions"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_xml_po_versions_source_stage_decoded_xml",
+						"type": "DatasetReference"
+					},
+					"name": "SrcXMl"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_po_versions_source_stage_final_csv",
+						"type": "DatasetReference"
+					},
+					"name": "SnkCsv"
+				}
+			],
+			"transformations": [
+				{
+					"name": "XmlToCsvflatten"
+				},
+				{
+					"name": "addLoadDetails"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          DATA_DS as (G_1 as (ACCEPTED_DATE as string, APPROVAL_INSTANCE_ID as long, APPROVED_DATE as string, B2B_MESSAGE_ID as string, BASE_VERSION_ID as long, CANCEL_BACKING_REQ_FLAG as string, CANCEL_DOC_FLAG as boolean, CHANGE_ORDER_DESC as string, CHANGE_ORDER_STATUS as string, CHANGE_ORDER_TYPE as string, CHECKLIST_ID as string, COMMUNICATED_DATE as string, COMMUNICATED_TO_SUPPLIER as boolean, COUNTERPROPOSAL_FLAG as boolean, CO_CANCELED_BY_ROLE as string, CO_CANCELED_BY_USER_ID as long, CO_CANCELED_FLAG as boolean, CO_NUM as string, CO_SEQUENCE as integer, CREATED_BY as string, CREATED_BY_PROGRAM_NAME as string, CREATION_DATE as string, DOCUMENT_DATE as string, ESIGN_ENVELOPE_ID as string, ESIGN_ENVELOPE_OWNER as string, ESIGN_ENVELOPE_STATUS as string, ESIGN_ENV_OWNER_EMAIL_ID as string, EXTERNAL_SYSTEM_FLAG as boolean, FUNDS_STATUS as string, JOB_DEFINITION_NAME as string, JOB_DEFINITION_PACKAGE as string, LAST_SUBMITTER_ID as long, LAST_UPDATED_BY as string, LAST_UPDATE_DATE as string, LAST_UPDATE_LOGIN as string, MODIFIED_FLAG as boolean, OBJECT_VERSION_NUMBER as short, ONLINE_REPORT_ID as long, ORIGINATOR_ID as long, ORIGINATOR_ROLE as string, OVERRIDE_USER_ID as string, PENDING_RESPONSE_ROLE as string, PO_HEADER_ID as long, PROCESSED_DATE as string, PROGRAM_APP_NAME as string, PROGRAM_NAME as string, REJECTED_FLAG as boolean, RELATED_RCO_VERSION_ID as string, REQUESTER_PROPOSAL_FLAG as boolean, REQUEST_DATE as string, REQUEST_ID as string, REVISION_NUM as short, SUBMITTED_DATE as string, VERSION_ID as long, WITHDRAWN_FLAG as boolean)[])",
+				"     ),",
+				"     allowSchemaDrift: false,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     validationMode: 'none',",
+				"     namespaces: true) ~> SrcXMl",
+				"SrcXMl foldDown(unroll(DATA_DS.G_1),",
+				"     mapColumn(",
+				"          ACCEPTED_DATE = DATA_DS.G_1.ACCEPTED_DATE,",
+				"          APPROVAL_INSTANCE_ID = DATA_DS.G_1.APPROVAL_INSTANCE_ID,",
+				"          APPROVED_DATE = DATA_DS.G_1.APPROVED_DATE,",
+				"          B2B_MESSAGE_ID = DATA_DS.G_1.B2B_MESSAGE_ID,",
+				"          BASE_VERSION_ID = DATA_DS.G_1.BASE_VERSION_ID,",
+				"          CANCEL_BACKING_REQ_FLAG = DATA_DS.G_1.CANCEL_BACKING_REQ_FLAG,",
+				"          CANCEL_DOC_FLAG = DATA_DS.G_1.CANCEL_DOC_FLAG,",
+				"          CHANGE_ORDER_DESC = DATA_DS.G_1.CHANGE_ORDER_DESC,",
+				"          CHANGE_ORDER_STATUS = DATA_DS.G_1.CHANGE_ORDER_STATUS,",
+				"          CHANGE_ORDER_TYPE = DATA_DS.G_1.CHANGE_ORDER_TYPE,",
+				"          CHECKLIST_ID = DATA_DS.G_1.CHECKLIST_ID,",
+				"          COMMUNICATED_DATE = DATA_DS.G_1.COMMUNICATED_DATE,",
+				"          COMMUNICATED_TO_SUPPLIER = DATA_DS.G_1.COMMUNICATED_TO_SUPPLIER,",
+				"          COUNTERPROPOSAL_FLAG = DATA_DS.G_1.COUNTERPROPOSAL_FLAG,",
+				"          CO_CANCELED_BY_ROLE = DATA_DS.G_1.CO_CANCELED_BY_ROLE,",
+				"          CO_CANCELED_BY_USER_ID = DATA_DS.G_1.CO_CANCELED_BY_USER_ID,",
+				"          CO_CANCELED_FLAG = DATA_DS.G_1.CO_CANCELED_FLAG,",
+				"          CO_NUM = DATA_DS.G_1.CO_NUM,",
+				"          CO_SEQUENCE = DATA_DS.G_1.CO_SEQUENCE,",
+				"          CREATED_BY = DATA_DS.G_1.CREATED_BY,",
+				"          CREATED_BY_PROGRAM_NAME = DATA_DS.G_1.CREATED_BY_PROGRAM_NAME,",
+				"          CREATION_DATE = DATA_DS.G_1.CREATION_DATE,",
+				"          DOCUMENT_DATE = DATA_DS.G_1.DOCUMENT_DATE,",
+				"          ESIGN_ENVELOPE_ID = DATA_DS.G_1.ESIGN_ENVELOPE_ID,",
+				"          ESIGN_ENVELOPE_OWNER = DATA_DS.G_1.ESIGN_ENVELOPE_OWNER,",
+				"          ESIGN_ENVELOPE_STATUS = DATA_DS.G_1.ESIGN_ENVELOPE_STATUS,",
+				"          ESIGN_ENV_OWNER_EMAIL_ID = DATA_DS.G_1.ESIGN_ENV_OWNER_EMAIL_ID,",
+				"          EXTERNAL_SYSTEM_FLAG = DATA_DS.G_1.EXTERNAL_SYSTEM_FLAG,",
+				"          FUNDS_STATUS = DATA_DS.G_1.FUNDS_STATUS,",
+				"          JOB_DEFINITION_NAME = DATA_DS.G_1.JOB_DEFINITION_NAME,",
+				"          JOB_DEFINITION_PACKAGE = DATA_DS.G_1.JOB_DEFINITION_PACKAGE,",
+				"          LAST_SUBMITTER_ID = DATA_DS.G_1.LAST_SUBMITTER_ID,",
+				"          LAST_UPDATED_BY = DATA_DS.G_1.LAST_UPDATED_BY,",
+				"          LAST_UPDATE_DATE = DATA_DS.G_1.LAST_UPDATE_DATE,",
+				"          LAST_UPDATE_LOGIN = DATA_DS.G_1.LAST_UPDATE_LOGIN,",
+				"          MODIFIED_FLAG = DATA_DS.G_1.MODIFIED_FLAG,",
+				"          OBJECT_VERSION_NUMBER = DATA_DS.G_1.OBJECT_VERSION_NUMBER,",
+				"          ONLINE_REPORT_ID = DATA_DS.G_1.ONLINE_REPORT_ID,",
+				"          ORIGINATOR_ID = DATA_DS.G_1.ORIGINATOR_ID,",
+				"          ORIGINATOR_ROLE = DATA_DS.G_1.ORIGINATOR_ROLE,",
+				"          OVERRIDE_USER_ID = DATA_DS.G_1.OVERRIDE_USER_ID,",
+				"          PENDING_RESPONSE_ROLE = DATA_DS.G_1.PENDING_RESPONSE_ROLE,",
+				"          PO_HEADER_ID = DATA_DS.G_1.PO_HEADER_ID,",
+				"          PROCESSED_DATE = DATA_DS.G_1.PROCESSED_DATE,",
+				"          PROGRAM_APP_NAME = DATA_DS.G_1.PROGRAM_APP_NAME,",
+				"          PROGRAM_NAME = DATA_DS.G_1.PROGRAM_NAME,",
+				"          REJECTED_FLAG = DATA_DS.G_1.REJECTED_FLAG,",
+				"          RELATED_RCO_VERSION_ID = DATA_DS.G_1.RELATED_RCO_VERSION_ID,",
+				"          REQUESTER_PROPOSAL_FLAG = DATA_DS.G_1.REQUESTER_PROPOSAL_FLAG,",
+				"          REQUEST_DATE = DATA_DS.G_1.REQUEST_DATE,",
+				"          REQUEST_ID = DATA_DS.G_1.REQUEST_ID,",
+				"          REVISION_NUM = DATA_DS.G_1.REVISION_NUM,",
+				"          SUBMITTED_DATE = DATA_DS.G_1.SUBMITTED_DATE,",
+				"          VERSION_ID = DATA_DS.G_1.VERSION_ID,",
+				"          WITHDRAWN_FLAG = DATA_DS.G_1.WITHDRAWN_FLAG",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> XmlToCsvflatten",
+				"XmlToCsvflatten derive(source_name = 'SYSTEM',",
+				"          sub_source_name = 'R2P',",
+				"          created_date_time = currentUTC()) ~> addLoadDetails",
+				"addLoadDetails sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     partitionFileNames:['Po_Versions.csv'],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> SnkCsv"
+			]
+		}
+	}
+}

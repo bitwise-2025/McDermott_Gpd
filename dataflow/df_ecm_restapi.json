@@ -1,0 +1,111 @@
+{
+	"name": "df_ecm_restapi",
+	"properties": {
+		"folder": {
+			"name": "Projects/ECM"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_ecm_restapi_json",
+						"type": "DatasetReference"
+					},
+					"name": "RestAPISource"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_employeesdata_api_stage",
+						"type": "DatasetReference"
+					},
+					"name": "sink"
+				}
+			],
+			"transformations": [
+				{
+					"name": "FlattenRestApiData"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          status as integer,",
+				"          message as string,",
+				"          total as integer,",
+				"          employeesdata as (country as string, missingfolders as string, modifiedAt as string, oracleID as string, employeeStatus as string, terminationDate as string, createdAt as string, sitename as string, siteid as string, noderef as string, modifiedBy as string, businesslinetwo as string, area as string, documentCreationDate as string, allowTermination as string, hireDate as string, author as string, isExecutive as string, businesslineone as string, planInactiveDate as string, createdBy as string, legacyID as string, location as string, subfolders as (documents as (recorddetails as (identifier as string, recordSearchDispositionAuthority as string, recordSearchDispositionActionAsOf as string, recordOriginatingLocation as string, rootNodeRef as string, recordSearchDispositionEventsEligible as string, recordOriginatingCreationDate as string, recordSearchDispositionInstructions as string, holddetails as string, recordSearchDispositionPeriod as string, recordSearchHasDispositionSchedule as string, recordOriginatingUserId as string, recordSearchVitalRecordReviewPeriod as string, recordSearchDispositionEvents as string, frozenBy as string, recordSearchDispositionActionName as string, recordSearchVitalRecordReviewPeriodExpression as string, recordSearchDispositionPeriodExpression as string, frozenAt as string, origionalName as string, cutoffdate as string), name as string, noofpages as string, noderef as string)[], name as string, noderef as string)[], directdocuments as string, employeename as string)[]",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     documentForm: 'documentPerLine') ~> RestAPISource",
+				"RestAPISource foldDown(unroll(employeesdata.subfolders.documents, employeesdata),",
+				"     mapColumn(",
+				"          employeesdata_country = employeesdata.country,",
+				"          missingfolders = employeesdata.missingfolders,",
+				"          employeesdata_modifiedAt = employeesdata.modifiedAt,",
+				"          employeesdata_oracleID = employeesdata.oracleID,",
+				"          employeesdata_employeeStatus = employeesdata.employeeStatus,",
+				"          employeesdata_terminationDate = employeesdata.terminationDate,",
+				"          employeesdata_createdAt = employeesdata.createdAt,",
+				"          employeesdata_sitename = employeesdata.sitename,",
+				"          employeesdata_siteid = employeesdata.siteid,",
+				"          employeesdata_noderef = employeesdata.noderef,",
+				"          employeesdata_modifiedBy = employeesdata.modifiedBy,",
+				"          employeesdata_businesslinetwo = employeesdata.businesslinetwo,",
+				"          employeesdata_area = employeesdata.area,",
+				"          employeesdata_documentCreationDate = employeesdata.documentCreationDate,",
+				"          employeesdata_allowTermination = employeesdata.allowTermination,",
+				"          employeesdata_hireDate = employeesdata.hireDate,",
+				"          employeesdata_author = employeesdata.author,",
+				"          employeesdata_isExecutive = employeesdata.isExecutive,",
+				"          employeesdata_businesslineone = employeesdata.businesslineone,",
+				"          employeesdata_planInactiveDate = employeesdata.planInactiveDate,",
+				"          employeesdata_createdBy = employeesdata.createdBy,",
+				"          employeesdata_legacyID = employeesdata.legacyID,",
+				"          employeesdata_location = employeesdata.location,",
+				"          recorddetails_identifier = employeesdata.subfolders.documents.recorddetails.identifier,",
+				"          recorddetails_recordSearchDispositionAuthority = employeesdata.subfolders.documents.recorddetails.recordSearchDispositionAuthority,",
+				"          recorddetails_recordSearchDispositionActionAsOf = employeesdata.subfolders.documents.recorddetails.recordSearchDispositionActionAsOf,",
+				"          recorddetails_recordOriginatingLocation = employeesdata.subfolders.documents.recorddetails.recordOriginatingLocation,",
+				"          recorddetails_rootNodeRef = employeesdata.subfolders.documents.recorddetails.rootNodeRef,",
+				"          recorddetails_recordSearchDispositionEventsEligible = employeesdata.subfolders.documents.recorddetails.recordSearchDispositionEventsEligible,",
+				"          recorddetails_recordOriginatingCreationDate = employeesdata.subfolders.documents.recorddetails.recordOriginatingCreationDate,",
+				"          recorddetails_recordSearchDispositionInstructions = employeesdata.subfolders.documents.recorddetails.recordSearchDispositionInstructions,",
+				"          recorddetails_holddetails = employeesdata.subfolders.documents.recorddetails.holddetails,",
+				"          recorddetails_recordSearchDispositionPeriod = employeesdata.subfolders.documents.recorddetails.recordSearchDispositionPeriod,",
+				"          recorddetails_recordSearchHasDispositionSchedule = employeesdata.subfolders.documents.recorddetails.recordSearchHasDispositionSchedule,",
+				"          recorddetails_recordOriginatingUserId = employeesdata.subfolders.documents.recorddetails.recordOriginatingUserId,",
+				"          recorddetails_recordSearchVitalRecordReviewPeriod = employeesdata.subfolders.documents.recorddetails.recordSearchVitalRecordReviewPeriod,",
+				"          recorddetails_recordSearchDispositionEvents = employeesdata.subfolders.documents.recorddetails.recordSearchDispositionEvents,",
+				"          recorddetails_frozenBy = employeesdata.subfolders.documents.recorddetails.frozenBy,",
+				"          recorddetails_recordSearchDispositionActionName = employeesdata.subfolders.documents.recorddetails.recordSearchDispositionActionName,",
+				"          recorddetails_recordSearchVitalRecordReviewPeriodExpression = employeesdata.subfolders.documents.recorddetails.recordSearchVitalRecordReviewPeriodExpression,",
+				"          recorddetails_recordSearchDispositionPeriodExpression = employeesdata.subfolders.documents.recorddetails.recordSearchDispositionPeriodExpression,",
+				"          recorddetails_frozenAt = employeesdata.subfolders.documents.recorddetails.frozenAt,",
+				"          recorddetails_origionalName = employeesdata.subfolders.documents.recorddetails.origionalName,",
+				"          recorddetails_cutoffdate = employeesdata.subfolders.documents.recorddetails.cutoffdate,",
+				"          documents_name = employeesdata.subfolders.documents.name,",
+				"          documents_noofpages = employeesdata.subfolders.documents.noofpages,",
+				"          documents_noderef = employeesdata.subfolders.documents.noderef,",
+				"          subfolders_name = employeesdata.subfolders.name,",
+				"          subfolders_noderef = employeesdata.subfolders.noderef,",
+				"          employeesdata_directdocuments = employeesdata.directdocuments,",
+				"          employeesdata_employeename = employeesdata.employeename",
+				"     ),",
+				"     skipDuplicateMapInputs: false,",
+				"     skipDuplicateMapOutputs: false) ~> FlattenRestApiData",
+				"FlattenRestApiData sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     partitionFileNames:['EmployeesData.csv'],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> sink"
+			]
+		}
+	}
+}

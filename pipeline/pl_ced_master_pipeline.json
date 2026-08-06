@@ -1,0 +1,328 @@
+{
+	"name": "pl_ced_master_pipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "pl_ced_excel_P6_master",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_ced_excel_P6_master",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "pl_ced_excel_roombook_master",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "pl_ced_excel_P6_master",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_ced_excel_roombook_master",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "pl_ced_idocs_master",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "pl_ced_excel_roombook_master",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_ced_idocs_master",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "pl_ced_oracle_edw_document_tag_comparison",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_ced_oracle_edw_document_tag_comparison",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "pl_ced_oracle_edw_eqa_data",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "pl_ced_oracle_edw_document_tag_comparison",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_ced_oracle_edw_eqa_data",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "pl_ced_oracle_edw_source_dates",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "pl_ced_oracle_edw_eqa_data",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_ced_oracle_edw_source_dates",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "pl_ced_oracle_edw_tag_document_comparison",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "pl_ced_oracle_edw_source_dates",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_ced_oracle_edw_tag_document_comparison",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "pl_ced_oracle_edw_tags_reconstructed_done",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_ced_oracle_edw_tags_reconstructed_done",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "pl_ced_oracle_edw_tags_reconstructed_error",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "pl_ced_oracle_edw_tags_reconstructed_done",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_ced_oracle_edw_tags_reconstructed_error",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "pl_ced_oracle_ro_user_sppid_equip",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "pl_ced_oracle_edw_tags_reconstructed_error",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_ced_oracle_ro_user_sppid_equip",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "pl_ced_oracle_ro_user_sppid_piperun_list",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "pl_ced_oracle_ro_user_sppid_equip",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_ced_oracle_ro_user_sppid_piperun_list",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "pl_ced_oracle_ro_user_sppid_rdspp",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "pl_ced_idocs_master",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_ced_oracle_ro_user_sppid_rdspp",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "pl_ced_oracle_spi_bal_spi_equip",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_ced_oracle_spi_bal_spi_equip",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "pl_ced_smat_po_details_master",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "pl_ced_oracle_spi_bal_spi_equip",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_ced_smat_po_details_master",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "pl_ced_excel_Aveva_E3D_master",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "pl_ced_smat_po_details_master",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_ced_excel_Aveva_E3D_master",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			}
+		],
+		"folder": {
+			"name": "Projects/Central Engineering Database"
+		},
+		"annotations": []
+	}
+}

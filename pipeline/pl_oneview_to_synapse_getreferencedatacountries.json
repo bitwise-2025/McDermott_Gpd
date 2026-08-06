@@ -1,0 +1,373 @@
+{
+	"name": "pl_oneview_to_synapse_getreferencedatacountries",
+	"properties": {
+		"activities": [
+			{
+				"name": "lk_get_pipeline_parameters",
+				"description": "Get the parameters to be used in this pipeline",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": {
+									"value": "NetworkFolder",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Send Email On Failure",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Copy Latest Data To Synapse Stage Table",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "POST",
+					"headers": {
+						"Content-Type": "application/json"
+					},
+					"url": "https://prod-31.eastus.logic.azure.com:443/workflows/03d7da5abbab4215a05aeaceae3b96fa/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=asuyutHtoSxGFURsj1-A6AKRiNLdXZ4mTnZvZ17_8hI",
+					"connectVia": {
+						"referenceName": "integrationRuntimeEast2",
+						"type": "IntegrationRuntimeReference"
+					},
+					"body": {
+						"value": "{\n    \"DataFactoryName\": \"@{pipeline().DataFactory}\",\n    \"PipelineName\": \"@{pipeline().Pipeline}\",\n    \"ErrorMessage\": \"Pipeline Failed\",\n    \"EmailTo\": \"@{activity('lk_get_pipeline_parameters_2').output.firstRow.ncsa_master_pipeline_email_to}\",\n    \"Activity\":  \"pl_invoice_header_ap_invoices_all\"\n}",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "lk_get_pipeline_parameters_2",
+				"description": "Get the parameters to be used in this pipeline",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": "pl_ncsa_master_pipelines"
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "EMAIL"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "CP_oneview_to_synapse_Src_to_Stage",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "lk_get_pipeline_parameters_2",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "BinarySource",
+						"storeSettings": {
+							"type": "HttpReadSettings",
+							"requestMethod": "POST",
+							"additionalHeaders": {
+								"value": "Content-Type: text/xml; charset=UTF-8\nSOAPAction: http://DS.Modules.Core.Contracts.Queries/CustomDataApi/CustomDataApiQueryService/GetData\nContent-Length: 649\nConnection: Keep-Alive\nUser-Agent: Apache-HttpClient/4.1.1 (java 1.5)",
+								"type": "Expression"
+							},
+							"requestBody": {
+								"value": "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\"\n        xmlns:cus=\"http://DS.Modules.Core.Contracts.Queries/CustomDataApi\"\n        xmlns:arr=\"http://schemas.microsoft.com/2003/10/Serialization/Arrays\">\n   <soapenv:Header>\n     <wsse:Security xmlns:wsse=\"http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd\"\n                    xmlns:wsu=\"http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd\">\n        <wsse:UsernameToken wsu:Id=\"UsernameToken-1\">\n            <wsse:Username>RLD_TestAPI</wsse:Username>\n            <wsse:Password Type=\"http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText\">UHhTkH8r!PEXU</wsse:Password>\n            <wsse:Nonce EncodingType=\"http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary\">Ta6zLKVVytCclXygmFUqpA==</wsse:Nonce>\n            <wsu:Created>{{created}}</wsu:Created>\n        </wsse:UsernameToken>\n     </wsse:Security>\n   </soapenv:Header>\n   <soapenv:Body>\n      <cus:GetData>\n         <!--Optional:-->\n         <cus:entitySetName>GetReferenceDataCountries</cus:entitySetName>\n         <!--Optional:-->\n         <cus:parameters>\n            <!--Zero or more repetitions:-->\n            <arr:KeyValueOfstringstring>\n               <arr:Key></arr:Key>\n               <arr:Value></arr:Value>\n            </arr:KeyValueOfstringstring>\n         </cus:parameters>\n         <!--Optional:-->\n         <cus:odataQueryOptions>?</cus:odataQueryOptions>\n      </cus:GetData>\n   </soapenv:Body>\n</soapenv:Envelope>",
+								"type": "Expression"
+							},
+							"requestTimeout": ""
+						},
+						"formatSettings": {
+							"type": "BinaryReadSettings"
+						}
+					},
+					"sink": {
+						"type": "BinarySink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						}
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_http_oneview_getreferencedatacountries",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_adlsg2_binary_oneview_getreferencedatacountries_source_stage",
+						"type": "DatasetReference"
+					}
+				]
+			},
+			{
+				"name": "df_oneview_stage_data_decoding_flattening",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [
+					{
+						"activity": "CP_oneview_to_synapse_Src_to_Stage",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "df_oneview_stage_data_decoding_flattening",
+						"type": "DataFlowReference"
+					},
+					"compute": {
+						"coreCount": 32,
+						"computeType": "MemoryOptimized"
+					},
+					"traceLevel": "Fine"
+				}
+			},
+			{
+				"name": "Copy Latest Data To Synapse Stage Table",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "df_oneview_stage_data_decoding_flattening",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": false,
+							"enablePartitionDiscovery": false
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"preCopyScript": "truncate table [rpy].[Oneview_GetReferenceDataCountries]",
+						"allowCopyCommand": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ADLSG2 TimeAnalytics DEV",
+							"type": "LinkedServiceReference"
+						},
+						"path": "mdr-raw-data/Polybase_Staging_Space"
+					},
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "CountryId",
+									"type": "String"
+								},
+								"sink": {
+									"name": "CountryId",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Name",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Name",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "CountryCode2Digits",
+									"type": "String"
+								},
+								"sink": {
+									"name": "CountryCode2Digits",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "CountryCode3Digits",
+									"type": "String"
+								},
+								"sink": {
+									"name": "CountryCode3Digits",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Nationality",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Nationality",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "source_name",
+									"type": "String"
+								},
+								"sink": {
+									"name": "source_name",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "sub_source_name",
+									"type": "String"
+								},
+								"sink": {
+									"name": "sub_source_name",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "created_date_time",
+									"type": "String"
+								},
+								"sink": {
+									"name": "created_date_time",
+									"type": "DateTime"
+								}
+							}
+						]
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_oneview_getreferencedatacountries_stage_final_flatten_csv",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_AzureSynapseAnalytics_oneview_getreferencedatacountries",
+						"type": "DatasetReference"
+					}
+				]
+			}
+		],
+		"variables": {
+			"v_end_date": {
+				"type": "String"
+			},
+			"v_start_date": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/NCSA/OneView"
+		},
+		"annotations": []
+	}
+}

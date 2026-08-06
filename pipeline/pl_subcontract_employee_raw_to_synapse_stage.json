@@ -1,0 +1,573 @@
+{
+	"name": "pl_subcontract_employee_raw_to_synapse_stage",
+	"properties": {
+		"activities": [
+			{
+				"name": "lkup_Get_Pipeline_parameters",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "TimeWorks"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "combine_raw_files_to_1_file",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "lkup_Get_Pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"additionalColumns": [
+							{
+								"name": "load_date",
+								"value": {
+									"value": "@utcnow()",
+									"type": "Expression"
+								}
+							}
+						],
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": true,
+							"modifiedDatetimeStart": {
+								"value": "@formatDateTime(activity('lkup_Get_Pipeline_parameters').output.firstRow.last_run_start_date, 'yyyy-MM-ddTHH:mm:ss.ff')",
+								"type": "Expression"
+							},
+							"modifiedDatetimeEnd": {
+								"value": "@if(equals(activity('lkup_Get_Pipeline_parameters').output.firstRow.last_run_end_date, 'currdate') ,formatDateTime(utcnow(), 'yyyy-MM-ddTHH:mm:ss.ff' ),formatDateTime(activity('lkup_Get_Pipeline_parameters').output.firstRow.last_run_end_date, 'yyyy-MM-ddTHH:mm:ss.ff'))",
+								"type": "Expression"
+							},
+							"wildcardFolderPath": "Project_Data/NCSA/Subcontract_Employee",
+							"wildcardFileName": "subcontract_employee*.csv"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings",
+							"copyBehavior": "MergeFiles"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": "ts_itime_combined.csv"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "EmplId",
+									"type": "String"
+								},
+								"sink": {
+									"name": "EmplId",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Name",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Name",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "CompanyCode",
+									"type": "String"
+								},
+								"sink": {
+									"name": "CompanyCode",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "CompanyName",
+									"type": "String"
+								},
+								"sink": {
+									"name": "CompanyName",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "JobClass",
+									"type": "String"
+								},
+								"sink": {
+									"name": "JobClass",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "WorkDate",
+									"type": "String"
+								},
+								"sink": {
+									"name": "WorkDate",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "DailyHours",
+									"type": "String"
+								},
+								"sink": {
+									"name": "DailyHours",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "employee_legacy_number",
+									"type": "String"
+								},
+								"sink": {
+									"name": "employee_legacy_number",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "load_date",
+									"type": "String"
+								},
+								"sink": {
+									"name": "load_date",
+									"type": "String"
+								}
+							}
+						]
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_subcontract_employee_raw",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_subcontract_employee_raw_combined",
+						"type": "DatasetReference"
+					}
+				]
+			},
+			{
+				"name": "Check Combined CSV File non zero Bytes",
+				"type": "GetMetadata",
+				"dependsOn": [
+					{
+						"activity": "combine_raw_files_to_1_file",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_subcontract_employee_raw_combined",
+						"type": "DatasetReference"
+					},
+					"fieldList": [
+						"size",
+						"exists"
+					],
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true
+					},
+					"formatSettings": {
+						"type": "DelimitedTextReadSettings"
+					}
+				}
+			},
+			{
+				"name": "if_File_Exists_Copy_to_Synapse",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Check Combined CSV File non zero Bytes",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@greater(activity('Check Combined CSV File non zero Bytes').output.size, 2)",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "Copy Raw Folder To Synapse Stage Table",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"additionalColumns": [
+										{
+											"name": "employee_type",
+											"value": {
+												"value": "Sub Contract",
+												"type": "Expression"
+											}
+										}
+									],
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "SqlDWSink",
+									"preCopyScript": "truncate table gpd.NCSA_SubcontractEmployee",
+									"allowPolyBase": true,
+									"polyBaseSettings": {
+										"rejectValue": 0,
+										"rejectType": "value",
+										"useTypeDefault": true
+									},
+									"disableMetricsCollection": false
+								},
+								"enableStaging": true,
+								"stagingSettings": {
+									"linkedServiceName": {
+										"referenceName": "ADLSG2 TimeAnalytics DEV",
+										"type": "LinkedServiceReference"
+									},
+									"path": "mdr-raw-data/Polybase_Staging_Space"
+								},
+								"translator": {
+									"type": "TabularTranslator",
+									"mappings": [
+										{
+											"source": {
+												"name": "EmplId",
+												"type": "String"
+											},
+											"sink": {
+												"name": "EmplId",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Name",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Name",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "CompanyCode",
+												"type": "String"
+											},
+											"sink": {
+												"name": "CompanyCode",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "CompanyName",
+												"type": "String"
+											},
+											"sink": {
+												"name": "CompanyName",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "JobClass",
+												"type": "String"
+											},
+											"sink": {
+												"name": "JobClass",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "WorkDate",
+												"type": "String"
+											},
+											"sink": {
+												"name": "WorkDate",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "DailyHours",
+												"type": "String"
+											},
+											"sink": {
+												"name": "DailyHours",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "employee_type",
+												"type": "String"
+											},
+											"sink": {
+												"name": "employee_type",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "employee_legacy_number",
+												"type": "String"
+											},
+											"sink": {
+												"name": "employee_legacy_number",
+												"type": "String"
+											}
+										}
+									]
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_adlsg2_csv_subcontract_employee_raw_combined",
+									"type": "DatasetReference"
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_AzureSynapseAnalytics_subcontract_employee_stage",
+									"type": "DatasetReference"
+								}
+							]
+						},
+						{
+							"name": "SP Update Control Table Last Run Date",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Copy Raw Folder To Synapse Stage Table",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+								"storedProcedureParameters": {
+									"pParameterCode": {
+										"value": {
+											"value": "last_run_start_date",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"pParameterValue": {
+										"value": {
+											"value": "@activity('lkup_Get_Pipeline_parameters').output.firstRow.run_start_datetime",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"pPipelineCode": {
+										"value": {
+											"value": "@pipeline().Pipeline",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"pPipelineSubCode": {
+										"value": {
+											"value": "TimeWorks",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "AzureSynapseDB_DEV",
+								"type": "LinkedServiceReference"
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Delete Temp combined File",
+				"type": "Delete",
+				"dependsOn": [
+					{
+						"activity": "if_File_Exists_Copy_to_Synapse",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_subcontract_employee_raw_combined",
+						"type": "DatasetReference"
+					},
+					"enableLogging": false,
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true
+					}
+				}
+			},
+			{
+				"name": "load_sp_dim_entp_subcontract_emp",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Delete Temp combined File",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[generic_load_dim_v2]",
+					"storedProcedureParameters": {
+						"debug_flag": {
+							"value": "N",
+							"type": "String"
+						},
+						"execute_flag": {
+							"value": "Y",
+							"type": "String"
+						},
+						"load_name": {
+							"value": "dim_entp_subcontract_emp",
+							"type": "String"
+						},
+						"rkValidationRequired": {
+							"value": "Y",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "linkedservice_DEV_entanalytics_synapse",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"folder": {
+			"name": "Projects/NCSA/9.Time Works Subcontract Employee"
+		},
+		"annotations": [],
+		"lastPublishTime": "2021-04-16T07:11:19Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

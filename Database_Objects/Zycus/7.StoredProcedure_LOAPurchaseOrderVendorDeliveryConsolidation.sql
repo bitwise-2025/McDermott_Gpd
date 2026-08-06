@@ -1,0 +1,80 @@
+USE [EnterpriseAnalyticsStaging]
+GO
+
+/****** Object:  StoredProcedure [Filter].[LOAPurchaseOrderVendorDeliveryConsolidation]    Script Date: 3/7/2024 11:54:48 AM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE PROCEDURE [Filter].[LOAPurchaseOrderVendorDeliveryConsolidation]
+AS
+BEGIN
+
+	SET NOCOUNT ON;
+	Declare @BatchDate datetime;
+	Set @BatchDate = getDate();
+
+	INSERT INTO EnterpriseAnalytics.Logistics.PurchaseOrderVendorDelivery
+	([PROJ_ID] ,[PROJECT_DESCRIPTION] 
+	,[JDE_PROJ_NUMBER] ,[OPERATING_GROUP] ,[SECTOR] ,[Client]
+      ,[JDE_SUPPLIER_NUMBER] ,[SUPPLIER_NAME] ,[IDENT] ,[TAG_NUMBER] ,[Description] ,[PO_NUMBER] ,[SPM_POH_ID]
+      ,[SUPPLEMENT] ,[SUP_POH_ID] ,[POLI_POS] ,[POLI_SUB_POS] ,[ITEM_SHIP_POS] ,[ITEM_SHIP_SUB_POS]
+      ,[FREIGHT_TERM] ,[POLI_QTY] ,[UOM] ,[ISH_PROM_CONTRACT_DATE] ,[MATL_RECV_DATE] ,[ISH_ITEM_SHIP_QTY]
+      ,[RECV_QTY] ,[RECV_TYPE] ,[RECV_DOC_NUMBER] ,[JDE_PO_NUMBER] 
+	  ,[JDE_PO_LINE] ,[ORDER_TYPE] ,[ORDER_SUFFIX]
+      ,[ORDER_COMPANY] ,[ACCOUNT_COMPANY] ,[SPM_PO_NUMBER] ,[SytemOfRecord] ,[SORId], BatchDate
+)
+	SELECT distinct ISNULL(SPM.PROJ_ID,LOA.[PROJ_ID]) as PROJ_ID
+      ,ISNULL(SPM.[PROJECT_DESCRIPTION],cast(LOA.[PROJECT_DESCRIPTION] as nvarchar(150))) as [PROJECT_DESCRIPTION]
+      ,ISNULL(SPM.[JDE_PROJ_NUMBER],LOA.[JDE_PROJ_NUMBER]) as [JDE_PROJ_NUMBER]
+      ,ISNULL(SPM.[OPERATING_GROUP],LOA.[OPERATING_GROUP]) as [OPERATING_GROUP]
+      ,ISNULL(SPM.[SECTOR],LOA.[SECTOR]) as [SECTOR]
+      ,ISNULL(SPM.[Client],LOA.[Client]) as [Client]
+      ,ISNULL(SPM.[JDE_SUPPLIER_NUMBER] ,cast(LOA.[JDE_SUPPLIER_NUMBER] as nvarchar)) as [JDE_SUPPLIER_NUMBER]
+      ,ISNULL(SPM.[SUPPLIER_NAME], LOA.[SUPPLIER_NAME]) as [SUPPLIER_NAME]
+      ,ISNULL(SPM.[IDENT],LOA.[IDENT]) as [IDENT]
+      ,ISNULL(SPM.[TAG_NUMBER],LOA.[TAG_NUMBER]) as [TAG_NUMBER]
+      ,ISNULL(SPM.[Description], LOA.[Description]) as [Description]
+      ,ISNULL(SPM.[PO_NUMBER],LOA.[PO_NUMBER]) as [PO_NUMBER]
+      ,ISNULL(SPM.[SPM_POH_ID], LOA.[SPM_POH_ID]) as [SPM_POH_ID]
+      ,ISNULL(SPM.[SUPPLEMENT], LOA.[SUPPLEMENT]) as [SUPPLEMENT]
+      ,ISNULL(SPM.[SUP_POH_ID],LOA.[SUP_POH_ID]) as [SUP_POH_ID]
+      ,ISNULL(SPM.[POLI_POS],LOA.[POLI_POS]) as [POLI_POS]
+      ,ISNULL(SPM.[POLI_SUB_POS],LOA.[POLI_SUB_POS]) as [POLI_SUB_POS]
+      ,ISNULL(SPM.[ITEM_SHIP_POS],cast(LOA.[ITEM_SHIP_POS] as nvarchar)) as [ITEM_SHIP_POS]
+      ,ISNULL(SPM.[ITEM_SHIP_SUB_POS],cast(LOA.[ITEM_SHIP_SUB_POS] as nvarchar)) as [ITEM_SHIP_SUB_POS]
+      ,ISNULL(SPM.[FREIGHT_TERM],LOA.[FREIGHT_TERM]) as [FREIGHT_TERM]
+      ,ISNULL(SPM.[POLI_QTY],LOA.[POLI_QTY]) as [POLI_QTY]
+      ,ISNULL(SPM.[UOM], LOA.[UOM]) as [UOM]
+      ,ISNULL(SPM.[ISH_PROM_CONTRACT_DATE],LOA.[ISH_PROM_CONTRACT_DATE]) as [ISH_PROM_CONTRACT_DATE]
+      ,ISNULL(SPM.[MATL_RECV_DATE],LOA.[MATL_RECV_DATE]) as [MATL_RECV_DATE]
+      ,ISNULL(cast(SPM.[ISH_ITEM_SHIP_QTY] as nvarchar), LOA.[ISH_ITEM_SHIP_QTY]) as [ISH_ITEM_SHIP_QTY]
+      ,ISNULL(SPM.[RECV_QTY], LOA.[RECV_QTY]) as [RECV_QTY]
+      ,ISNULL(SPM.[RECV_TYPE], LOA.[RECV_TYPE]) as [RECV_TYPE]
+      ,ISNULL(SPM.[RECV_DOC_NUMBER],cast(LOA.[RECV_DOC_NUMBER] as nvarchar)) as [RECV_DOC_NUMBER]
+      ,LOA.[JDE_PO_NUMBER]
+      ,LOA.[JDE_PO_LINE]
+      ,LOA.[ORDER_TYPE]
+      ,LOA.[ORDER_SUFFIX]
+      ,LOA.[ORDER_COMPANY]
+      ,LOA.[ACCOUNT_COMPANY]
+      ,LOA.[SPM_PO_NUMBER]	 
+	 -- ,SPM.PO_NUMBER  
+	  ,ISNULL(SPM.SystemOfRecord, LOA.SystemOfRecord) as SystemOfRecord
+	  ,ISNULL(SPM.SORId, LOA.SORId) as SORId
+	  ,@BatchDate
+--	 ,CASE Right(ltrim(rtrim(LOA.SPM_PO_NUMBER)), 3) WHEN '-00' THEN LEFT(LTRIM(RTRIM(LOA.SPM_PO_NUMBER)), LEN(LTRIM(RTRIM(LOA.SPM_PO_NUMBER))) - 3) ELSE LTRIM(RTRIM(LOA.SPM_PO_NUMBER)) END
+--	,Right(ltrim(rtrim(LOA.SPM_PO_NUMBER)), 3)	
+	  --,Format(cast(SPM.POLI_POS as decimal(18,8)) + cast(SPM.POLI_SUB_POS as decimal(18,8))/1000.0, 'g18') as  testerpolypos
+  FROM [Staging].[LOAPurchaseOrderVendorDelivery] as LOA
+	FULL OUTER JOIN [Staging].SPMPurchaseOrderVendorDelivery SPM
+		ON 
+		CASE Right(ltrim(rtrim(LOA.SPM_PO_NUMBER)), 3) WHEN '-00' THEN LEFT(LTRIM(RTRIM(LOA.SPM_PO_NUMBER)), LEN(LTRIM(RTRIM(LOA.SPM_PO_NUMBER))) - 3) ELSE LTRIM(RTRIM(LOA.SPM_PO_NUMBER)) END
+		 = ltrim(rtrim(SPM.PO_NUMBER))
+		AND	 Format(cast(LOA.JDE_PO_LINE as decimal(18,8)), 'g18') = Format(cast(SPM.POLI_POS as decimal(18,8)) + cast(SPM.POLI_SUB_POS as decimal(18,8))/1000.0, 'g18') 
+--where SPM.[TAG_NUMBER] = 'G6_A_8'
+
+END
+GO

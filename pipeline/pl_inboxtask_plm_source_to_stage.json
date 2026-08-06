@@ -1,0 +1,320 @@
+{
+	"name": "pl_inboxtask_plm_source_to_stage",
+	"properties": {
+		"activities": [
+			{
+				"name": "Update last run DTM",
+				"description": "Update last run details",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "df_inboxtask_plm_raw_to_synapse",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "00.07:00:00",
+					"retry": 1,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+					"storedProcedureParameters": {
+						"pParameterCode": {
+							"value": "plm_run_last_dtm",
+							"type": "String"
+						},
+						"pParameterValue": {
+							"value": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.run_start_datetime",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": "NetworkFolder",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseDB_DEV",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "lk_get_pipeline_parameters",
+				"description": "Get Pipeline Parameters",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderStoredProcedureName": "[dbo].[getPipelineParametersValues]",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "NetworkFolder"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azuresynapse_dev",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Copy Source DT InboxTask to Stage",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "00.07:00:00",
+					"retry": 1,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "OracleSource",
+						"oracleReaderQuery": {
+							"value": "select \na.*\n,b.TYPE as Person_Type\n,b.FIRSTNAME\n,b.LASTNAME\n,p.PROJECT_NUMBER as project_number\n\n,(CASE WHEN r.IDOCSENGDOC_ID = ed.ID THEN ed.MDR_IDOCSDOCID\n     WHEN r.IDOCSVENDORDOC_ID = vd.ID THEN vd.MDR_IDOCSDOCID\n\t ELSE NULL\n\t END ) AS MDR_IDOCSDOCID\n\n\nfrom PLMDATA.PLM_DT_INBOXTASK a\nleft join PLMDATA.PLM_DT_PERSON b on a.OWNER=b.NAME\nleft join PLMDATA.PLM_DT_ROUTE r on a.ROUTE_ID=r.ID\nleft join PLMDATA.PLM_DT_IDOCS_ENG_DOCUMENT ed on r.IDOCSENGDOC_ID = ed.ID\nleft join PLMDATA.PLM_DT_IDOCS_VENDOR_DOCUMENT vd on r.IDOCSVENDORDOC_ID = vd.ID\nleft join PLMDATA.PLM_DT_PROJECT p on p.PROJECT_NAME=a.PROJECT\n",
+							"type": "Expression"
+						},
+						"partitionOption": "None",
+						"convertDecimalToInteger": false,
+						"queryTimeout": "02:00:00"
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_oracle_plm_source",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_generic",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_ds_filesystem": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.file_system",
+								"type": "Expression"
+							},
+							"p_ds_directory": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+								"type": "Expression"
+							},
+							"p_ds_filename": {
+								"value": "DT_InboxTask.csv",
+								"type": "Expression"
+							},
+							"p_ds_first_row_header": true
+						}
+					}
+				]
+			},
+			{
+				"name": "Copy Source RF InboxTask to Stage",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "OracleSource",
+						"oracleReaderQuery": "SELECT * FROM PLMDATA.PLM_RF_INBOXTASK",
+						"partitionOption": "None",
+						"queryTimeout": "02:00:00"
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_oracle_plm_source",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_generic",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_ds_filesystem": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.file_system",
+								"type": "Expression"
+							},
+							"p_ds_directory": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+								"type": "Expression"
+							},
+							"p_ds_filename": "RF_INBOXTASK.csv",
+							"p_ds_first_row_header": true
+						}
+					}
+				]
+			},
+			{
+				"name": "df_inboxtask_plm_raw_to_synapse",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [
+					{
+						"activity": "Copy Source DT InboxTask to Stage",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Copy Source RF InboxTask to Stage",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "df_inboxtask_plm_raw_to_synapse",
+						"type": "DataFlowReference",
+						"parameters": {
+							"p_ds_stgfilepath": {
+								"value": "'@{activity('lk_get_pipeline_parameters').output.firstRow.folder_path}'",
+								"type": "Expression"
+							},
+							"p_ds_snkstgpath": {
+								"value": "'@{activity('lk_get_pipeline_parameters').output.firstRow.folder_path}'",
+								"type": "Expression"
+							},
+							"p_ds_snkstgfilename": {
+								"value": "'@{concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')}'",
+								"type": "Expression"
+							}
+						},
+						"datasetParameters": {
+							"SrcInboxTaskDTFile": {
+								"p_ds_stgfilepath": {
+									"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+									"type": "Expression"
+								}
+							},
+							"SrcInboxTaskRFFile": {
+								"p_ds_stgfilepath": {
+									"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+									"type": "Expression"
+								}
+							},
+							"snkJsonSTG": {
+								"p_ds_snkstgpath": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path"
+							}
+						}
+					},
+					"integrationRuntime": {
+						"referenceName": "integrationRuntimeEast2",
+						"type": "IntegrationRuntimeReference"
+					},
+					"traceLevel": "Fine"
+				}
+			}
+		],
+		"variables": {
+			"max_created_datetime": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/NCSA/PLM/PLM InboxTask"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-09-29T07:20:56Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

@@ -1,0 +1,70 @@
+{
+	"name": "df_pqr_project_master_stage_to_raw",
+	"properties": {
+		"folder": {
+			"name": "Projects/YARD KPI/PQR"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_pqr_project_master_stg_generic",
+						"type": "DatasetReference"
+					},
+					"name": "PQRProjectMasterStage"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_gen2_pqr_project_master_raw_tgt",
+						"type": "DatasetReference"
+					},
+					"name": "PCMRaw"
+				}
+			],
+			"transformations": [
+				{
+					"name": "SetFileName"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          Id as string,",
+				"          ContentTypeID as string,",
+				"          ContentType as string,",
+				"          Title as string,",
+				"          Modified as string,",
+				"          Created as string,",
+				"          CreatedById as string,",
+				"          ModifiedById as string,",
+				"          Owshiddenversion as string,",
+				"          Version as string,",
+				"          Path as string,",
+				"          ComplianceAssetId as string,",
+				"          ProjectCode as string,",
+				"          ActiveStatus as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> PQRProjectMasterStage",
+				"PQRProjectMasterStage derive(FileName = concat('Project_Data/YARDKPI/PQR/',substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/','PQR_PROJECT_MASTER_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv'),",
+				"          source_code = 'SYSTEM',",
+				"          sub_source_code = 'Sharepoint',",
+				"          create_date_time = currentUTC()) ~> SetFileName",
+				"SetFileName sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     rowUrlColumn:'FileName',",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     mapColumn(",
+				"          each(match(true()))",
+				"     )) ~> PCMRaw"
+			]
+		}
+	}
+}

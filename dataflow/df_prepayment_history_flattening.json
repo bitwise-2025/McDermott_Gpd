@@ -1,0 +1,91 @@
+{
+	"name": "df_prepayment_history_flattening",
+	"properties": {
+		"folder": {
+			"name": "Projects/Payment Dashboard/Prepayment History"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_xml_prepayment_history_source_stage_decoded_xml",
+						"type": "DatasetReference"
+					},
+					"name": "SrcXMl"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_prepayment_history_source_stage_final_csv",
+						"type": "DatasetReference"
+					},
+					"name": "SnkCsv"
+				}
+			],
+			"transformations": [
+				{
+					"name": "XmlToCsvflatten"
+				},
+				{
+					"name": "addLoadDetails"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          DATA_DS as (G_1 as (ACCOUNTING_DATE as string, ACCOUNTING_EVENT_ID as string, BC_EVENT_ID as string, CREATED_BY as string, CREATION_DATE as string, GAIN_LOSS_INDICATOR as string, HISTORICAL_FLAG as string, INVOICE_ADJUSTMENT_EVENT_ID as string, INVOICE_ID as string, INVOICE_LINE_NUMBER as string, JOB_DEFINITION_NAME as string, JOB_DEFINITION_PACKAGE as string, LAST_UPDATED_BY as string, LAST_UPDATE_DATE as string, LAST_UPDATE_LOGIN as string, OBJECT_VERSION_NUMBER as string, ORG_ID as string, POSTED_FLAG as string, PREPAY_HISTORY_ID as string, PREPAY_INVOICE_ID as string, PREPAY_LINE_NUM as string, PROGRAM_APPLICATION_ID as string, PROGRAM_ID as string, PROGRAM_UPDATE_DATE as string, RELATED_PREPAY_APP_EVENT_ID as string, REQUEST_ID as string, TRANSACTION_TYPE as string)[])",
+				"     ),",
+				"     allowSchemaDrift: false,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     validationMode: 'none',",
+				"     namespaces: true) ~> SrcXMl",
+				"SrcXMl foldDown(unroll(DATA_DS.G_1),",
+				"     mapColumn(",
+				"          ACCOUNTING_DATE = DATA_DS.G_1.ACCOUNTING_DATE,",
+				"          ACCOUNTING_EVENT_ID = DATA_DS.G_1.ACCOUNTING_EVENT_ID,",
+				"          BC_EVENT_ID = DATA_DS.G_1.BC_EVENT_ID,",
+				"          CREATED_BY = DATA_DS.G_1.CREATED_BY,",
+				"          CREATION_DATE = DATA_DS.G_1.CREATION_DATE,",
+				"          GAIN_LOSS_INDICATOR = DATA_DS.G_1.GAIN_LOSS_INDICATOR,",
+				"          HISTORICAL_FLAG = DATA_DS.G_1.HISTORICAL_FLAG,",
+				"          INVOICE_ADJUSTMENT_EVENT_ID = DATA_DS.G_1.INVOICE_ADJUSTMENT_EVENT_ID,",
+				"          INVOICE_ID = DATA_DS.G_1.INVOICE_ID,",
+				"          INVOICE_LINE_NUMBER = DATA_DS.G_1.INVOICE_LINE_NUMBER,",
+				"          JOB_DEFINITION_NAME = DATA_DS.G_1.JOB_DEFINITION_NAME,",
+				"          JOB_DEFINITION_PACKAGE = DATA_DS.G_1.JOB_DEFINITION_PACKAGE,",
+				"          LAST_UPDATED_BY = DATA_DS.G_1.LAST_UPDATED_BY,",
+				"          LAST_UPDATE_DATE = DATA_DS.G_1.LAST_UPDATE_DATE,",
+				"          LAST_UPDATE_LOGIN = DATA_DS.G_1.LAST_UPDATE_LOGIN,",
+				"          OBJECT_VERSION_NUMBER = DATA_DS.G_1.OBJECT_VERSION_NUMBER,",
+				"          ORG_ID = DATA_DS.G_1.ORG_ID,",
+				"          POSTED_FLAG = DATA_DS.G_1.POSTED_FLAG,",
+				"          PREPAY_HISTORY_ID = DATA_DS.G_1.PREPAY_HISTORY_ID,",
+				"          PREPAY_INVOICE_ID = DATA_DS.G_1.PREPAY_INVOICE_ID,",
+				"          PREPAY_LINE_NUM = DATA_DS.G_1.PREPAY_LINE_NUM,",
+				"          PROGRAM_APPLICATION_ID = DATA_DS.G_1.PROGRAM_APPLICATION_ID,",
+				"          PROGRAM_ID = DATA_DS.G_1.PROGRAM_ID,",
+				"          PROGRAM_UPDATE_DATE = DATA_DS.G_1.PROGRAM_UPDATE_DATE,",
+				"          RELATED_PREPAY_APP_EVENT_ID = DATA_DS.G_1.RELATED_PREPAY_APP_EVENT_ID,",
+				"          REQUEST_ID = DATA_DS.G_1.REQUEST_ID,",
+				"          TRANSACTION_TYPE = DATA_DS.G_1.TRANSACTION_TYPE",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> XmlToCsvflatten",
+				"XmlToCsvflatten derive(source_name = 'SYSTEM',",
+				"          sub_source_name = 'R2P',",
+				"          created_date_time = currentUTC()) ~> addLoadDetails",
+				"addLoadDetails sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     partitionFileNames:['Prepayment_History.csv'],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> SnkCsv"
+			]
+		}
+	}
+}

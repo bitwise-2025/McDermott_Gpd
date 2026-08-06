@@ -1,0 +1,608 @@
+{
+	"name": "pl_activity_cwp_sitepro_source_to_stage",
+	"properties": {
+		"activities": [
+			{
+				"name": "cp_getsiteprocwpdata",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Set data pull date time",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"sqlReaderQuery": {
+							"value": "@concat(\n'SELECT convert(varchar(20),act.ID) stage_ncsa_activity_id, \n       convert(varchar(20),ProjectID) ProjectID\n      ,','''',pipeline().parameters.p_pl_projectid,'''',' as Project\n      , proj.ProjectDescription \n      ,[Activity]\n      ,[Description]\n      ,convert(varchar(20),[ScheduleUnit]) ScheduleUnit\n      ,convert(varchar(20),(select code from SP_ScheduleResource where ID = [ScheduleResourceID])) [ScheduleResource]\n      ,convert(varchar(20),[ActivityStatus]) ActivityStatus\n      ,convert(varchar(20),[OriginalDuration]) OriginalDuration\n      ,convert(varchar(20),[RemainingDuration]) RemainingDuration\n      ,convert(varchar(20),[ActualStart]) ActualStart\n      ,convert(varchar(20),[ActualFinish]) ActualFinish\n      ,convert(varchar(20),[BudgetLaborUnit]) BudgetLaborUnit\n      ,convert(varchar(20),[PercentCompleteType]) PercentCompleteType\n      ,convert(varchar(20),[ExecutedByType]) ExecutedByType\n      ,convert(varchar(20),[Prime]) Prime\n      ,convert(varchar(20),[SubPrime]) SubPrime\n      ,convert(varchar(20),[ScheduleWorkArea]) ScheduleWorkArea\n      ,convert(varchar(20),[ExecutedBy]) ExecutedBy\n      ,convert(varchar(20),[EarlyStartDate]) EarlyStartDate\n      ,convert(varchar(20),[EarlyFinishDate]) EarlyFinishDate\n      ,convert(varchar(20),[IsOnCriticalPath]) IsOnCriticalPath\n      ,convert(varchar(20),[TotalFloat]) TotalFloat\n      ,convert(varchar(20),[StagingReference]) StagingReference\n      ,convert(varchar(20),[CWP]) CWP\n      ,[CWPDescription]\n      ,convert(varchar(20),[EWP]) EWP\n      ,[EWPDescription],\n      '''' as dim_entp_project_nk,\n      convert(varchar(20),[ScheduleWorkArea]) S_WorkArea,\n     '''' PlannedStart,\n     ''''PlannedFinish\n  FROM [dbo].[PM_Activity] act\n  JOIN [dbo].[PM_ProjectMasterData] proj\n  on act.ProjectID = proj.ID'\n)",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "stage_ncsa_activity_id",
+									"type": "String",
+									"physicalType": "varchar"
+								},
+								"sink": {
+									"name": "stage_ncsa_activity_id",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ProjectID",
+									"type": "String",
+									"physicalType": "varchar"
+								},
+								"sink": {
+									"name": "ProjectID",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Project",
+									"type": "String",
+									"physicalType": "varchar"
+								},
+								"sink": {
+									"name": "Project",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ProjectDescription",
+									"type": "String",
+									"physicalType": "varchar"
+								},
+								"sink": {
+									"name": "ProjectDescription",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Activity",
+									"type": "String",
+									"physicalType": "varchar"
+								},
+								"sink": {
+									"name": "Activity",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Description",
+									"type": "String",
+									"physicalType": "varchar"
+								},
+								"sink": {
+									"name": "Description",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ScheduleUnit",
+									"type": "String",
+									"physicalType": "varchar"
+								},
+								"sink": {
+									"name": "ScheduleUnit",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ScheduleResource",
+									"type": "String",
+									"physicalType": "varchar"
+								},
+								"sink": {
+									"name": "ScheduleResource",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ActivityStatus",
+									"type": "String",
+									"physicalType": "varchar"
+								},
+								"sink": {
+									"name": "ActivityStatus",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "OriginalDuration",
+									"type": "String",
+									"physicalType": "varchar"
+								},
+								"sink": {
+									"name": "OriginalDuration",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "RemainingDuration",
+									"type": "String",
+									"physicalType": "varchar"
+								},
+								"sink": {
+									"name": "RemainingDuration",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ActualStart",
+									"type": "String",
+									"physicalType": "varchar"
+								},
+								"sink": {
+									"name": "ActualStart",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ActualFinish",
+									"type": "String",
+									"physicalType": "varchar"
+								},
+								"sink": {
+									"name": "ActualFinish",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "BudgetLaborUnit",
+									"type": "String",
+									"physicalType": "varchar"
+								},
+								"sink": {
+									"name": "BudgetLaborUnit",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "PercentCompleteType",
+									"type": "String",
+									"physicalType": "varchar"
+								},
+								"sink": {
+									"name": "PercentCompleteType",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ExecutedByType",
+									"type": "String",
+									"physicalType": "varchar"
+								},
+								"sink": {
+									"name": "ExecutedByType",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Prime",
+									"type": "String",
+									"physicalType": "varchar"
+								},
+								"sink": {
+									"name": "Prime",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "SubPrime",
+									"type": "String",
+									"physicalType": "varchar"
+								},
+								"sink": {
+									"name": "SubPrime",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ScheduleWorkArea",
+									"type": "String",
+									"physicalType": "varchar"
+								},
+								"sink": {
+									"name": "ScheduleWorkArea",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ExecutedBy",
+									"type": "String",
+									"physicalType": "varchar"
+								},
+								"sink": {
+									"name": "ExecutedBy",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "EarlyStartDate",
+									"type": "String",
+									"physicalType": "varchar"
+								},
+								"sink": {
+									"name": "EarlyStartDate",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "EarlyFinishDate",
+									"type": "String",
+									"physicalType": "varchar"
+								},
+								"sink": {
+									"name": "EarlyFinishDate",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "IsOnCriticalPath",
+									"type": "String",
+									"physicalType": "varchar"
+								},
+								"sink": {
+									"name": "IsOnCriticalPath",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "TotalFloat",
+									"type": "String",
+									"physicalType": "varchar"
+								},
+								"sink": {
+									"name": "TotalFloat",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "StagingReference",
+									"type": "String",
+									"physicalType": "varchar"
+								},
+								"sink": {
+									"name": "StagingReference",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "CWP",
+									"type": "String",
+									"physicalType": "varchar"
+								},
+								"sink": {
+									"name": "CWP",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "CWPDescription",
+									"type": "String",
+									"physicalType": "varchar"
+								},
+								"sink": {
+									"name": "CWPDescription",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "EWP",
+									"type": "String",
+									"physicalType": "varchar"
+								},
+								"sink": {
+									"name": "EWP",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "EWPDescription",
+									"type": "String",
+									"physicalType": "varchar"
+								},
+								"sink": {
+									"name": "EWPDescription",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "dim_entp_project_nk",
+									"type": "String",
+									"physicalType": "varchar"
+								},
+								"sink": {
+									"name": "dim_entp_project_nk",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "S_WorkArea",
+									"type": "String",
+									"physicalType": "varchar"
+								},
+								"sink": {
+									"name": "S_WorkArea",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "PlannedStart",
+									"type": "String",
+									"physicalType": "varchar"
+								},
+								"sink": {
+									"name": "PlannedStart",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "PlannedFinish",
+									"type": "String",
+									"physicalType": "varchar"
+								},
+								"sink": {
+									"name": "PlannedFinish",
+									"type": "String",
+									"physicalType": "String"
+								}
+							}
+						],
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_sitepro_prod",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_ds_dbname": {
+								"value": "@pipeline().parameters.p_pl_dbname",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_sitepro_cwp_stage",
+						"type": "DatasetReference"
+					}
+				]
+			},
+			{
+				"name": "Set data pull date time",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_run_start",
+					"value": {
+						"value": "@utcnow()",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "lk_get_pipeline_parameters",
+				"description": "Use the lookup procedure to get the last run details to be used in the next steps",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "Sitepro"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "sp_Update_Parameter",
+				"description": "Update the appropriate parameter in the parameter table",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "cp_getsiteprocwpdata",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+					"storedProcedureParameters": {
+						"pParameterValue": {
+							"value": {
+								"value": "@formatDateTime(variables('v_run_start'),'yyyy-MM-dd HH:mm:ss')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": "Sitepro",
+							"type": "String"
+						},
+						"pParameterCode": {
+							"value": "last_run_start_date",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"parameters": {
+			"p_pl_dbname": {
+				"type": "string"
+			},
+			"p_pl_projectid": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"v_run_start": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/NCSA/6.Activity and CWP"
+		},
+		"annotations": [],
+		"lastPublishTime": "2021-12-15T07:13:48Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

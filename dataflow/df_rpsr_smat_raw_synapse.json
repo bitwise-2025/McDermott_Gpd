@@ -1,0 +1,36 @@
+{
+	"name": "df_rpsr_smat_raw_synapse",
+	"properties": {
+		"description": "Data Flow to pull data from ADLS Raw to Synapse Stage.",
+		"folder": {
+			"name": "Projects/NCSA/SMAT"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_smat_rpsr_raw_latest_file",
+						"type": "DatasetReference"
+					},
+					"name": "srcSMATRPSRRaw"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_AzureSynapseAnalytics_SMAT_RPSR",
+						"type": "DatasetReference"
+					},
+					"name": "snkSMATRPSRSynapse"
+				}
+			],
+			"transformations": [
+				{
+					"name": "setProjNB"
+				}
+			],
+			"script": "source(output(\n\t\tECI_ID as string,\n\t\tPROJ_NB as string,\n\t\tR_CODE as string,\n\t\tR_SUPP as string,\n\t\tACTUAL_IND as string,\n\t\tORDER_SEQ as string,\n\t\tSHORT_DESC as string,\n\t\tSCHEDULED_DATE as string,\n\t\tPLANNED_DATE as string,\n\t\tACTUAL_DATE as string,\n\t\tECI_COMMENT as string,\n\t\tECI_ATTR_4 as string,\n\t\tDISCIPLINE as string,\n\t\tDEPARTMENT as string,\n\t\tPLANNED_BUYER as string,\n\t\tREQ_DESC as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['Project_Data/NCSA/SMAT/RPSR/Latest_SMAT_RPSR_BB3.csv']) ~> srcSMATRPSRRaw\nsrcSMATRPSRRaw derive(PROJ_NB = iif(length(PROJ_NB)>5,concat('99', PROJ_NB),PROJ_NB)) ~> setProjNB\nsetProjNB sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tinput(\n\t\tstage_smat_rpsr_id as integer,\n\t\tECI_ID as string,\n\t\tPROJ_NB as string,\n\t\tR_CODE as string,\n\t\tR_SUPP as string,\n\t\tACTUAL_IND as string,\n\t\tORDER_SEQ as string,\n\t\tSHORT_DESC as string,\n\t\tSCHEDULED_DATE as string,\n\t\tPLANNED_DATE as string,\n\t\tACTUAL_DATE as string,\n\t\tECI_COMMENT as string,\n\t\tECI_ATTR_4 as string,\n\t\tDISCIPLINE as string,\n\t\tDEPARTMENT as string,\n\t\tPLANNED_BUYER as string,\n\t\tREQ_DESC as string\n\t),\n\tdeletable:false,\n\tinsertable:true,\n\tupdateable:false,\n\tupsertable:false,\n\ttruncate:true,\n\tformat: 'table',\n\tstaged: true,\n\tallowCopyCommand: true,\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\terrorHandlingOption: 'stopOnFirstError') ~> snkSMATRPSRSynapse"
+		}
+	}
+}

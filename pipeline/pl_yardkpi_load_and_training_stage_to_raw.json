@@ -1,0 +1,136 @@
+{
+	"name": "pl_yardkpi_load_and_training_stage_to_raw",
+	"properties": {
+		"activities": [
+			{
+				"name": "df_load_and_training_stage_to_raw",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "df_load_and_training_stage_to_raw",
+						"type": "DataFlowReference",
+						"datasetParameters": {
+							"PCMWelderActivityStage": {
+								"Directory": {
+									"value": "@activity('lk_get_pipeline_parameters').output.firstRow.Directory",
+									"type": "Expression"
+								},
+								"File": {
+									"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_name",
+									"type": "Expression"
+								},
+								"FileSystem": {
+									"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+									"type": "Expression"
+								}
+							},
+							"PCMRaw": {
+								"p_ds_file_system": {
+									"value": "@activity('lk_get_pipeline_parameters').output.firstRow.output_file_system",
+									"type": "Expression"
+								},
+								"p_ds_directory": {
+									"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+									"type": "Expression"
+								},
+								"p_ds_file_name": {
+									"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_name",
+									"type": "Expression"
+								}
+							}
+						}
+					},
+					"compute": {
+						"coreCount": 8,
+						"computeType": "General"
+					},
+					"traceLevel": "Fine"
+				}
+			},
+			{
+				"name": "lk_get_pipeline_parameters",
+				"description": "Get the parameters to be used in this pipeline",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": {
+									"value": "NetworkFolder",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			}
+		],
+		"variables": {
+			"v_filename": {
+				"type": "String"
+			},
+			"v_folderpath": {
+				"type": "String"
+			},
+			"p_pl_fileexists": {
+				"type": "Boolean"
+			},
+			"v_dc_function": {
+				"type": "Array",
+				"defaultValue": [
+					"Fabrication",
+					"Assembly",
+					"Erection",
+					"Piping"
+				]
+			}
+		},
+		"folder": {
+			"name": "Projects/YARD KPI/LoadANDTraining"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-09-14T20:36:01Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

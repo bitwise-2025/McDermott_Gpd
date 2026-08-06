@@ -1,0 +1,103 @@
+{
+	"name": "df_load_and_training_stage_to_raw",
+	"properties": {
+		"folder": {
+			"name": "Projects/YARD KPI/LoadAndTraining"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_yardkpi_load_source",
+						"type": "DatasetReference"
+					},
+					"name": "PCMWelderActivityStage"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_yardkpi_load_generic",
+						"type": "DatasetReference"
+					},
+					"name": "PCMRaw"
+				}
+			],
+			"transformations": [
+				{
+					"name": "SetFileName"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          No as string,",
+				"          {Stamp No} as string,",
+				"          {Badge No} as string,",
+				"          Experience as string,",
+				"          {Reason for Marjan category Level D } as string,",
+				"          {Reason & Accumulative Repair per project (Defect By Length %)} as string,",
+				"          Name as string,",
+				"          {Start Date Training} as string,",
+				"          Discipline as string,",
+				"          {Project Contract} as string,",
+				"          {Propose To Process} as string,",
+				"          {Propose To Position} as string,",
+				"          Project as string,",
+				"          {Internal Test Date} as string,",
+				"          {Internal Test Visual} as string,",
+				"          {Official Test Date} as string,",
+				"          {Official Test Visual} as string,",
+				"          {Official Test RT} as string,",
+				"          {Official Test Bend / Macro / Fracture} as string,",
+				"          {Official Test UT & MPI & PT} as string,",
+				"          Remarks as string,",
+				"          {Final Result} as string,",
+				"          {Process & Position} as string,",
+				"          Years as string,",
+				"          {REMARKS } as string,",
+				"          {Total Days for Training & Test} as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: true,",
+				"     purgeFiles: true,",
+				"     multiLineRow: true) ~> PCMWelderActivityStage",
+				"PCMWelderActivityStage derive(FileName = concat('Project_Data/YARDKPI/Load_Training/',substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/','Database_All_for_Welding_High_Repair_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv'),",
+				"          source_code = 'Manual',",
+				"          sub_source_code = 'Excel',",
+				"          create_date_time = currentUTC(),",
+				"          No = trim(replace(replace(replace(replace(replace(replace(No,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+				"          {Stamp No} = trim(replace(replace(replace(replace(replace(replace({Stamp No},'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+				"          {Badge No} = trim(replace(replace(replace(replace(replace(replace({Badge No},'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+				"          Experience = trim(replace(replace(replace(replace(replace(replace(Experience,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+				"          Name = trim(replace(replace(replace(replace(replace(replace(Name,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+				"          {Start Date Training} = trim(replace(replace(replace(replace(replace(replace({Start Date Training},'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+				"          Discipline = trim(replace(replace(replace(replace(replace(replace({Discipline},'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+				"          {Project Contract} = trim(replace(replace(replace(replace(replace(replace({Project Contract},'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+				"          {Propose To Process} = trim(replace(replace(replace(replace(replace(replace({Propose To Process},'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+				"          {Propose To Position} = trim(replace(replace(replace(replace(replace(replace({Propose To Position},'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+				"          Project = trim(replace(replace(replace(replace(replace(replace(Project,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+				"          {Internal Test Date} = trim(replace(replace(replace(replace(replace(replace({Internal Test Date},'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+				"          {Internal Test Visual} = trim(replace(replace(replace(replace(replace(replace({Internal Test Visual},'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+				"          {Official Test Date} = trim(replace(replace(replace(replace(replace(replace({Official Test Date},'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+				"          {Official Test Visual} = trim(replace(replace(replace(replace(replace(replace({Official Test Visual},'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+				"          {Official Test RT} = trim(replace(replace(replace(replace(replace(replace({Official Test RT},'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+				"          {Official Test Bend / Macro / Fracture} = trim(replace(replace(replace(replace(replace(replace({Official Test Bend / Macro / Fracture},'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+				"          {Official Test UT & MPI & PT} = trim(replace(replace(replace(replace(replace(replace({Official Test UT & MPI & PT},'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+				"          Remarks = trim(replace(replace(replace(replace(replace(replace(Remarks,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+				"          {Final Result} = trim(replace(replace(replace(replace(replace(replace({Final Result},'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+				"          {Process & Position} = trim(replace(replace(replace(replace(replace(replace({Process & Position},'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+				"          Years = trim(replace(replace(replace(replace(replace(replace(Years,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' '))) ~> SetFileName",
+				"SetFileName sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     rowUrlColumn:'FileName',",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> PCMRaw"
+			]
+		}
+	}
+}

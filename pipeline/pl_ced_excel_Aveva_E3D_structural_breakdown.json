@@ -1,0 +1,2405 @@
+{
+	"name": "pl_ced_excel_Aveva_E3D_structural_breakdown",
+	"properties": {
+		"activities": [
+			{
+				"name": "lk_get_pipeline_parameters",
+				"description": "Get the parameters to be used in this pipeline",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": {
+									"value": "Excel",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "gm_check_sourcefile_exists",
+				"description": "Check if the combined file has any data to be loaded.",
+				"type": "GetMetadata",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "lk_get_pipeline_email_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_fileshare_excel_ced_generic",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_ds_directory": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+								"type": "Expression"
+							},
+							"p_ds_file_name": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.file_name",
+								"type": "Expression"
+							},
+							"p_ds_sheet_name": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.sheet_name",
+								"type": "Expression"
+							}
+						}
+					},
+					"fieldList": [
+						"lastModified"
+					],
+					"storeSettings": {
+						"type": "FileServerReadSettings",
+						"recursive": true,
+						"modifiedDatetimeStart": null,
+						"enablePartitionDiscovery": false
+					}
+				}
+			},
+			{
+				"name": "if_File_Exists_Copy_to_Synapse",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "gm_check_sourcefile_exists",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@greaterOrEquals(activity('gm_check_sourcefile_exists').output.lastModified,activity('lk_get_pipeline_parameters').output.firstRow.last_run_start_date)",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "sp_update_parameter",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "cd_src_to_synapse",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": {
+									"value": "[dbo].[updateIncrementPipelineParameterValue]",
+									"type": "Expression"
+								},
+								"storedProcedureParameters": {
+									"pParameterCode": {
+										"value": {
+											"value": "last_run_start_date",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"pParameterValue": {
+										"value": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.run_start_datetime",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"pPipelineCode": {
+										"value": {
+											"value": "@pipeline().Pipeline",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"pPipelineSubCode": {
+										"value": {
+											"value": "Excel",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "linkedservice_DEV_entanalytics_synapse",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "cd_src_to_synapse",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "ExcelSource",
+									"additionalColumns": [
+										{
+											"name": "Load_date",
+											"value": {
+												"value": "@activity('lk_get_pipeline_parameters').output.firstRow.run_start_datetime",
+												"type": "Expression"
+											}
+										}
+									],
+									"storeSettings": {
+										"type": "FileServerReadSettings",
+										"recursive": true,
+										"enablePartitionDiscovery": false
+									}
+								},
+								"sink": {
+									"type": "SqlDWSink",
+									"preCopyScript": {
+										"value": "INSERT INTO @{concat(activity('lk_get_pipeline_parameters').output.firstRow.target_table,'_archive')}\nSELECT * FROM @{activity('lk_get_pipeline_parameters').output.firstRow.target_table};\n \nTRUNCATE TABLE @{activity('lk_get_pipeline_parameters').output.firstRow.target_table};\n \nDELETE FROM @{concat(activity('lk_get_pipeline_parameters').output.firstRow.target_table,'_archive')}\nWHERE Load_date < DATEADD(MONTH, -6, GETDATE());",
+										"type": "Expression"
+									},
+									"allowCopyCommand": true,
+									"disableMetricsCollection": false
+								},
+								"enableStaging": true,
+								"stagingSettings": {
+									"linkedServiceName": {
+										"referenceName": "ADGLS2 SRCDEST DEV",
+										"type": "LinkedServiceReference"
+									},
+									"path": "mdr-raw-data/Polybase_Staging_Space"
+								},
+								"translator": {
+									"type": "TabularTranslator",
+									"mappings": [
+										{
+											"source": {
+												"name": "Name",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Name",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Type",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Type",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Lock",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Lock",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Owner",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Owner",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Description",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Description",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Function",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Function",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Purpose",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Purpose",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Number",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Number",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Built",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Built",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Area",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Area",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Usrweight",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Usrweight",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GrdRef",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GrdRef",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Usrwweight",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Usrwweight",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Usrcogravity",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Usrcogravity",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Usrwcogravity",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Usrwcogravity",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Position",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Position",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Orientation",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Orientation",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Desparam",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Desparam",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Uwmtxt",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Uwmtxt",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "DUnion",
+												"type": "String"
+											},
+											"sink": {
+												"name": "DUnion",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Propst",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Propst",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Skey",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Skey",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Optblo",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Optblo",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Pdname",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Pdname",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": ":MDSOrigin",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MDSOrigin"
+											}
+										},
+										{
+											"source": {
+												"name": ":MDSBuildStyl",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MDSBuildStyl"
+											}
+										},
+										{
+											"source": {
+												"name": ":MDSSref",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MDSSref"
+											}
+										},
+										{
+											"source": {
+												"name": ":MDSTmplOri",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MDSTmplOri"
+											}
+										},
+										{
+											"source": {
+												"name": "Fstatus",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Fstatus",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": ":MDSAdp",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MDSAdp"
+											}
+										},
+										{
+											"source": {
+												"name": ":MDSAdpRem",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MDSAdpRem"
+											}
+										},
+										{
+											"source": {
+												"name": "Inprtref",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Inprtref",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": ":MDSAdpLoc",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MDSAdpLoc"
+											}
+										},
+										{
+											"source": {
+												"name": "Ouprtref",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Ouprtref",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": ":MDSAdpScale",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MDSAdpScale"
+											}
+										},
+										{
+											"source": {
+												"name": ":MdsAncRef",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MdsAncRef"
+											}
+										},
+										{
+											"source": {
+												"name": ":MDSComment",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MDSComment"
+											}
+										},
+										{
+											"source": {
+												"name": ":MDSBars",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MDSBars"
+											}
+										},
+										{
+											"source": {
+												"name": ":EXCLD",
+												"type": "String"
+											},
+											"sink": {
+												"name": "EXCLD"
+											}
+										},
+										{
+											"source": {
+												"name": ":MDSBpref1",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MDSBpref1"
+											}
+										},
+										{
+											"source": {
+												"name": ":MATRSUBS",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MATRSUBS"
+											}
+										},
+										{
+											"source": {
+												"name": ":MDSBpref2",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MDSBpref2"
+											}
+										},
+										{
+											"source": {
+												"name": ":MATRSUBSDESC",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MATRSUBSDESC"
+											}
+										},
+										{
+											"source": {
+												"name": ":MDSCheck",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MDSCheck"
+											}
+										},
+										{
+											"source": {
+												"name": ":ANCINote",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ANCINote"
+											}
+										},
+										{
+											"source": {
+												"name": ":OED",
+												"type": "String"
+											},
+											"sink": {
+												"name": "OED"
+											}
+										},
+										{
+											"source": {
+												"name": ":MDSDType",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MDSDType"
+											}
+										},
+										{
+											"source": {
+												"name": ":PLATFORM-ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PLATFORM-ID"
+											}
+										},
+										{
+											"source": {
+												"name": ":MDSFrameDir",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MDSFrameDir"
+											}
+										},
+										{
+											"source": {
+												"name": ":RDS-PP",
+												"type": "String"
+											},
+											"sink": {
+												"name": "RDS-PP"
+											}
+										},
+										{
+											"source": {
+												"name": ":MDSFraMirror",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MDSFraMirror"
+											}
+										},
+										{
+											"source": {
+												"name": ":MMISTATUSVAL",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MMISTATUSVAL"
+											}
+										},
+										{
+											"source": {
+												"name": ":MDSHv",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MDSHv"
+											}
+										},
+										{
+											"source": {
+												"name": ":WEIGHT",
+												"type": "String"
+											},
+											"sink": {
+												"name": "WEIGHT"
+											}
+										},
+										{
+											"source": {
+												"name": ":MDSHVACType",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MDSHVACType"
+											}
+										},
+										{
+											"source": {
+												"name": ":LENGTH",
+												"type": "String"
+											},
+											"sink": {
+												"name": "LENGTH"
+											}
+										},
+										{
+											"source": {
+												"name": ":MDSMaxBore",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MDSMaxBore"
+											}
+										},
+										{
+											"source": {
+												"name": ":SIGNAL",
+												"type": "String"
+											},
+											"sink": {
+												"name": "SIGNAL"
+											}
+										},
+										{
+											"source": {
+												"name": ":MDSMinBore",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MDSMinBore"
+											}
+										},
+										{
+											"source": {
+												"name": ":FIREPROOF",
+												"type": "String"
+											},
+											"sink": {
+												"name": "FIREPROOF"
+											}
+										},
+										{
+											"source": {
+												"name": ":MMIGROUP",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MMIGROUP"
+											}
+										},
+										{
+											"source": {
+												"name": ":MDSPosNumMax",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MDSPosNumMax"
+											}
+										},
+										{
+											"source": {
+												"name": ":DISC-SEQ-NO",
+												"type": "String"
+											},
+											"sink": {
+												"name": "DISC-SEQ-NO"
+											}
+										},
+										{
+											"source": {
+												"name": ":MDSProjSpec",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MDSProjSpec"
+											}
+										},
+										{
+											"source": {
+												"name": ":AWP",
+												"type": "String"
+											},
+											"sink": {
+												"name": "AWP"
+											}
+										},
+										{
+											"source": {
+												"name": ":MDSRange",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MDSRange"
+											}
+										},
+										{
+											"source": {
+												"name": ":CWA",
+												"type": "String"
+											},
+											"sink": {
+												"name": "CWA"
+											}
+										},
+										{
+											"source": {
+												"name": ":MDSShopweld",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MDSShopweld"
+											}
+										},
+										{
+											"source": {
+												"name": ":CWP",
+												"type": "String"
+											},
+											"sink": {
+												"name": "CWP"
+											}
+										},
+										{
+											"source": {
+												"name": ":MDSSiteweld",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MDSSiteweld"
+											}
+										},
+										{
+											"source": {
+												"name": ":EWP",
+												"type": "String"
+											},
+											"sink": {
+												"name": "EWP"
+											}
+										},
+										{
+											"source": {
+												"name": ":MDSSpecialNo",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MDSSpecialNo"
+											}
+										},
+										{
+											"source": {
+												"name": ":PWP",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PWP"
+											}
+										},
+										{
+											"source": {
+												"name": ":MDSSplRot",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MDSSplRot"
+											}
+										},
+										{
+											"source": {
+												"name": ":IWP",
+												"type": "String"
+											},
+											"sink": {
+												"name": "IWP"
+											}
+										},
+										{
+											"source": {
+												"name": ":MDSStdSupp",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MDSStdSupp"
+											}
+										},
+										{
+											"source": {
+												"name": ":MDSSuppType",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MDSSuppType"
+											}
+										},
+										{
+											"source": {
+												"name": ":MATERIAL",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MATERIAL"
+											}
+										},
+										{
+											"source": {
+												"name": ":MDSTrimmer",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MDSTrimmer"
+											}
+										},
+										{
+											"source": {
+												"name": ":MDSViewFlip",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MDSViewFlip"
+											}
+										},
+										{
+											"source": {
+												"name": ":DESIGNDRWG",
+												"type": "String"
+											},
+											"sink": {
+												"name": "DESIGNDRWG"
+											}
+										},
+										{
+											"source": {
+												"name": ":FABDRWG",
+												"type": "String"
+											},
+											"sink": {
+												"name": "FABDRWG"
+											}
+										},
+										{
+											"source": {
+												"name": ":PID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PID"
+											}
+										},
+										{
+											"source": {
+												"name": ":GA",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GA"
+											}
+										},
+										{
+											"source": {
+												"name": ":ENGGSYSTEM",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ENGGSYSTEM"
+											}
+										},
+										{
+											"source": {
+												"name": ":ROOMNUM",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ROOMNUM"
+											}
+										},
+										{
+											"source": {
+												"name": ":DECKNUM",
+												"type": "String"
+											},
+											"sink": {
+												"name": "DECKNUM"
+											}
+										},
+										{
+											"source": {
+												"name": ":WELDNUM",
+												"type": "String"
+											},
+											"sink": {
+												"name": "WELDNUM"
+											}
+										},
+										{
+											"source": {
+												"name": ":FLANCONN",
+												"type": "String"
+											},
+											"sink": {
+												"name": "FLANCONN"
+											}
+										},
+										{
+											"source": {
+												"name": ":YARDBLOCK",
+												"type": "String"
+											},
+											"sink": {
+												"name": "YARDBLOCK"
+											}
+										},
+										{
+											"source": {
+												"name": ":DIAINCH",
+												"type": "String"
+											},
+											"sink": {
+												"name": "DIAINCH"
+											}
+										},
+										{
+											"source": {
+												"name": ":RoomNumber",
+												"type": "String"
+											},
+											"sink": {
+												"name": "RoomNumber"
+											}
+										},
+										{
+											"source": {
+												"name": ":SURFACEAREA",
+												"type": "String"
+											},
+											"sink": {
+												"name": "SURFACEAREA"
+											}
+										},
+										{
+											"source": {
+												"name": ":GALV",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GALV"
+											}
+										},
+										{
+											"source": {
+												"name": ":PIPESIZECATG",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PIPESIZECATG"
+											}
+										},
+										{
+											"source": {
+												"name": ":SCTR",
+												"type": "String"
+											},
+											"sink": {
+												"name": "SCTR"
+											}
+										},
+										{
+											"source": {
+												"name": ":TESTPACKNUM",
+												"type": "String"
+											},
+											"sink": {
+												"name": "TESTPACKNUM"
+											}
+										},
+										{
+											"source": {
+												"name": ":URI",
+												"type": "String"
+											},
+											"sink": {
+												"name": "URI"
+											}
+										},
+										{
+											"source": {
+												"name": ":STATUS",
+												"type": "String"
+											},
+											"sink": {
+												"name": "STATUS"
+											}
+										},
+										{
+											"source": {
+												"name": ":MTOSTATUS",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MTOSTATUS"
+											}
+										},
+										{
+											"source": {
+												"name": ":MTODESC",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MTODESC"
+											}
+										},
+										{
+											"source": {
+												"name": ":MTODATE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MTODATE"
+											}
+										},
+										{
+											"source": {
+												"name": ":MTOREV",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MTOREV"
+											}
+										},
+										{
+											"source": {
+												"name": ":MTOBY",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MTOBY"
+											}
+										},
+										{
+											"source": {
+												"name": ":DESIGNALLOWANCE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "DESIGNALLOWANCE"
+											}
+										},
+										{
+											"source": {
+												"name": ":AIRS",
+												"type": "String"
+											},
+											"sink": {
+												"name": "AIRS"
+											}
+										},
+										{
+											"source": {
+												"name": ":PAD",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PAD"
+											}
+										},
+										{
+											"source": {
+												"name": ":PLOC",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PLOC"
+											}
+										},
+										{
+											"source": {
+												"name": ":PNDT",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PNDT"
+											}
+										},
+										{
+											"source": {
+												"name": ":IDWG",
+												"type": "String"
+											},
+											"sink": {
+												"name": "IDWG"
+											}
+										},
+										{
+											"source": {
+												"name": ":EMPDOCID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "EMPDOCID"
+											}
+										},
+										{
+											"source": {
+												"name": ":JBCON",
+												"type": "String"
+											},
+											"sink": {
+												"name": "JBCON"
+											}
+										},
+										{
+											"source": {
+												"name": ":CONDOCID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "CONDOCID"
+											}
+										},
+										{
+											"source": {
+												"name": ":DWGTITLE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "DWGTITLE"
+											}
+										},
+										{
+											"source": {
+												"name": ":DWGREVDATE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "DWGREVDATE"
+											}
+										},
+										{
+											"source": {
+												"name": ":DWGREVSTATUS",
+												"type": "String"
+											},
+											"sink": {
+												"name": "DWGREVSTATUS"
+											}
+										},
+										{
+											"source": {
+												"name": ":ITEMDESIGNATION",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ITEMDESIGNATION"
+											}
+										},
+										{
+											"source": {
+												"name": ":SUPP",
+												"type": "String"
+											},
+											"sink": {
+												"name": "SUPP"
+											}
+										},
+										{
+											"source": {
+												"name": ":SDNFEXPREV",
+												"type": "String"
+											},
+											"sink": {
+												"name": "SDNFEXPREV"
+											}
+										},
+										{
+											"source": {
+												"name": ":SDNFEXPDOC",
+												"type": "String"
+											},
+											"sink": {
+												"name": "SDNFEXPDOC"
+											}
+										},
+										{
+											"source": {
+												"name": ":DSCR2",
+												"type": "String"
+											},
+											"sink": {
+												"name": "DSCR2"
+											}
+										},
+										{
+											"source": {
+												"name": ":EWEIG",
+												"type": "String"
+											},
+											"sink": {
+												"name": "EWEIG"
+											}
+										},
+										{
+											"source": {
+												"name": ":DSCR3",
+												"type": "String"
+											},
+											"sink": {
+												"name": "DSCR3"
+											}
+										},
+										{
+											"source": {
+												"name": ":HSRE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "HSRE"
+											}
+										},
+										{
+											"source": {
+												"name": ":EDWG",
+												"type": "String"
+											},
+											"sink": {
+												"name": "EDWG"
+											}
+										},
+										{
+											"source": {
+												"name": ":STTY",
+												"type": "String"
+											},
+											"sink": {
+												"name": "STTY"
+											}
+										},
+										{
+											"source": {
+												"name": ":OFDES",
+												"type": "String"
+											},
+											"sink": {
+												"name": "OFDES"
+											}
+										},
+										{
+											"source": {
+												"name": ":OFDWG",
+												"type": "String"
+											},
+											"sink": {
+												"name": "OFDWG"
+											}
+										},
+										{
+											"source": {
+												"name": ":OFENG",
+												"type": "String"
+											},
+											"sink": {
+												"name": "OFENG"
+											}
+										},
+										{
+											"source": {
+												"name": ":OFPROG",
+												"type": "String"
+											},
+											"sink": {
+												"name": "OFPROG"
+											}
+										},
+										{
+											"source": {
+												"name": ":OFSTAT",
+												"type": "String"
+											},
+											"sink": {
+												"name": "OFSTAT"
+											}
+										},
+										{
+											"source": {
+												"name": ":REVREAS",
+												"type": "String"
+											},
+											"sink": {
+												"name": "REVREAS"
+											}
+										},
+										{
+											"source": {
+												"name": ":REVSHOP",
+												"type": "String"
+											},
+											"sink": {
+												"name": "REVSHOP"
+											}
+										},
+										{
+											"source": {
+												"name": ":REVREAS2",
+												"type": "String"
+											},
+											"sink": {
+												"name": "REVREAS2"
+											}
+										},
+										{
+											"source": {
+												"name": ":REVSHOP2",
+												"type": "String"
+											},
+											"sink": {
+												"name": "REVSHOP2"
+											}
+										},
+										{
+											"source": {
+												"name": ":REVREAS3",
+												"type": "String"
+											},
+											"sink": {
+												"name": "REVREAS3"
+											}
+										},
+										{
+											"source": {
+												"name": ":PSREV1",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PSREV1"
+											}
+										},
+										{
+											"source": {
+												"name": ":REVSHOP3",
+												"type": "String"
+											},
+											"sink": {
+												"name": "REVSHOP3"
+											}
+										},
+										{
+											"source": {
+												"name": ":PSREV2",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PSREV2"
+											}
+										},
+										{
+											"source": {
+												"name": ":PSREV3",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PSREV3"
+											}
+										},
+										{
+											"source": {
+												"name": ":PSREV4",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PSREV4"
+											}
+										},
+										{
+											"source": {
+												"name": ":PSREV5",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PSREV5"
+											}
+										},
+										{
+											"source": {
+												"name": ":PSDESC1",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PSDESC1"
+											}
+										},
+										{
+											"source": {
+												"name": ":CLAP",
+												"type": "String"
+											},
+											"sink": {
+												"name": "CLAP"
+											}
+										},
+										{
+											"source": {
+												"name": ":PSDESC2",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PSDESC2"
+											}
+										},
+										{
+											"source": {
+												"name": ":DSCR",
+												"type": "String"
+											},
+											"sink": {
+												"name": "DSCR"
+											}
+										},
+										{
+											"source": {
+												"name": ":PSDESC3",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PSDESC3"
+											}
+										},
+										{
+											"source": {
+												"name": ":EXCO",
+												"type": "String"
+											},
+											"sink": {
+												"name": "EXCO"
+											}
+										},
+										{
+											"source": {
+												"name": ":PSDESC4",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PSDESC4"
+											}
+										},
+										{
+											"source": {
+												"name": ":INIT",
+												"type": "String"
+											},
+											"sink": {
+												"name": "INIT"
+											}
+										},
+										{
+											"source": {
+												"name": ":PSDESC5",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PSDESC5"
+											}
+										},
+										{
+											"source": {
+												"name": ":PSISSUE1",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PSISSUE1"
+											}
+										},
+										{
+											"source": {
+												"name": ":PSISSUE2",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PSISSUE2"
+											}
+										},
+										{
+											"source": {
+												"name": ":PSISSUE3",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PSISSUE3"
+											}
+										},
+										{
+											"source": {
+												"name": ":CLST",
+												"type": "String"
+											},
+											"sink": {
+												"name": "CLST"
+											}
+										},
+										{
+											"source": {
+												"name": ":PSISSUE4",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PSISSUE4"
+											}
+										},
+										{
+											"source": {
+												"name": "ZONE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ZONE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": ":PSISSUE5",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PSISSUE5"
+											}
+										},
+										{
+											"source": {
+												"name": ":PSWRITER1",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PSWRITER1"
+											}
+										},
+										{
+											"source": {
+												"name": ":PSWRITER2",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PSWRITER2"
+											}
+										},
+										{
+											"source": {
+												"name": ":PSWRITER3",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PSWRITER3"
+											}
+										},
+										{
+											"source": {
+												"name": ":PSWRITER4",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PSWRITER4"
+											}
+										},
+										{
+											"source": {
+												"name": ":PSWRITER5",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PSWRITER5"
+											}
+										},
+										{
+											"source": {
+												"name": ":PSCHECK1",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PSCHECK1"
+											}
+										},
+										{
+											"source": {
+												"name": ":PSCHECK2",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PSCHECK2"
+											}
+										},
+										{
+											"source": {
+												"name": ":PSCHECK3",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PSCHECK3"
+											}
+										},
+										{
+											"source": {
+												"name": ":PSCHECK4",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PSCHECK4"
+											}
+										},
+										{
+											"source": {
+												"name": ":PSCHECK5",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PSCHECK5"
+											}
+										},
+										{
+											"source": {
+												"name": ":PSLEAD1",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PSLEAD1"
+											}
+										},
+										{
+											"source": {
+												"name": ":PSLEAD2",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PSLEAD2"
+											}
+										},
+										{
+											"source": {
+												"name": ":PSLEAD3",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PSLEAD3"
+											}
+										},
+										{
+											"source": {
+												"name": ":PSLEAD4",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PSLEAD4"
+											}
+										},
+										{
+											"source": {
+												"name": ":PSLEAD5",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PSLEAD5"
+											}
+										},
+										{
+											"source": {
+												"name": ":PSEPM1",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PSEPM1"
+											}
+										},
+										{
+											"source": {
+												"name": ":PSEPM2",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PSEPM2"
+											}
+										},
+										{
+											"source": {
+												"name": ":PSEPM3",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PSEPM3"
+											}
+										},
+										{
+											"source": {
+												"name": ":PSEPM4",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PSEPM4"
+											}
+										},
+										{
+											"source": {
+												"name": ":PSEPM5",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PSEPM5"
+											}
+										},
+										{
+											"source": {
+												"name": ":PSDPT",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PSDPT"
+											}
+										},
+										{
+											"source": {
+												"name": ":PSDPTREV",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PSDPTREV"
+											}
+										},
+										{
+											"source": {
+												"name": ":PSACTREV",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PSACTREV"
+											}
+										},
+										{
+											"source": {
+												"name": ":SUPPSTATUS",
+												"type": "String"
+											},
+											"sink": {
+												"name": "SUPPSTATUS"
+											}
+										},
+										{
+											"source": {
+												"name": ":SDNFEDATE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "SDNFEDATE"
+											}
+										},
+										{
+											"source": {
+												"name": ":SDNFETIME",
+												"type": "String"
+											},
+											"sink": {
+												"name": "SDNFETIME"
+											}
+										},
+										{
+											"source": {
+												"name": ":SDNFIDATE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "SDNFIDATE"
+											}
+										},
+										{
+											"source": {
+												"name": ":SDNFITIME",
+												"type": "String"
+											},
+											"sink": {
+												"name": "SDNFITIME"
+											}
+										},
+										{
+											"source": {
+												"name": ":SDNFEFID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "SDNFEFID"
+											}
+										},
+										{
+											"source": {
+												"name": ":SDNFCLID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "SDNFCLID"
+											}
+										},
+										{
+											"source": {
+												"name": ":SDNFSTID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "SDNFSTID"
+											}
+										},
+										{
+											"source": {
+												"name": ":SDNFPRID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "SDNFPRID"
+											}
+										},
+										{
+											"source": {
+												"name": ":SDNFDECODE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "SDNFDECODE"
+											}
+										},
+										{
+											"source": {
+												"name": ":SDNFSOURCE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "SDNFSOURCE"
+											}
+										},
+										{
+											"source": {
+												"name": ":SDNFTARGET",
+												"type": "String"
+											},
+											"sink": {
+												"name": "SDNFTARGET"
+											}
+										},
+										{
+											"source": {
+												"name": ":SDNFMODNR",
+												"type": "String"
+											},
+											"sink": {
+												"name": "SDNFMODNR"
+											}
+										},
+										{
+											"source": {
+												"name": ":SDNFELIST",
+												"type": "String"
+											},
+											"sink": {
+												"name": "SDNFELIST"
+											}
+										},
+										{
+											"source": {
+												"name": ":ClashZones",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ClashZones"
+											}
+										},
+										{
+											"source": {
+												"name": ":MDRSuppCodes",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MDRSuppCodes"
+											}
+										},
+										{
+											"source": {
+												"name": ":MACT",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MACT"
+											}
+										},
+										{
+											"source": {
+												"name": ":NOTE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "NOTE"
+											}
+										},
+										{
+											"source": {
+												"name": ":PAINT",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PAINT"
+											}
+										},
+										{
+											"source": {
+												"name": ":REVNO",
+												"type": "String"
+											},
+											"sink": {
+												"name": "REVNO"
+											}
+										},
+										{
+											"source": {
+												"name": ":STAGE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "STAGE"
+											}
+										},
+										{
+											"source": {
+												"name": ":BLOCK",
+												"type": "String"
+											},
+											"sink": {
+												"name": "BLOCK"
+											}
+										},
+										{
+											"source": {
+												"name": ":HIL-DesignSolution",
+												"type": "String"
+											},
+											"sink": {
+												"name": "HIL-DesignSolution"
+											}
+										},
+										{
+											"source": {
+												"name": ":HIL-RevStatus",
+												"type": "String"
+											},
+											"sink": {
+												"name": "HIL-RevStatus"
+											}
+										},
+										{
+											"source": {
+												"name": ":HIL-BIMTrackNumber",
+												"type": "String"
+											},
+											"sink": {
+												"name": "HIL-BIMTrackNumber"
+											}
+										},
+										{
+											"source": {
+												"name": ":hilAttas",
+												"type": "String"
+											},
+											"sink": {
+												"name": "hilAttas"
+											}
+										},
+										{
+											"source": {
+												"name": ":hilTotalWeight",
+												"type": "String"
+											},
+											"sink": {
+												"name": "hilTotalWeight"
+											}
+										},
+										{
+											"source": {
+												"name": "Load_date",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Load_date",
+												"type": "String"
+											}
+										}
+									]
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_fileshare_excel_ced_generic",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_ds_directory": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+											"type": "Expression"
+										},
+										"p_ds_file_name": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.file_name",
+											"type": "Expression"
+										},
+										"p_ds_sheet_name": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.sheet_name",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "AzureSynapseAnalyticsPool",
+									"type": "DatasetReference",
+									"parameters": {
+										"schema": "@split(activity('lk_get_pipeline_parameters').output.firstRow.target_table,'.')[0]",
+										"TableName": "@split(activity('lk_get_pipeline_parameters').output.firstRow.target_table,'.')[1]"
+									}
+								}
+							]
+						},
+						{
+							"name": "sp_dataload_status",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "cd_src_to_synapse",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": {
+									"value": "[edw].data_warehouse_dataload_status",
+									"type": "Expression"
+								},
+								"storedProcedureParameters": {
+									"datasource": {
+										"value": {
+											"value": "@pipeline().parameters.pPipeLineSubCode",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"description": {
+										"value": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.description",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"load_date_time": {
+										"value": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.run_start_datetime",
+											"type": "Expression"
+										},
+										"type": "DateTime"
+									},
+									"project_number": {
+										"value": {
+											"value": "@pipeline().parameters.pProjectNumber",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"table_name": {
+										"value": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.target_table",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "linkedservice_DEV_entanalytics_synapse",
+								"type": "LinkedServiceReference"
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Append Copy to Synapse Error",
+				"type": "AppendVariable",
+				"dependsOn": [
+					{
+						"activity": "if_File_Exists_Copy_to_Synapse",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_error_message",
+					"value": {
+						"value": "@concat('Copy to Synapse Failure: | |',\nactivity('if_File_Exists_Copy_to_Synapse').error.message)\n",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "If failure detected send mail",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Append Copy to Synapse Error",
+						"dependencyConditions": [
+							"Completed",
+							"Skipped"
+						]
+					},
+					{
+						"activity": "if_File_Exists_Copy_to_Synapse",
+						"dependencyConditions": [
+							"Skipped",
+							"Completed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@if(empty(variables('v_error_message')),false,true)",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "Send Email On Failure",
+							"type": "WebActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"method": "POST",
+								"headers": {
+									"Content-Type": "application/json"
+								},
+								"url": "https://prod-31.eastus.logic.azure.com:443/workflows/03d7da5abbab4215a05aeaceae3b96fa/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=asuyutHtoSxGFURsj1-A6AKRiNLdXZ4mTnZvZ17_8hI",
+								"connectVia": {
+									"referenceName": "integrationRuntimeEast2",
+									"type": "IntegrationRuntimeReference"
+								},
+								"body": {
+									"value": "{\n    \"DataFactoryName\": \"@{pipeline().DataFactory}\",\n    \"PipelineName\": \"@{pipeline().Pipeline}\",\n    \"Activity\": \"@{split(replace(replace(join(variables('v_error_message'),';'),'\"',''),'\\','/'),'|')[0]}\",\n    \"ErrorMessage\": \"@{split(replace(replace(join(variables('v_error_message'),';'),'\"',''),'\\','/'),'|')[2]}\",\n\"EmailTo\": \"@{activity('lk_get_pipeline_email_parameters').output.firstRow.master_pipeline_email}\"\n}",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "lk_get_pipeline_email_parameters",
+				"description": "Get the parameters to be used in this pipeline",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "pl_ced_master_email",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": {
+									"value": "CED",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Append Get Metadata Error",
+				"type": "AppendVariable",
+				"dependsOn": [
+					{
+						"activity": "gm_check_sourcefile_exists",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_error_message",
+					"value": {
+						"value": "@concat('Get Metadata Failure: | |',\nactivity('gm_check_sourcefile_exists').error.message)\n",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"pPipeLineSubCode": {
+				"type": "string",
+				"defaultValue": "Network Folder"
+			},
+			"pProjectNumber": {
+				"type": "string",
+				"defaultValue": "360536"
+			}
+		},
+		"variables": {
+			"v_error_message": {
+				"type": "Array"
+			}
+		},
+		"folder": {
+			"name": "Projects/Central Engineering Database/Excel/Aveva E3D"
+		},
+		"annotations": []
+	}
+}

@@ -1,0 +1,50 @@
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+--DROP VIEW [dbo].[dim_entp_yardkpi_iDocs_fab_docmaster_v]
+CREATE VIEW [dbo].[dim_entp_yardkpi_iDocs_fab_docmaster_v]
+AS select [dim_entp_yardkpi_iDocs_fab_docmaster_sk]
+	,[dim_entp_yardkpi_iDocs_fab_docmaster_nk]
+	,[end_date]
+	,[hash_code]
+	,[active]
+	,[created_date_time]
+	,[modified_date_time]
+	,[late_arrival_flag]
+	,[dim_ent_source_nk]
+	,[dim_ent_sub_source_nk]
+	,[dim_ent_contract_nk]
+	,[project_no]
+	,[project_id]
+	,[project_name]
+	,[contract_no]
+	,[client_name]
+	,[deliverable]
+	,[dl_import]
+	,[doc_id]
+	,[type_class]
+	,[deliverable_type]
+	,[doc_type]
+	,[doc_number]
+	,[alternate_doc_number]
+	,[title]
+	,[revision_no]
+	,[revision_date]
+	,[issue_state]
+	,[client_rev_no]
+	,[facility_plant_unit]
+	,[overdue_reason] 
+	,[office_location] 
+	,[discipline]
+	,[pcm_last_weld]
+	,[ref_no]
+	,[shop_dwg_type_of_error]
+	,[superseded_by]
+	,[idocs_url] 
+	,[idocs_folder]
+from [dbo].[dim_entp_yardkpi_iDocs_fab_docmaster] where active = 1;
+GO
+
+

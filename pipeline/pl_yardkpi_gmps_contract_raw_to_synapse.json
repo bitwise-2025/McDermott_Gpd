@@ -1,0 +1,455 @@
+{
+	"name": "pl_yardkpi_gmps_contract_raw_to_synapse",
+	"properties": {
+		"activities": [
+			{
+				"name": "Delete_synapse_stage_data",
+				"type": "Script",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseDB_DEV",
+					"type": "LinkedServiceReference"
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": {
+								"value": "DELETE FROM yardkpi.stage_gmps_sp_contract",
+								"type": "Expression"
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Set_current_date_time",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lkup_Get_Pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_current_date_time",
+					"value": {
+						"value": "@string(utcnow())",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "sp_Update_Parameter",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Copy_data_Raw_to_synapse_stage",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+					"storedProcedureParameters": {
+						"pParameterCode": {
+							"value": {
+								"value": "last_run_start_date",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pParameterValue": {
+							"value": {
+								"value": "@formatDateTime(variables('v_current_date_time'),'yyyy-MM-dd HH:mm:ss')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": {
+								"value": "GMPS",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseDB_DEV",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "lkup_Get_Pipeline_parameters",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "GMPS"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Copy_data_Raw_to_synapse_stage",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Set_current_date_time",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Delete_synapse_stage_data",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.00:03:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": true,
+							"modifiedDatetimeStart": {
+								"value": "@activity('lkup_Get_Pipeline_parameters').output.firstRow.last_run_start_date",
+								"type": "Expression"
+							},
+							"wildcardFolderPath": {
+								"value": "@activity('lkup_Get_Pipeline_parameters').output.firstRow.Directory",
+								"type": "Expression"
+							},
+							"wildcardFileName": {
+								"value": "@concat('Master_GMPS_Project','_*.csv')",
+								"type": "Expression"
+							},
+							"enablePartitionDiscovery": false
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"allowPolyBase": true,
+						"polyBaseSettings": {
+							"rejectValue": 0,
+							"rejectType": "value",
+							"useTypeDefault": true
+						}
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ADLSG2 TimeAnalytics DEV",
+							"type": "LinkedServiceReference"
+						},
+						"path": {
+							"value": "mdr-raw-data/Polybase_Staging_Space",
+							"type": "Expression"
+						}
+					},
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "source_code",
+									"type": "String"
+								},
+								"sink": {
+									"name": "source_code",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "sub_source_code",
+									"type": "String"
+								},
+								"sink": {
+									"name": "sub_source_code",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "contract_no",
+									"type": "String"
+								},
+								"sink": {
+									"name": "contract_no",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "CONTRACTNO",
+									"type": "String"
+								},
+								"sink": {
+									"name": "gmps_contract_no",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "DESCRIPTION",
+									"type": "String"
+								},
+								"sink": {
+									"name": "description",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "create_date_time",
+									"type": "String"
+								},
+								"sink": {
+									"name": "created_date_time",
+									"type": "DateTime"
+								}
+							}
+						]
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_gen2_gmps_raw_tgt",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_AzureSynapseAnalytics_yardkpi",
+						"type": "DatasetReference",
+						"parameters": {
+							"schema": {
+								"value": "yardkpi",
+								"type": "Expression"
+							},
+							"db_name": {
+								"value": "stage_gmps_sp_contract",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "dim_entp_mcr_project",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "sp_Update_Parameter",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": {
+						"value": "[dbo].[generic_load_dim_v2]",
+						"type": "Expression"
+					},
+					"storedProcedureParameters": {
+						"debug_flag": {
+							"value": "N"
+						},
+						"execute_flag": {
+							"value": "Y"
+						},
+						"load_name": {
+							"value": "Dim_ent_project_gmps_load"
+						},
+						"rkValidationRequired": {
+							"value": "Y"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "linkedservice_DEV_entanalytics_synapse",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "dim_entp_gmps_sp_contract_load",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "dim_entp_mcr_contract",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": {
+						"value": "[dbo].[generic_load_dim_v2]",
+						"type": "Expression"
+					},
+					"storedProcedureParameters": {
+						"debug_flag": {
+							"value": "N"
+						},
+						"execute_flag": {
+							"value": "Y"
+						},
+						"load_name": {
+							"value": "dim_entp_gmps_sp_contract_load"
+						},
+						"rkValidationRequired": {
+							"value": "Y"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "linkedservice_DEV_entanalytics_synapse",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "dim_entp_mcr_contract",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "dim_entp_mcr_project",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": {
+						"value": "[dbo].[generic_load_dim_v2]",
+						"type": "Expression"
+					},
+					"storedProcedureParameters": {
+						"debug_flag": {
+							"value": "N"
+						},
+						"execute_flag": {
+							"value": "Y"
+						},
+						"load_name": {
+							"value": "Dim_ent_contract_gmps_load"
+						},
+						"rkValidationRequired": {
+							"value": "Y"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "linkedservice_DEV_entanalytics_synapse",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"variables": {
+			"v_current_date_time": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/YARD KPI/GMPS/Contract"
+		},
+		"annotations": [],
+		"lastPublishTime": "2024-01-12T10:37:08Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

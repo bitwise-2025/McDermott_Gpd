@@ -1,0 +1,35 @@
+{
+	"name": "df_iDocs_doc_eng_raw_to_synapse",
+	"properties": {
+		"folder": {
+			"name": "Projects/NCSA/iDocs/Doc Master Eng"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_idocs_doc_eng_raw_latest",
+						"type": "DatasetReference"
+					},
+					"name": "srcDocEngRaw"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_AzureSynapseAnalytics_idocs_doc_eng",
+						"type": "DatasetReference"
+					},
+					"name": "snkDocEngSynapse"
+				}
+			],
+			"transformations": [
+				{
+					"name": "DataTransform"
+				}
+			],
+			"script": "source(output(\n\t\t{PROJECT NO.} as string,\n\t\t{PROJECT ID} as string,\n\t\t{PROJECT NAME} as string,\n\t\t{CLIENT NAME} as string,\n\t\tDELIVERABLE as string,\n\t\t{DOC ID} as string,\n\t\t{TYPE CLASS} as string,\n\t\t{DOC. TYPE} as string,\n\t\t{DOCUMENT NUMBER} as string,\n\t\t{ALTERNATE DOCUMENT NUMBER} as string,\n\t\tTITLE as string,\n\t\t{REVISION NO.} as string,\n\t\t{REVISION DATE} as string,\n\t\t{ISSUE STATE} as string,\n\t\t{OFFICE LOCATION} as string,\n\t\tDISCIPLINE as string,\n\t\tFACILITY_PLANT_UNIT as string,\n\t\t{TOTAL CURRENT PROGRESS} as string,\n\t\tEWP as string,\n\t\tCWA as string,\n\t\tCWP as string,\n\t\tHOLD as string,\n\t\t{TAG_EQUIPMENT NUMBER} as string,\n\t\t{COST CODE} as string,\n\t\tAPPROVER as string,\n\t\tCHECKER as string,\n\t\t{REASON FOR CHANGE-ENGINEERING} as string,\n\t\tISO_LINU as string,\n\t\tISO_NAME as string,\n\t\t{SUPERSEDED BY} as string,\n\t\tSTART_ACTIVITY_ID as string,\n\t\tIDC_ACTIVITY_ID as string,\n\t\tIFI_ACTIVITY_ID as string,\n\t\tIFR_ACTIVITY_ID as string,\n\t\tIFA_ACTIVITY_ID as string,\n\t\tICA_ACTIVITY_ID as string,\n\t\tIFB_ACTIVITY_ID as string,\n\t\tTBE_ACTIVITY_ID as string,\n\t\tIFP_ACTIVITY_ID as string,\n\t\tAFD_ACTIVITY_ID as string,\n\t\tAFC_FINAL_ACTIVITY_ID as string,\n\t\tPROJ_DEFINED_01_ACTIVITY_ID as string,\n\t\tPROJ_DEFINED_02_ACTIVITY_ID as string,\n\t\tPROJ_DEFINED_03_ACTIVITY_ID as string,\n\t\tPROJ_DEFINED_04_ACTIVITY_ID as string,\n\t\tPROJ_DEFINED_05_ACTIVITY_ID as string,\n\t\tPROJ_DEFINED_06_ACTIVITY_ID as string,\n\t\tPROJ_DEFINED_07_ACTIVITY_ID as string,\n\t\tPROJ_DEFINED_08_ACTIVITY_ID as string,\n\t\tPROJ_DEFINED_09_ACTIVITY_ID as string,\n\t\tPROJ_DEFINED_10_ACTIVITY_ID as string,\n\t\t{CONTRACT NO.} as string,\n\t\t{DELIVERABLE TYPE} as string,\n\t\t{IDOCS FOLDER} as string,\n\t\t{IDOCS URL} as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['Project_Data/NCSA/iDocs/Doc_Master_Eng/Latest_iDocs_doc_eng.csv']) ~> srcDocEngRaw\nsrcDocEngRaw derive(WORK_PACKAGE = iif(length(trim(regexExtract(CWP,`(\\d+-[a-zA-Z]{2}\\d+)`,1)))>0,regexExtract(CWP,`(\\d+-[a-zA-Z]{2}\\d+)`,1),'null')) ~> DataTransform\nDataTransform sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tinput(\n\t\tstage_idoc_doc_eng_id as integer,\n\t\tPROJECT_NAME as string,\n\t\tPROJECT_NUMBER as string,\n\t\tPROJECT_ID as string,\n\t\tCLIENT_NAME as string,\n\t\tDOC_ID as string,\n\t\tDELIVERABLE as string,\n\t\tTYPE_CLASS as string,\n\t\tDOCUMENT_TYPE as string,\n\t\tDOCUMENT_NUMBER as string,\n\t\tALTERNATE_DOC_NUMBER as string,\n\t\tTitle as string,\n\t\tIssue_State as string,\n\t\tRevision as string,\n\t\tRevision_Date as string,\n\t\tDISCIPLINE as string,\n\t\tFACILITY_PLANT_UNIT as string,\n\t\tOFFICE_LOCATION as string,\n\t\tTOTAL_CURRENT_PROGRESS as string,\n\t\tEWP as string,\n\t\tCWA as string,\n\t\tCWP as string,\n\t\tHOLDS as string,\n\t\tTAG_EQUIPMENT_NUMBER as string,\n\t\tWORK_PACKAGE as string,\n\t\tcost_code as string,\n\t\tapprover as string,\n\t\tchecker as string,\n\t\tReason_for_change as string,\n\t\tISO_LINU as string,\n\t\tISO_NAME as string,\n\t\tSUPERSEDED_BY as string,\n\t\tSTART_ACTIVITY_ID as string,\n\t\tIDC_ACTIVITY_ID as string,\n\t\tIFI_ACTIVITY_ID as string,\n\t\tIFR_ACTIVITY_ID as string,\n\t\tIFA_ACTIVITY_ID as string,\n\t\tICA_ACTIVITY_ID as string,\n\t\tIFB_ACTIVITY_ID as string,\n\t\tTBE_ACTIVITY_ID as string,\n\t\tIFP_ACTIVITY_ID as string,\n\t\tAFD_ACTIVITY_ID as string,\n\t\tAFC_FINAL_ACTIVITY_ID as string,\n\t\tPROJ_DEFINED_01_ACTIVITY_ID as string,\n\t\tPROJ_DEFINED_02_ACTIVITY_ID as string,\n\t\tPROJ_DEFINED_03_ACTIVITY_ID as string,\n\t\tPROJ_DEFINED_04_ACTIVITY_ID as string,\n\t\tPROJ_DEFINED_05_ACTIVITY_ID as string,\n\t\tPROJ_DEFINED_06_ACTIVITY_ID as string,\n\t\tPROJ_DEFINED_07_ACTIVITY_ID as string,\n\t\tPROJ_DEFINED_08_ACTIVITY_ID as string,\n\t\tPROJ_DEFINED_09_ACTIVITY_ID as string,\n\t\tPROJ_DEFINED_10_ACTIVITY_ID as string,\n\t\tCONTRACT_NO as string,\n\t\tDELIVERABLE_TYPE as string,\n\t\tIDOCS_FOLDER as string,\n\t\tIDOCS_URL as string\n\t),\n\tdeletable:false,\n\tinsertable:true,\n\tupdateable:false,\n\tupsertable:false,\n\ttruncate:true,\n\tformat: 'table',\n\tstaged: true,\n\tallowCopyCommand: true,\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\terrorHandlingOption: 'stopOnFirstError',\n\tmapColumn(\n\t\tPROJECT_NAME = {PROJECT NAME},\n\t\tPROJECT_NUMBER = {PROJECT NO.},\n\t\tPROJECT_ID = {PROJECT ID},\n\t\tCLIENT_NAME = {CLIENT NAME},\n\t\tDOC_ID = {DOC ID},\n\t\tDELIVERABLE,\n\t\tTYPE_CLASS = {TYPE CLASS},\n\t\tDOCUMENT_TYPE = {DOC. TYPE},\n\t\tDOCUMENT_NUMBER = {DOCUMENT NUMBER},\n\t\tALTERNATE_DOC_NUMBER = {ALTERNATE DOCUMENT NUMBER},\n\t\tTitle = TITLE,\n\t\tIssue_State = {ISSUE STATE},\n\t\tRevision = {REVISION NO.},\n\t\tRevision_Date = {REVISION DATE},\n\t\tDISCIPLINE,\n\t\tFACILITY_PLANT_UNIT,\n\t\tOFFICE_LOCATION = {OFFICE LOCATION},\n\t\tTOTAL_CURRENT_PROGRESS = {TOTAL CURRENT PROGRESS},\n\t\tEWP,\n\t\tCWA,\n\t\tCWP,\n\t\tHOLDS = HOLD,\n\t\tTAG_EQUIPMENT_NUMBER = {TAG_EQUIPMENT NUMBER},\n\t\tWORK_PACKAGE,\n\t\tcost_code = {COST CODE},\n\t\tapprover = APPROVER,\n\t\tchecker = CHECKER,\n\t\tReason_for_change = {REASON FOR CHANGE-ENGINEERING},\n\t\tISO_LINU,\n\t\tISO_NAME,\n\t\tSUPERSEDED_BY = {SUPERSEDED BY},\n\t\tSTART_ACTIVITY_ID,\n\t\tIDC_ACTIVITY_ID,\n\t\tIFI_ACTIVITY_ID,\n\t\tIFR_ACTIVITY_ID,\n\t\tIFA_ACTIVITY_ID,\n\t\tICA_ACTIVITY_ID,\n\t\tIFB_ACTIVITY_ID,\n\t\tTBE_ACTIVITY_ID,\n\t\tIFP_ACTIVITY_ID,\n\t\tAFD_ACTIVITY_ID,\n\t\tAFC_FINAL_ACTIVITY_ID,\n\t\tPROJ_DEFINED_01_ACTIVITY_ID,\n\t\tPROJ_DEFINED_02_ACTIVITY_ID,\n\t\tPROJ_DEFINED_03_ACTIVITY_ID,\n\t\tPROJ_DEFINED_04_ACTIVITY_ID,\n\t\tPROJ_DEFINED_05_ACTIVITY_ID,\n\t\tPROJ_DEFINED_06_ACTIVITY_ID,\n\t\tPROJ_DEFINED_07_ACTIVITY_ID,\n\t\tPROJ_DEFINED_08_ACTIVITY_ID,\n\t\tPROJ_DEFINED_09_ACTIVITY_ID,\n\t\tPROJ_DEFINED_10_ACTIVITY_ID,\n\t\tIDOCS_FOLDER = {IDOCS FOLDER},\n\t\tIDOCS_URL = {IDOCS URL},\n\t\tCONTRACT_NO = {CONTRACT NO.},\n\t\tDELIVERABLE_TYPE = {DELIVERABLE TYPE}\n\t)) ~> snkDocEngSynapse"
+		}
+	}
+}

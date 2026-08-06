@@ -1,0 +1,1064 @@
+{
+	"name": "pl_yardkpi_servicenow_source_to_stage",
+	"properties": {
+		"activities": [
+			{
+				"name": "lk_get_pipeline_parameters",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "[dbo].[getPipelineParametersValues]",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.pPipeLineSubCode",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "AzureSynapseAnalyticsDB",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Set data pull date time",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_run_start",
+					"value": {
+						"value": "@utcnow()",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "sp_Update_Parameter",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Copy data",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+					"storedProcedureParameters": {
+						"pParameterCode": {
+							"value": "start_date",
+							"type": "String"
+						},
+						"pParameterValue": {
+							"value": {
+								"value": "@formatDateTime(variables('v_run_start'),'yyyy-MM-dd HH:mm:ss')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": {
+								"value": "@pipeline().parameters.pPipeLineSubCode",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseAnalytics",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Copy data",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Set data pull date time",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "ServiceNowV2Source",
+						"additionalColumns": [
+							{
+								"name": "source_code",
+								"value": {
+									"value": "@activity('lk_get_pipeline_parameters').output.firstRow.source_name",
+									"type": "Expression"
+								}
+							},
+							{
+								"name": "sub_source_code",
+								"value": {
+									"value": "@activity('lk_get_pipeline_parameters').output.firstRow.sub_source_name",
+									"type": "Expression"
+								}
+							}
+						],
+						"expression": {
+							"type": "Nary",
+							"operators": [
+								">"
+							],
+							"operands": [
+								{
+									"type": "Field",
+									"value": "sys_updated_on"
+								},
+								{
+									"type": "Constant",
+									"value": {
+										"value": "@activity('lk_get_pipeline_parameters').output.firstRow.start_date",
+										"type": "Expression"
+									}
+								}
+							]
+						},
+						"pageSize": 300
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ADGLS2 SRCDEST DEV",
+							"type": "LinkedServiceReference"
+						},
+						"path": "mdr-raw-data/ Polybase_Staging_Space",
+						"enableCompression": true
+					},
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "category",
+									"type": "String",
+									"physicalType": "string"
+								},
+								"sink": {
+									"name": "category",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "business_stc",
+									"type": "Int32",
+									"physicalType": "integer"
+								},
+								"sink": {
+									"name": "business_stc",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "parent_incident",
+									"type": "String",
+									"physicalType": "reference"
+								},
+								"sink": {
+									"name": "parent_incident",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "caller_id",
+									"type": "String",
+									"physicalType": "reference"
+								},
+								"sink": {
+									"name": "caller_id",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "subcategory",
+									"type": "String",
+									"physicalType": "string"
+								},
+								"sink": {
+									"name": "subcategory",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "close_code",
+									"type": "String",
+									"physicalType": "string"
+								},
+								"sink": {
+									"name": "close_code",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "sys_id",
+									"type": "String",
+									"physicalType": "GUID"
+								},
+								"sink": {
+									"name": "sys_id",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "severity",
+									"type": "Int32",
+									"physicalType": "integer"
+								},
+								"sink": {
+									"name": "severity",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "problem_id",
+									"type": "String",
+									"physicalType": "reference"
+								},
+								"sink": {
+									"name": "problem_id",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "notify",
+									"type": "Int32",
+									"physicalType": "integer"
+								},
+								"sink": {
+									"name": "notify",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "resolved_by",
+									"type": "String",
+									"physicalType": "reference"
+								},
+								"sink": {
+									"name": "resolved_by",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "resolved_at",
+									"type": "DateTime",
+									"physicalType": "glide_date_time"
+								},
+								"sink": {
+									"name": "resolved_at",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "reopen_count",
+									"type": "Int32",
+									"physicalType": "integer"
+								},
+								"sink": {
+									"name": "reopen_count",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "u_type",
+									"type": "String",
+									"physicalType": "choice"
+								},
+								"sink": {
+									"name": "u_type",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "rfc",
+									"type": "String",
+									"physicalType": "reference"
+								},
+								"sink": {
+									"name": "rfc",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "incident_state",
+									"type": "Int32",
+									"physicalType": "integer"
+								},
+								"sink": {
+									"name": "incident_state",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "calendar_stc",
+									"type": "Int32",
+									"physicalType": "integer"
+								},
+								"sink": {
+									"name": "calendar_stc",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "contact_type",
+									"type": "String",
+									"physicalType": "string"
+								},
+								"sink": {
+									"name": "contact_type",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "sys_mod_count",
+									"type": "Int32",
+									"physicalType": "integer"
+								},
+								"sink": {
+									"name": "sys_mod_count",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "activity_due",
+									"type": "DateTime",
+									"physicalType": "due_date"
+								},
+								"sink": {
+									"name": "activity_due",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "made_sla",
+									"type": "Boolean",
+									"physicalType": "boolean"
+								},
+								"sink": {
+									"name": "made_sla",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "sys_updated_by",
+									"type": "String",
+									"physicalType": "string"
+								},
+								"sink": {
+									"name": "sys_updated_by",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "upon_approval",
+									"type": "String",
+									"physicalType": "string"
+								},
+								"sink": {
+									"name": "upon_approval",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "approval_set",
+									"type": "DateTime",
+									"physicalType": "glide_date_time"
+								},
+								"sink": {
+									"name": "approval_set",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "closed_at",
+									"type": "DateTime",
+									"physicalType": "glide_date_time"
+								},
+								"sink": {
+									"name": "closed_at",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "company",
+									"type": "String",
+									"physicalType": "reference"
+								},
+								"sink": {
+									"name": "company",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "opened_by",
+									"type": "String",
+									"physicalType": "reference"
+								},
+								"sink": {
+									"name": "opened_by",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "work_end",
+									"type": "DateTime",
+									"physicalType": "glide_date_time"
+								},
+								"sink": {
+									"name": "work_end",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "impact",
+									"type": "Int32",
+									"physicalType": "integer"
+								},
+								"sink": {
+									"name": "impact",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "correlation_id",
+									"type": "String",
+									"physicalType": "string"
+								},
+								"sink": {
+									"name": "correlation_id",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "sys_domain",
+									"type": "String",
+									"physicalType": "domain_id"
+								},
+								"sink": {
+									"name": "sys_domain",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "additional_assignee_list",
+									"type": "String",
+									"physicalType": "glide_list"
+								},
+								"sink": {
+									"name": "additional_assignee_list",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "sys_updated_on",
+									"type": "DateTime",
+									"physicalType": "glide_date_time"
+								},
+								"sink": {
+									"name": "sys_updated_on",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "follow_up",
+									"type": "DateTime",
+									"physicalType": "glide_date_time"
+								},
+								"sink": {
+									"name": "follow_up",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "assigned_to",
+									"type": "String",
+									"physicalType": "reference"
+								},
+								"sink": {
+									"name": "assigned_to",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "time_worked",
+									"type": "String",
+									"physicalType": "timer"
+								},
+								"sink": {
+									"name": "time_worked",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "state",
+									"type": "Int32",
+									"physicalType": "integer"
+								},
+								"sink": {
+									"name": "state",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "closed_by",
+									"type": "String",
+									"physicalType": "reference"
+								},
+								"sink": {
+									"name": "closed_by",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "escalation",
+									"type": "Int32",
+									"physicalType": "integer"
+								},
+								"sink": {
+									"name": "escalation",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "active",
+									"type": "Boolean",
+									"physicalType": "boolean"
+								},
+								"sink": {
+									"name": "active",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "reassignment_count",
+									"type": "Int32",
+									"physicalType": "integer"
+								},
+								"sink": {
+									"name": "reassignment_count",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "order",
+									"type": "Int32",
+									"physicalType": "integer"
+								},
+								"sink": {
+									"name": "order",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "knowledge",
+									"type": "Boolean",
+									"physicalType": "boolean"
+								},
+								"sink": {
+									"name": "knowledge",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "sys_created_by",
+									"type": "String",
+									"physicalType": "string"
+								},
+								"sink": {
+									"name": "sys_created_by",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "due_date",
+									"type": "DateTime",
+									"physicalType": "glide_date_time"
+								},
+								"sink": {
+									"name": "due_date",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "correlation_display",
+									"type": "String",
+									"physicalType": "string"
+								},
+								"sink": {
+									"name": "correlation_display",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "priority",
+									"type": "Int32",
+									"physicalType": "integer"
+								},
+								"sink": {
+									"name": "priority",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "upon_reject",
+									"type": "String",
+									"physicalType": "string"
+								},
+								"sink": {
+									"name": "upon_reject",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "sys_class_name",
+									"type": "String",
+									"physicalType": "sys_class_name"
+								},
+								"sink": {
+									"name": "sys_class_name",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "approval",
+									"type": "String",
+									"physicalType": "string"
+								},
+								"sink": {
+									"name": "approval",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "expected_start",
+									"type": "DateTime",
+									"physicalType": "glide_date_time"
+								},
+								"sink": {
+									"name": "expected_start",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "assignment_group",
+									"type": "String",
+									"physicalType": "reference"
+								},
+								"sink": {
+									"name": "assignment_group",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "calendar_duration",
+									"type": "DateTime",
+									"physicalType": "glide_duration"
+								},
+								"sink": {
+									"name": "calendar_duration",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "work_start",
+									"type": "DateTime",
+									"physicalType": "glide_date_time"
+								},
+								"sink": {
+									"name": "work_start",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "location",
+									"type": "String",
+									"physicalType": "reference"
+								},
+								"sink": {
+									"name": "location",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "sys_created_on",
+									"type": "DateTime",
+									"physicalType": "glide_date_time"
+								},
+								"sink": {
+									"name": "sys_created_on",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "sla_due",
+									"type": "DateTime",
+									"physicalType": "due_date"
+								},
+								"sink": {
+									"name": "sla_due",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "sys_domain_path",
+									"type": "String",
+									"physicalType": "domain_path"
+								},
+								"sink": {
+									"name": "sys_domain_path",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "number",
+									"type": "String",
+									"physicalType": "string"
+								},
+								"sink": {
+									"name": "number",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "opened_at",
+									"type": "DateTime",
+									"physicalType": "glide_date_time"
+								},
+								"sink": {
+									"name": "opened_at",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "cmdb_ci",
+									"type": "String",
+									"physicalType": "reference"
+								},
+								"sink": {
+									"name": "cmdb_ci",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "business_duration",
+									"type": "DateTime",
+									"physicalType": "glide_duration"
+								},
+								"sink": {
+									"name": "business_duration",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "urgency",
+									"type": "Int32",
+									"physicalType": "integer"
+								},
+								"sink": {
+									"name": "urgency",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "source_code",
+									"type": "String"
+								},
+								"sink": {
+									"name": "source_code",
+									"type": "String",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "sub_source_code",
+									"type": "String"
+								},
+								"sink": {
+									"name": "sub_source_code",
+									"type": "String",
+									"physicalType": "String"
+								}
+							}
+						],
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_generic_api_servicnow_v2",
+						"type": "DatasetReference",
+						"parameters": {
+							"TableName": {
+								"value": "incident",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_adlsg2_yardkpi_servicenow_src",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_ds_filesystem": "@activity('lk_get_pipeline_parameters').output.firstRow.file_system",
+							"p_ds_directory": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+								"type": "Expression"
+							},
+							"p_ds_filename": {
+								"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,utcNow(),'.csv')",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "pl_yardkpi_servicenow_loadtables",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Set data pull date time",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_yardkpi_servicenow_loadtables",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			}
+		],
+		"parameters": {
+			"pPipeLineSubCode": {
+				"type": "string",
+				"defaultValue": "SERVICENOW"
+			}
+		},
+		"variables": {
+			"v_run_start": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/YARD KPI/ServiceNow"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-09-22T08:34:40Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

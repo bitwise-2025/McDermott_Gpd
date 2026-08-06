@@ -1,0 +1,46 @@
+{
+	"name": "df_yardkpi_Welding_Process_stage_to_raw",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_Src_snk_adgls2_src_ykpi",
+						"type": "DatasetReference"
+					},
+					"name": "srcYardKPIWeldingProcess"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_Src_snk_adgls2_src_ykpi",
+						"type": "DatasetReference"
+					},
+					"name": "snkYardKPIWeldingProcess"
+				}
+			],
+			"transformations": [
+				{
+					"name": "derivedColumn1"
+				}
+			],
+			"scriptLines": [
+				"source(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     purgeFiles: true) ~> srcYardKPIWeldingProcess",
+				"srcYardKPIWeldingProcess derive(FileName = concat('Project_Data/YARDKPI/Welding_Process/',substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/','Welding_Process',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv')) ~> derivedColumn1",
+				"derivedColumn1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     rowUrlColumn:'FileName',",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> snkYardKPIWeldingProcess"
+			]
+		}
+	}
+}

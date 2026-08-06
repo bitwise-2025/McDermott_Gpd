@@ -1,0 +1,26 @@
+
+alter table yardkpi.stage_material_Issuing_register
+alter column line_item_count decimal
+alter table yardkpi.reprocess_material_Issuing_register
+alter column line_item_count decimal
+alter table dim_entp_yardkpi_material_Issuing_register
+alter column line_item_count decimal
+begin tran
+update generic_load_detail
+set stage_column_data_type ='DECIMAL'
+where stage_column_name ='LINE_ITEM_COUNT' and load_name ='dim_entp_yardkpi_material_issuing'
+--commit
+
+DROP VIEW [dbo].[dim_entp_yardkpi_material_issuing_register_vw]
+GO
+CREATE VIEW [dbo].[dim_entp_yardkpi_material_issuing_register_vw]
+AS select * from dim_entp_yardkpi_material_issuing_register where active =1;
+GO
+
+drop view [yardkpi].[stage_material_issuing_register_vw]
+GO
+CREATE VIEW [yardkpi].[stage_material_issuing_register_vw]
+AS select
+R.Project_NO AS PROJECT_ID, R.* FROM yardkpi.stage_material_issuing_register R;
+GO
+

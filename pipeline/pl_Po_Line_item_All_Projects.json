@@ -1,0 +1,264 @@
+{
+	"name": "pl_Po_Line_item_All_Projects",
+	"properties": {
+		"activities": [
+			{
+				"name": "lk_get_pipeline_parameters",
+				"description": "Get the parameters to be used in this pipeline",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": "pl_ncsa_master_pipelines"
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "EMAIL"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "lk_get_pipeline_parameters_2",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "NetworkFolder"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "cp_copy_first_sheet_from_source_to_synapse",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Update_Week_end_date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "OracleSource",
+						"additionalColumns": [
+							{
+								"name": "CreatedDateTime",
+								"value": {
+									"value": "@addHours(utcNow(),4 )",
+									"type": "Expression"
+								}
+							}
+						],
+						"oracleReaderQuery": {
+							"value": "SELECT DISTINCT\n  project_id, requisition_no, req_rev, req_originator, req_date, released_to_proc, proc_ack_date,\n  DECODE((SELECT NVL(attr_char3, 'NOTAVAILABLE') FROM m_sys.m_projects WHERE proj_id = project_id),\n  'PROJECT', mdr_pack_number,\n  'MRO', (SELECT  mg_code FROM m_sys.m_material_groups mgg WHERE mgg.mg_id=get_mg_id),\n  DECODE(mdr_pack_number, '-', (SELECT  mg_code FROM m_sys.m_material_groups mgg WHERE mgg.mg_id=get_mg_id), mdr_pack_number)\n  ) matl_wrk_grp,\n  DECODE((SELECT NVL(attr_char3, 'NOTAVAILABLE') FROM m_sys.m_projects WHERE proj_id = project_id),\n  'PROJECT', (SELECT UNIQUE n.description FROM m_sys.m_material_group_nls n,m_sys.m_material_groups g WHERE mdr_pack_number = g.mg_code AND n.mg_id=g.mg_id AND n.nls_id=1),\n  'MRO',(SELECT n.description FROM m_sys.m_material_group_nls n WHERE n.mg_id=get_mg_id),\n  DECODE(mdr_pack_number, '-',(SELECT n.description FROM m_sys.m_material_group_nls n WHERE n.mg_id=get_mg_id),\n  (SELECT UNIQUE n.description FROM m_sys.m_material_group_nls n,m_sys.m_material_groups g WHERE mdr_pack_number = g.mg_code AND n.mg_id=g.mg_id AND n.nls_id=1))\n  ) matl_wrk_nls,\n  rli_pos, rli_sub_pos,  released_qty, uom, ros_date, po_number, po_rev, po_description, po_status, status_date, \n  po_created_date, po_issue_date, po_approved_date, \n  supplier_code, supplier_name, supplier_location, country_of_origin,\n  buyer,  select_code, payment_mode, commodity_code, ident_code,  item_desc,\n  poli_pos, poli_sub_pos, account_code_item, poli_uom, poli_qty,\n  unit_price_item, po_line_item_price,\n  ROUND(get_exchange_rate * (poli_qty * poli_unit_price), 2) po_line_item_price_usd,\n  po_total_cost, ROUND(get_exchange_rate * (total_price+tax_amount), 2) po_total_usd, po_currency, currency_po_item, \n  discount_percentage, incoterm, delivery_place,Group1,Group2,Group3,Group4,Group5, prom_delivery_date, \n  mrr_number, mrr_creation_date, mrr_recv_date, mrr_posted_date, mrr_quantity, is_master_tag\nFROM\n(\nSELECT -- first select\nget_poh.proj_id project_id, r.r_code requisition_no, r.r_supp req_rev, dummy_poli.poli_id,\n\tTO_CHAR(r.created_date, 'DD-MON-YYYY') req_date,                    \n\t(SELECT /*+ index(u USR_PK) */  first_name||' '||last_name FROM m_sys.m_users u WHERE u.m_usr_id=r.originator AND ROWNUM<2) req_originator,\n\tTO_CHAR(r.rel_to_proc_date, 'DD-MON-YYYY') released_to_proc,\n\tTO_CHAR(r.proc_acknowledge_date, 'DD-MON-YYYY') proc_ack_date,\n\tr.mg_id get_mg_id,\n\t(SELECT attr_value \n    FROM m_sys.m_used_values uv, m_sys.m_attrs att\n    WHERE uv.proj_id    = get_poh.proj_id\n    AND   uv.attr_id    = att.attr_id\n    AND   att.attr_code = 'MDR_PACKAGE_NUMBER'\n    AND   uv.pk_id      = r.r_id\n    AND   uv.used_type  = 'ER'\n    AND   ROWNUM < 2) mdr_pack_number,                     \n\trli.rli_pos, rli.rli_sub_pos,\n (SELECT /*+ index(cc CC_PK) */ commodity_code from m_sys.m_commodity_codes cc WHERE cc.commodity_id=i.commodity_id AND ROWNUM<2) commodity_code,\n\ti.ident_code,\n\ti.ident,\n\tREPLACE(REPLACE(REPLACE(REGEXP_REPLACE(LTRIM(MDR_CUST.MDR_REPORT_CUSTOM_bir.GET_IDENT_DESC_WITH_DEVIATION(i.ident, dummy_poli.poli_id, 'POLI'),'-'),'^-'||' ?',''), CHR(13), ' '), CHR(10), ' '),'- ','') item_desc,  \n\trli.total_release_qty released_qty,\n\trli.unit_code uom,               \n\tTO_CHAR(rli.estimated_ros_date, 'DD-MON-YYYY') ros_date,\n\tget_poh.poh_id, get_poh.buyer, get_poh.po_number, get_poh.po_rev,  get_poh.po_description,\n\tdummy_poli.poli_pos, dummy_poli.poli_sub_pos,\n\t(CASE\n\t\tWHEN (NVL(tc.total_price, 0) + NVL(dummy_poli.poli_qty, 0) = 0) THEN                           \n\t\t   DECODE((SUM(dummy_poli.poli_qty) OVER (PARTITION BY get_poh.poh_id, dummy_poli.poli_id)), 0, 'CANCELLED', get_poh.get_po_status) -- check if cancel\n\t\tELSE                          \n\t\t  get_poh.get_po_status -- check without cancel \n\t\tEND) po_status,                      \n\tget_poh.status_date, get_poh.po_created_date, get_poh.po_approved_date, get_poh.po_issue_date,\n\t(SELECT /*+ index(un UNIT_PK) */ unit_code FROM m_sys.m_units un WHERE un.unit_id=dummy_poli.qty_unit_id) poli_uom,\n\tdummy_poli.poli_qty, get_poh.select_code, get_poh.payment_mode,                    \n\t(SELECT /*+ index(c C_PK) */ company_name FROM m_sys.m_companies c WHERE c.company_id=ms.company_id AND ROWNUM<2) supplier_name,\n\tms.sup_code supplier_code,\n\t(SELECT description FROM m_sys.m_country_nls WHERE cy_id=ms.cy_id AND nls_id=1 AND ROWNUM<2) supplier_location,\n\tdummy_poli.poli_unit_price unit_price_item,\n\tROUND(dummy_poli.poli_qty * dummy_poli.poli_unit_price,2) po_line_item_price,\n\t(SELECT /*+ index(un UNIT_PK) */ unit_code FROM m_sys.m_units un WHERE un.unit_id=dummy_poli.currency_id  AND ROWNUM<2) currency_po_item,\n\tNVL(get_poh.discount_percent,0) + NVL(dummy_poli.discount_percent,0) discount_percentage,\n\t(SELECT /*+ index(frt FRT_PK) */ frt_code FROM m_sys.m_freight_terms frt WHERE frt.frt_id = dummy_poli.frt_id  AND ROWNUM<2) incoterm,\n\t(SELECT /*+ index(j JOB_PK) */ job_number FROM m_sys.m_jobs j WHERE j.proj_id=r.proj_id AND j.job_id=dummy_poli.job_id  AND ROWNUM<2) account_code_item,\n\tdummy_poli.freight_value delivery_place,\n\trli.attr_group1 Group1,\n\trli.attr_group2 Group2,\n\trli.attr_group3 Group3,\n\trli.attr_group4 Group4,\n\trli.attr_group5 Group5,\n\tish.prom_contract_date prom_delivery_date,\n\t(SELECT /*+ index(c CY_PK) */ cy_code FROM m_sys.m_countries c WHERE c.cy_id=dummy_poli.cy_id  AND ROWNUM<2)||' ('||(SELECT /*+ index(cn CYN_PK) */ description FROM m_sys.m_country_nls cn WHERE cn.cy_id=dummy_poli.cy_id AND cn.nls_id=1  AND ROWNUM<2)||')' country_of_origin,\n\tROUND(tc.total_price+NVL(tc.tax_amount,0),2) po_total_cost,\n\tpo_currency,  get_poh.get_exchange_rate,\n\tish.item_ship_pos, ish.item_ship_sub_pos, poli_unit_price,                    \n\tNVL(tc.total_price, 0) total_price,\n\tNVL(tc.tax_amount, 0) tax_amount,\n\tish.item_ship_qty, ish.item_ship_id, get_mrr1.mrr_id,  mrr.mrr_number, \n\tTO_CHAR(mrr.mrr_create_date, 'DD-MON-YYYY') mrr_creation_date, \n\tTO_CHAR(mrr.matl_recv_date, 'DD-MON-YYYY') mrr_recv_date, \n\tTO_CHAR(mrr.posted_date, 'DD-MON-YYYY') mrr_posted_date,                      \n\t(SELECT SUM(recv_qty) FROM m_sys.m_inv_receipts irr WHERE irr.mrr_id=get_mrr1.mrr_id AND irr.item_ship_id=ish.item_ship_id) mrr_quantity,                      \n\tDECODE((SELECT COUNT(1) FROM m_sys.m_item_ships ish1 WHERE ish1.master_ish_id = ish.item_ship_id AND ROWNUM < 2), 1, 'Y', NULL) is_master_tag  \n  \nFROM -- Real Tables below\n  m_sys.m_reqs r ------------------------Table-1 r\n  ,(SELECT rr.proj_id, rr.r_id, (SELECT MAX(r1.r_id)  ------------------------Table-2 get_max_r\n                        FROM m_sys.m_reqs r1\n                        WHERE r1.proj_id = rr.proj_id\n                        AND   r1.actual_ind = 'Y'\n                        AND   r1.approved_date IS NOT NULL\n                        --MZ-1124 AND TRUNC(rel_to_proc_date) <= TO_DATE(:P8103_GET_TO)\n                        START WITH r1.r_id = rr.r_id\n                        CONNECT BY PRIOR r1.r_id = r1.last_r_id) r_id_max\n        FROM m_sys.m_reqs rr\n        WHERE 1=1 -- and rr.proj_id = 'D7521'\n        AND rr.actual_ind = 'Y'\n        AND rr.approved_date IS NOT NULL\n    )get_max_r\n  ,(SELECT mrli.proj_id, r_id, rli_id, rli_pos, rli_sub_pos           ------------------------Table-3 rli\n        , total_release_qty, estimated_ros_date, un.unit_code,attr_group1,attr_group2,attr_group3,attr_group4,attr_group5\n        FROM m_sys.m_req_line_items mrli, m_sys.m_units un\n        WHERE 1=1 -- and mrli.proj_id = 'D7521'\n        AND released_ind   = 'Y'\n        AND mrli.release_qty_unit_id = un.unit_id\n\t )rli\n  ,m_sys.m_po_line_items dummy_poli  ------------------------Table-4 dummy_poli\n    ,(SELECT * FROM ------------------------Table-5 get_poli\n        (SELECT max_poh.poh_id, max_poh.base_poh_id, poli.poli_id, proj_id\n         FROM (\n               SELECT MAX(poh1.poh_id) poh_id, poh1.base_poh_id, poh1.proj_id                             \n               FROM m_sys.m_po_headers poh1\n               WHERE 1=1 -- AND poh1.proj_id = 'D7521'\n               --MZ-1124 AND  TRUNC(poh1.po_issue_date) BETWEEN TO_DATE(:P8103_GET_FROM) AND TO_DATE(:P8103_GET_TO)\n               AND  TRUNC(poh1.po_issue_date) >= '01-Jan-2024' AND  TRUNC(poh1.po_issue_date)<= '01-Oct-2024'\n               GROUP BY base_poh_id, poh1.proj_id\n               ) max_poh,\n              TABLE(MDR_CUST.MDR_REPORT_CUSTOM.GET_PO_LINE_ITEMS(max_poh.poh_id, 'Y')) poli\n        WHERE max_poh.poh_id = poli.poh_id\n        ORDER BY poh_id, poli_id\n        )\n        --MZ-1124 WHERE ((:P8103_FROM_IND = 1 AND ROWNUM < 1001) OR (:P8103_FROM_IND = 0 AND 1=1)) -- restrict records to 1000 when IND = 1\n\t)get_poli\n  ,(SELECT poh.proj_id, poh.poh_id, po_number, po_supp po_rev, sup_id, discount_percent,  ------------------------Table-6 get_poh\n        TO_CHAR(poh.creation_date, 'DD-MON-YYYY') po_created_date,\n        TO_CHAR(poh.approved_date, 'DD-MON-YYYY') po_approved_date,\n        TO_CHAR(poh.po_issue_date, 'DD-MON-YYYY') po_issue_date,\n        (SELECT /*+ index(u USR_PK) */ first_name||' '||last_name FROM m_sys.m_users u WHERE u.m_usr_id=poh.buyer AND ROWNUM<2) buyer,\n        (SELECT /*+ index(pohn PHN_PK) */ description FROM m_sys.m_po_header_nls pohn WHERE pohn.nls_id=1 AND pohn.poh_id=poh.poh_id AND ROWNUM<2) po_description, \n        MDR_CUST.MDR_REPORT_CUSTOM.GET_EXCHANGE_RATE_USD(poh.proj_id, SYSDATE, poh.currency_id) get_exchange_rate,\n        (SELECT /*+ index(un UNIT_PK) */ unit_code FROM m_sys.m_units un WHERE un.unit_id=poh.currency_id AND ROWNUM<2) po_currency,\n         (SELECT attr_value\n         FROM m_sys.m_used_values uv, m_sys.m_attrs att\n         WHERE uv.proj_id    = poh.proj_id\n         AND   uv.attr_id    = att.attr_id\n         AND   att.attr_code = 'SELECT_CODE'\n         AND   uv.pk_id      = poh.poh_id\n         AND   uv.used_type  = 'PO'\n         AND   ROWNUM < 2) select_code,                     \n        (SELECT attr_value\n         FROM m_sys.m_used_values uv, m_sys.m_attrs att\n         WHERE uv.proj_id    = poh.proj_id\n         AND   uv.attr_id    = att.attr_id\n         AND   att.attr_code = 'PAYMENT_MODE'\n         AND   uv.pk_id      = poh.poh_id\n         AND   uv.used_type  = 'PO'\n         AND   ROWNUM < 2) payment_mode,\n         NVL2(po_close_date, 'CLOSED', NVL2(po_issue_date, 'ISSUED', NVL2(approved_date, 'APPROVED', NVL2(rfa_date, 'FROZEN', 'CONFIRMED')))) get_po_status,\n         TO_CHAR(NVL2(po_close_date, po_close_date, NVL2(po_issue_date, po_issue_date, NVL2(approved_date, approved_date, NVL2(rfa_date, rfa_date, lmod)))), 'DD-MON-YYYY') status_date\n    FROM m_sys.m_po_headers poh\n    WHERE 1=1 --AND poh.proj_id = 'D7521'\n      AND  TRUNC(poh.po_issue_date) >= '01-Jan-2024'\n      AND   poh.po_issue_date IS NOT NULL\n\t)get_poh\n  ,m_sys.m_idents i                 ------------------------Table-7 idents               \n\t,m_sys.m_po_total_costs tc        ------------------------Table-8 tc  total_costs\n\t,m_sys.m_overview_suppliers ms    ------------------------Table-9 ms  overview_suppliers    ------INC1591215 by Vineet  \n\t--MZ1124 ,m_sys.m_company_addrs mca        ------------------------Table-10 company_addrs mca   not in select / not in use\n  ,m_sys.m_item_ships ish           ------------------------Table-11 company_addrs ish  \n  ,(SELECT  MAX(mrr.mrr_id) mrr_id, mrr.proj_id, mrr_number, item_ship_id  ------------------------Table-12 get_mrr1\n      FROM m_sys.m_matl_recv_rpts mrr, m_sys.m_inv_receipts ir\n      WHERE 1=1 -- mrr.proj_id = 'D7521'\n        AND   ir.proj_id  = mrr.proj_id\n        AND   mrr.mrr_id  = ir.mrr_id\n        GROUP BY mrr.proj_id, mrr_number, item_ship_id                 \n\t)get_mrr1\n  ,m_sys.m_matl_recv_rpts mrr       ------------------------Table-13 mrr \n\n  --- Final WHERE Clause is down \n\tWHERE 1=1\n  AND  r.proj_id in (select distinct proj_id from m_sys.m_jobs j \n                      where (j.field2 =  '0100' and field1 in ('0923', '0921', '0950'))  or  \n                            (j.field2 <> '0100' and substr(field2,1,4) in ('0923', '0921', '0950')))  -- 0923, 0921, 0950\n  AND  r.proj_id = get_max_r.proj_id\n\tAND  r.actual_ind = 'Y'\n\tAND  get_max_r.r_id_max = r.r_id\n  AND  get_max_r.r_id = rli.r_id --AND r.proj_id = rli.proj_id\n\tAND  rli.rli_id = dummy_poli.rli_id --AND r.proj_id = dummy_poli.proj_id\n\tAND  dummy_poli.poli_id = get_poli.poli_id\n\tAND  get_poh.poh_id     = get_poli.poh_id\n\tAND  i.ident            = dummy_poli.ident --//RN: added to link with ident  \n\tAND  get_poh.poh_id     = tc.poh_id(+)\n\tAND  get_poh.sup_id     = ms.sup_id\n  AND  get_poli.poli_id   = ish.poli_id(+) --//RN: change to left join to get record without itemshipment  \n  AND  ish.proj_id        = r.proj_id\n\tAND  ish.item_ship_id   = get_mrr1.item_ship_id(+)\n\tAND  get_mrr1.mrr_id     = mrr.mrr_id(+)\n )  \nORDER BY project_id , po_number, poli_pos, poli_sub_pos\n",
+							"type": "Expression"
+						},
+						"partitionOption": "None",
+						"convertDecimalToInteger": false,
+						"queryTimeout": "02:00:00"
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"allowCopyCommand": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ADLSG2 TimeAnalytics DEV",
+							"type": "LinkedServiceReference"
+						},
+						"path": "mdr-staging-data/Ruya11"
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_smat_11_extracts",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_excel_loads_AzureSynapseAnalytics",
+						"type": "DatasetReference",
+						"parameters": {
+							"TableName": {
+								"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.table_name",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "Send Email On Failure",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "cp_copy_first_sheet_from_source_to_synapse",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "POST",
+					"headers": {
+						"Content-Type": "application/json"
+					},
+					"url": "https://prod-31.eastus.logic.azure.com:443/workflows/03d7da5abbab4215a05aeaceae3b96fa/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=asuyutHtoSxGFURsj1-A6AKRiNLdXZ4mTnZvZ17_8hI",
+					"connectVia": {
+						"referenceName": "integrationRuntimeEast2",
+						"type": "IntegrationRuntimeReference"
+					},
+					"body": {
+						"value": "{\n    \"DataFactoryName\": \"@{pipeline().DataFactory}\",\n    \"PipelineName\": \"@{pipeline().Pipeline}\",\n    \"ErrorMessage\": \"Pipeline Failed\",\n    \"EmailTo\": \"@{activity('lk_get_pipeline_parameters').output.firstRow.ncsa_master_pipeline_email_to}\",\n    \"Activity\":  \"pl_Vendor_Progress_Ruya11_D7507\"\n}",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Update_Week_end_date",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "lk_get_pipeline_parameters_2",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseAnalytics",
+					"type": "LinkedServiceReference"
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"parameters": [
+								{
+									"name": "proj_id",
+									"type": "String",
+									"value": {
+										"value": "@pipeline().parameters.proj_id",
+										"type": "Expression"
+									},
+									"direction": "Input"
+								}
+							],
+							"type": "Query",
+							"text": {
+								"value": "@concat('delete from [epr].[',activity('lk_get_pipeline_parameters_2').output.firstRow.table_name,']','\nwhere  PROJECT_ID = ','''',pipeline().parameters.proj_id,'''')",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			}
+		],
+		"parameters": {
+			"proj_id": {
+				"type": "string",
+				"defaultValue": "D7507"
+			}
+		},
+		"variables": {
+			"v_error_message": {
+				"type": "Array"
+			},
+			"v_pipelinedetails": {
+				"type": "Array"
+			},
+			"date": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/NCSA/Ruya_D7507"
+		},
+		"annotations": [],
+		"lastPublishTime": "2024-04-30T07:33:42Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

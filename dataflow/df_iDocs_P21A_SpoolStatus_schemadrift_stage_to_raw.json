@@ -1,0 +1,36 @@
+{
+	"name": "df_iDocs_P21A_SpoolStatus_schemadrift_stage_to_raw",
+	"properties": {
+		"description": "Data Flow to pull data from ADLS Stg to ADLS Raw.\nNo schema defined in source or Target, Schema drift was used along with column rules to direct data into Sink.",
+		"folder": {
+			"name": "Projects/iDocs"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_iDocs_SpoolStatus_stg",
+						"type": "DatasetReference"
+					},
+					"name": "srcSpoolStatusReportStage"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_iDocs_SpoolStatus_raw",
+						"type": "DatasetReference"
+					},
+					"name": "snkSpoolStatusRptRaw"
+				}
+			],
+			"transformations": [
+				{
+					"name": "setFileName"
+				}
+			],
+			"script": "parameters{\n\tWildPath as string,\n\tFileName as string\n}\nsource(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\trowUrlColumn: 'Filename',\n\twildcardPaths:[($WildPath + $FileName + '.csv')]) ~> srcSpoolStatusReportStage\nsrcSpoolStatusReportStage derive(Filename = concat($WildPath,substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',$FileName,'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv')) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\trowUrlColumn:'Filename',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tmapColumn(\n\t\tFilename,\n\t\teach(match('PROJNAME'==upper(name)),\n\t\t\t'PROJNAME' = $$),\n\t\teach(match('PROJNO'==upper(name)),\n\t\t\t'PROJNO' = $$),\n\t\teach(match('DOC_ID'==upper(name)),\n\t\t\t'DOC_ID' = $$),\n\t\teach(match('DOCUMENT NUMBER'==upper(name)),\n\t\t\t'DOCUMENT NUMBER' = $$),\n\t\teach(match('REVISION'==upper(name)),\n\t\t\t'REVISION' = $$),\n\t\teach(match('REVISION DATE'==upper(name)),\n\t\t\t'REVISION DATE' = $$),\n\t\teach(match('TITLE'==upper(name)),\n\t\t\t'TITLE' = $$),\n\t\teach(match('ISSUE STATE'==upper(name)),\n\t\t\t'ISSUE STATE' = $$),\n\t\teach(match('TRANSMITTAL NUMBER'==upper(name)),\n\t\t\t'TRANSMITTAL NUMBER' = $$),\n\t\teach(match('TRANSMITTAL DATE'==upper(name)),\n\t\t\t'TRANSMITTAL DATE' = $$),\n\t\teach(match('DELIVERABLE'==upper(name)),\n\t\t\t'DELIVERABLE' = $$),\n\t\teach(match('IDOCS FOLDER'==upper(name)),\n\t\t\t'IDOCS FOLDER' = $$),\n\t\teach(match('REF DOC'==upper(name)),\n\t\t\t'REF DOC' = $$)\n\t)) ~> snkSpoolStatusRptRaw"
+		}
+	}
+}

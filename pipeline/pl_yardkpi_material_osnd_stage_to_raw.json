@@ -1,0 +1,131 @@
+{
+	"name": "pl_yardkpi_material_osnd_stage_to_raw",
+	"properties": {
+		"activities": [
+			{
+				"name": "osnd_stage_to_raw",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "df_yardkpi_Material_OSND_stage_to_raw",
+						"type": "DataFlowReference",
+						"parameters": {
+							"FilePath": {
+								"value": "'@{activity('lk_get_pipeline_parameters').output.firstRow.folder_path}'",
+								"type": "Expression"
+							},
+							"FileName": {
+								"value": "'@{activity('lk_get_pipeline_parameters').output.firstRow.file_name}'",
+								"type": "Expression"
+							}
+						},
+						"datasetParameters": {
+							"SrcOSNDStage": {
+								"p_ds_file_system": {
+									"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+									"type": "Expression"
+								},
+								"p_ds_folder_path": {
+									"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+									"type": "Expression"
+								},
+								"p_ds_file_name": {
+									"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+									"type": "Expression"
+								}
+							},
+							"SnkOSNDRaw": {
+								"p_ds_file_system": {
+									"value": "@activity('lk_get_pipeline_parameters').output.firstRow.output_file_system",
+									"type": "Expression"
+								},
+								"p_ds_folder_path": {
+									"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+									"type": "Expression"
+								},
+								"p_ds_file_name": {
+									"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+									"type": "Expression"
+								}
+							}
+						}
+					},
+					"compute": {
+						"coreCount": 8,
+						"computeType": "General"
+					},
+					"traceLevel": "Fine"
+				}
+			},
+			{
+				"name": "lk_get_pipeline_parameters",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "[dbo].[getPipelineParametersValues]",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": {
+									"value": "SHAREPOINT",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "AzureSynapseAnalyticsDB",
+						"type": "DatasetReference"
+					}
+				}
+			}
+		],
+		"variables": {
+			"p_pl_fileexists": {
+				"type": "Boolean",
+				"defaultValue": true
+			}
+		},
+		"folder": {
+			"name": "Projects/YARD KPI/Material Register/Material OSND"
+		},
+		"annotations": [],
+		"lastPublishTime": "2024-04-09T06:13:40Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

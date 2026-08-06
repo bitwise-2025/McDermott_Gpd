@@ -1,0 +1,32 @@
+{
+	"name": "df_sitepro_progress_stage_to_raw",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_sitepro_progress_stage",
+						"type": "DatasetReference"
+					},
+					"name": "sourceSiteproProgressStage"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_progress_raw",
+						"type": "DatasetReference"
+					},
+					"name": "snkProgressSiteproRaw"
+				}
+			],
+			"transformations": [
+				{
+					"name": "setFileName"
+				}
+			],
+			"script": "source(output(\n\t\tproject_number as string,\n\t\tfunction_code as string,\n\t\tsource_name as string,\n\t\tsub_source_name as string,\n\t\tdata_class_budget_name as string,\n\t\tdata_class_Progress_name as string,\n\t\tdata_class_percentage_code as string,\n\t\tdata_class_quantity_name as string,\n\t\tdata_class_time_name as string,\n\t\tsub_class_budget_hours_name as string,\n\t\tsub_class_budget_quantity_name as string,\n\t\tsub_class_progress_hours_name as string,\n\t\tsub_class_progress_quantity_name as string,\n\t\tsub_class_progress_installed_quantity_name as string,\n\t\tsub_class_percentage_code as string,\n\t\tunit_of_measure_Hours as string,\n\t\tunit_of_measure_Quantity as string,\n\t\tunit_of_measure_code_percentage as string,\n\t\tphase_code as string,\n\t\tschedule_resource_code as string,\n\t\twork_unit_code as string,\n\t\twork_area_code as string,\n\t\tactivity_code as string,\n\t\tCWP_Code as string,\n\t\tIWP_Code as string,\n\t\tIWP_Status_Code as string,\n\t\tIWP_StatusDescription as string,\n\t\tPMID as string,\n\t\tPMID_Description as string,\n\t\tContract as string,\n\t\tCost_Code as string,\n\t\tCost_Code_Description as string,\n\t\tCosting_COA as string,\n\t\tDrawing_No as string,\n\t\tTag_No as string,\n\t\tspool as string,\n\t\tline as string,\n\t\tspec as string,\n\t\tsystem as string,\n\t\tPiece_Mark as string,\n\t\tCost_Type as string,\n\t\tNumber_Of_Pieces as string,\n\t\tSubsystem as string,\n\t\ttext5 as string,\n\t\tBom_Node_ID as string,\n\t\tDoc_ID as string,\n\t\tStaging_Reference as string,\n\t\tLevel6 as string,\n\t\tplanned_Status as string,\n\t\tprogress_Status as string,\n\t\tworkpack_status as string,\n\t\tIFC as string,\n\t\tProgressHistoryID as string,\n\t\tROCCode as string,\n\t\tStep as string,\n\t\tIs_Driving as string,\n\t\tName as string,\n\t\tCapture_Origin as string,\n\t\tUserName as string,\n\t\tProgress_Entry_Date_Time as string,\n\t\tTimestampShift as string,\n\t\tProgressDate as string,\n\t\tProgressDelta as string,\n\t\tProgressCumulative as string,\n\t\tBudget_Hrs as string,\n\t\tProgressed_Hrs as string,\n\t\tBudget_Qty as string,\n\t\tProgressed_Qty as string,\n\t\tInstall_Qty as string,\n\t\tmax_date as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\twildcardPaths:['Project_Data/NCSA/Sitepro/SiteproProgress/Sitepro_Progress.csv']) ~> sourceSiteproProgressStage\nsourceSiteproProgressStage derive(FileName = concat( 'Project_Data/NCSA/SitePro/SiteproProgress/',        substring(toString(currentTimestamp()),1,4),        '/',substring(toString(currentTimestamp()),6,2),        '/',substring(toString(currentTimestamp()),9,2),        '/',        'Sitepro_Progress_',        replace(replace(toString(currentTimestamp()),'.',''),':',''),        '.csv')) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\trowUrlColumn:'FileName',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> snkProgressSiteproRaw"
+		}
+	}
+}

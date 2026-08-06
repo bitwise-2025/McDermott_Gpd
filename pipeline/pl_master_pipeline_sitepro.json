@@ -1,0 +1,76 @@
+{
+	"name": "pl_master_pipeline_sitepro",
+	"properties": {
+		"description": "Master Pipeline to run the following three Sitepro FACT pipeline(s) in sequence.",
+		"activities": [
+			{
+				"name": "pl_progress_sitepro_master_pipeline",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_progress_sitepro_master_pipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "pl_Budget_sitepro_master_pipeline",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "pl_progress_sitepro_master_pipeline",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_Budget_sitepro_master_pipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "pl_timesheet_sitepro_master_pipeline",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "pl_Budget_sitepro_master_pipeline",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_timesheet_sitepro_master_pipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			}
+		],
+		"folder": {
+			"name": "Projects/NCSA/Master Pipeline"
+		},
+		"annotations": [],
+		"lastPublishTime": "2021-04-29T02:31:46Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

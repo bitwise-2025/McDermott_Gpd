@@ -1,0 +1,1277 @@
+{
+	"name": "pl_maps_person_raw_to_synapse",
+	"properties": {
+		"activities": [
+			{
+				"name": "Check Combined File non zero Bytes",
+				"description": "Check if the combined file has any data to be loaded.",
+				"type": "GetMetadata",
+				"dependsOn": [
+					{
+						"activity": "cp_Get_Latest_File",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_maps_person_raw_latest",
+						"type": "DatasetReference"
+					},
+					"fieldList": [
+						"size",
+						"exists"
+					],
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true
+					},
+					"formatSettings": {
+						"type": "DelimitedTextReadSettings"
+					}
+				}
+			},
+			{
+				"name": "Set start date",
+				"description": "Set the last stage run date to the variable as start date.",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lkup_Get_Pipeline_parameters_getlrd",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_lrd_src_to_stage",
+					"value": {
+						"value": "@activity('lkup_Get_Pipeline_parameters_getlrd').output.firstRow.start_date",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "cp_Get_Latest_File",
+				"description": "Copy all the files created since the last start date and combine them into one file to be processed into Synapse.",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Set start date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.09:00:00",
+					"retry": 1,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": true,
+							"modifiedDatetimeStart": {
+								"value": "@variables('v_lrd_src_to_stage')",
+								"type": "Expression"
+							},
+							"wildcardFolderPath": "Project_Data/NCSA/FAB Automation/MAPS/Person/*/*/*",
+							"wildcardFileName": "MAPS_Person*.csv"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings",
+							"copyBehavior": "MergeFiles"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": "ts_itime_combined.csv"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_maps_person_raw",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_maps_person_raw_latest",
+						"type": "DatasetReference"
+					}
+				]
+			},
+			{
+				"name": "if_File_Exists_Copy_to_Synapse",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Check Combined File non zero Bytes",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@greater(activity('Check Combined File non zero Bytes').output.size, 2)",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "cp_copy_from_adlsg2_to_Synapse",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": true,
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "SqlDWSink",
+									"allowCopyCommand": true,
+									"disableMetricsCollection": false
+								},
+								"enableStaging": true,
+								"stagingSettings": {
+									"linkedServiceName": {
+										"referenceName": "ADLSG2 TimeAnalytics DEV",
+										"type": "LinkedServiceReference"
+									},
+									"path": "mdr-staging-data/Project_Data/NCSA/FAB Automation/MAPS/Person/Logs"
+								},
+								"translator": {
+									"type": "TabularTranslator",
+									"mappings": [
+										{
+											"source": {
+												"name": "Id_Number",
+												"type": "String"
+											},
+											"sink": {
+												"name": "id_number",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "prfscId_Code",
+												"type": "String"
+											},
+											"sink": {
+												"name": "prfscid_code",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Pleave_rType",
+												"type": "String"
+											},
+											"sink": {
+												"name": "pleave_rtype",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Leave_reAs",
+												"type": "String"
+											},
+											"sink": {
+												"name": "leave_reas",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "Title_Rank",
+												"type": "String"
+											},
+											"sink": {
+												"name": "title_rank",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Surname",
+												"type": "String"
+											},
+											"sink": {
+												"name": "surname",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Forenames",
+												"type": "String"
+											},
+											"sink": {
+												"name": "forenames",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Initials",
+												"type": "String"
+											},
+											"sink": {
+												"name": "initials",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Date_Leaving",
+												"type": "String"
+											},
+											"sink": {
+												"name": "date_leaving",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "Part_Time_Acceptable",
+												"type": "String"
+											},
+											"sink": {
+												"name": "part_time_acceptable",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Part_Time",
+												"type": "String"
+											},
+											"sink": {
+												"name": "part_time",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Part_Time_Hours",
+												"type": "String"
+											},
+											"sink": {
+												"name": "part_time_hours",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Date_Joined",
+												"type": "String"
+											},
+											"sink": {
+												"name": "date_joined",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "Extra_Code_1",
+												"type": "String"
+											},
+											"sink": {
+												"name": "extra_code_1",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Extra_Code_2",
+												"type": "String"
+											},
+											"sink": {
+												"name": "extra_code_2",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Person_Type",
+												"type": "String"
+											},
+											"sink": {
+												"name": "person_type",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Grade_sht_Title",
+												"type": "String"
+											},
+											"sink": {
+												"name": "grade_sht_title",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "tkt_grd_sht_Title",
+												"type": "String"
+											},
+											"sink": {
+												"name": "tkt_grd_sht_title",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Employee_Type",
+												"type": "String"
+											},
+											"sink": {
+												"name": "employee_type",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "Sex",
+												"type": "String"
+											},
+											"sink": {
+												"name": "sex",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Date_Birth",
+												"type": "String"
+											},
+											"sink": {
+												"name": "date_birth",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "Marital_Status",
+												"type": "String"
+											},
+											"sink": {
+												"name": "marital_status",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Surplus_sDate",
+												"type": "String"
+											},
+											"sink": {
+												"name": "surplus_sdate",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "Supern_sDate",
+												"type": "String"
+											},
+											"sink": {
+												"name": "supern_sdate",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "Date_ott_dUs",
+												"type": "String"
+											},
+											"sink": {
+												"name": "date_ott_dus",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "Promotion_Ryear",
+												"type": "String"
+											},
+											"sink": {
+												"name": "promotion_ryear",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Eret_Date",
+												"type": "String"
+											},
+											"sink": {
+												"name": "eret_date",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "ret_Date",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ret_date",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "ret_dec",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ret_dec",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Asr_Despatch",
+												"type": "String"
+											},
+											"sink": {
+												"name": "asr_despatch",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "Asr_Issue",
+												"type": "String"
+											},
+											"sink": {
+												"name": "asr_issue",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "Asr_Actual_Return",
+												"type": "String"
+											},
+											"sink": {
+												"name": "asr_actual_return",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "Date_av_Post",
+												"type": "String"
+											},
+											"sink": {
+												"name": "date_av_post",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "Disabled_Number",
+												"type": "String"
+											},
+											"sink": {
+												"name": "disabled_number",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Seniority_Date",
+												"type": "String"
+											},
+											"sink": {
+												"name": "seniority_date",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "comp_Name",
+												"type": "String"
+											},
+											"sink": {
+												"name": "comp_name",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Date_Contract",
+												"type": "String"
+											},
+											"sink": {
+												"name": "date_contract",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "Student_Type_Id",
+												"type": "String"
+											},
+											"sink": {
+												"name": "student_type_id",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Dietary_Requirements",
+												"type": "String"
+											},
+											"sink": {
+												"name": "dietary_requirements",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Special_Needs",
+												"type": "String"
+											},
+											"sink": {
+												"name": "special_needs",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Country_Of_OrGin",
+												"type": "String"
+											},
+											"sink": {
+												"name": "country_of_orgin",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Telephone_Number",
+												"type": "String"
+											},
+											"sink": {
+												"name": "telephone_number",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Students_Company",
+												"type": "String"
+											},
+											"sink": {
+												"name": "students_company",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Notes",
+												"type": "String"
+											},
+											"sink": {
+												"name": "notes",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Previous_Employee",
+												"type": "String"
+											},
+											"sink": {
+												"name": "previous_employee",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Applicant_Id",
+												"type": "String"
+											},
+											"sink": {
+												"name": "applicant_id",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Blood_Type",
+												"type": "String"
+											},
+											"sink": {
+												"name": "blood_type",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "e_Mail_Name",
+												"type": "String"
+											},
+											"sink": {
+												"name": "e_mail_name",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Sob_Type_Id",
+												"type": "String"
+											},
+											"sink": {
+												"name": "sob_type_id",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Lifetime_Sob",
+												"type": "String"
+											},
+											"sink": {
+												"name": "lifetime_sob",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Nationality_Id",
+												"type": "String"
+											},
+											"sink": {
+												"name": "nationality_id",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Person_Check_Box_1",
+												"type": "String"
+											},
+											"sink": {
+												"name": "person_check_box_1",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Person_Check_Box_2",
+												"type": "String"
+											},
+											"sink": {
+												"name": "person_check_box_2",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Person_Check_Box_3",
+												"type": "String"
+											},
+											"sink": {
+												"name": "person_check_box_3",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Companion_Id_Number",
+												"type": "String"
+											},
+											"sink": {
+												"name": "companion_id_number",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Is_Smoker",
+												"type": "String"
+											},
+											"sink": {
+												"name": "is_smoker",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Travel_Provider_Id",
+												"type": "String"
+											},
+											"sink": {
+												"name": "travel_provider_id",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Hair_Reason_Id",
+												"type": "String"
+											},
+											"sink": {
+												"name": "hair_reason_id",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Eye_Reason_Id",
+												"type": "String"
+											},
+											"sink": {
+												"name": "eye_reason_id",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Person_Weight",
+												"type": "String"
+											},
+											"sink": {
+												"name": "person_weight",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Person_Height",
+												"type": "String"
+											},
+											"sink": {
+												"name": "person_height",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Shoe_Size",
+												"type": "String"
+											},
+											"sink": {
+												"name": "shoe_size",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Uniform_Size",
+												"type": "String"
+											},
+											"sink": {
+												"name": "uniform_size",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Place_Of_Birth",
+												"type": "String"
+											},
+											"sink": {
+												"name": "place_of_birth",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ItemTag_Id",
+												"type": "String"
+											},
+											"sink": {
+												"name": "itemtag_id",
+												"type": "Decimal"
+											}
+										},
+										{
+											"source": {
+												"name": "Itemdb_Id",
+												"type": "String"
+											},
+											"sink": {
+												"name": "itemdb_id",
+												"type": "Decimal"
+											}
+										},
+										{
+											"source": {
+												"name": "Date_Created",
+												"type": "String"
+											},
+											"sink": {
+												"name": "date_created",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "Date_Last_mod",
+												"type": "String"
+											},
+											"sink": {
+												"name": "date_last_mod",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "Last_Edit_By",
+												"type": "String"
+											},
+											"sink": {
+												"name": "last_edit_by",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "Activity_Id",
+												"type": "String"
+											},
+											"sink": {
+												"name": "activity_id",
+												"type": "Decimal"
+											}
+										},
+										{
+											"source": {
+												"name": "Activity_db",
+												"type": "String"
+											},
+											"sink": {
+												"name": "activity_db",
+												"type": "Decimal"
+											}
+										},
+										{
+											"source": {
+												"name": "Spare_Char_1_255",
+												"type": "String"
+											},
+											"sink": {
+												"name": "spare_char_1_255",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Spare_Char_1_100",
+												"type": "String"
+											},
+											"sink": {
+												"name": "spare_char_1_100",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Spare_Char_1_50",
+												"type": "String"
+											},
+											"sink": {
+												"name": "spare_char_1_50",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Spare_Int_1",
+												"type": "String"
+											},
+											"sink": {
+												"name": "spare_int_1",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "Spare_Int_2",
+												"type": "String"
+											},
+											"sink": {
+												"name": "spare_int_2",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "b1m",
+												"type": "String"
+											},
+											"sink": {
+												"name": "b1m",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "b2m",
+												"type": "String"
+											},
+											"sink": {
+												"name": "b2m",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "b3m",
+												"type": "String"
+											},
+											"sink": {
+												"name": "b3m",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "b4m",
+												"type": "String"
+											},
+											"sink": {
+												"name": "b4m",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "b5m",
+												"type": "String"
+											},
+											"sink": {
+												"name": "b5m",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "b6m",
+												"type": "String"
+											},
+											"sink": {
+												"name": "b6m",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "b7m",
+												"type": "String"
+											},
+											"sink": {
+												"name": "b7m",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "b8m",
+												"type": "String"
+											},
+											"sink": {
+												"name": "b8m",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "Country_Of_Birth_Id",
+												"type": "String"
+											},
+											"sink": {
+												"name": "country_of_birth_id",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Person_Known_As",
+												"type": "String"
+											},
+											"sink": {
+												"name": "person_known_as",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Employ_Type_Name",
+												"type": "String"
+											},
+											"sink": {
+												"name": "employ_type_name",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Employ_Type_desc",
+												"type": "String"
+											},
+											"sink": {
+												"name": "employ_type_desc",
+												"type": "String"
+											}
+										}
+									]
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_adlsg2_csv_maps_person_raw_latest",
+									"type": "DatasetReference"
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_AzureSynapseAnalytics_maps_person",
+									"type": "DatasetReference"
+								}
+							]
+						},
+						{
+							"name": "Delete Temp combined File",
+							"description": "After the data has been loaded, clear the combined latest file from the ADLSV2 ",
+							"type": "Delete",
+							"dependsOn": [
+								{
+									"activity": "cp_copy_from_adlsg2_to_Synapse",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataset": {
+									"referenceName": "ds_adlsg2_csv_maps_person_raw_latest",
+									"type": "DatasetReference"
+								},
+								"enableLogging": false,
+								"storeSettings": {
+									"type": "AzureBlobFSReadSettings",
+									"recursive": true,
+									"enablePartitionDiscovery": false
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "lkup_Get_Pipeline_parameters_getlrd",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "NetworkFolder"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "sp_Update_Parameter",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "sp_generic_procedure_dim_load",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+					"storedProcedureParameters": {
+						"pParameterValue": {
+							"value": {
+								"value": "@formatDateTime(activity('lkup_Get_Pipeline_parameters_getlrd').output.firstRow.run_start_datetime,'yyyy-MM-dd HH:mm:ss.fff')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": "NetworkFolder",
+							"type": "String"
+						},
+						"pParameterCode": {
+							"value": "start_date",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseDB_DEV",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "sp_generic_procedure_dim_load",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "if_File_Exists_Copy_to_Synapse",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.07:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[generic_load_dim_v2]",
+					"storedProcedureParameters": {
+						"debug_flag": {
+							"value": "N",
+							"type": "String"
+						},
+						"execute_flag": {
+							"value": "Y",
+							"type": "String"
+						},
+						"load_name": {
+							"value": "dim_entp_maps_person",
+							"type": "String"
+						},
+						"rkValidationRequired": {
+							"value": "Y",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"variables": {
+			"v_lrd_src_to_stage": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/NCSA/FAB Automation/MAPS/Person"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-03-09T05:53:35Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

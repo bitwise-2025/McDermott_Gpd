@@ -1,0 +1,665 @@
+{
+	"name": "pl_yardkpi_pqr_raw_to_synapse",
+	"properties": {
+		"activities": [
+			{
+				"name": "Delete_synapse_stage_data",
+				"type": "Script",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseDB_DEV",
+					"type": "LinkedServiceReference"
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": {
+								"value": "DELETE FROM yardkpi.stage_entp_pqr_welding_eng",
+								"type": "Expression"
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Set_current_date_time",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lkup_Get_Pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_current_date_time",
+					"value": {
+						"value": "@string(utcnow())",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "sp_Update_Parameter",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Copy_data_Raw_to_synapse_stage",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+					"storedProcedureParameters": {
+						"pParameterCode": {
+							"value": {
+								"value": "last_run_start_date",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pParameterValue": {
+							"value": {
+								"value": "@formatDateTime(variables('v_current_date_time'),'yyyy-MM-dd HH:mm:ss')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": {
+								"value": "PQR",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseDB_DEV",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "lkup_Get_Pipeline_parameters",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "PQR"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Copy_data_Raw_to_synapse_stage",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Set_current_date_time",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Delete_synapse_stage_data",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.00:03:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": true,
+							"modifiedDatetimeStart": {
+								"value": "@activity('lkup_Get_Pipeline_parameters').output.firstRow.last_run_start_date",
+								"type": "Expression"
+							},
+							"wildcardFolderPath": {
+								"value": "@activity('lkup_Get_Pipeline_parameters').output.firstRow.Directory",
+								"type": "Expression"
+							},
+							"wildcardFileName": {
+								"value": "@concat('STATUSWPSPQRQUALIFICATION','_*.csv')",
+								"type": "Expression"
+							},
+							"enablePartitionDiscovery": false
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"allowPolyBase": true,
+						"polyBaseSettings": {
+							"rejectValue": 0,
+							"rejectType": "value",
+							"useTypeDefault": true
+						}
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ADLSG2 TimeAnalytics DEV",
+							"type": "LinkedServiceReference"
+						},
+						"path": {
+							"value": "mdr-raw-data/Polybase_Staging_Space",
+							"type": "Expression"
+						}
+					},
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "source_code",
+									"type": "String"
+								},
+								"sink": {
+									"name": "source_code",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "sub_source_code",
+									"type": "String"
+								},
+								"sink": {
+									"name": "sub_source_code",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "PROJECTCODEId",
+									"type": "String"
+								},
+								"sink": {
+									"name": "contract_id",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "PROJECT",
+									"type": "String"
+								},
+								"sink": {
+									"name": "contract_name",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "SCOPE",
+									"type": "String"
+								},
+								"sink": {
+									"name": "SCOPE",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Title",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Title",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "WELDPROCESS",
+									"type": "String"
+								},
+								"sink": {
+									"name": "WELD_PROCESS",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "WELDPOSITION",
+									"type": "String"
+								},
+								"sink": {
+									"name": "WELD_POSITION",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "WELDSTART",
+									"type": "String"
+								},
+								"sink": {
+									"name": "WELD_START",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "WELDFINISH",
+									"type": "String"
+								},
+								"sink": {
+									"name": "WELD_FINISH",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "VISUAL",
+									"type": "String"
+								},
+								"sink": {
+									"name": "VISUAL",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "PTMPI",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PT_MPI",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "UT",
+									"type": "String"
+								},
+								"sink": {
+									"name": "UT",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "RT",
+									"type": "String"
+								},
+								"sink": {
+									"name": "RT",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "SENDTOLAVORATORY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "SEND_TO_LAVORATORY",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "PASSEDMECHANICALTESTING",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PASSED_MECHANICAL_TESTING",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "PQRPACKAGEAPPROVEDBYCLIENT",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PQR_PACKAGE_APPROVED_BY_CLIENT",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "REMARK",
+									"type": "String"
+								},
+								"sink": {
+									"name": "REMARK",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Created",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Dt_Created",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "CreatedById",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Dt_Created_By",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Modified",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Dt_Modified",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ModifiedById",
+									"type": "String"
+								},
+								"sink": {
+									"name": "DT_Modified_By",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Id",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ID",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "CountApproved",
+									"type": "String"
+								},
+								"sink": {
+									"name": "CountApproved",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ContentType",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Item_Type",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Path",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Path",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "create_date_time",
+									"type": "String"
+								},
+								"sink": {
+									"name": "created_date_time",
+									"type": "String"
+								}
+							}
+						]
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_gen2_pqr_raw_tgt",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_AzureSynapseAnalytics_yardkpi",
+						"type": "DatasetReference",
+						"parameters": {
+							"schema": {
+								"value": "yardkpi",
+								"type": "Expression"
+							},
+							"db_name": {
+								"value": "stage_entp_pqr_welding_eng",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "dim_entp_pqr_project",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Copy_data_Raw_to_synapse_stage",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": {
+						"value": "[dbo].[generic_load_dim_v2]",
+						"type": "Expression"
+					},
+					"storedProcedureParameters": {
+						"debug_flag": {
+							"value": "N"
+						},
+						"execute_flag": {
+							"value": "Y"
+						},
+						"load_name": {
+							"value": "Dim_ent_project_pqr_load"
+						},
+						"rkValidationRequired": {
+							"value": "Y"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "linkedservice_DEV_entanalytics_synapse",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "dim_entp_pqr_welding_eng",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "dim_entp_pqr_contract",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": {
+						"value": "[dbo].[generic_load_dim_v2]",
+						"type": "Expression"
+					},
+					"storedProcedureParameters": {
+						"debug_flag": {
+							"value": "N"
+						},
+						"execute_flag": {
+							"value": "Y"
+						},
+						"load_name": {
+							"value": "dim_entp_pqr_welding_eng"
+						},
+						"rkValidationRequired": {
+							"value": "Y"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "linkedservice_DEV_entanalytics_synapse",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "dim_entp_pqr_contract",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "dim_entp_pqr_project",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": {
+						"value": "[dbo].[generic_load_dim_v2]",
+						"type": "Expression"
+					},
+					"storedProcedureParameters": {
+						"debug_flag": {
+							"value": "N"
+						},
+						"execute_flag": {
+							"value": "Y"
+						},
+						"load_name": {
+							"value": "Dim_ent_contract_pqr_load"
+						},
+						"rkValidationRequired": {
+							"value": "Y"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "linkedservice_DEV_entanalytics_synapse",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"variables": {
+			"v_current_date_time": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/YARD KPI/PQR"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-12-27T06:02:03Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

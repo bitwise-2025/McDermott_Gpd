@@ -1,0 +1,414 @@
+{
+	"name": "pl_wa_sitepro_raw_to_synapse",
+	"properties": {
+		"activities": [
+			{
+				"name": "RawToSynapse",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Set_current_date_time",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": true,
+							"modifiedDatetimeStart": {
+								"value": "@variables('v_lrd_src_to_stage')",
+								"type": "Expression"
+							},
+							"wildcardFolderPath": "Project_Data/NCSA/SitePro/WA/*/*/*",
+							"wildcardFileName": "Wa_sitepro*.csv"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"preCopyScript": "truncate table gpd.NCSA_WorkArea",
+						"disableMetricsCollection": false
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "ID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "stage_ncsa_workarea_id",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "CODE",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Code",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Description",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Description",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "CreatedByID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "CreateByID",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "ModifiedByID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ModifiedByID",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "CreatedDate",
+									"type": "String"
+								},
+								"sink": {
+									"name": "CreatedDate",
+									"type": "DateTime"
+								}
+							},
+							{
+								"source": {
+									"name": "ModifiedDate",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ModifiedDate",
+									"type": "DateTime"
+								}
+							},
+							{
+								"source": {
+									"name": "PhaseID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PhaseID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "UnitID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "UnitID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "project_id",
+									"type": "String"
+								},
+								"sink": {
+									"name": "project_id",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "temp_id",
+									"type": "String"
+								},
+								"sink": {
+									"name": "dim_entp_project_nk",
+									"type": "Int32"
+								}
+							}
+						]
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_adlsg2_wa_sitepro_raw",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_AzureSynapseAnalytics_wa_sitepro_stage_copy",
+						"type": "DatasetReference",
+						"parameters": {
+							"table_name": "NCSA_WorkArea"
+						}
+					}
+				]
+			},
+			{
+				"name": "load_sp_dim_entp_work_area",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "usp_update_project_key",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[generic_load_dim_v2]",
+					"storedProcedureParameters": {
+						"debug_flag": {
+							"value": "N",
+							"type": "String"
+						},
+						"execute_flag": {
+							"value": "Y",
+							"type": "String"
+						},
+						"load_name": {
+							"value": "dim_entp_work_area",
+							"type": "String"
+						},
+						"rkValidationRequired": {
+							"value": "Y",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "linkedservice_DEV_entanalytics_synapse",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "lkup_Get_Pipeline_parameters_getlrd",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "Sitepro"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Set start date",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lkup_Get_Pipeline_parameters_getlrd",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_lrd_src_to_stage",
+					"value": {
+						"value": "@activity('lkup_Get_Pipeline_parameters_getlrd').output.firstRow.start_date",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set_current_date_time",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Set start date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "currentdatetime",
+					"value": {
+						"value": "@string(utcnow())",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "usp_update_project_key",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "RawToSynapse",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[usp_update_project_key_generic]",
+					"storedProcedureParameters": {
+						"project_id_name": {
+							"value": "project_id",
+							"type": "String"
+						},
+						"table_name": {
+							"value": "gpd.NCSA_WorkArea",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "linkedservice_DEV_entanalytics_synapse",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "SP Update Control Table Last Run Date",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "load_sp_dim_entp_work_area",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+					"storedProcedureParameters": {
+						"pParameterCode": {
+							"value": "start_date",
+							"type": "String"
+						},
+						"pParameterValue": {
+							"value": {
+								"value": "@formatDateTime(utcnow(),'yyyy-MM-dd HH:mm:ss')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": "Sitepro",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "linkedservice_DEV_entanalytics_synapse",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"variables": {
+			"v_lrd_src_to_stage": {
+				"type": "String"
+			},
+			"currentdatetime": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/NCSA/3. Work Area"
+		},
+		"annotations": [],
+		"lastPublishTime": "2021-04-16T07:11:38Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

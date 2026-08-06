@@ -1,0 +1,57 @@
+/****** Object:  View [yardkpi].[stage_material_receiving_register_vw]    Script Date: 1/6/2023 7:07:29 PM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+drop view [yardkpi].[stage_material_receiving_register_vw]
+GO
+CREATE VIEW [yardkpi].[stage_material_receiving_register_vw] AS select
+P.Project_NO AS PROJECT_ID, R.* FROM yardkpi.stage_material_Receiving_register R
+LEFT OUTER JOIN yardkpi.stage_project_no P
+ON R.PROJECT_NO  = P.PROJECT_NO;
+GO
+
+
+
+/****** Object:  View [yardkpi].[stage_ent_material_receiving_contract_vw]    Script Date: 1/6/2023 7:04:59 PM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+drop view [yardkpi].[stage_ent_material_receiving_contract_vw]
+GO
+CREATE VIEW [yardkpi].[stage_ent_material_receiving_contract_vw] AS select distinct
+   ROW_NUMBER() over(ORDER BY CONTRACT_ID ASC) as  stage_material_Receiving_register_id,
+   source_Code,
+sub_source_Code
+	  ,[contract_id]
+	  ,[contract_description]
+      ,[project_id]
+      ,[contract_description] AS PROJECT_DESCRIPTION
+from
+(SELECT DISTINCT source_Code,
+sub_source_Code,
+      [PROJECT_ID] as contract_id
+      ,[PROJECT_DESCRIPTION] AS contract_DESCRIPTION
+      ,[PROJECT_ID] as project_id FROM
+  yardkpi.[stage_material_receiving_register_vw]) M
+  where NOT EXISTS(select 1 from dim_ent_contract_active_v C where M.CONTRACT_ID = C.CONTRACT_NUMBER);
+GO
+
+
+
+/****** Object:  View [dbo].[dim_entp_yardkpi_material_Receiving_register_vw]    Script Date: 1/6/2023 7:09:16 PM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+DROP VIEW [dbo].[dim_entp_yardkpi_material_Receiving_register_vw]
+GO
+CREATE VIEW [dbo].[dim_entp_yardkpi_material_Receiving_register_vw]
+AS select * from dim_entp_yardkpi_material_Receiving_register where active =1;
+GO
+
+

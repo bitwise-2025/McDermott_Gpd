@@ -1,0 +1,35 @@
+{
+	"name": "df_iDocs_doc_ven_stage_to_raw",
+	"properties": {
+		"folder": {
+			"name": "Projects/NCSA/iDocs/Doc Master Ven"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_idocs_doc_ven_stg",
+						"type": "DatasetReference"
+					},
+					"name": "srcDocVenStage"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_idocs_doc_ven_raw",
+						"type": "DatasetReference"
+					},
+					"name": "snkDocVenRaw"
+				}
+			],
+			"transformations": [
+				{
+					"name": "setFileName"
+				}
+			],
+			"script": "parameters{\n\tWildPath as string,\n\tFileName as string\n}\nsource(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\trowUrlColumn: 'Filename',\n\twildcardPaths:[($WildPath+$FileName+'.csv')]) ~> srcDocVenStage\nsrcDocVenStage derive(Filename = concat($WildPath,substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',$FileName,'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv'),\n\t\teach(match(name=='PROJECT NO.'), $$ = iif(length(regexSplit($$,'[-]')[1])>5,concat('99',regexSplit($$,'[-]')[1]),regexSplit($$,'[-]')[1]))) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\trowUrlColumn:'Filename',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> snkDocVenRaw"
+		}
+	}
+}

@@ -1,0 +1,222 @@
+{
+	"name": "pl_idocs_project_specific_stage_to_raw",
+	"properties": {
+		"description": "iDocs - Project Spe",
+		"activities": [
+			{
+				"name": "Check File Exists",
+				"type": "GetMetadata",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_adlsg2_iDocs_ProjectSpecific_stg",
+						"type": "DatasetReference"
+					},
+					"fieldList": [
+						"childItems"
+					],
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true
+					},
+					"formatSettings": {
+						"type": "DelimitedTextReadSettings"
+					}
+				}
+			},
+			{
+				"name": "Set_File_Exists_status",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Check File Exists",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "p_pl_fileexists",
+					"value": {
+						"value": "@greaterOrEquals(indexof(string(activity('Check File Exists').output.childItems),activity('lk_get_pipeline_parameters').output.firstRow.file_name),0)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Run Data Flow if File Exists",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Set_File_Exists_status",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@variables('p_pl_fileexists')",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "df_iDocs_ProjectSpecific_stage_to_raw",
+							"type": "ExecuteDataFlow",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataflow": {
+									"referenceName": "df_iDocs_ProjectSpecific_stage_to_raw",
+									"type": "DataFlowReference",
+									"parameters": {
+										"WildPath": {
+											"value": "'@{concat(activity('lk_get_pipeline_parameters').output.firstRow.folder_path, '/')}'",
+											"type": "Expression"
+										},
+										"FileName": {
+											"value": "'@{activity('lk_get_pipeline_parameters').output.firstRow.file_name}'",
+											"type": "Expression"
+										}
+									}
+								},
+								"integrationRuntime": {
+									"referenceName": "integrationRuntimeEast2",
+									"type": "IntegrationRuntimeReference"
+								},
+								"traceLevel": "Fine"
+							}
+						},
+						{
+							"name": "sp_Update_Parameter",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "df_iDocs_ProjectSpecific_stage_to_raw",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+								"storedProcedureParameters": {
+									"pParameterValue": {
+										"value": {
+											"value": "@formatDateTime(activity('lk_get_pipeline_parameters').output.firstRow.run_start_datetime,'yyyy-MM-dd HH:mm:ss.fff')",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"pPipelineCode": {
+										"value": {
+											"value": "@pipeline().Pipeline",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"pPipelineSubCode": {
+										"value": "iDocs",
+										"type": "String"
+									},
+									"pParameterCode": {
+										"value": "lastrundate",
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "AzureSynapseDB_DEV",
+								"type": "LinkedServiceReference"
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "lk_get_pipeline_parameters",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "iDocs"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			}
+		],
+		"variables": {
+			"p_pl_fileexists": {
+				"type": "Boolean"
+			}
+		},
+		"folder": {
+			"name": "Projects/NCSA/iDocs/Project Specific"
+		},
+		"annotations": [],
+		"lastPublishTime": "2021-07-29T04:08:30Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

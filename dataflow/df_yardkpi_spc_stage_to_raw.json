@@ -1,0 +1,35 @@
+{
+	"name": "df_yardkpi_spc_stage_to_raw",
+	"properties": {
+		"folder": {
+			"name": "Projects/YARD KPI/SPC"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adgl2_csv_yardkpi_spc_source",
+						"type": "DatasetReference"
+					},
+					"name": "srcSPCStage"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_yardkpi_spc_default",
+						"type": "DatasetReference"
+					},
+					"name": "snkSPCRaw"
+				}
+			],
+			"transformations": [
+				{
+					"name": "setFileName"
+				}
+			],
+			"script": "parameters{\n\tp_directory as string,\n\tp_filename as string\n}\nsource(output(\n\t\tFIWPOBID as string,\n\t\tFIWPUID as string,\n\t\tPROJECT as string,\n\t\tNAME as string,\n\t\tDESCRIPTION as string,\n\t\tPURPOSE as string,\n\t\tDISCIPLINE as string,\n\t\tPLANNEDSTARTDATE as string,\n\t\tPLANNEDFINISHDATE as string,\n\t\tACTUALSTARTDATE as string,\n\t\tACTUALFINISHDATE as string,\n\t\tESTIMATEDMANHOURS as string,\n\t\tPLANNEDMANHOURS as string,\n\t\tACTUALMANHOURS as string,\n\t\tCOMPLETEDMANHOURS as string,\n\t\tTOTALCOMPONENTCONSTRAINTS as string,\n\t\tOPENCOMPONENTCONSTRAINTS as string,\n\t\tSTATUS as string,\n\t\tSCOPE as string,\n\t\tNOTES as string,\n\t\tCREWSIZE as string,\n\t\tCREWDURATION as string,\n\t\tEWPNUMBER as string,\n\t\tCONTRACT as string,\n\t\tCONTRACTOR as string,\n\t\tDESIGNAREA as string,\n\t\tFOREMAN as string,\n\t\tGENERALFOREMAN as string,\n\t\tFIELDENGINEER as string,\n\t\tSUPERINTENDENT as string,\n\t\tCREWOBID as string,\n\t\tCWPOBID as string,\n\t\tJOBNO as string,\n\t\tREVISION as string,\n\t\tIWPREVDATE as string,\n\t\tCREATIONUSER as string,\n\t\tsource_code as string,\n\t\tsub_source_code as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tinferDriftedColumnTypes: true,\n\tignoreNoFilesFound: true,\n\tpurgeFiles: true,\n\trowUrlColumn: 'File_Path',\n\twildcardPaths:[($p_directory+'/'+$p_filename+'_*.csv')]) ~> srcSPCStage\nsrcSPCStage derive(FIWPOBID = trim(replace(FIWPOBID, \"\\n\", \" \")),\n\t\tFIWPUID = trim(replace(FIWPUID, \"\\n\", \" \")),\n\t\tPROJECT = trim(replace(PROJECT, \"\\n\", \" \")),\n\t\tNAME = trim(replace(NAME, \"\\n\", \" \")),\n\t\tDESCRIPTION = trim(replace(replace(replace(replace(replace(DESCRIPTION, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"  \",\" \")),\n\t\tPURPOSE = trim(replace(PURPOSE, \"\\n\", \" \")),\n\t\tDISCIPLINE = trim(replace(DISCIPLINE, \"\\n\", \" \")),\n\t\tPLANNEDSTARTDATE = trim(replace(PLANNEDSTARTDATE, \"\\n\", \" \")),\n\t\tPLANNEDFINISHDATE = trim(replace(PLANNEDFINISHDATE, \"\\n\", \" \")),\n\t\tACTUALSTARTDATE = trim(replace(ACTUALSTARTDATE, \"\\n\", \" \")),\n\t\tACTUALFINISHDATE = trim(replace(ACTUALFINISHDATE, \"\\n\", \" \")),\n\t\tESTIMATEDMANHOURS = trim(replace(ESTIMATEDMANHOURS, \"\\n\", \" \")),\n\t\tPLANNEDMANHOURS = trim(replace(PLANNEDMANHOURS, \"\\n\", \" \")),\n\t\tACTUALMANHOURS = trim(replace(ACTUALMANHOURS, \"\\n\", \" \")),\n\t\tCOMPLETEDMANHOURS = trim(replace(COMPLETEDMANHOURS, \"\\n\", \" \")),\n\t\tTOTALCOMPONENTCONSTRAINTS = trim(replace(TOTALCOMPONENTCONSTRAINTS, \"\\n\", \" \")),\n\t\tOPENCOMPONENTCONSTRAINTS = trim(replace(OPENCOMPONENTCONSTRAINTS, \"\\n\", \" \")),\n\t\tSTATUS = trim(replace(STATUS, \"\\n\", \" \")),\n\t\tSCOPE = trim(replace(replace(replace(replace(replace(SCOPE, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"  \",\" \")),\n\t\tNOTES = trim(replace(replace(replace(replace(replace(SCOPE, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"  \",\" \")),\n\t\tCREWSIZE = trim(replace(CREWSIZE, \"\\n\", \" \")),\n\t\tCREWDURATION = trim(replace(CREWDURATION, \"\\n\", \" \")),\n\t\tEWPNUMBER = trim(replace(EWPNUMBER, \"\\n\", \" \")),\n\t\tCONTRACTOR = trim(replace(CONTRACTOR, \"\\n\", \" \")),\n\t\tDESIGNAREA = trim(replace(DESIGNAREA, \"\\n\", \" \")),\n\t\tFOREMAN = trim(replace(FOREMAN, \"\\n\", \" \")),\n\t\tGENERALFOREMAN = trim(replace(GENERALFOREMAN, \"\\n\", \" \")),\n\t\tFIELDENGINEER = trim(replace(FIELDENGINEER, \"\\n\", \" \")),\n\t\tSUPERINTENDENT = trim(replace(SUPERINTENDENT, \"\\n\", \" \")),\n\t\tCREWOBID = trim(replace(CREWOBID, \"\\n\", \" \")),\n\t\tCWPOBID = trim(replace(CWPOBID, \"\\n\", \" \")),\n\t\tJOBNO = trim(replace(JOBNO, \"\\n\", \" \")),\n\t\tREVISION = trim(replace(REVISION, \"\\n\", \" \")),\n\t\tIWPREVDATE = trim(replace(IWPREVDATE, \"\\n\", \" \")),\n\t\tCREATIONUSER = trim(replace(CREATIONUSER, \"\\n\", \" \")),\n\t\tsource_code = source_code,\n\t\tsub_source_code = sub_source_code,\n\t\tCONTRACT_Number = trim(substringIndex(CONTRACT,'-',1)),\n\t\tCONTRACT_description = trim(trim(dropLeft(CONTRACT,length(substringIndex(CONTRACT,'-',1))),'-')),\n\t\tFile_Path = concat(trim($p_directory),'/',substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',$p_filename,'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv')) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tinput(\n\t\tColumn_1 as string,\n\t\tColumn_2 as string,\n\t\tColumn_3 as string,\n\t\tColumn_4 as string,\n\t\tColumn_5 as string,\n\t\tColumn_6 as string,\n\t\tColumn_7 as string,\n\t\tColumn_8 as string,\n\t\tColumn_9 as string,\n\t\tColumn_10 as string,\n\t\tColumn_11 as string,\n\t\tColumn_12 as string,\n\t\tColumn_13 as string,\n\t\tColumn_14 as string,\n\t\tColumn_15 as string,\n\t\tColumn_16 as string,\n\t\tColumn_17 as string,\n\t\tColumn_18 as string,\n\t\tColumn_19 as string,\n\t\tColumn_20 as string,\n\t\tColumn_21 as string,\n\t\tColumn_22 as string,\n\t\tColumn_23 as string,\n\t\tColumn_24 as string\n\t),\n\trowUrlColumn:'File_Path',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> snkSPCRaw"
+		}
+	}
+}

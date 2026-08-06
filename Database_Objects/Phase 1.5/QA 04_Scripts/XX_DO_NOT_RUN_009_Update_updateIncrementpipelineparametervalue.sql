@@ -1,0 +1,6 @@
+execute [dbo].[updateIncrementpipelineparametervalue] 'pl_idocs_doc_eng_source_to_stage','iDocs_D7068','last_run_start_date','2022-06-06 00:00:00'
+execute [dbo].[updateIncrementpipelineparametervalue] 'pl_idocs_closed_m_source_to_stage','iDocs_D7068','last_run_start_date','2022-06-06 00:00:00'
+execute [dbo].[updateIncrementpipelineparametervalue] 'pl_idocs_doc_ven_source_to_stage','iDocs_D7068','last_run_start_date','2022-06-06 00:00:00'
+execute [dbo].[updateIncrementpipelineparametervalue] 'pl_idocs_ev_ms_master_source_to_stage','iDocs_D7068','last_run_start_date','2022-06-06 00:00:00'
+execute [dbo].[updateIncrementpipelineparametervalue] 'pl_idocs_open_exp_source_to_stage','iDocs_D7068','last_run_start_date','2022-06-06 00:00:00'
+execute [dbo].[updateIncrementpipelineparametervalue] 'pl_idocs_project_specific_source_to_stage','iDocs_D7068','last_run_start_date','2022-06-06 00:00:00'

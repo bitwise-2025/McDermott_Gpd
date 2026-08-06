@@ -1,0 +1,1096 @@
+{
+	"name": "pl_yardkpi_intelex_nonconformance_raw_to_synapse",
+	"properties": {
+		"activities": [
+			{
+				"name": "cp_Get_Latest_Combined_File",
+				"description": "Copy all the files created since the last start date and combine them into one file to be processed into Synapse.",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Set last_run_start_date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"additionalColumns": [
+							{
+								"name": "source_code",
+								"value": {
+									"value": "@activity('lk_get_pipeline_parameters').output.firstRow.source_code",
+									"type": "Expression"
+								}
+							},
+							{
+								"name": "sub_source_code",
+								"value": {
+									"value": "@activity('lk_get_pipeline_parameters').output.firstRow.sub_source_code",
+									"type": "Expression"
+								}
+							}
+						],
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": true,
+							"modifiedDatetimeStart": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.last_run_start_date",
+								"type": "Expression"
+							},
+							"wildcardFolderPath": {
+								"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.directory,'/*/*/*')",
+								"type": "Expression"
+							},
+							"wildcardFileName": {
+								"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.input_file_name,'_*.csv')",
+								"type": "Expression"
+							}
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings",
+							"copyBehavior": "MergeFiles"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": "ts_itime_combined.csv"
+						}
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_yardkpi_intelex_wildcard",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_ds_filesystem": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+								"type": "Expression"
+							},
+							"p_ds_first_row_header": true
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_yardkpi_intelex_generic",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_ds_filesystem": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+								"type": "Expression"
+							},
+							"p_ds_directory": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+								"type": "Expression"
+							},
+							"p_ds_filename": {
+								"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.input_file_name,'Temp.csv')",
+								"type": "Expression"
+							},
+							"p_ds_first_row_header": true
+						}
+					}
+				]
+			},
+			{
+				"name": "Check Combined File non zero Bytes",
+				"description": "Check if the combined file has any data to be loaded.",
+				"type": "GetMetadata",
+				"dependsOn": [
+					{
+						"activity": "cp_Get_Latest_Combined_File",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_yardkpi_intelex_generic",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_ds_filesystem": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+								"type": "Expression"
+							},
+							"p_ds_directory": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+								"type": "Expression"
+							},
+							"p_ds_filename": {
+								"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.input_file_name,'Temp.csv')",
+								"type": "Expression"
+							},
+							"p_ds_first_row_header": true
+						}
+					},
+					"fieldList": [
+						"size",
+						"exists"
+					],
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true
+					},
+					"formatSettings": {
+						"type": "DelimitedTextReadSettings"
+					}
+				}
+			},
+			{
+				"name": "if_File_Exists_Copy_to_Synapse",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Check Combined File non zero Bytes",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@greater(activity('Check Combined File non zero Bytes').output.size, 2)",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "Copy_RAW_to_Sysnapse_Stage",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": true,
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "SqlDWSink",
+									"preCopyScript": {
+										"value": "TRUNCATE TABLE [yardkpi].[stage_intelex_nonconformance]",
+										"type": "Expression"
+									},
+									"allowPolyBase": true,
+									"polyBaseSettings": {
+										"rejectValue": 0,
+										"rejectType": "value",
+										"useTypeDefault": true
+									},
+									"disableMetricsCollection": false
+								},
+								"enableStaging": true,
+								"stagingSettings": {
+									"linkedServiceName": {
+										"referenceName": "ADLSG2 TimeAnalytics DEV",
+										"type": "LinkedServiceReference"
+									},
+									"path": "mdr-raw-data/Polybase_Staging_Space"
+								},
+								"translator": {
+									"type": "TabularTranslator",
+									"mappings": [
+										{
+											"source": {
+												"name": "source_code",
+												"type": "String"
+											},
+											"sink": {
+												"name": "source_code",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "sub_source_code",
+												"type": "String"
+											},
+											"sink": {
+												"name": "sub_source_code",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "RowNum",
+												"type": "String"
+											},
+											"sink": {
+												"name": "row_id",
+												"type": "Int64"
+											}
+										},
+										{
+											"source": {
+												"name": "NCR_x0020_No",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ncr_no",
+												"type": "Int64"
+											}
+										},
+										{
+											"source": {
+												"name": "Date_x0020_Created",
+												"type": "DateTime"
+											},
+											"sink": {
+												"name": "date_created",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "Date_x0020_Closed",
+												"type": "DateTime"
+											},
+											"sink": {
+												"name": "date_closed",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "Location",
+												"type": "String"
+											},
+											"sink": {
+												"name": "location",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Profile_x0020_Type",
+												"type": "String"
+											},
+											"sink": {
+												"name": "profile_type",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Profile",
+												"type": "String"
+											},
+											"sink": {
+												"name": "profile",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Product_x0020_Line",
+												"type": "String"
+											},
+											"sink": {
+												"name": "product_line",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "NCR_x0020_Type",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ncr_type",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Issued_x0020_To",
+												"type": "String"
+											},
+											"sink": {
+												"name": "issued_to",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Specify_x0020_Regulatory_x0020_Agency_x0020_Issued_x0020_To",
+												"type": "String"
+											},
+											"sink": {
+												"name": "specify_regulatory_agency_issued_to",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Issued_x0020_By",
+												"type": "String"
+											},
+											"sink": {
+												"name": "issued_by",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Specify_x0020_Regulatory_x0020_Agency_x0020_Issued_x0020_By",
+												"type": "String"
+											},
+											"sink": {
+												"name": "specify_regulatory_agency_issued_by",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Client_x0020_NCR_x0020_No",
+												"type": "String"
+											},
+											"sink": {
+												"name": "client_ncr_no",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Issue",
+												"type": "String"
+											},
+											"sink": {
+												"name": "issue",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Description",
+												"type": "String"
+											},
+											"sink": {
+												"name": "description",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Requirement",
+												"type": "String"
+											},
+											"sink": {
+												"name": "requirement",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Area_x0020_of_x0020_Project",
+												"type": "String"
+											},
+											"sink": {
+												"name": "area_of_project",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Vessel",
+												"type": "String"
+											},
+											"sink": {
+												"name": "vessel",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Function",
+												"type": "String"
+											},
+											"sink": {
+												"name": "function_name"
+											}
+										},
+										{
+											"source": {
+												"name": "Product_x0020__x002F__x0020_Activity",
+												"type": "String"
+											},
+											"sink": {
+												"name": "product_activity",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Defect_x0020_Code",
+												"type": "String"
+											},
+											"sink": {
+												"name": "defect_code",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Units_x0020_Affected",
+												"type": "String"
+											},
+											"sink": {
+												"name": "units_affected",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Serial_x002F_Lot_x0020_No",
+												"type": "String"
+											},
+											"sink": {
+												"name": "seriallot_no",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Immediate_x0020_Action",
+												"type": "String"
+											},
+											"sink": {
+												"name": "immediate_action",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Recommended_x0020_Action",
+												"type": "String"
+											},
+											"sink": {
+												"name": "recommended_action",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Identified_x0020_By",
+												"type": "String"
+											},
+											"sink": {
+												"name": "identified_by",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Reported_x0020_By",
+												"type": "String"
+											},
+											"sink": {
+												"name": "reported_by",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Date_x0020_Reported",
+												"type": "DateTime"
+											},
+											"sink": {
+												"name": "date_reported",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "Project_x0020_Phase",
+												"type": "String"
+											},
+											"sink": {
+												"name": "project_phase",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Supplier",
+												"type": "String"
+											},
+											"sink": {
+												"name": "supplier",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Return_x0020_Material_x0020_Authorization_x0020_No",
+												"type": "String"
+											},
+											"sink": {
+												"name": "return_material_authorization_no",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Is_x0020_this_x0020_a_x0020_recurrence_x003F_",
+												"type": "String"
+											},
+											"sink": {
+												"name": "is_this_recurrence",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Suspected_x0020_Cause",
+												"type": "String"
+											},
+											"sink": {
+												"name": "suspected_cause",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Probability",
+												"type": "String"
+											},
+											"sink": {
+												"name": "probability",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Detection",
+												"type": "String"
+											},
+											"sink": {
+												"name": "detection",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Criticality",
+												"type": "String"
+											},
+											"sink": {
+												"name": "criticality",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "RPN",
+												"type": "String"
+											},
+											"sink": {
+												"name": "rpn",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Responsible_x0020_for_x0020_Disposition",
+												"type": "String"
+											},
+											"sink": {
+												"name": "responsible_for_disposition",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Disposition_x0020_Due_x0020_Date",
+												"type": "DateTime"
+											},
+											"sink": {
+												"name": "disposition_due_date",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "Reviewer_x0020_Comments",
+												"type": "String"
+											},
+											"sink": {
+												"name": "reviewer_comments",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Cancel_x0020_Comments",
+												"type": "String"
+											},
+											"sink": {
+												"name": "cancel_comments",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Disposition",
+												"type": "String"
+											},
+											"sink": {
+												"name": "disposition",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Client_x0020_Approval_x0020_Required_x003F_",
+												"type": "String"
+											},
+											"sink": {
+												"name": "client_approval_required",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Qty_x0020_Used_x0020_As_x0020_Is",
+												"type": "String"
+											},
+											"sink": {
+												"name": "qty_used_as_is",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Used_x0020_As_x0020_Is_x0020_Comments",
+												"type": "String"
+											},
+											"sink": {
+												"name": "used_as_is_comments",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Dispositioner_x0020_Action_x0020_Plan_x0020_Recommendations",
+												"type": "String"
+											},
+											"sink": {
+												"name": "dispositioner_action_plan_recommendations",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Disposition_x0020_Completed_x0020_Date",
+												"type": "DateTime"
+											},
+											"sink": {
+												"name": "disposition_completed_date",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "Action_x0020__x0026__x0020_Verification_x0020_Due_x0020_Date",
+												"type": "DateTime"
+											},
+											"sink": {
+												"name": "action_verification_due_date",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "Dispositioner_x0020_Comments",
+												"type": "String"
+											},
+											"sink": {
+												"name": "dispositioner_comments",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Verification_x0020_Due_x0020_Date",
+												"type": "String"
+											},
+											"sink": {
+												"name": "verification_due_date",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "Verification_x0020_By",
+												"type": "String"
+											},
+											"sink": {
+												"name": "verification_by",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Verification_x0020_Notes",
+												"type": "String"
+											},
+											"sink": {
+												"name": "verification_notes",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Verification_x0020_Date",
+												"type": "DateTime"
+											},
+											"sink": {
+												"name": "verification_date",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "WorkflowCurrent_x0020_Stage",
+												"type": "String"
+											},
+											"sink": {
+												"name": "workflowcurrent_stage",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "WorkflowStatus",
+												"type": "String"
+											},
+											"sink": {
+												"name": "workflowstatus",
+												"type": "String"
+											}
+										}
+									]
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_adlsg2_csv_yardkpi_intelex_generic",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_ds_filesystem": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+											"type": "Expression"
+										},
+										"p_ds_directory": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+											"type": "Expression"
+										},
+										"p_ds_filename": {
+											"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.input_file_name,'Temp.csv')",
+											"type": "Expression"
+										},
+										"p_ds_first_row_header": true
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_AzureSynapseAnalytics_yardkpi",
+									"type": "DatasetReference",
+									"parameters": {
+										"schema": {
+											"value": "yardkpi",
+											"type": "Expression"
+										},
+										"db_name": {
+											"value": "stage_intelex_nonconformance",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "SP load to DIM Table",
+							"description": "Use the SPU generic_load_dim_v2 to populate the dim_entp_eng_ven_milestone  dimension table.",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Copy_RAW_to_Sysnapse_Stage",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": {
+									"value": "[dbo].[generic_load_dim_v2]",
+									"type": "Expression"
+								},
+								"storedProcedureParameters": {
+									"debug_flag": {
+										"value": {
+											"value": "N",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"execute_flag": {
+										"value": {
+											"value": "Y",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"load_name": {
+										"value": {
+											"value": "dim_entp_yardkpi_intelex_nonconformance",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"rkValidationRequired": {
+										"value": {
+											"value": "Y",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+								"type": "LinkedServiceReference"
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Set last_run_start_date",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_raw_start_time",
+					"value": {
+						"value": "@formatDateTime(utcNow(),'yyyy-MM-dd HH:mm:ss')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "lk_get_pipeline_parameters",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": {
+									"value": "Intelex",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Delete Temp combined File",
+				"description": "After the data has been loaded, clear the combined file from the ADLSV2 ",
+				"type": "Delete",
+				"dependsOn": [
+					{
+						"activity": "if_File_Exists_Copy_to_Synapse",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_yardkpi_intelex_generic",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_ds_filesystem": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+								"type": "Expression"
+							},
+							"p_ds_directory": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+								"type": "Expression"
+							},
+							"p_ds_filename": {
+								"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.input_file_name,'Temp.csv')",
+								"type": "Expression"
+							},
+							"p_ds_first_row_header": true
+						}
+					},
+					"enableLogging": false,
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true
+					}
+				}
+			},
+			{
+				"name": "SP Update Last Run Date",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "if_File_Exists_Copy_to_Synapse",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+					"storedProcedureParameters": {
+						"pParameterCode": {
+							"value": "last_run_start_date",
+							"type": "String"
+						},
+						"pParameterValue": {
+							"value": {
+								"value": "@variables('v_raw_start_time')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": {
+								"value": "Intelex",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "linkedservice_DEV_entanalytics_synapse",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"variables": {
+			"v_raw_start_time": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/YARD KPI/Intelex/Nonconformance Reporting"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-01-30T08:27:07Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

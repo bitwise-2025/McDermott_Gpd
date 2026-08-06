@@ -1,0 +1,86 @@
+{
+	"name": "df_gl_code_combinations_stage_data_flattening",
+	"properties": {
+		"folder": {
+			"name": "Projects/Payment Dashboard/Gl Code Combinations"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_xml_gl_code_combinations_source_stage_decoded_xml",
+						"type": "DatasetReference"
+					},
+					"name": "SrcXMl"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_gl_code_combinations_source_stage_final_csv",
+						"type": "DatasetReference"
+					},
+					"name": "SnkCsv"
+				}
+			],
+			"transformations": [
+				{
+					"name": "XmlToCsvflatten"
+				},
+				{
+					"name": "addLoadDetails"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          DATA_DS as (G_1 as (CODE_COMBINATION_ID as string, CONCATENATED_SEGMENTS as string, CONCAT_DESCRIPTION as string, LAST_UPDATE_DATE as string, SEGM1_DESCRIPTION as string, SEGM2_DESCRIPTION as string, SEGM3_DESCRIPTION as string, SEGM4_DESCRIPTION as string, SEGM5_DESCRIPTION as string, SEGM6_DESCRIPTION as string, SEGM7_DESCRIPTION as string, SEGM8_DESCRIPTION as string, SEGM9_DESCRIPTION as string, SEGMENT1 as string, SEGMENT2 as string, SEGMENT3 as string, SEGMENT4 as string, SEGMENT5 as string, SEGMENT6 as string, SEGMENT7 as string, SEGMENT8 as string, SEGMENT9 as string)[])",
+				"     ),",
+				"     allowSchemaDrift: false,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     validationMode: 'none',",
+				"     namespaces: true) ~> SrcXMl",
+				"SrcXMl foldDown(unroll(DATA_DS.G_1),",
+				"     mapColumn(",
+				"          CODE_COMBINATION_ID = DATA_DS.G_1.CODE_COMBINATION_ID,",
+				"          CONCATENATED_SEGMENTS = DATA_DS.G_1.CONCATENATED_SEGMENTS,",
+				"          CONCAT_DESCRIPTION = DATA_DS.G_1.CONCAT_DESCRIPTION,",
+				"          LAST_UPDATE_DATE = DATA_DS.G_1.LAST_UPDATE_DATE,",
+				"          SEGM1_DESCRIPTION = DATA_DS.G_1.SEGM1_DESCRIPTION,",
+				"          SEGM2_DESCRIPTION = DATA_DS.G_1.SEGM2_DESCRIPTION,",
+				"          SEGM3_DESCRIPTION = DATA_DS.G_1.SEGM3_DESCRIPTION,",
+				"          SEGM4_DESCRIPTION = DATA_DS.G_1.SEGM4_DESCRIPTION,",
+				"          SEGM5_DESCRIPTION = DATA_DS.G_1.SEGM5_DESCRIPTION,",
+				"          SEGM6_DESCRIPTION = DATA_DS.G_1.SEGM6_DESCRIPTION,",
+				"          SEGM7_DESCRIPTION = DATA_DS.G_1.SEGM7_DESCRIPTION,",
+				"          SEGM8_DESCRIPTION = DATA_DS.G_1.SEGM8_DESCRIPTION,",
+				"          SEGM9_DESCRIPTION = DATA_DS.G_1.SEGM9_DESCRIPTION,",
+				"          SEGMENT1 = DATA_DS.G_1.SEGMENT1,",
+				"          SEGMENT2 = DATA_DS.G_1.SEGMENT2,",
+				"          SEGMENT3 = DATA_DS.G_1.SEGMENT3,",
+				"          SEGMENT4 = DATA_DS.G_1.SEGMENT4,",
+				"          SEGMENT5 = DATA_DS.G_1.SEGMENT5,",
+				"          SEGMENT6 = DATA_DS.G_1.SEGMENT6,",
+				"          SEGMENT7 = DATA_DS.G_1.SEGMENT7,",
+				"          SEGMENT8 = DATA_DS.G_1.SEGMENT8,",
+				"          SEGMENT9 = DATA_DS.G_1.SEGMENT9",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> XmlToCsvflatten",
+				"XmlToCsvflatten derive(source_name = 'SYSTEM',",
+				"          sub_source_name = 'R2P',",
+				"          created_date_time = currentUTC()) ~> addLoadDetails",
+				"addLoadDetails sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     partitionFileNames:['Gl_code_combinations.csv'],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> SnkCsv"
+			]
+		}
+	}
+}

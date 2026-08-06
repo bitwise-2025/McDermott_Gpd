@@ -1,0 +1,102 @@
+{
+	"name": "df_pcm_certificate_package_stage_to_raw_del",
+	"properties": {
+		"folder": {
+			"name": "Projects/YARD KPI/PCM"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_certificate_package_stg",
+						"type": "DatasetReference"
+					},
+					"name": "PCMWelderActivityStage"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_yardkpi_pcm_default",
+						"type": "DatasetReference"
+					},
+					"name": "PCMRaw"
+				}
+			],
+			"transformations": [
+				{
+					"name": "SetFileName"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          trans_date as string,",
+				"          trans_type as string,",
+				"          fab_code as string,",
+				"          contract as string,",
+				"          contract_title as string,",
+				"          job as string,",
+				"          job_title as string,",
+				"          item as string,",
+				"          item_title as string,",
+				"          ndt_drawing as string,",
+				"          ndt_drawing_desc as string,",
+				"          ndt_drawing_rev as string,",
+				"          ndt_drawing_date as string,",
+				"          line as string,",
+				"          line_desc as string,",
+				"          discipline as string,",
+				"          recap as string,",
+				"          weldcount as string,",
+				"          clear_date as string,",
+				"          clear_run as string,",
+				"          submit_date as string,",
+				"          accept_date as string,",
+				"          cert_pack_complete as string,",
+				"          package_recall_date as string,",
+				"          package_date as string,",
+				"          ndt_percent as string,",
+				"          mtn_completed as string,",
+				"          markup_received as string,",
+				"          inspector as string,",
+				"          insp_name as string,",
+				"          wh_report_num as string,",
+				"          cl_name1 as string,",
+				"          cl_date1 as string,",
+				"          cl_name2 as string,",
+				"          cl_date2 as string,",
+				"          cl_name3 as string,",
+				"          cl_date3 as string,",
+				"          include_in_rr_calc as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: true,",
+				"     purgeFiles: true,",
+				"     multiLineRow: true,",
+				"     wildcardPaths:['Project_Data/YARDKPI/PCM_Del/pcm_certification_package_del_*_*.csv']) ~> PCMWelderActivityStage",
+				"PCMWelderActivityStage derive(FileName = concat('Project_Data/YARDKPI/PCM_Del/',substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/','PCM_CERTIFICATION_PACKAGE_DEL_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv'),",
+				"          create_date_time = currentUTC(),",
+				"          ndt_drawing_desc = trim(replace(replace(replace(replace(replace(replace(replace(replace(replace(ndt_drawing_desc,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'CHAR(10)','CHAR 10'),'CHAR(13)','CHAR 13'),'  ',' ')),",
+				"          contract_title = trim(replace(replace(replace(replace(replace(replace(replace(contract_title,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),",
+				"          job_title = trim(replace(replace(replace(replace(replace(replace(replace(job_title,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),",
+				"          item_title = trim(replace(replace(replace(replace(replace(replace(replace(item_title,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),",
+				"          ndt_drawing = trim(replace(replace(replace(replace(replace(replace(replace(ndt_drawing,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),",
+				"          line_desc = trim(replace(replace(replace(replace(replace(replace(replace(line_desc,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),",
+				"          contract = trim(replace(replace(replace(replace(replace(replace(replace(contract,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),",
+				"          ndt_drawing_rev = trim(replace(replace(replace(replace(replace(replace(replace(ndt_drawing_rev,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),",
+				"          line = trim(replace(replace(replace(replace(replace(replace(replace(line,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),",
+				"          recap = trim(replace(replace(replace(replace(replace(replace(replace(recap,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' '))) ~> SetFileName",
+				"SetFileName sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     rowUrlColumn:'FileName',",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> PCMRaw"
+			]
+		}
+	}
+}

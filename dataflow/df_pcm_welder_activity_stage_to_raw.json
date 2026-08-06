@@ -1,0 +1,92 @@
+{
+	"name": "df_pcm_welder_activity_stage_to_raw",
+	"properties": {
+		"folder": {
+			"name": "Projects/YARD KPI/PCM"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_welder_activity_stg",
+						"type": "DatasetReference"
+					},
+					"name": "PCMStage"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_yardkpi_pcm_default",
+						"type": "DatasetReference"
+					},
+					"name": "PCMRaw"
+				}
+			],
+			"transformations": [
+				{
+					"name": "SetFileName"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          trans_date as string,",
+				"          trans_type as string,",
+				"          fab_code as string,",
+				"          contract as string,",
+				"          contract_title as string,",
+				"          job as string,",
+				"          job_title as string,",
+				"          item as string,",
+				"          item_title as string,",
+				"          ndt_drawing as string,",
+				"          ndt_drawing_desc as string,",
+				"          wctrl as string,",
+				"          weld_suffix as string,",
+				"          stress_relief as string,",
+				"          weld_repair_ref as string,",
+				"          spool as string,",
+				"          weld as string,",
+				"          welder as string,",
+				"          Badge_Id as string,",
+				"          sap_id as string,",
+				"          weld_procedure as string,",
+				"          welding_process as string,",
+				"          welding_status as string,",
+				"          weld_date as string,",
+				"          discipline as string,",
+				"          include_in_rr_calc as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: true,",
+				"     purgeFiles: true,",
+				"     multiLineRow: true,",
+				"     wildcardPaths:['Project_Data/YARDKPI/PCM/pcm_welder_activity*.csv']) ~> PCMStage",
+				"PCMStage derive(FileName = concat('Project_Data/YARDKPI/PCM/',substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/','PCM_WELDER_ACTIVITY_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv'),",
+				"          create_date_time = currentUTC(),",
+				"          contract_title = trim(replace(replace(replace(replace(replace(replace(replace(contract_title,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),",
+				"          job_title = trim(replace(replace(replace(replace(replace(replace(replace(job_title,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),",
+				"          item_title = trim(replace(replace(replace(replace(replace(replace(replace(item_title,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),",
+				"          ndt_drawing = trim(replace(replace(replace(replace(replace(replace(replace(ndt_drawing,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),",
+				"          ndt_drawing_desc = trim(replace(replace(replace(replace(replace(replace(replace(ndt_drawing_desc,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),",
+				"          welder = trim(replace(replace(replace(replace(replace(replace(replace(welder,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),",
+				"          Badge_Id = trim(replace(replace(replace(replace(replace(replace(replace(Badge_Id,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),",
+				"          weld_procedure = trim(replace(replace(replace(replace(replace(replace(replace(weld_procedure,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),",
+				"          contract = trim(replace(replace(replace(replace(replace(replace(replace(contract,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' '))) ~> SetFileName",
+				"SetFileName sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     rowUrlColumn:'FileName',",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     mapColumn(",
+				"          each(match(true()))",
+				"     )) ~> PCMRaw"
+			]
+		}
+	}
+}

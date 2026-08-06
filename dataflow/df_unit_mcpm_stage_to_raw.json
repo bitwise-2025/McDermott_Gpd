@@ -1,0 +1,35 @@
+{
+	"name": "df_unit_mcpm_stage_to_raw",
+	"properties": {
+		"folder": {
+			"name": "Projects/NCSA/Unit"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_mcpm_unit_stage",
+						"type": "DatasetReference"
+					},
+					"name": "sourceUNITmcpmStage"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_mcpm_unit_raw",
+						"type": "DatasetReference"
+					},
+					"name": "snkUNITmcpmRaw"
+				}
+			],
+			"transformations": [
+				{
+					"name": "setFileName"
+				}
+			],
+			"script": "source(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\twildcardPaths:['Project_Data/NCSA/MCPM/Unit/Unit_mcpm.csv']) ~> sourceUNITmcpmStage\nsourceUNITmcpmStage derive(FileName = concat( 'Project_Data/NCSA/MCPM/Unit/',        \r\n        substring(toString(currentTimestamp()),1,4),        \r\n        '/',substring(toString(currentTimestamp()),6,2),        \r\n        '/',substring(toString(currentTimestamp()),9,2),        \r\n        '/',        'unit_mcpm_',        \r\n        replace(replace(toString(currentTimestamp()),'.',''),':',''),        \r\n        '.csv')) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\trowUrlColumn:'FileName',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> snkUNITmcpmRaw"
+		}
+	}
+}

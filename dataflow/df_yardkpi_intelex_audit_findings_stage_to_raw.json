@@ -1,0 +1,101 @@
+{
+	"name": "df_yardkpi_intelex_audit_findings_stage_to_raw",
+	"properties": {
+		"folder": {
+			"name": "Projects/YARD KPI/Intelex"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_yardkpi_intelex_generic",
+						"type": "DatasetReference"
+					},
+					"name": "IntelexAuditFindSource"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_yardkpi_intelex_generic",
+						"type": "DatasetReference"
+					},
+					"name": "IntelexAuditFindSink"
+				}
+			],
+			"transformations": [
+				{
+					"name": "setFileName"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          RowNum as string,",
+				"          Audit_x0020_Record_x0020_No as string,",
+				"          Audit_x0020_Title as string,",
+				"          Location as string,",
+				"          Profile_x0020_Type as string,",
+				"          Profile as string,",
+				"          Product_x0020_Line as string,",
+				"          Checklist as string,",
+				"          Finding_x0020_Record_x0020_No as string,",
+				"          MDR_x0020_Finding_x0020_No as string,",
+				"          Question as string,",
+				"          Finding_x0020_Description as string,",
+				"          Finding_x0020_Severity as string,",
+				"          Finding_x0020_Creator as string,",
+				"          Finding_x0020_Due_x0020_Date as string,",
+				"          Person_x0020_Responsible as string,",
+				"          Auditee_x0020_Finding_x0020_Acceptance as string,",
+				"          Auditee_x0020_Finding_x0020_Comments as string,",
+				"          Completed_x0020_By as string,",
+				"          Completion_x0020_Date as string,",
+				"          Final_x0020_Approver as string,",
+				"          Date_x0020_of_x0020_Approval as string,",
+				"          Final_x0020_Approver_x0020_Notes as string,",
+				"          Workflow_x0020_Current_x0020_Stage as string,",
+				"          Workflow_x0020_Status as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: true,",
+				"     rowUrlColumn: 'File_Path') ~> IntelexAuditFindSource",
+				"IntelexAuditFindSource derive(RowNum = trim(replace(RowNum, '\\n', ' ')),",
+				"          Audit_x0020_Record_x0020_No = trim(replace(Audit_x0020_Record_x0020_No, '\\n', ' ')),",
+				"          Audit_x0020_Title = trim(replace(Audit_x0020_Title, '\\n', ' ')),",
+				"          Location = trim(replace(Location, '\\n', ' ')),",
+				"          Profile_x0020_Type = trim(replace(Profile_x0020_Type, '\\n', ' ')),",
+				"          Profile = trim(replace(Profile, '\\n', ' ')),",
+				"          Product_x0020_Line = trim(replace(Product_x0020_Line, '\\n', ' ')),",
+				"          Checklist = trim(replace(Checklist, '\\n', ' ')),",
+				"          Finding_x0020_Record_x0020_No = trim(replace(Finding_x0020_Record_x0020_No, '\\n', ' ')),",
+				"          MDR_x0020_Finding_x0020_No = trim(replace(MDR_x0020_Finding_x0020_No, '\\n', ' ')),",
+				"          Question = trim(replace(Question, '\\n', ' ')),",
+				"          Finding_x0020_Description = trim(replace(Finding_x0020_Description, '\\n', ' ')),",
+				"          Finding_x0020_Severity = trim(replace(Finding_x0020_Severity, '\\n', ' ')),",
+				"          Finding_x0020_Creator = trim(replace(Finding_x0020_Creator, '\\n', ' ')),",
+				"          Finding_x0020_Due_x0020_Date = trim(replace(Finding_x0020_Due_x0020_Date, '\\n', ' ')),",
+				"          Person_x0020_Responsible = trim(replace(Person_x0020_Responsible, '\\n', ' ')),",
+				"          Auditee_x0020_Finding_x0020_Acceptance = trim(replace(Auditee_x0020_Finding_x0020_Acceptance, '\\n', ' ')),",
+				"          Auditee_x0020_Finding_x0020_Comments = trim(replace(Auditee_x0020_Finding_x0020_Comments, '\\n', ' ')),",
+				"          Completed_x0020_By = trim(replace(Completed_x0020_By, '\\n', ' ')),",
+				"          Completion_x0020_Date = trim(replace(Completion_x0020_Date, '\\n', ' ')),",
+				"          Final_x0020_Approver = trim(replace(Final_x0020_Approver, '\\n', ' ')),",
+				"          Date_x0020_of_x0020_Approval = trim(replace(Date_x0020_of_x0020_Approval, '\\n', ' ')),",
+				"          Final_x0020_Approver_x0020_Notes = trim(replace(Final_x0020_Approver_x0020_Notes, '\\n', ' ')),",
+				"          Workflow_x0020_Current_x0020_Stage = trim(replace(Workflow_x0020_Current_x0020_Stage, '\\n', ' ')),",
+				"          Workflow_x0020_Status = trim(replace(Workflow_x0020_Status, '\\n', ' ')),",
+				"          File_Path = concat(concat(trim(substringIndex(File_Path,'/',5),'/'),'/'),substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',split(substringIndex(File_Path,'/',-1),'.')[1],'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv')) ~> setFileName",
+				"setFileName sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     rowUrlColumn:'File_Path',",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> IntelexAuditFindSink"
+			]
+		}
+	}
+}

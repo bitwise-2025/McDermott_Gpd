@@ -1,0 +1,244 @@
+DECLARE @Date DATETIME;
+DECLARE @v_pipelinename varchar(150);
+
+SET @Date = GETDATE();
+SET @v_pipelinename='pl_P10_MDR_Data_Ruya11_D7507'
+
+
+delete from [dbo].[plp_pipeline] where [pipeline_code] = @v_pipelinename
+
+
+--PLP Pipeline
+INSERT INTO [dbo].[plp_pipeline] ([pipeline_code],[subject_area_code],[description],[comment],[active],[touched_by],[touched_dtm],[sec_sa_id])
+	VALUES (@v_pipelinename,'NCSA','Manual Excel File Direct Source To Synapse',NULL,1,'aditya.anand2@mcdermott.com',@Date,9)
+
+delete from [dbo].[plp_pipeline_parameter] where [pipeline_code] = @v_pipelinename
+
+--PLP Pipeline Parameter
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+VALUES(@v_pipelinename,'NetworkFolder','start_date',1,'start_date','IN',NULL,1,'aditya.anand2@mcdermott.com',@Date)
+
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+VALUES(@v_pipelinename,'NetworkFolder','end_date',2,'end_date','IN',NULL,1,'aditya.anand2@mcdermott.com',@Date)
+
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+VALUES(@v_pipelinename,'NetworkFolder','source_directory',3,'source_directory','IN',NULL,1,'aditya.anand2@mcdermott.com',@Date)
+
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+VALUES(@v_pipelinename,'NetworkFolder','table_name',5,'table_name','IN','table_name with schema e.g. gpd.scm_procurement',1,'aditya.anand2@mcdermott.com',@Date)
+
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+VALUES(@v_pipelinename,'NetworkFolder','logicapp_url',6,'logicapp_url','IN',NULL,1,'aditya.anand2@mcdermott.com',@Date)
+
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+VALUES(@v_pipelinename,'NetworkFolder','project_number',7,'project_number','IN',NULL,1,'aditya.anand2@mcdermott.com',@Date)
+
+INSERT INTO [dbo].[plp_pipeline_parameter] ([pipeline_code],[pipeline_sub_code],[parameter_code],[display_order],[source_column_name],[source_operator],[comment],[active],[touched_by],[touched_dtm]) 
+VALUES(@v_pipelinename,'NetworkFolder','file_name',7,'file_name','IN',NULL,1,'aditya.anand2@mcdermott.com',@Date)
+
+
+delete from [dbo].[plp_parameter_value] where [pipeline_code] = @v_pipelinename
+
+--PLP Pipeline values
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+     VALUES('start_date','2021-10-07 11:33:55',1,'aditya.anand2@mcdermott.com',@Date,@v_pipelinename,'NetworkFolder')
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+     VALUES('end_date','currdate',1,'aditya.anand2@mcdermott.com',@Date,@v_pipelinename,'NetworkFolder')
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+     VALUES('source_directory','07. D7507 - RUYA 11\02. Engineering\01. MDR',1,'aditya.anand2@mcdermott.com',@Date,@v_pipelinename,'NetworkFolder')
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+     VALUES('table_name','P10_MDR_Data_Ruya11_D7507',1,'aditya.anand2@mcdermott.com',@Date,@v_pipelinename,'NetworkFolder')
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+     VALUES('logicapp_url','https://prod-56.eastus.logic.azure.com:443/workflows/3cff41a53ba14a82a9b7cc8d6d2bfe56/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=c7BCbv69x4tk7w5oqGQNOPlpIXvqBQi_Zwm8wkww0WQ',1,'aditya.anand2@mcdermott.com',@Date,@v_pipelinename,'NetworkFolder')	 
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+     VALUES('project_number','D7507',1,'aditya.anand2@mcdermott.com',@Date,@v_pipelinename,'NetworkFolder')
+INSERT INTO [dbo].[plp_parameter_value] ([parameter_code],[parameter_value],[active],[touched_by],[touched_dtm],[pipeline_code],[pipeline_sub_code])
+     VALUES('file_name','P10 - MDR DATA EXPOR.CSV',1,'aditya.anand2@mcdermott.com',@Date,@v_pipelinename,'NetworkFolder')
+go
+
+
+CREATE TABLE [epr].[P10_MDR_Data_Ruya11_D7507](
+[File Name]   varchar(5000) NULL,
+[SFN Description]   varchar(2000) NULL,
+[PCM Input]   varchar(2000) NULL,
+[3rd Party ID]   varchar(2000) NULL,
+[Doc. Type]   varchar(2000) NULL,
+[Discipline]   varchar(2000) NULL,
+[CRS No.]   varchar(2000) NULL,
+[Yard Flag ID]   varchar(2000) NULL,
+[Profile Type]   varchar(5000) NULL,
+[Name]   varchar(5000) NULL,
+[Revision]   varchar(2000) NULL,
+[Revision Date]   varchar(2000) NULL,
+[State]   varchar(5000) NULL,
+[Deliverable Type]   varchar(5000) NULL,
+[Project Doc Type]   varchar(5000) NULL,
+[Project Doc Name]   varchar(5000) NULL,
+[Status]   varchar(5000) NULL,
+[Client Discipline]   varchar(5000) NULL,
+[Client Document Type]   varchar(5000) NULL,
+[Title]   varchar(5000) NULL,
+[Facility]   varchar(5000) NULL,
+[Client Completion Percentage]   varchar(2000) NULL,
+[Client Earned Value]   varchar(2000) NULL,
+[Completion Percentage]   varchar(2000) NULL,
+[Earned Value]   varchar(2000) NULL,
+[Client Return Code]   varchar(2000) NULL,
+[Client Return Date]   varchar(2000) NULL,
+[Client Expected Return]   varchar(5000) NULL,
+[Comments]   varchar(5000) NULL,
+[Location]   varchar(2000) NULL,
+[Voided Reason]   varchar(2000) NULL,
+[Thirty Percent Design Review]   varchar(2000) NULL,
+[Sixty Percent Design Review]   varchar(2000) NULL,
+[Ninety Percent Design Review]   varchar(2000) NULL,
+[Original Weight]   varchar(2000) NULL,
+[Planned Weight]   varchar(2000) NULL,
+[Forecast Weight]   varchar(2000) NULL,
+[Weighting 1]   varchar(2000) NULL,
+[Start Activity Id]   varchar(2000) NULL,
+[IDC Activity Id]   varchar(2000) NULL,
+[IDC Completed Activity ID]   varchar(2000) NULL,
+[IFR Activity ID]   varchar(2000) NULL,
+[IFR RCA Activity ID]   varchar(2000) NULL,
+[IFA Activity ID]   varchar(2000) NULL,
+[IFA RCA Activity ID]   varchar(2000) NULL,
+[IFA/IFR Activity Id]   varchar(2000) NULL,
+[CA Activity Id]   varchar(2000) NULL,
+[IFH Activity Id]   varchar(2000) NULL,
+[AFD Activity Id]   varchar(2000) NULL,
+[IFB Activity Id]   varchar(2000) NULL,
+[AFC(H) Activity Id]   varchar(2000) NULL,
+[AFC Activity Id]   varchar(2000) NULL,
+[AFC RCA Activity ID]   varchar(2000) NULL,
+[AFF Activity Id]   varchar(2000) NULL,
+[AFH Activity Id]   varchar(2000) NULL,
+[IFI Activity Id]   varchar(2000) NULL,
+[IFP Activity Id]   varchar(2000) NULL,
+[AFU Activity Id]   varchar(2000) NULL,
+[As-Built Activity Id]   varchar(2000) NULL,
+[Start Original]   varchar(2000) NULL,
+[Start Plan]   varchar(2000) NULL,
+[Start Forecast]   varchar(2000) NULL,
+[Start Actual]   varchar(2000) NULL,
+[IDC Original]   varchar(2000) NULL,
+[IDC Plan]   varchar(2000) NULL,
+[IDC Forecast]   varchar(2000) NULL,
+[IDC Actual]   varchar(2000) NULL,
+[IDC Complete Original]   varchar(2000) NULL,
+[IDC Complete Plan]   varchar(2000) NULL,
+[IDC Complete Forecast]   varchar(2000) NULL,
+[IDC Complete Actual]   varchar(2000) NULL,
+[IFR Original]   varchar(2000) NULL,
+[IFR Plan]   varchar(2000) NULL,
+[IFR Forecast]   varchar(2000) NULL,
+[IFR Actual]   varchar(2000) NULL,
+[RCA - IFR Original]   varchar(2000) NULL,
+[RCA - IFR Plan]   varchar(2000) NULL,
+[RCA - IFR Forecast]   varchar(2000) NULL,
+[RCA - IFR Actual]   varchar(2000) NULL,
+[IFA Original]   varchar(2000) NULL,
+[IFA Plan]   varchar(2000) NULL,
+[IFA Forecast]   varchar(2000) NULL,
+[IFA Actual]   varchar(2000) NULL,
+[RCA - IFA Original]   varchar(2000) NULL,
+[RCA - IFA Plan]   varchar(2000) NULL,
+[RCA - IFA Forecast]   varchar(2000) NULL,
+[RCA - IFA Actual]   varchar(2000) NULL,
+[AFD Original]   varchar(2000) NULL,
+[AFD Plan]   varchar(2000) NULL,
+[AFD Forecast]   varchar(2000) NULL,
+[AFD Actual]   varchar(2000) NULL,
+[IFB Original]   varchar(2000) NULL,
+[IFB Plan]   varchar(2000) NULL,
+[IFB Forecast]   varchar(2000) NULL,
+[IFB Actual]   varchar(2000) NULL,
+[AFC(H) Original]   varchar(2000) NULL,
+[AFC(H) Plan]   varchar(2000) NULL,
+[AFC(H) Forecast]   varchar(2000) NULL,
+[AFC(H) Actual]   varchar(2000) NULL,
+[AFC Original]   varchar(2000) NULL,
+[AFC Plan]   varchar(2000) NULL,
+[AFC Forecast]   varchar(2000) NULL,
+[AFC Actual]   varchar(2000) NULL,
+[RCA - AFC Original]   varchar(2000) NULL,
+[RCA - AFC Plan]   varchar(2000) NULL,
+[RCA - AFC Forecast]   varchar(2000) NULL,
+[RCA - AFC Actual]   varchar(2000) NULL,
+[IFI Original]   varchar(2000) NULL,
+[IFI Plan]   varchar(2000) NULL,
+[IFI Forecast]   varchar(2000) NULL,
+[IFI Actual]   varchar(2000) NULL,
+[RCA - IFI Original]   varchar(2000) NULL,
+[RCA - IFI Plan]   varchar(2000) NULL,
+[RCA - IFI Forecast]   varchar(2000) NULL,
+[RCA - IFI Actual]   varchar(2000) NULL,
+[IFP Original]   varchar(2000) NULL,
+[IFP Plan]   varchar(2000) NULL,
+[IFP Forecast]   varchar(2000) NULL,
+[IFP Actual]   varchar(2000) NULL,
+[As Built Original]   varchar(2000) NULL,
+[As Built Plan]   varchar(2000) NULL,
+[As Built Forecast]   varchar(2000) NULL,
+[As Built Actual]   varchar(2000) NULL,
+[Company Transmittal Number]   varchar(5000) NULL,
+[Company Return Date]   varchar(5000) NULL,
+[Review Return code]   varchar(5000) NULL,
+[Transmittal Number]   varchar(5000) NULL,
+[Transmittal Date]   varchar(5000) NULL,
+[Interface Document]   varchar(5000) NULL,
+[Originator]   varchar(2000) NULL,
+[Contract Code]   varchar(2000) NULL,
+[Contractor Originator Code]   varchar(2000) NULL,
+[Country]   varchar(2000) NULL,
+[Client Document Classification]   varchar(5000) NULL,
+[Equipment Class]   varchar(2000) NULL,
+[Equipment SubClass]   varchar(2000) NULL,
+[Field Operation Deliverable]   varchar(2000) NULL,
+[MDR Update Information]   varchar(2000) NULL,
+[Project Code]   varchar(2000) NULL,
+[Reason for Change-Engineering]   varchar(2000) NULL,
+[Recipient]   varchar(2000) NULL,
+[Sector Code]   varchar(2000) NULL,
+[Site Code]   varchar(2000) NULL,
+[Superseded by]   varchar(2000) NULL,
+[System Code]   varchar(2000) NULL,
+[Tag/Equipment No.]   varchar(2000) NULL,
+[Unique ID]   varchar(5000) NULL,
+[Sub-System]   varchar(2000) NULL,
+[Greenfield / Brownfield]   varchar(2000) NULL,
+[Work Unit]   varchar(2000) NULL,
+[Work Pack]   varchar(2000) NULL,
+[Put in iDocs]   varchar(2000) NULL,
+[Internal Transmittal No.]   varchar(5000) NULL,
+[Internal Transmittal Date]   varchar(2000) NULL,
+[Distribution Q Status]   varchar(2000) NULL,
+[DM Queue Date]   varchar(2000) NULL,
+[DM Queue Release Date]   varchar(2000) NULL,
+[Days Variance]   varchar(2000) NULL,
+[Published Revision]   varchar(2000) NULL,
+[Document Status]   varchar(2000) NULL,
+[HHI Transmittal No.]   varchar(2000) NULL,
+[HHI Transmittal Date]   varchar(2000) NULL,
+[Expediting Status]   varchar(2000) NULL,
+[UserType]   varchar(2000) NULL,
+[MOPEX Location]   varchar(2000) NULL,
+[As Built Required]   varchar(2000) NULL,
+[AWP Type]   varchar(2000) NULL,
+[AWP Applicable]   varchar(2000) NULL,
+[AWP Assigned Platform]   varchar(2000) NULL,
+[AWP Deck]   varchar(2000) NULL,
+[AWP CWA]   varchar(2000) NULL,
+[AWP Package]   varchar(2000) NULL,
+[EWP]   varchar(2000) NULL,
+[PWP]   varchar(2000) NULL,
+[CWP]   varchar(2000) NULL,
+[IWP]   varchar(2000) NULL,
+[GPCA Cost Code]   varchar(2000) NULL,
+[GPCA Cost Code Description]   varchar(5000) NULL,
+[GPCA Prime Description]   varchar(5000) NULL,
+[GPCA Sub Prime Description]   varchar(5000) NULL,
+[project_number]   varchar(2000) NULL,
+[file_name]   varchar(2000) NULL,
+[CreatedDateTime]   datetime NULL
+)WITH(	DISTRIBUTION = ROUND_ROBIN,	CLUSTERED COLUMNSTORE INDEX)

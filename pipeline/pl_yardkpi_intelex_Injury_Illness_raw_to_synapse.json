@@ -1,0 +1,1337 @@
+{
+	"name": "pl_yardkpi_intelex_Injury_Illness_raw_to_synapse",
+	"properties": {
+		"activities": [
+			{
+				"name": "cp_Get_Latest_Combined_File",
+				"description": "Copy all the files created since the last start date and combine them into one file to be processed into Synapse.",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Set last_run_start_date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"additionalColumns": [
+							{
+								"name": "source_code",
+								"value": {
+									"value": "@activity('lk_get_pipeline_parameters').output.firstRow.source_code",
+									"type": "Expression"
+								}
+							},
+							{
+								"name": "sub_source_code",
+								"value": {
+									"value": "@activity('lk_get_pipeline_parameters').output.firstRow.sub_source_code",
+									"type": "Expression"
+								}
+							}
+						],
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": true,
+							"modifiedDatetimeStart": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.last_run_start_date",
+								"type": "Expression"
+							},
+							"wildcardFolderPath": {
+								"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.directory,'/*/*/*')",
+								"type": "Expression"
+							},
+							"wildcardFileName": {
+								"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.input_file_name,'_*.csv')",
+								"type": "Expression"
+							}
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings",
+							"copyBehavior": "MergeFiles"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": "ts_itime_combined.csv"
+						}
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_yardkpi_intelex_wildcard",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_ds_filesystem": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+								"type": "Expression"
+							},
+							"p_ds_first_row_header": true
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_yardkpi_intelex_generic",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_ds_filesystem": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+								"type": "Expression"
+							},
+							"p_ds_directory": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+								"type": "Expression"
+							},
+							"p_ds_filename": {
+								"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.input_file_name,'Temp.csv')",
+								"type": "Expression"
+							},
+							"p_ds_first_row_header": true
+						}
+					}
+				]
+			},
+			{
+				"name": "Check Combined File non zero Bytes",
+				"description": "Check if the combined file has any data to be loaded.",
+				"type": "GetMetadata",
+				"dependsOn": [
+					{
+						"activity": "cp_Get_Latest_Combined_File",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_yardkpi_intelex_generic",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_ds_filesystem": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+								"type": "Expression"
+							},
+							"p_ds_directory": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+								"type": "Expression"
+							},
+							"p_ds_filename": {
+								"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.input_file_name,'Temp.csv')",
+								"type": "Expression"
+							},
+							"p_ds_first_row_header": true
+						}
+					},
+					"fieldList": [
+						"size",
+						"exists"
+					],
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true
+					},
+					"formatSettings": {
+						"type": "DelimitedTextReadSettings"
+					}
+				}
+			},
+			{
+				"name": "if_File_Exists_Copy_to_Synapse",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Check Combined File non zero Bytes",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@greater(activity('Check Combined File non zero Bytes').output.size, 2)",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "Copy_RAW_to_Sysnapse_Stage",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": true,
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "SqlDWSink",
+									"preCopyScript": {
+										"value": "TRUNCATE TABLE [yardkpi].[stage_intelex_injury_illness]",
+										"type": "Expression"
+									},
+									"allowPolyBase": true,
+									"polyBaseSettings": {
+										"rejectValue": 0,
+										"rejectType": "value",
+										"useTypeDefault": true
+									},
+									"disableMetricsCollection": false
+								},
+								"enableStaging": true,
+								"stagingSettings": {
+									"linkedServiceName": {
+										"referenceName": "ADLSG2 TimeAnalytics DEV",
+										"type": "LinkedServiceReference"
+									},
+									"path": "mdr-raw-data/Polybase_Staging_Space"
+								},
+								"translator": {
+									"type": "TabularTranslator",
+									"mappings": [
+										{
+											"source": {
+												"name": "source_code",
+												"type": "String"
+											},
+											"sink": {
+												"name": "source_code",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "sub_source_code",
+												"type": "String"
+											},
+											"sink": {
+												"name": "sub_source_code",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "RowNum",
+												"type": "String"
+											},
+											"sink": {
+												"name": "row_id",
+												"type": "Int64"
+											}
+										},
+										{
+											"source": {
+												"name": "Employee_x0020_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "employee_id",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Record_x0020_No",
+												"type": "String"
+											},
+											"sink": {
+												"name": "record_no",
+												"type": "Int64"
+											}
+										},
+										{
+											"source": {
+												"name": "Category",
+												"type": "String"
+											},
+											"sink": {
+												"name": "category",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Date",
+												"type": "DateTime"
+											},
+											"sink": {
+												"name": "date",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "HIPO_x0020_Change_x0020_Counter",
+												"type": "String"
+											},
+											"sink": {
+												"name": "hipo_change_counter",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "Location",
+												"type": "String"
+											},
+											"sink": {
+												"name": "location",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Was_x0020_Treatment_x0020_Received_x003F_",
+												"type": "String"
+											},
+											"sink": {
+												"name": "was_treatment_received",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "HIPO_x003F_",
+												"type": "String"
+											},
+											"sink": {
+												"name": "hipo",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Related_x0020_MOVs",
+												"type": "String"
+											},
+											"sink": {
+												"name": "related_movs",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Profile_x0020_Type",
+												"type": "String"
+											},
+											"sink": {
+												"name": "profile_type",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Profile_x0020_No",
+												"type": "String"
+											},
+											"sink": {
+												"name": "profile_no",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Profile",
+												"type": "String"
+											},
+											"sink": {
+												"name": "profile",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Vessel_x002F_Barge",
+												"type": "String"
+											},
+											"sink": {
+												"name": "vessel_barge",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Business_x0020_Line",
+												"type": "String"
+											},
+											"sink": {
+												"name": "business_line",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Area",
+												"type": "String"
+											},
+											"sink": {
+												"name": "area",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Project_x0020_Name",
+												"type": "String"
+											},
+											"sink": {
+												"name": "project_name",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Project_x0020_Number",
+												"type": "String"
+											},
+											"sink": {
+												"name": "project_number",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Incident_x0020_Title",
+												"type": "String"
+											},
+											"sink": {
+												"name": "incident_title",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Hospitalization_x0020_Type",
+												"type": "String"
+											},
+											"sink": {
+												"name": "hospitalization_type",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Description",
+												"type": "String"
+											},
+											"sink": {
+												"name": "description",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Injury_x0020_or_x0020_Illness",
+												"type": "String"
+											},
+											"sink": {
+												"name": "injury_or_illness",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Number_x0020_of_x0020_People_x0020_Impacted",
+												"type": "String"
+											},
+											"sink": {
+												"name": "number_of_people_impacted",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "Immediate_x0020_Action",
+												"type": "String"
+											},
+											"sink": {
+												"name": "immediate_action",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "External_x0020_Agency_x0020_Notification_x0020_Required_x003F_",
+												"type": "String"
+											},
+											"sink": {
+												"name": "external_agency_notification_required",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Specify_x0020_Agency",
+												"type": "String"
+											},
+											"sink": {
+												"name": "specify_agency",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Specify_x0020_Other",
+												"type": "String"
+											},
+											"sink": {
+												"name": "specify_other",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Worker_x0020_Type",
+												"type": "String"
+											},
+											"sink": {
+												"name": "worker_type",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Does_x0020_employee_x0020_exist_x0020_in_x0020_the_x0020_system_x003F_",
+												"type": "String"
+											},
+											"sink": {
+												"name": "does_employee_exist_in_the_system",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Employee_x0020_ID2",
+												"type": "String"
+											},
+											"sink": {
+												"name": "employee_id2",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "First_x0020_Name",
+												"type": "String"
+											},
+											"sink": {
+												"name": "first_name",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Last_x0020_Name",
+												"type": "String"
+											},
+											"sink": {
+												"name": "last_name",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Did_x0020_the_x0020_incident_x0020_occur_x0020_during_x0020_rework_x003F_",
+												"type": "String"
+											},
+											"sink": {
+												"name": "did_the_incident_occur_during_rework",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Potential_x0020_Risk_x0020_Reporting_x0020_Level",
+												"type": "String"
+											},
+											"sink": {
+												"name": "potential_risk_reporting_level",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Potential_x0020_Severity_x0020_Level",
+												"type": "String"
+											},
+											"sink": {
+												"name": "potential_severity_level",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Actual_x0020_Severity_x0020_Level",
+												"type": "String"
+											},
+											"sink": {
+												"name": "actual_severity_level",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Reported_x0020_By",
+												"type": "String"
+											},
+											"sink": {
+												"name": "reported_by",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Stop_x0020_Work_x0020_Authority_x0020_applied_x003F_",
+												"type": "String"
+											},
+											"sink": {
+												"name": "stop_work_authority_applied",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Work_x0020_Related_x0020_Injury_x002F_Illness_x003F_",
+												"type": "String"
+											},
+											"sink": {
+												"name": "work_related_injury_illness",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Was_x0020_impacted_x0020_person_x0020_sent_x0020_offsite_x0020_for_x0020_medical_x0020_evaluation_x0020_or_x0020_treatment_x003F_",
+												"type": "String"
+											},
+											"sink": {
+												"name": "impacted_person_sent_offsite_for_evaluation_or_treatment",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Drug_x0020_and_x002F_or_x0020_Alcohol_x0020_Test_x0020_Required_x003F_",
+												"type": "String"
+											},
+											"sink": {
+												"name": "drug_and_or_alcohol_test_required",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Local-News_x0020_Media_x0020_Involvement_x003F_",
+												"type": "String"
+											},
+											"sink": {
+												"name": "local_news_media_involvement",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Incident_x0020_Reported_x0020_By",
+												"type": "String"
+											},
+											"sink": {
+												"name": "incident_reported_by",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Created_x0020_By",
+												"type": "String"
+											},
+											"sink": {
+												"name": "created_by",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Date_x0020_Created",
+												"type": "DateTime"
+											},
+											"sink": {
+												"name": "date_created",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "Assign_x0020_Investigator",
+												"type": "String"
+											},
+											"sink": {
+												"name": "assign_investigator",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Comments",
+												"type": "String"
+											},
+											"sink": {
+												"name": "comments",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Workers_x0027__x0020_Comp_x003F_",
+												"type": "String"
+											},
+											"sink": {
+												"name": "workers_comp",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Workers_x0027__x0020_Comp_x0020_Comments",
+												"type": "String"
+											},
+											"sink": {
+												"name": "workers_comp_comments",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Shift_x0020_Details",
+												"type": "String"
+											},
+											"sink": {
+												"name": "shift_details",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Hours_x0020_Into_x0020_Shift",
+												"type": "String"
+											},
+											"sink": {
+												"name": "hours_into_shift",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Shift_x0020_Duration",
+												"type": "String"
+											},
+											"sink": {
+												"name": "shift_duration",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Privacy_x0020_Case_x003F_",
+												"type": "String"
+											},
+											"sink": {
+												"name": "privacy_case",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Events_x002F_Exposures",
+												"type": "String"
+											},
+											"sink": {
+												"name": "events_exposures",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Source_x0020_of_x0020_Injury_x002F_Illness",
+												"type": "String"
+											},
+											"sink": {
+												"name": "source_of_injury_illness",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Source_x0020_Details",
+												"type": "String"
+											},
+											"sink": {
+												"name": "source_details",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Body_x0020_Part",
+												"type": "String"
+											},
+											"sink": {
+												"name": "body_part",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Injury_x002F_Illness",
+												"type": "String"
+											},
+											"sink": {
+												"name": "injury_illness",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Initial_x0020_Treatment",
+												"type": "String"
+											},
+											"sink": {
+												"name": "initial_treatment",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Who_x0020_provided_x0020_treatment_x003F_",
+												"type": "String"
+											},
+											"sink": {
+												"name": "who_provided_treatment",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Hospitalized",
+												"type": "String"
+											},
+											"sink": {
+												"name": "hospitalized",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Recordable",
+												"type": "String"
+											},
+											"sink": {
+												"name": "recordable",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Recordable_x0020_Classification",
+												"type": "String"
+											},
+											"sink": {
+												"name": "recordable_classification",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Start_x0020_Date_x0020_and_x0020_Time_x0020_of_x0020_Investigation",
+												"type": "DateTime"
+											},
+											"sink": {
+												"name": "start_date_and_time_of_investigation",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "End_x0020_Date_x0020_and_x0020_Time_x0020_of_x0020_Investigation",
+												"type": "DateTime"
+											},
+											"sink": {
+												"name": "end_date_and_time_of_investigation",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "Investigator",
+												"type": "String"
+											},
+											"sink": {
+												"name": "investigator",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Additional_x0020_Investigators",
+												"type": "String"
+											},
+											"sink": {
+												"name": "additional_investigators",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "HIPO_x003F_2",
+												"type": "String"
+											},
+											"sink": {
+												"name": "hipo_2",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Incident_x0020_Owner",
+												"type": "String"
+											},
+											"sink": {
+												"name": "incident_owner",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Total_x0020_Number_x0020_of_x0020_Days_x0020_Away",
+												"type": "String"
+											},
+											"sink": {
+												"name": "total_number_of_days_away",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "Total_x0020_Number_x0020_of_x0020_Job_x0020_Transfer",
+												"type": "String"
+											},
+											"sink": {
+												"name": "total_number_of_job_transfer",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "Total_x0020_Number_x0020_of_x0020_Restricted_x0020_Days",
+												"type": "String"
+											},
+											"sink": {
+												"name": "total_number_of_restricted_days",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "Total_x0020_Number_x0020_of_x0020_Restricted_x0020_or_x0020_Job_x0020_Transfer_x0020_Days",
+												"type": "String"
+											},
+											"sink": {
+												"name": "total_number_of_restricted_or_job_transfer_days",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "Date_x0020_Approved",
+												"type": "DateTime"
+											},
+											"sink": {
+												"name": "date_approved",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "Approver_x0027_s_x0020_Comment",
+												"type": "String"
+											},
+											"sink": {
+												"name": "approvers_comment",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Approved_x0020_By",
+												"type": "String"
+											},
+											"sink": {
+												"name": "approved_by",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "WorkflowCurrent_x0020_Stage",
+												"type": "String"
+											},
+											"sink": {
+												"name": "workflowcurrent_stage",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "WorkflowWorkflow_x0020_Status",
+												"type": "String"
+											},
+											"sink": {
+												"name": "workflowworkflow_status",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "WorkflowStatus",
+												"type": "String"
+											},
+											"sink": {
+												"name": "workflowstatus",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "WorkflowCurrent_x0020_Person_x0020_Responsible",
+												"type": "String"
+											},
+											"sink": {
+												"name": "workflowcurrent_person_responsible",
+												"type": "String"
+											}
+										}
+									]
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_adlsg2_csv_yardkpi_intelex_generic",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_ds_filesystem": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+											"type": "Expression"
+										},
+										"p_ds_directory": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+											"type": "Expression"
+										},
+										"p_ds_filename": {
+											"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.input_file_name,'Temp.csv')",
+											"type": "Expression"
+										},
+										"p_ds_first_row_header": true
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_AzureSynapseAnalytics_yardkpi",
+									"type": "DatasetReference",
+									"parameters": {
+										"schema": {
+											"value": "yardkpi",
+											"type": "Expression"
+										},
+										"db_name": {
+											"value": "stage_intelex_injury_illness",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "SP load to DIM Table",
+							"description": "Use the SPU generic_load_dim_v2 to populate the dim_entp_eng_ven_milestone  dimension table.",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Copy_RAW_to_Sysnapse_Stage",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": {
+									"value": "[dbo].[generic_load_dim_v2]",
+									"type": "Expression"
+								},
+								"storedProcedureParameters": {
+									"debug_flag": {
+										"value": {
+											"value": "N",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"execute_flag": {
+										"value": {
+											"value": "Y",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"load_name": {
+										"value": {
+											"value": "dim_entp_yardkpi_intelex_injury_illness",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"rkValidationRequired": {
+										"value": {
+											"value": "Y",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+								"type": "LinkedServiceReference"
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Set last_run_start_date",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_raw_start_time",
+					"value": {
+						"value": "@formatDateTime(utcNow(),'yyyy-MM-dd HH:mm:ss')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "lk_get_pipeline_parameters",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": {
+									"value": "Intelex",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Delete Temp combined File",
+				"description": "After the data has been loaded, clear the combined file from the ADLSV2 ",
+				"type": "Delete",
+				"dependsOn": [
+					{
+						"activity": "if_File_Exists_Copy_to_Synapse",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_yardkpi_intelex_generic",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_ds_filesystem": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+								"type": "Expression"
+							},
+							"p_ds_directory": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+								"type": "Expression"
+							},
+							"p_ds_filename": {
+								"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.input_file_name,'Temp.csv')",
+								"type": "Expression"
+							},
+							"p_ds_first_row_header": true
+						}
+					},
+					"enableLogging": false,
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true
+					}
+				}
+			},
+			{
+				"name": "SP Update Last Run Date",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "if_File_Exists_Copy_to_Synapse",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+					"storedProcedureParameters": {
+						"pParameterCode": {
+							"value": "last_run_start_date",
+							"type": "String"
+						},
+						"pParameterValue": {
+							"value": {
+								"value": "@variables('v_raw_start_time')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": {
+								"value": "Intelex",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "linkedservice_DEV_entanalytics_synapse",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"variables": {
+			"v_raw_start_time": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/YARD KPI/Intelex/Injury Illness"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-01-30T08:27:07Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

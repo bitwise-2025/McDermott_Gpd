@@ -1,0 +1,45 @@
+{
+	"name": "df_mcpm_progressitems_stg_variance_calc",
+	"properties": {
+		"folder": {
+			"name": "Projects/NCSA/MCPM"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"linkedService": {
+						"referenceName": "ADLSG2 TimeAnalytics DEV",
+						"type": "LinkedServiceReference"
+					},
+					"name": "StgCurrentWk"
+				},
+				{
+					"linkedService": {
+						"referenceName": "ADLSG2 TimeAnalytics DEV",
+						"type": "LinkedServiceReference"
+					},
+					"name": "StgPrevWk"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_mcpm_onshore_progressitems_data",
+						"type": "DatasetReference"
+					},
+					"name": "StgFinalWk"
+				}
+			],
+			"transformations": [
+				{
+					"name": "lkPrevWkData"
+				},
+				{
+					"name": "CalcDelta"
+				}
+			],
+			"script": "source(output(\n\t\tDomain as string,\n\t\tKeyUoM as string,\n\t\tCoA as string,\n\t\tEarnedQty as string,\n\t\tEarnedHrs as string,\n\t\tPrevEarnedQty as string,\n\t\tPrevEarnedHrs as string,\n\t\tVarianceEarnedQty as string,\n\t\tVarianceEarnedHrs as string,\n\t\tTakeOffQty as string,\n\t\tTakeOffHrs as string,\n\t\tProgressBaseQty as string,\n\t\tProgressBaseHrs as string,\n\t\tProgressBaseAmt as string,\n\t\tActualHrs as string,\n\t\tActualAmt as string,\n\t\tPhase as string,\n\t\tPrime as string,\n\t\tSubPrime as string,\n\t\tCostCode as string,\n\t\tContract as string,\n\t\tUNIT as string,\n\t\tWorkArea as string,\n\t\tSummaryCostType as string,\n\t\tCostType as string,\n\t\tPSRLevel1 as string,\n\t\tPSRLevel2 as string,\n\t\tPSRL1DESC as string,\n\t\tPSRL2DESC as string,\n\t\tCoaDesc as string,\n\t\tOriginalHrs as string,\n\t\tOriginalQty as string,\n\t\tOriginalAmt as string,\n\t\tCutoff as string\n\t),\n\tuseSchema: false,\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\tformat: 'delimited',\n\tfileSystem: 'mdr-staging-data',\n\tfolderPath: 'Project_Data/NCSA/MCPM/MCPM_Onshore_ProgressItems',\n\tfileName: 'MCPM_Onshore_curwk.csv',\n\tcolumnDelimiter: ',',\n\tescapeChar: '\\\\',\n\tquoteChar: '\\\"',\n\tcolumnNamesAsHeader: true,\n\tqutoChar: '\\\"') ~> StgCurrentWk\nsource(output(\n\t\tDomain as string,\n\t\tKeyUoM as string,\n\t\tCoA as string,\n\t\tEarnedQty as string,\n\t\tEarnedHrs as string,\n\t\tPrevEarnedQty as string,\n\t\tPrevEarnedHrs as string,\n\t\tVarianceEarnedQty as string,\n\t\tVarianceEarnedHrs as string,\n\t\tTakeOffQty as string,\n\t\tTakeOffHrs as string,\n\t\tProgressBaseQty as string,\n\t\tProgressBaseHrs as string,\n\t\tProgressBaseAmt as string,\n\t\tActualHrs as string,\n\t\tActualAmt as string,\n\t\tPhase as string,\n\t\tPrime as string,\n\t\tSubPrime as string,\n\t\tCostCode as string,\n\t\tContract as string,\n\t\tUNIT as string,\n\t\tWorkArea as string,\n\t\tSummaryCostType as string,\n\t\tCostType as string,\n\t\tPSRLevel1 as string,\n\t\tPSRLevel2 as string,\n\t\tPSRL1DESC as string,\n\t\tPSRL2DESC as string,\n\t\tCoaDesc as string,\n\t\tOriginalHrs as string,\n\t\tOriginalQty as string,\n\t\tOriginalAmt as string,\n\t\tCutoff as string\n\t),\n\tuseSchema: false,\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\tformat: 'delimited',\n\tfileSystem: 'mdr-staging-data',\n\tfolderPath: 'Project_Data/NCSA/MCPM/MCPM_Onshore_ProgressItems',\n\tfileName: 'MCPM_Onshore_prvwk.csv',\n\tcolumnDelimiter: ',',\n\tescapeChar: '\\\\',\n\tquoteChar: '\\\"',\n\tcolumnNamesAsHeader: true,\n\tqutoChar: '\\\"') ~> StgPrevWk\nStgCurrentWk, StgPrevWk lookup(StgCurrentWk@CoA == StgPrevWk@CoA,\n\tmultiple: false,\n\tpickup: 'first',\n\tasc(StgPrevWk@CoA, true),\n\tbroadcast: 'auto')~> lkPrevWkData\nlkPrevWkData derive(VarianceActualHrs = iif(isNull(StgCurrentWk@ActualHrs) && isNull(StgPrevWk@ActualHrs),'',toString(round(toDouble(coalesce(StgCurrentWk@ActualHrs,'0'))-toDouble(coalesce(StgPrevWk@ActualHrs,'0')),6))),\n\t\tVarianceActualAmt = iif(isNull(StgCurrentWk@ActualAmt) && isNull(StgPrevWk@ActualAmt),'',toString(round(toDouble(coalesce(StgCurrentWk@ActualAmt,'0'))-toDouble(coalesce(StgPrevWk@ActualAmt,'0')),6)))) ~> CalcDelta\nCalcDelta sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:[(concat('Int_MCPM_Onshore_',toString(currentUTC()),'_.csv'))],\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tmapColumn(\n\t\tDomain = StgCurrentWk@Domain,\n\t\tKeyUoM = StgCurrentWk@KeyUoM,\n\t\tCoA = StgCurrentWk@CoA,\n\t\tEarnedQty = StgCurrentWk@EarnedQty,\n\t\tEarnedHrs = StgCurrentWk@EarnedHrs,\n\t\tPrevEarnedQty = StgCurrentWk@PrevEarnedQty,\n\t\tPrevEarnedHrs = StgCurrentWk@PrevEarnedHrs,\n\t\tVarianceEarnedQty = StgCurrentWk@VarianceEarnedQty,\n\t\tVarianceEarnedHrs = StgCurrentWk@VarianceEarnedHrs,\n\t\tTakeOffQty = StgCurrentWk@TakeOffQty,\n\t\tTakeOffHrs = StgCurrentWk@TakeOffHrs,\n\t\tProgressBaseQty = StgCurrentWk@ProgressBaseQty,\n\t\tProgressBaseHrs = StgCurrentWk@ProgressBaseHrs,\n\t\tProgressBaseAmt = StgCurrentWk@ProgressBaseAmt,\n\t\tActualHrs = StgCurrentWk@ActualHrs,\n\t\tActualAmt = StgCurrentWk@ActualAmt,\n\t\tPhase = StgCurrentWk@Phase,\n\t\tPrime = StgCurrentWk@Prime,\n\t\tSubPrime = StgCurrentWk@SubPrime,\n\t\tCostCode = StgCurrentWk@CostCode,\n\t\tContract = StgCurrentWk@Contract,\n\t\tUNIT = StgCurrentWk@UNIT,\n\t\tWorkArea = StgCurrentWk@WorkArea,\n\t\tSummaryCostType = StgCurrentWk@SummaryCostType,\n\t\tCostType = StgCurrentWk@CostType,\n\t\tPSRLevel1 = StgCurrentWk@PSRLevel1,\n\t\tPSRLevel2 = StgCurrentWk@PSRLevel2,\n\t\tPSRL1DESC = StgCurrentWk@PSRL1DESC,\n\t\tPSRL2DESC = StgCurrentWk@PSRL2DESC,\n\t\tCoaDesc = StgCurrentWk@CoaDesc,\n\t\tOriginalHrs = StgCurrentWk@OriginalHrs,\n\t\tOriginalQty = StgCurrentWk@OriginalQty,\n\t\tOriginalAmt = StgCurrentWk@OriginalAmt,\n\t\tCutoff = StgCurrentWk@Cutoff,\n\t\tVarianceActualHrs,\n\t\tVarianceActualAmt\n\t),\n\tpartitionBy('hash', 1)) ~> StgFinalWk"
+		}
+	}
+}

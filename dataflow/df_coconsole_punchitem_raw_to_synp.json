@@ -1,0 +1,36 @@
+{
+	"name": "df_coconsole_punchitem_raw_to_synp",
+	"properties": {
+		"description": "Data Flow to pull data from ADLS RAW to Synapse database\nData Transformation used to update PROJECT  and perform other ETL activities",
+		"folder": {
+			"name": "Projects/NCSA/Co Console"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_coconsole_punchitem_raw_latest",
+						"type": "DatasetReference"
+					},
+					"name": "srcPunchItemRAWLatest"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_AzureSynapseAnalytics_coconsole_punchitem",
+						"type": "DatasetReference"
+					},
+					"name": "snkPunchItemRptSynapse"
+				}
+			],
+			"transformations": [
+				{
+					"name": "DataTransformation"
+				}
+			],
+			"script": "source(output(\n\t\tProject as string,\n\t\tSystem as string,\n\t\t{System Description} as string,\n\t\t{Sub System} as string,\n\t\t{Sub System Description} as string,\n\t\t{Tag Number} as string,\n\t\t{Tag Description} as string,\n\t\t{Tag Type} as string,\n\t\t{Punch Item} as string,\n\t\tDescription as string,\n\t\tDiscipline as string,\n\t\t{Discipline Desc.} as string,\n\t\tCategory as string,\n\t\t{Raised By} as string,\n\t\t{Raised Date} as string,\n\t\t{Action By} as string,\n\t\tNotes as string,\n\t\tStatus as string,\n\t\t{Cleared By} as string,\n\t\t{Cleared Date} as string,\n\t\t{Verified By} as string,\n\t\t{Verified Date} as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true) ~> srcPunchItemRAWLatest\nsrcPunchItemRAWLatest derive(Project = iif(length(Project)>5,concat('99',Project),Project)) ~> DataTransformation\nDataTransformation sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tdeletable:false,\n\tinsertable:true,\n\tupdateable:false,\n\tupsertable:false,\n\ttruncate:true,\n\tformat: 'table',\n\tstaged: true,\n\tallowCopyCommand: true,\n\terrorHandlingOption: 'stopOnFirstError',\n\tmapColumn(\n\t\tProject,\n\t\tSystem,\n\t\tSystem_Description = {System Description},\n\t\tSub_System = {Sub System},\n\t\tSub_System_Description = {Sub System Description},\n\t\tTag_Number = {Tag Number},\n\t\tTag_Description = {Tag Description},\n\t\tTag_Type = {Tag Type},\n\t\tPunch_Item = {Punch Item},\n\t\tPunch_Item_Description = Description,\n\t\tDiscipline,\n\t\tDiscipline_Desc = {Discipline Desc.},\n\t\tCategory,\n\t\tRaised_By = {Raised By},\n\t\tRaised_Date = {Raised Date},\n\t\tAction_By = {Action By},\n\t\tNotes,\n\t\tStatus,\n\t\tCleared_By = {Cleared By},\n\t\tCleared_Date = {Cleared Date},\n\t\tVerified_By = {Verified By},\n\t\tVerified_Date = {Verified Date}\n\t)) ~> snkPunchItemRptSynapse"
+		}
+	}
+}

@@ -1,0 +1,36 @@
+{
+	"name": "df_p6_engr_histogram_stage_to_raw",
+	"properties": {
+		"description": "Data Flow to pull data from ADLS Stg to ADLS Raw.\nNo schema defined in source or Target, Schema drift was used along with column rules to direct data into Sink.",
+		"folder": {
+			"name": "Projects/NCSA/P6 Engr Histogram"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_P6engr_mhrs_histo_stage",
+						"type": "DatasetReference"
+					},
+					"name": "srcP6EngrHistogramStage"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_engr_mhrs_histo_raw",
+						"type": "DatasetReference"
+					},
+					"name": "snkP6EngrHistogramRaw"
+				}
+			],
+			"transformations": [
+				{
+					"name": "setFileName"
+				}
+			],
+			"script": "parameters{\n\tWildPath as string,\n\tFileName as string\n}\nsource(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\trowUrlColumn: 'Filename',\n\twildcardPaths:[($WildPath + $FileName + '.csv')]) ~> srcP6EngrHistogramStage\nsrcP6EngrHistogramStage derive(Filename = concat($WildPath,substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',$FileName,'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv')) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tinput(\n\t\tContract as string,\n\t\tPhase as string,\n\t\tOffice as string,\n\t\tTYPE as string,\n\t\tPrime as string,\n\t\t{Sub Prime} as string,\n\t\tSFN as string,\n\t\t{Activity Code} as string,\n\t\tDiscipline as string,\n\t\tPSRL1Code as string,\n\t\tPSRL2Code as string,\n\t\tPeriod as string,\n\t\tUnits as string\n\t),\n\trowUrlColumn:'Filename',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: []) ~> snkP6EngrHistogramRaw"
+		}
+	}
+}

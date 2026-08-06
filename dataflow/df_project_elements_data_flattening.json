@@ -1,0 +1,90 @@
+{
+	"name": "df_project_elements_data_flattening",
+	"properties": {
+		"folder": {
+			"name": "Projects/Payment Dashboard/Project Elements Data"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_xml_project_elements_data_source_stage_decoded_xml",
+						"type": "DatasetReference"
+					},
+					"name": "SrcXMl"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_project_elements_data_source_stage_final_csv",
+						"type": "DatasetReference"
+					},
+					"name": "SnkCsv"
+				}
+			],
+			"transformations": [
+				{
+					"name": "XmlToCsvflatten"
+				},
+				{
+					"name": "addLoadDetails"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          DATA_DS as (G_1 as (ATTRIBUTE1 as string, ATTRIBUTE10 as string, ATTRIBUTE11 as string, ATTRIBUTE12 as string, ATTRIBUTE13 as string, ATTRIBUTE14 as string, ATTRIBUTE15 as string, ATTRIBUTE2 as string, ATTRIBUTE3 as string, ATTRIBUTE4 as string, ATTRIBUTE5 as string, ATTRIBUTE6 as string, ATTRIBUTE7 as string, ATTRIBUTE8 as string, ATTRIBUTE9 as string, BILLABLE_FLAG as string, CARRYING_OUT_ORGANIZATION_ID as string, CHARGEABLE_FLAG as string, COMPLETION_DATE as string, DESCRIPTION as string, ELEMENT_NUMBER as string, LAST_UPDATE_DATE as string, NAME as string, PROJECT_ID as string, PROJ_ELEMENT_ID as string, START_DATE as string)[])",
+				"     ),",
+				"     allowSchemaDrift: false,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     validationMode: 'none',",
+				"     namespaces: true) ~> SrcXMl",
+				"SrcXMl foldDown(unroll(DATA_DS.G_1),",
+				"     mapColumn(",
+				"          ATTRIBUTE1 = DATA_DS.G_1.ATTRIBUTE1,",
+				"          ATTRIBUTE10 = DATA_DS.G_1.ATTRIBUTE10,",
+				"          ATTRIBUTE11 = DATA_DS.G_1.ATTRIBUTE11,",
+				"          ATTRIBUTE12 = DATA_DS.G_1.ATTRIBUTE12,",
+				"          ATTRIBUTE13 = DATA_DS.G_1.ATTRIBUTE13,",
+				"          ATTRIBUTE14 = DATA_DS.G_1.ATTRIBUTE14,",
+				"          ATTRIBUTE15 = DATA_DS.G_1.ATTRIBUTE15,",
+				"          ATTRIBUTE2 = DATA_DS.G_1.ATTRIBUTE2,",
+				"          ATTRIBUTE3 = DATA_DS.G_1.ATTRIBUTE3,",
+				"          ATTRIBUTE4 = DATA_DS.G_1.ATTRIBUTE4,",
+				"          ATTRIBUTE5 = DATA_DS.G_1.ATTRIBUTE5,",
+				"          ATTRIBUTE6 = DATA_DS.G_1.ATTRIBUTE6,",
+				"          ATTRIBUTE7 = DATA_DS.G_1.ATTRIBUTE7,",
+				"          ATTRIBUTE8 = DATA_DS.G_1.ATTRIBUTE8,",
+				"          ATTRIBUTE9 = DATA_DS.G_1.ATTRIBUTE9,",
+				"          BILLABLE_FLAG = DATA_DS.G_1.BILLABLE_FLAG,",
+				"          CARRYING_OUT_ORGANIZATION_ID = DATA_DS.G_1.CARRYING_OUT_ORGANIZATION_ID,",
+				"          CHARGEABLE_FLAG = DATA_DS.G_1.CHARGEABLE_FLAG,",
+				"          COMPLETION_DATE = DATA_DS.G_1.COMPLETION_DATE,",
+				"          DESCRIPTION = DATA_DS.G_1.DESCRIPTION,",
+				"          ELEMENT_NUMBER = DATA_DS.G_1.ELEMENT_NUMBER,",
+				"          LAST_UPDATE_DATE = DATA_DS.G_1.LAST_UPDATE_DATE,",
+				"          NAME = DATA_DS.G_1.NAME,",
+				"          PROJECT_ID = DATA_DS.G_1.PROJECT_ID,",
+				"          PROJ_ELEMENT_ID = DATA_DS.G_1.PROJ_ELEMENT_ID,",
+				"          START_DATE = DATA_DS.G_1.START_DATE",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> XmlToCsvflatten",
+				"XmlToCsvflatten derive(source_name = 'SYSTEM',",
+				"          sub_source_name = 'R2P',",
+				"          created_date_time = currentUTC()) ~> addLoadDetails",
+				"addLoadDetails sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     partitionFileNames:['Project_Elements_Data.csv'],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> SnkCsv"
+			]
+		}
+	}
+}

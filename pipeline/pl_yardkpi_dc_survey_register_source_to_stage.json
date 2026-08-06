@@ -1,0 +1,146 @@
+{
+	"name": "pl_yardkpi_dc_survey_register_source_to_stage",
+	"properties": {
+		"activities": [
+			{
+				"name": "cp_get_dc_survey_register_to_stage",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 3,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SharePointOnlineListSource",
+						"query": {
+							"value": "@concat('$select=Dc_function,ProjectNo,Discipline,PlatformName,ReportNumber,Rev,Description,DwgRef,WorkPackNo,WorkPackTitle,DateRequest,DateInspect,DateReport,QCRFIIRN,PCMStatus,Area,Stages,Weightage,Status,DefectCategory,Remarks,TRNNO,IRN,DATE,MISC')",
+							"type": "Expression"
+						},
+						"httpRequestTimeout": "00:05:00"
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_generic_filelist_sharepoint",
+						"type": "DatasetReference",
+						"parameters": {
+							"ListName": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.list_name",
+								"type": "Expression"
+							},
+							"SharePointLink": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.sharepoint_link",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_yardkpi_dc_source",
+						"type": "DatasetReference",
+						"parameters": {
+							"Directory": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+								"type": "Expression"
+							},
+							"File": {
+								"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'_',formatDateTime(utcNow(),'yyyy-MM-dd HH:mm:ss.fff'),'.csv')",
+								"type": "Expression"
+							},
+							"FileSystem": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.output_file_system",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "lk_get_pipeline_parameters",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "[dbo].[getPipelineParametersValues]",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.p_pipeline_sub_code",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "AzureSynapseAnalyticsDB",
+						"type": "DatasetReference"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"p_pipeline_sub_code": {
+				"type": "string",
+				"defaultValue": "SHAREPOINT"
+			}
+		},
+		"folder": {
+			"name": "Projects/YARD KPI/DC Survey Register/SharePoint"
+		},
+		"annotations": [],
+		"lastPublishTime": "2024-05-13T15:12:31Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

@@ -1,0 +1,340 @@
+{
+	"name": "pl_master_pipeline_idocs_loop_project",
+	"properties": {
+		"description": "An idocs pipeline that loops through valid Project folders, which provide the source files needed by underlying ADF.",
+		"activities": [
+			{
+				"name": "Check Project Folder Exists",
+				"type": "GetMetadata",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_fs_idoc_doc_eng_csv",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_folder_path": {
+								"value": "@coalesce('')",
+								"type": "Expression"
+							}
+						}
+					},
+					"fieldList": [
+						"childItems"
+					],
+					"storeSettings": {
+						"type": "FileServerReadSettings",
+						"recursive": true
+					},
+					"formatSettings": {
+						"type": "DelimitedTextReadSettings"
+					}
+				}
+			},
+			{
+				"name": "flt_ProperProjectFldr",
+				"description": "Check for project folders with proper naming convention",
+				"type": "Filter",
+				"dependsOn": [
+					{
+						"activity": "Check Project Folder Exists",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Check Project Folder Exists').output.childitems",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@and(startswith(item().name,'IDOCS-'),equals(item().type,'Folder'))",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "fe_PerProject",
+				"description": "Loop for each Project Folder",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "flt_ProperProjectFldr",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('flt_ProperProjectFldr').output.Value",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "lk_get_projects_configured",
+							"type": "Lookup",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SqlDWSource",
+									"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+									"storedProcedureParameters": {
+										"pPipelineCode": {
+											"type": "String",
+											"value": {
+												"value": "pl_idocs_doc_eng_source_to_stage",
+												"type": "Expression"
+											}
+										},
+										"pPipeLineSubCode": {
+											"type": "String",
+											"value": {
+												"value": "@concat('iDocs_',split(item().name,'-')[2])",
+												"type": "Expression"
+											}
+										}
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "ds_azure_synapse_parameter",
+									"type": "DatasetReference"
+								}
+							}
+						},
+						{
+							"name": "If Condition1",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "lk_get_projects_configured",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@not(equals(activity('lk_get_projects_configured').output.firstRow.where_condition,'null'))",
+									"type": "Expression"
+								},
+								"ifTrueActivities": [
+									{
+										"name": "iDocs Doc Eng Master",
+										"type": "ExecutePipeline",
+										"dependsOn": [],
+										"policy": {
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"pipeline": {
+												"referenceName": "pl_idocs_doc_eng_master_pipeline",
+												"type": "PipelineReference"
+											},
+											"waitOnCompletion": true,
+											"parameters": {
+												"p_pl_m_sourcefolder": {
+													"value": "@concat('iDocs_',split(item().name,'-')[2])",
+													"type": "Expression"
+												}
+											}
+										}
+									},
+									{
+										"name": "iDocs Doc Ven Master",
+										"type": "ExecutePipeline",
+										"dependsOn": [],
+										"policy": {
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"pipeline": {
+												"referenceName": "pl_idocs_doc_ven_master_pipeline",
+												"type": "PipelineReference"
+											},
+											"waitOnCompletion": true,
+											"parameters": {
+												"p_pl_m_sourcefolder": {
+													"value": "@concat('iDocs_',split(item().name,'-')[2])",
+													"type": "Expression"
+												}
+											}
+										}
+									},
+									{
+										"name": "iDocs Milestone",
+										"type": "ExecutePipeline",
+										"dependsOn": [
+											{
+												"activity": "iDocs Doc Eng Master",
+												"dependencyConditions": [
+													"Completed"
+												]
+											},
+											{
+												"activity": "iDocs Doc Ven Master",
+												"dependencyConditions": [
+													"Completed"
+												]
+											}
+										],
+										"policy": {
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"pipeline": {
+												"referenceName": "pl_idocs_ev_ms_master_pipeline",
+												"type": "PipelineReference"
+											},
+											"waitOnCompletion": true,
+											"parameters": {
+												"p_pl_m_sourcefolder": {
+													"value": "@concat('iDocs_',split(item().name,'-')[2])",
+													"type": "Expression"
+												}
+											}
+										}
+									},
+									{
+										"name": "iDocs Project Specific",
+										"type": "ExecutePipeline",
+										"dependsOn": [
+											{
+												"activity": "iDocs Doc Ven Master",
+												"dependencyConditions": [
+													"Completed"
+												]
+											},
+											{
+												"activity": "iDocs Doc Eng Master",
+												"dependencyConditions": [
+													"Completed"
+												]
+											}
+										],
+										"policy": {
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"pipeline": {
+												"referenceName": "pl_idocs_project_specific_master_pipeline",
+												"type": "PipelineReference"
+											},
+											"waitOnCompletion": true,
+											"parameters": {
+												"p_pl_m_sourcefolder": {
+													"value": "@concat('iDocs_',split(item().name,'-')[2])",
+													"type": "Expression"
+												}
+											}
+										}
+									},
+									{
+										"name": "iDocs Closed Master",
+										"type": "ExecutePipeline",
+										"dependsOn": [
+											{
+												"activity": "iDocs Doc Eng Master",
+												"dependencyConditions": [
+													"Completed"
+												]
+											},
+											{
+												"activity": "iDocs Doc Ven Master",
+												"dependencyConditions": [
+													"Completed"
+												]
+											}
+										],
+										"policy": {
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"pipeline": {
+												"referenceName": "pl_idocs_closed_m_master_pipeline",
+												"type": "PipelineReference"
+											},
+											"waitOnCompletion": true,
+											"parameters": {
+												"p_pl_m_sourcefolder": {
+													"value": "@concat('iDocs_',split(item().name,'-')[2])",
+													"type": "Expression"
+												}
+											}
+										}
+									}
+								]
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Post_CleanupScript",
+				"description": "Post_CleanupScript",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "fe_PerProject",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseDB_DEV",
+					"type": "LinkedServiceReference"
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "NonQuery",
+							"text": "update dim_entp_ven_deliverables\nset active=0\nwhere active=1 and document_id in (select document_id from dbo.dim_entp_eng_deliverables where active=1)"
+						}
+					]
+				}
+			}
+		],
+		"folder": {
+			"name": "Projects/NCSA/Master Pipeline"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-09-09T09:22:44Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

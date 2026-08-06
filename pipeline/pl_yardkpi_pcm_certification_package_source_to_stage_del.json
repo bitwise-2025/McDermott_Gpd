@@ -1,0 +1,358 @@
+{
+	"name": "pl_yardkpi_pcm_certification_package_source_to_stage_del",
+	"properties": {
+		"activities": [
+			{
+				"name": "lk_get_pipeline_parameters",
+				"description": "Get the parameters to be used in this pipeline",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": {
+									"value": "PCM",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "ForEach_PCM_Fab_Code",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@split(pipeline().parameters.p_src_pipeline_pcm_fab_code,',' )",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"activities": [
+						{
+							"name": "lk_get_pipeline_pcm_yard_parameters",
+							"description": "Get the parameters to be used in this pipeline",
+							"type": "Lookup",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SqlDWSource",
+									"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+									"storedProcedureParameters": {
+										"pPipelineCode": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().Pipeline",
+												"type": "Expression"
+											}
+										},
+										"pPipeLineSubCode": {
+											"type": "String",
+											"value": {
+												"value": "@concat('PCM_',trim(item()))",
+												"type": "Expression"
+											}
+										}
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "ds_azure_synapse_parameter",
+									"type": "DatasetReference"
+								}
+							}
+						},
+						{
+							"name": "Set_current_date_time",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "lk_get_pipeline_pcm_yard_parameters",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "v_current_date_time",
+								"value": {
+									"value": "@if(equals(activity('lk_get_pipeline_pcm_yard_parameters').output.firstRow.to_date,'currdate'),formatDateTime(utcNow(),'yyyy-MM-dd HH:mm:ss.fff'),formatDateTime(activity('lk_get_pipeline_pcm_yard_parameters').output.firstRow.to_date,'yyyy-MM-dd HH:mm:ss.fff'))",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Copy PCM to Stage",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "Set_current_date_time",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SqlServerSource",
+									"additionalColumns": [
+										{
+											"name": "source_code",
+											"value": {
+												"value": "SYSTEM",
+												"type": "Expression"
+											}
+										},
+										{
+											"name": "sub_source_code",
+											"value": {
+												"value": "PCM",
+												"type": "Expression"
+											}
+										}
+									],
+									"sqlReaderStoredProcedureName": "[dbo].[pcm_dl_data]",
+									"storedProcedureParameters": {
+										"fab_code": {
+											"type": "String",
+											"value": {
+												"value": "@activity('lk_get_pipeline_pcm_yard_parameters').output.firstRow.fab_code",
+												"type": "Expression"
+											}
+										},
+										"sp_dataset": {
+											"type": "String",
+											"value": {
+												"value": "@activity('lk_get_pipeline_parameters').output.firstRow.sp_dataset_certification_package",
+												"type": "Expression"
+											}
+										},
+										"from_date": {
+											"type": "String",
+											"value": {
+												"value": "@activity('lk_get_pipeline_pcm_yard_parameters').output.firstRow.from_date",
+												"type": "Expression"
+											}
+										},
+										"to_date": {
+											"type": "String",
+											"value": {
+												"value": "@variables('v_current_date_time')",
+												"type": "Expression"
+											}
+										},
+										"trans_type": {
+											"type": "String",
+											"value": {
+												"value": "@activity('lk_get_pipeline_parameters').output.firstRow.trans_type",
+												"type": "Expression"
+											}
+										},
+										"contract": {
+											"type": "String",
+											"value": {
+												"value": "@activity('lk_get_pipeline_parameters').output.firstRow.contract",
+												"type": "Expression"
+											}
+										},
+										"job": {
+											"type": "String",
+											"value": {
+												"value": "@activity('lk_get_pipeline_parameters').output.firstRow.job",
+												"type": "Expression"
+											}
+										},
+										"item": {
+											"type": "String",
+											"value": {
+												"value": "@activity('lk_get_pipeline_parameters').output.firstRow.item",
+												"type": "Expression"
+											}
+										}
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"sink": {
+									"type": "DelimitedTextSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									},
+									"formatSettings": {
+										"type": "DelimitedTextWriteSettings",
+										"quoteAllText": true,
+										"fileExtension": ".txt"
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_pcm_source_sql_server",
+									"type": "DatasetReference"
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_adlsg2_certificate_package_stg",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_ds_filename": {
+											"value": "@concat('pcm_certification_package_del_',item(),'_',formatDateTime(variables('v_current_date_time'),'yyyy-MM-dd HH:mm:ss'),'.csv')",
+											"type": "Expression"
+										},
+										"p_ds_folderpath": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+											"type": "Expression"
+										},
+										"p_ds_filesystem": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.output_file_system",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "sp_Update_Parameter",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Copy PCM to Stage",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+								"storedProcedureParameters": {
+									"pParameterCode": {
+										"value": {
+											"value": "from_date",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"pParameterValue": {
+										"value": {
+											"value": "@variables('v_current_date_time')",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"pPipelineCode": {
+										"value": {
+											"value": "@pipeline().Pipeline",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"pPipelineSubCode": {
+										"value": {
+											"value": "@concat('PCM_',trim(item()))",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "AzureSynapseDB_DEV",
+								"type": "LinkedServiceReference"
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"p_src_pipeline_pcm_fab_code": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"v_current_date_time": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/YARD KPI/PCM/certification_package_del"
+		},
+		"annotations": [],
+		"lastPublishTime": "2024-04-09T06:13:35Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

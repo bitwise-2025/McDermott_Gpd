@@ -1,0 +1,236 @@
+{
+	"name": "pl_yardkpi_tabware_source_to_stage",
+	"properties": {
+		"activities": [
+			{
+				"name": "lk_get_pipeline_parameters",
+				"description": "Get the parameters to be used in this pipeline",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": {
+									"value": "Tabware",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Set last_run_start_date",
+				"description": "Sets start and current date",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_src_start_time",
+					"value": {
+						"value": "@formatDateTime(utcNow(),'yyyy-MM-dd HH:mm:ss')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "sp_Update_Parameter",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "ForEach Plant",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": {
+						"value": "[dbo].[updateIncrementPipelineParameterValue]",
+						"type": "Expression"
+					},
+					"storedProcedureParameters": {
+						"pParameterCode": {
+							"value": {
+								"value": "last_run_start_date",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pParameterValue": {
+							"value": {
+								"value": "@variables('v_src_start_time')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": {
+								"value": "Tabware",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseAnalytics",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "ForEach Plant",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Set last_run_start_date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@split(activity('lk_get_pipeline_parameters').output.firstRow.plant,',')",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "CP_Tabware_Src_toStage",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SqlServerSource",
+									"sqlReaderQuery": {
+										"value": "@concat('SELECT wo_work_order.equipment, wo_work_order.equipment_class, case when ''','gl_timeoffset',''' is not null then dbo.sp_get_client_date(wo_work_order.plant, wo_work_order.entered_date, eq_events.time_created) else wo_work_order.entered_date end as entered_date, wo_work_order.requested_completion, case when ''','gl_timeoffset',''' is not null then dbo.sp_get_client_date(wo_work_order.plant, wo_work_order.completed_date, eq_events.event_end_time) else wo_work_order.completed_date end as completed_date, wo_work_order.last_modified, wo_work_order.status,wo_work_order.work_class, wo_work_order.iso9000, wo_resources.workers, wo_work_order.planned_hours as wo_planned_hours, wo_work_order.down_hours, wo_resources.planned_hours as res_planned_hours, wo_resources.actual_hours, wo_work_order.planned_labor+wo_work_order.planned_nonstock+wo_work_order.planned_stores+wo_work_order.planned_services+wo_work_order.planned_tools as planned_hours_total, eq_v_event_costs.internal_labor, eq_v_event_costs.contract_labor, eq_v_event_costs.internal_nonstock, eq_v_event_costs.contract_nonstock, eq_v_event_costs.stores_material, eq_v_event_costs.services, eq_v_event_costs.internal_tool, eq_v_event_costs.contract_tool, eq_v_event_costs.internal_other, eq_v_event_costs.contract_other, wo_work_order.wo_base, wo_work_order.wo_task, wo_work_order.wo_subtask, eq_events.failure_flag, wo_work_order.planned_labor, wo_work_order.planned_nonstock, wo_work_order.planned_stores, wo_work_order.planned_services, wo_work_order.planned_tools, wo_work_order.plant,isnull(wo_resources.resource_id,'''') as resource_id \nFROM wo_work_order JOIN eq_events ON wo_work_order.plant = eq_events.plant AND wo_work_order.wo_base = eq_events.wo_base AND wo_work_order.wo_task = eq_events.wo_task AND wo_work_order.wo_subtask = eq_events.wo_subtask LEFT OUTER JOIN wo_resources ON wo_work_order.plant = wo_resources.plant AND wo_work_order.wo_base = wo_resources.wo_base AND wo_work_order.wo_task = wo_resources.wo_task AND wo_work_order.wo_subtask = wo_resources.wo_subtask LEFT OUTER JOIN eq_v_event_costs ON wo_work_order.plant = eq_v_event_costs.plant AND wo_work_order.wo_base = eq_v_event_costs.wo_base AND wo_work_order.wo_task = eq_v_event_costs.wo_task AND wo_work_order.wo_subtask = eq_v_event_costs.wo_subtask where wo_work_order.plant =''',item(),''' AND wo_work_order.last_modified >=''',activity('lk_get_pipeline_parameters').output.firstRow.last_run_start_date,'''')",
+										"type": "Expression"
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"sink": {
+									"type": "DelimitedTextSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									},
+									"formatSettings": {
+										"type": "DelimitedTextWriteSettings",
+										"quoteAllText": true,
+										"fileExtension": ".txt"
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_sql_query_yardkpi_tabware_source",
+									"type": "DatasetReference"
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_adlsg2_csv_yardkpi_tabware_generic",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_ds_filesystem": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.file_system",
+											"type": "Expression"
+										},
+										"p_ds_directory": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+											"type": "Expression"
+										},
+										"p_ds_filename": {
+											"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'_',item(),'_',variables('v_src_start_time'),'.csv')",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					]
+				}
+			}
+		],
+		"variables": {
+			"v_src_start_time": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/YARD KPI/Tabware"
+		},
+		"annotations": [],
+		"lastPublishTime": "2024-04-09T06:13:35Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

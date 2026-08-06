@@ -1,0 +1,827 @@
+{
+	"name": "pl_legacy_plan_excel_p6_raw_to_synapse",
+	"properties": {
+		"activities": [
+			{
+				"name": "Check Combined File non zero Bytes",
+				"description": "Check if the combined file has any data to be loaded.",
+				"type": "GetMetadata",
+				"dependsOn": [
+					{
+						"activity": "cp_Get_Latest_File",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_legacy_plan_raw_ltst_file",
+						"type": "DatasetReference"
+					},
+					"fieldList": [
+						"size",
+						"exists"
+					],
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true
+					},
+					"formatSettings": {
+						"type": "DelimitedTextReadSettings"
+					}
+				}
+			},
+			{
+				"name": "Set start date",
+				"description": "Set the last stage run date to the variable as start date.",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lkup_Get_Pipeline_parameters_getlrd",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_lrd_src_to_stage",
+					"value": {
+						"value": "@activity('lkup_Get_Pipeline_parameters_getlrd').output.firstRow.last_run_start_date",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "cp_Get_Latest_File",
+				"description": "Copy all the files created since the last start date and combine them into one file to be processed into Synapse.",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Set start date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.09:00:00",
+					"retry": 1,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": true,
+							"modifiedDatetimeStart": {
+								"value": "@variables('v_lrd_src_to_stage')",
+								"type": "Expression"
+							},
+							"wildcardFolderPath": "Project_Data/NCSA/P6/Legacy_Plan/*/*/*",
+							"wildcardFileName": "P6_Legacy_Plan_*.csv"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings",
+							"copyBehavior": "MergeFiles"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": "ts_itime_combined.csv"
+						}
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_legacy_plan_raw",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_legacy_plan_raw_ltst_file",
+						"type": "DatasetReference"
+					}
+				]
+			},
+			{
+				"name": "if_File_Exists_Copy_to_Synapse",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Check Combined File non zero Bytes",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@greater(activity('Check Combined File non zero Bytes').output.size, 2)",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "Copy Latest Data To Synapse Stage Table",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.09:00:00",
+								"retry": 1,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"additionalColumns": [
+										{
+											"name": "fx",
+											"value": {
+												"value": "@activity('lkup_Get_Pipeline_parameters_getlrd').output.firstRow.function_code",
+												"type": "Expression"
+											}
+										},
+										{
+											"name": "data_class",
+											"value": {
+												"value": "@activity('lkup_Get_Pipeline_parameters_getlrd').output.firstRow.data_class",
+												"type": "Expression"
+											}
+										},
+										{
+											"name": "sub_source",
+											"value": {
+												"value": "@activity('lkup_Get_Pipeline_parameters_getlrd').output.firstRow.sub_source",
+												"type": "Expression"
+											}
+										},
+										{
+											"name": "source",
+											"value": {
+												"value": "@activity('lkup_Get_Pipeline_parameters_getlrd').output.firstRow.source",
+												"type": "Expression"
+											}
+										},
+										{
+											"name": "unit_of_measure",
+											"value": {
+												"value": "@activity('lkup_Get_Pipeline_parameters_getlrd').output.firstRow.unit_of_measure",
+												"type": "Expression"
+											}
+										},
+										{
+											"name": "IWP_code",
+											"value": {
+												"value": "@activity('lkup_Get_Pipeline_parameters_getlrd').output.firstRow.IWP_code",
+												"type": "Expression"
+											}
+										},
+										{
+											"name": "PIM_code",
+											"value": {
+												"value": "@activity('lkup_Get_Pipeline_parameters_getlrd').output.firstRow.PIM_code",
+												"type": "Expression"
+											}
+										},
+										{
+											"name": "ROC_Code",
+											"value": {
+												"value": "@activity('lkup_Get_Pipeline_parameters_getlrd').output.firstRow.ROC_code",
+												"type": "Expression"
+											}
+										},
+										{
+											"name": "WA_code",
+											"value": {
+												"value": "@activity('lkup_Get_Pipeline_parameters_getlrd').output.firstRow.ROC_code",
+												"type": "Expression"
+											}
+										},
+										{
+											"name": "WU_code",
+											"value": {
+												"value": "@activity('lkup_Get_Pipeline_parameters_getlrd').output.firstRow.ROC_code",
+												"type": "Expression"
+											}
+										},
+										{
+											"name": "SR_code",
+											"value": {
+												"value": "@activity('lkup_Get_Pipeline_parameters_getlrd').output.firstRow.ROC_code",
+												"type": "Expression"
+											}
+										},
+										{
+											"name": "CWP_code",
+											"value": {
+												"value": "@activity('lkup_Get_Pipeline_parameters_getlrd').output.firstRow.ROC_code",
+												"type": "Expression"
+											}
+										},
+										{
+											"name": "Phase",
+											"value": {
+												"value": "@activity('lkup_Get_Pipeline_parameters_getlrd').output.firstRow.ROC_code",
+												"type": "Expression"
+											}
+										}
+									],
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "SqlDWSink",
+									"preCopyScript": "truncate table [gpd].[P6_legacy_plan]",
+									"allowPolyBase": true,
+									"polyBaseSettings": {
+										"rejectValue": 0,
+										"rejectType": "value",
+										"useTypeDefault": false
+									},
+									"disableMetricsCollection": false
+								},
+								"enableStaging": true,
+								"stagingSettings": {
+									"linkedServiceName": {
+										"referenceName": "ADLSG2 TimeAnalytics DEV",
+										"type": "LinkedServiceReference"
+									},
+									"path": "mdr-raw-data/Polybase_Staging_Space"
+								},
+								"translator": {
+									"type": "TabularTranslator",
+									"mappings": [
+										{
+											"source": {
+												"name": "Reference No.",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Reference_Number",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Line No.",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Line_Number",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "Category",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Category",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Parent Transaction Type",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Parent_Transaction_Type",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Transaction Type",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Transaction_Type",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Metrics",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Metrics",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Physical Location",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Office_Location",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Username",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Username",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Contract",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Contract",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Entity",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Entity",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Job Number",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Job_Number",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Sub-function",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Sub_Function",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Activity Code",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Activity_Code",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Unit",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Unit",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Quantity",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Quantity",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Man Hours",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Man_Hours",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Percentage",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Percentage",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Effective Year",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Effective_Year",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "Effective Month",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Effective_Month",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "Effective Date",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Effective_Date",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Revision",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Revision",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "data_class",
+												"type": "String"
+											},
+											"sink": {
+												"name": "data_class",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "source",
+												"type": "String"
+											},
+											"sink": {
+												"name": "source",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "sub_source",
+												"type": "String"
+											},
+											"sink": {
+												"name": "sub_source",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "fx",
+												"type": "String"
+											},
+											"sink": {
+												"name": "fx",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "CWP_code",
+												"type": "String"
+											},
+											"sink": {
+												"name": "cwp",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "IWP_code",
+												"type": "String"
+											},
+											"sink": {
+												"name": "iwp",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PIM_code",
+												"type": "String"
+											},
+											"sink": {
+												"name": "pim",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ROC_Code",
+												"type": "String"
+											},
+											"sink": {
+												"name": "roc",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Phase",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Phase",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "WU_code",
+												"type": "String"
+											},
+											"sink": {
+												"name": "work_unit",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "WA_code",
+												"type": "String"
+											},
+											"sink": {
+												"name": "work_area",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "SR_code",
+												"type": "String"
+											},
+											"sink": {
+												"name": "schedule_resource",
+												"type": "String"
+											}
+										}
+									]
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_adlsg2_csv_legacy_plan_raw_ltst_file",
+									"type": "DatasetReference"
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_AzureSynapseAnalytics_legacy_plan",
+									"type": "DatasetReference"
+								}
+							]
+						}
+					]
+				}
+			},
+			{
+				"name": "Delete Temp combined File",
+				"description": "After the data has been loaded, clear the combined file from the ADLSV2 ",
+				"type": "Delete",
+				"dependsOn": [
+					{
+						"activity": "if_File_Exists_Copy_to_Synapse",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_legacy_plan_raw_ltst_file",
+						"type": "DatasetReference"
+					},
+					"enableLogging": false,
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true
+					}
+				}
+			},
+			{
+				"name": "sp_execute_fact_validation",
+				"description": " SPU call to validate and prep the data in the stage for FACT load",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Delete Temp combined File",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "1.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[load_NCSA_fact_P6_legacy_plan_validate]"
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "sp_execute_fact_load",
+				"description": " SPU call to load the data into the Fact Table",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "sp_execute_fact_validation",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[load_NCSA_fact_P6_legacy_plan_fact_load]"
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "lkup_Get_Pipeline_parameters_getlrd",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "NetworkFolder"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "sp_Update_Parameter",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "sp_execute_fact_load",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+					"storedProcedureParameters": {
+						"pParameterValue": {
+							"value": {
+								"value": "@formatDateTime(activity('lkup_Get_Pipeline_parameters_getlrd').output.firstRow.run_start_datetime,'yyyy-MM-dd HH:mm:ss.fff')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": "NetworkFolder",
+							"type": "String"
+						},
+						"pParameterCode": {
+							"value": "last_run_start_date",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseDB_DEV",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"variables": {
+			"v_lrd_src_to_stage": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/NCSA/P6 Legacy Plan"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-03-31T05:32:47Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

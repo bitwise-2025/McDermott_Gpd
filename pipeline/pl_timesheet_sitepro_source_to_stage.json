@@ -1,0 +1,261 @@
+{
+	"name": "pl_timesheet_sitepro_source_to_stage",
+	"properties": {
+		"activities": [
+			{
+				"name": "cp_getjdepaytypesdata",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Set data pull date time",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"sqlReaderQuery": {
+							"value": "@concat('SELECT ','''',pipeline().parameters.p_pl_projectid,'''',' Project_id\n\t   ,','''',activity('lk_get_pipeline_parameters').output.firstRow.function_code,'''',' function_code\n\t   ,','''',activity('lk_get_pipeline_parameters').output.firstRow.source_name,'''',' source_name\n\t   ,','''',activity('lk_get_pipeline_parameters').output.firstRow.sub_source_name,'''',' sub_source_name\n\t   ,','''',activity('lk_get_pipeline_parameters').output.firstRow.class_name,'''',' class_name\n\t   ,','''',activity('lk_get_pipeline_parameters').output.firstRow.sub_class_name,'''',' sub_class_name\n\t   ,','''',activity('lk_get_pipeline_parameters').output.firstRow.unit_of_measure,'''',' unit_of_measure\n\t   ,','''',activity('lk_get_pipeline_parameters').output.firstRow.pim_code,'''',' pim_code\n\t   ,','''',activity('lk_get_pipeline_parameters').output.firstRow.roc_code,'''',' roc_code\n\t   ,ph.Code Phase_Code\n\t   ,wa.Code WorkArea_Code\n\t   ,su.Code WorkUnit_Code\n\t   ,sr.Code ScheduleResource_Code\n\t   ,act.CWP cwp_code\n\t   ,act.Activity\n       ,cwp.[Name] iwp_Code\n\t   ,DateWorked\n       ,EmployeeID\n,(select max( +', '''','JDE.','''',' + ','''','00','''',' + left(pi.contract,3) + ','''','.','''',' + ltrim(rtrim(pi.contract)) + ','''','.','''',' + ltrim(rtrim(pi.costtype)) + ','''','.','''',' + ltrim(rtrim(pi.costingcoa)))\n  FROM PM_ProgressItem pi with (NOLOCK)\n  left outer join SP_ProgressItem_CWP picwp  with (NOLOCK) on pi.id = picwp.ProgressItemID\nwhere CWPID  = tme.ConstructionWorkPackID) as coa_value\n\t   ,sum([HoursWorked]) Spent_Hours  \n  FROM [dbo].[TM_EmployeeHoursWorked] tme with (NOLOCK)\n  LEFT JOIN [dbo].[SP_ConstructionWorkPack] cwp with (NOLOCK) ON tme.ConstructionWorkPackID = cwp.ID\n  LEFT JOIN [dbo].[PM_Activity] act with (NOLOCK) ON cwp.ActivityID = act.ID\n  LEFT JOIN [dbo].[PM_ProjectMasterData] p with (NOLOCK) ON p.Project <> ','''','ssssss','''','\n  LEFT JOIN [dbo].[SP_ScheduleResource] sr with (NOLOCK) ON cwp.ScheduleResourceID = sr.ID\n  LEFT JOIN [dbo].[SP_Unit] su with (NOLOCK) ON act.ScheduleUnit = su.Code\n  LEFT JOIN [dbo].[SP_WorkArea] wa with (NOLOCK) ON act.ScheduleWorkArea = wa.Code\n  LEFT JOIN [dbo].[SP_Phases] ph with (NOLOCK) ON wa.PhaseID = ph.ID\n  where tme.DateWorked >= ','''',activity('lk_get_pipeline_parameters').output.firstRow.start_date,'''',' group by tme.ConstructionWorkPackID,p.Project,ph.Code\n\t   ,wa.Code\n\t   ,su.Code\n\t   ,sr.Code \n\t   ,act.CWP\n\t   ,act.Activity\n       ,cwp.[Name]\n\t   ,DateWorked\n       ,EmployeeID')",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_sitepro_prod",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_ds_dbname": {
+								"value": "@pipeline().parameters.p_pl_dbname",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_generic",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_ds_filesystem": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.file_system",
+								"type": "Expression"
+							},
+							"p_ds_directory": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+								"type": "Expression"
+							},
+							"p_ds_filename": {
+								"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+								"type": "Expression"
+							},
+							"p_ds_first_row_header": true
+						}
+					}
+				]
+			},
+			{
+				"name": "lk_get_pipeline_parameters",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "Sitepro"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Set data pull date time",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lk_lastrun_date_from_sitepro",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_run_start",
+					"value": {
+						"value": "@convertFromUtc(utcnow(),'Central Standard Time')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "lk_lastrun_date_from_sitepro",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"sqlReaderQuery": "select max(DateWorked) max_date from [dbo].[TM_EmployeeHoursWorked]  WITH (NOLOCK) ",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_sitepro_prod",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_ds_dbname": {
+								"value": "@pipeline().parameters.p_pl_dbname",
+								"type": "Expression"
+							}
+						}
+					}
+				}
+			},
+			{
+				"name": "sp_Update_Parameter",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "cp_getjdepaytypesdata",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+					"storedProcedureParameters": {
+						"pParameterValue": {
+							"value": {
+								"value": "@formatDateTime(variables('v_run_start'),'yyyy-MM-dd HH:mm:ss')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": "Sitepro",
+							"type": "String"
+						},
+						"pParameterCode": {
+							"value": "start_date",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseDB_DEV",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"parameters": {
+			"p_pl_dbname": {
+				"type": "string"
+			},
+			"p_pl_projectid": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"v_run_start": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/NCSA/SiteproTimesheet"
+		},
+		"annotations": [],
+		"lastPublishTime": "2021-12-15T07:13:48Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

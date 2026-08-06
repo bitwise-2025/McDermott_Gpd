@@ -1,0 +1,90 @@
+{
+	"name": "df_mcr_stage_to_raw",
+	"properties": {
+		"folder": {
+			"name": "Projects/YARD KPI/MCR"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_mcr_stg_generic",
+						"type": "DatasetReference"
+					},
+					"name": "MCRStage"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_gen2_mcr_raw_tgt",
+						"type": "DatasetReference"
+					},
+					"name": "MCRRaw"
+				}
+			],
+			"transformations": [
+				{
+					"name": "SetFileName"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          Id as string,",
+				"          ContentTypeID as string,",
+				"          ContentType as string,",
+				"          REMARK as string,",
+				"          Modified as string,",
+				"          Created as string,",
+				"          CreatedById as string,",
+				"          ModifiedById as string,",
+				"          Owshiddenversion as string,",
+				"          Version as string,",
+				"          Path as string,",
+				"          ComplianceAssetId as string,",
+				"          P_ID as string,",
+				"          P_TYPE as string,",
+				"          P_SEQ1 as string,",
+				"          P_SEQ2 as string,",
+				"          TYPE as string,",
+				"          RFI as string,",
+				"          LOG as string,",
+				"          MCRREVIEWEDBYMCDENG as string,",
+				"          BYMCDENG_TRANSMITTALNO as string,",
+				"          CLIENTREP as string,",
+				"          BYCLIENTREP_TRANSMITTALNO as string,",
+				"          DATESUBMITTEDCLIENT as string,",
+				"          SOFTCOPYSUBMISSIONValue as string,",
+				"          MTNNumber as string,",
+				"          P_SEQ3 as string,",
+				"          P_NAMEId as string,",
+				"          REFP_NAME as string,",
+				"          DATESUBMITTEDENG as string,",
+				"          REQUIREDCLIENTREVIEW as string,",
+				"          PROJECTID as string,",
+				"          REFEDIT as string,",
+				"          ClientReplyDate as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> MCRStage",
+				"MCRStage derive(FileName = concat('Project_Data/YARDKPI/MCR/',substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/','QC_MCR_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv'),",
+				"          source_code = 'SYSTEM',",
+				"          sub_source_code = 'Sharepoint',",
+				"          create_date_time = currentUTC()) ~> SetFileName",
+				"SetFileName sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     rowUrlColumn:'FileName',",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     mapColumn(",
+				"          each(match(true()))",
+				"     )) ~> MCRRaw"
+			]
+		}
+	}
+}

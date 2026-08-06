@@ -1,0 +1,3519 @@
+{
+	"name": "pl_invoice_line_ap_invoice_lines_all",
+	"properties": {
+		"activities": [
+			{
+				"name": "lk_get_pipeline_parameters",
+				"description": "Get the parameters to be used in this pipeline",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": {
+									"value": "NetworkFolder",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Set last_run_date - one day",
+				"description": "Sets start and current date",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "lk_get_pipeline_parameters_2",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_end_date",
+					"value": {
+						"value": "@if(equals(activity('lk_get_pipeline_parameters').output.firstRow.end_date,'currdate'),formatDateTime(utcNow(),'yyyy-MM-dd'),formatDateTime(activity('lk_get_pipeline_parameters').output.firstRow.end_date,'yyyy-MM-dd'))",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Run Until start date equals to end date",
+				"type": "Until",
+				"dependsOn": [
+					{
+						"activity": "Set last_run_date - one day",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "GetClientId",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "GetClientSecret",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@greaterOrEquals(activity('lk_get_pipeline_parameters_to_lookup_dates').output.firstRow.start_date,if(equals(activity('lk_get_pipeline_parameters').output.firstRow.end_date,'currdate'),formatDateTime(utcNow(),'yyyy-MM-dd HH:mm:ss'),formatDateTime(activity('lk_get_pipeline_parameters').output.firstRow.end_date,'yyyy-MM-dd HH:mm:ss')))",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "CP_invoice_line_ap_invoices_Src_to_Stage",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "Get Access Token",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "BinarySource",
+									"storeSettings": {
+										"type": "HttpReadSettings",
+										"requestMethod": "POST",
+										"additionalHeaders": {
+											"value": "@concat('Authorization: Bearer ', activity('Get Access Token').output.access_token,'\nContent-Type: application/soap+xml;charset=UTF-8\nContent-Length: 649\nConnection: Keep-Alive\nUser-Agent: Apache-HttpClient/4.1.1 (java 1.5)\n')",
+											"type": "Expression"
+										},
+										"requestBody": {
+											"value": "@concat('<ns1:Envelope xmlns:ns1=\"http://www.w3.org/2003/05/soap-envelope\">\n<ns1:Body>\n<ns2:runReport xmlns:ns2=\"http://xmlns.oracle.com/oxp/service/PublicReportService\">\n<ns2:reportRequest>\n<ns2:attributeFormat>xml</ns2:attributeFormat>\n<ns2:parameterNameValues>\n<ns2:item>\n<ns2:name>P_FROM_DATE</ns2:name>\n<ns2:values>\n<ns2:item>',variables('v_start_date'),'</ns2:item>\n</ns2:values>\n</ns2:item>\n<ns2:item>\n<ns2:name>P_TO_DATE</ns2:name>\n<ns2:values>\n<ns2:item>',variables('v_end_date'),'</ns2:item>\n</ns2:values>\n</ns2:item>\n</ns2:parameterNameValues>\n<ns2:reportAbsolutePath>/Custom/Oracle R2P Integrations/Invoice Inquiry Dashboard/AP_INVOICE_LINES_ALL.xdo</ns2:reportAbsolutePath>\n<ns2:sizeOfDataChunkDownload>-1</ns2:sizeOfDataChunkDownload>\n</ns2:reportRequest>\n</ns2:runReport>\n</ns1:Body>\n</ns1:Envelope>')",
+											"type": "Expression"
+										},
+										"requestTimeout": ""
+									},
+									"formatSettings": {
+										"type": "BinaryReadSettings"
+									}
+								},
+								"sink": {
+									"type": "BinarySink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									}
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_http_binary_invoice_line_ap_invoice_lines_all_source",
+									"type": "DatasetReference"
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_adlsg2_binary_invoice_line_ap_invoice_lines_all_source_stage",
+									"type": "DatasetReference"
+								}
+							]
+						},
+						{
+							"name": "df_invoice_line_ap_invoice_lines_all_stage_data_decode",
+							"type": "ExecuteDataFlow",
+							"dependsOn": [
+								{
+									"activity": "CP_invoice_line_ap_invoices_Src_to_Stage",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataflow": {
+									"referenceName": "df_invoice_line_ap_invoice_lines_all_stage_data_decoding",
+									"type": "DataFlowReference"
+								},
+								"compute": {
+									"coreCount": 32,
+									"computeType": "MemoryOptimized"
+								},
+								"traceLevel": "Fine"
+							}
+						},
+						{
+							"name": "df_invoice_line_ap_invoice_lines_all_stage_data_flatten",
+							"type": "ExecuteDataFlow",
+							"dependsOn": [
+								{
+									"activity": "df_invoice_line_ap_invoice_lines_all_stage_data_decode",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataflow": {
+									"referenceName": "df_invoice_line_ap_invoice_lines_all_stage_data_flattening",
+									"type": "DataFlowReference"
+								},
+								"compute": {
+									"coreCount": 32,
+									"computeType": "MemoryOptimized"
+								},
+								"traceLevel": "Fine"
+							}
+						},
+						{
+							"name": "Copy Latest Data To Synapse Stage Table",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "df_invoice_line_ap_invoice_lines_all_stage_data_flatten",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": false,
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "SqlDWSink",
+									"preCopyScript": "truncate table [rpy].[Invoice_line_ap_invoice_lines_all_stage]",
+									"allowCopyCommand": true,
+									"disableMetricsCollection": false
+								},
+								"enableStaging": true,
+								"stagingSettings": {
+									"linkedServiceName": {
+										"referenceName": "ADLSG2 TimeAnalytics DEV",
+										"type": "LinkedServiceReference"
+									},
+									"path": "mdr-raw-data/Polybase_Staging_Space"
+								},
+								"translator": {
+									"type": "TabularTranslator",
+									"mappings": [
+										{
+											"source": {
+												"name": "ACCOUNTING_DATE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ACCOUNTING_DATE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ACCOUNT_SEGMENT",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ACCOUNT_SEGMENT",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ACC_REFERENCE_VALUE1",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ACC_REFERENCE_VALUE1",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ADJUSTMENT_REASON",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ADJUSTMENT_REASON",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "AMOUNT",
+												"type": "String"
+											},
+											"sink": {
+												"name": "AMOUNT",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "APPLICATION_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "APPLICATION_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ASSESSABLE_VALUE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ASSESSABLE_VALUE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ASSETS_TRACKING_FLAG",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ASSETS_TRACKING_FLAG",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ASSET_BOOK_TYPE_CODE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ASSET_BOOK_TYPE_CODE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ASSET_CATEGORY_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ASSET_CATEGORY_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ATTRIBUTE1",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ATTRIBUTE1",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ATTRIBUTE10",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ATTRIBUTE10",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ATTRIBUTE11",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ATTRIBUTE11",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ATTRIBUTE12",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ATTRIBUTE12",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ATTRIBUTE13",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ATTRIBUTE13",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ATTRIBUTE14",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ATTRIBUTE14",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ATTRIBUTE15",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ATTRIBUTE15",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ATTRIBUTE2",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ATTRIBUTE2",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ATTRIBUTE3",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ATTRIBUTE3",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ATTRIBUTE4",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ATTRIBUTE4",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ATTRIBUTE5",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ATTRIBUTE5",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ATTRIBUTE6",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ATTRIBUTE6",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ATTRIBUTE7",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ATTRIBUTE7",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ATTRIBUTE8",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ATTRIBUTE8",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ATTRIBUTE9",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ATTRIBUTE9",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ATTRIBUTE_CATEGORY",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ATTRIBUTE_CATEGORY",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ATTRIBUTE_DATE1",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ATTRIBUTE_DATE1",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ATTRIBUTE_DATE2",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ATTRIBUTE_DATE2",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ATTRIBUTE_DATE3",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ATTRIBUTE_DATE3",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ATTRIBUTE_DATE4",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ATTRIBUTE_DATE4",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ATTRIBUTE_DATE5",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ATTRIBUTE_DATE5",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ATTRIBUTE_NUMBER1",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ATTRIBUTE_NUMBER1",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ATTRIBUTE_NUMBER2",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ATTRIBUTE_NUMBER2",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ATTRIBUTE_NUMBER3",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ATTRIBUTE_NUMBER3",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ATTRIBUTE_NUMBER4",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ATTRIBUTE_NUMBER4",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ATTRIBUTE_NUMBER5",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ATTRIBUTE_NUMBER5",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "AWARD_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "AWARD_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "AWT_GROUP_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "AWT_GROUP_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "BALANCING_SEGMENT",
+												"type": "String"
+											},
+											"sink": {
+												"name": "BALANCING_SEGMENT",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "BASE_AMOUNT",
+												"type": "String"
+											},
+											"sink": {
+												"name": "BASE_AMOUNT",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "BUDGET_DATE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "BUDGET_DATE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "CANCELLED_FLAG",
+												"type": "String"
+											},
+											"sink": {
+												"name": "CANCELLED_FLAG",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "CC_REVERSAL_FLAG",
+												"type": "String"
+											},
+											"sink": {
+												"name": "CC_REVERSAL_FLAG",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "COMPANY_PREPAID_INVOICE_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "COMPANY_PREPAID_INVOICE_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "CONSUMPTION_ADVICE_HEADER_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "CONSUMPTION_ADVICE_HEADER_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "CONSUMPTION_ADVICE_LINE_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "CONSUMPTION_ADVICE_LINE_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "CONTROL_AMOUNT",
+												"type": "String"
+											},
+											"sink": {
+												"name": "CONTROL_AMOUNT",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "CORRECTED_INV_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "CORRECTED_INV_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "CORRECTED_LINE_NUMBER",
+												"type": "String"
+											},
+											"sink": {
+												"name": "CORRECTED_LINE_NUMBER",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "COST_CENTER_SEGMENT",
+												"type": "String"
+											},
+											"sink": {
+												"name": "COST_CENTER_SEGMENT",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "COST_FACTOR_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "COST_FACTOR_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "COUNTRY_OF_SUPPLY",
+												"type": "String"
+											},
+											"sink": {
+												"name": "COUNTRY_OF_SUPPLY",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "CREATED_BY",
+												"type": "String"
+											},
+											"sink": {
+												"name": "CREATED_BY",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "CREATION_DATE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "CREATION_DATE",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "CREDIT_CARD_TRX_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "CREDIT_CARD_TRX_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "DAILY_AMOUNT",
+												"type": "String"
+											},
+											"sink": {
+												"name": "DAILY_AMOUNT",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "DEFAULT_DIST_CCID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "DEFAULT_DIST_CCID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "DEFERRED_ACCTG_FLAG",
+												"type": "String"
+											},
+											"sink": {
+												"name": "DEFERRED_ACCTG_FLAG",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "DEF_ACCTG_ACCRUAL_CCID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "DEF_ACCTG_ACCRUAL_CCID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "DEF_ACCTG_END_DATE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "DEF_ACCTG_END_DATE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "DEF_ACCTG_NUMBER_OF_PERIODS",
+												"type": "String"
+											},
+											"sink": {
+												"name": "DEF_ACCTG_NUMBER_OF_PERIODS",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "DEF_ACCTG_PERIOD_TYPE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "DEF_ACCTG_PERIOD_TYPE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "DEF_ACCTG_START_DATE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "DEF_ACCTG_START_DATE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "DESCRIPTION",
+												"type": "String"
+											},
+											"sink": {
+												"name": "DESCRIPTION",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "DISCARDED_FLAG",
+												"type": "String"
+											},
+											"sink": {
+												"name": "DISCARDED_FLAG",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "DISPUTABLE_FLAG",
+												"type": "String"
+											},
+											"sink": {
+												"name": "DISPUTABLE_FLAG",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "DISTRIBUTION_SET_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "DISTRIBUTION_SET_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "END_EXPENSE_DATE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "END_EXPENSE_DATE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "EXPENDITURE_ITEM_DATE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "EXPENDITURE_ITEM_DATE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "EXPENDITURE_ORGANIZATION_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "EXPENDITURE_ORGANIZATION_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "EXPENDITURE_TYPE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "EXPENDITURE_TYPE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "EXPENSE_GROUP",
+												"type": "String"
+											},
+											"sink": {
+												"name": "EXPENSE_GROUP",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "FINAL_DISCHARGE_LOCATION_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "FINAL_DISCHARGE_LOCATION_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "FINAL_MATCH_FLAG",
+												"type": "String"
+											},
+											"sink": {
+												"name": "FINAL_MATCH_FLAG",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "FISCAL_CHARGE_TYPE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "FISCAL_CHARGE_TYPE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "FOS_XFACE_FLAG",
+												"type": "String"
+											},
+											"sink": {
+												"name": "FOS_XFACE_FLAG",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "FUNDS_STATUS",
+												"type": "String"
+											},
+											"sink": {
+												"name": "FUNDS_STATUS",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GENERATE_DISTS",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GENERATE_DISTS",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE1",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE1",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE10",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE10",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE11",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE11",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE12",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE12",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE13",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE13",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE14",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE14",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE15",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE15",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE16",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE16",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE17",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE17",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE18",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE18",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE19",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE19",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE2",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE2",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE20",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE20",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE3",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE3",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE4",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE4",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE5",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE5",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE6",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE6",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE7",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE7",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE8",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE8",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE9",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE9",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE_CATEGORY",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE_CATEGORY",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE_DATE1",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE_DATE1",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE_DATE2",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE_DATE2",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE_DATE3",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE_DATE3",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE_DATE4",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE_DATE4",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE_DATE5",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE_DATE5",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE_NUMBER1",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE_NUMBER1",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE_NUMBER2",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE_NUMBER2",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE_NUMBER3",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE_NUMBER3",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE_NUMBER4",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE_NUMBER4",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "GLOBAL_ATTRIBUTE_NUMBER5",
+												"type": "String"
+											},
+											"sink": {
+												"name": "GLOBAL_ATTRIBUTE_NUMBER5",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "HISTORICAL_FLAG",
+												"type": "String"
+											},
+											"sink": {
+												"name": "HISTORICAL_FLAG",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "INCLUDED_TAX_AMOUNT",
+												"type": "String"
+											},
+											"sink": {
+												"name": "INCLUDED_TAX_AMOUNT",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "INCOME_TAX_REGION",
+												"type": "String"
+											},
+											"sink": {
+												"name": "INCOME_TAX_REGION",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "INTENDED_USE_CLASSIF_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "INTENDED_USE_CLASSIF_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "INVENTORY_ITEM_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "INVENTORY_ITEM_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "INVOICE_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "INVOICE_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "INVOICE_INCLUDES_PREPAY_FLAG",
+												"type": "String"
+											},
+											"sink": {
+												"name": "INVOICE_INCLUDES_PREPAY_FLAG",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ITEM_DESCRIPTION",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ITEM_DESCRIPTION",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "JOB_DEFINITION_NAME",
+												"type": "String"
+											},
+											"sink": {
+												"name": "JOB_DEFINITION_NAME",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "JOB_DEFINITION_PACKAGE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "JOB_DEFINITION_PACKAGE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "JUSTIFICATION",
+												"type": "String"
+											},
+											"sink": {
+												"name": "JUSTIFICATION",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "LAST_UPDATED_BY",
+												"type": "String"
+											},
+											"sink": {
+												"name": "LAST_UPDATED_BY",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "LAST_UPDATE_DATE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "LAST_UPDATE_DATE",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "LAST_UPDATE_LOGIN",
+												"type": "String"
+											},
+											"sink": {
+												"name": "LAST_UPDATE_LOGIN",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "LCM_ENABLED_FLAG",
+												"type": "String"
+											},
+											"sink": {
+												"name": "LCM_ENABLED_FLAG",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "LINE_GROUP_NUMBER",
+												"type": "String"
+											},
+											"sink": {
+												"name": "LINE_GROUP_NUMBER",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "LINE_NUMBER",
+												"type": "String"
+											},
+											"sink": {
+												"name": "LINE_NUMBER",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "LINE_OWNER_ROLE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "LINE_OWNER_ROLE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "LINE_SELECTED_FOR_APPL_FLAG",
+												"type": "String"
+											},
+											"sink": {
+												"name": "LINE_SELECTED_FOR_APPL_FLAG",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "LINE_SELECTED_FOR_RELEASE_FLAG",
+												"type": "String"
+											},
+											"sink": {
+												"name": "LINE_SELECTED_FOR_RELEASE_FLAG",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "LINE_SOURCE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "LINE_SOURCE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "LINE_TYPE_LOOKUP_CODE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "LINE_TYPE_LOOKUP_CODE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "MANUFACTURER",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MANUFACTURER",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "MATCHING_RULE_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MATCHING_RULE_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "MATCHING_RULE_SET_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MATCHING_RULE_SET_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "MATCH_TYPE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MATCH_TYPE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "MERCHANT_DOCUMENT_NUMBER",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MERCHANT_DOCUMENT_NUMBER",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "MERCHANT_NAME",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MERCHANT_NAME",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "MERCHANT_REFERENCE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MERCHANT_REFERENCE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "MERCHANT_TAXPAYER_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MERCHANT_TAXPAYER_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "MERCHANT_TAX_REG_NUMBER",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MERCHANT_TAX_REG_NUMBER",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "MODEL_NUMBER",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MODEL_NUMBER",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "OBJECT_VERSION_NUMBER",
+												"type": "String"
+											},
+											"sink": {
+												"name": "OBJECT_VERSION_NUMBER",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ORG_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ORG_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ORIGINAL_AMOUNT",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ORIGINAL_AMOUNT",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ORIGINAL_BASE_AMOUNT",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ORIGINAL_BASE_AMOUNT",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ORIGINAL_ROUNDING_AMT",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ORIGINAL_ROUNDING_AMT",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "OVERLAY_DIST_CODE_CONCAT",
+												"type": "String"
+											},
+											"sink": {
+												"name": "OVERLAY_DIST_CODE_CONCAT",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PA_CC_AR_INVOICE_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PA_CC_AR_INVOICE_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PA_CC_AR_INVOICE_LINE_NUM",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PA_CC_AR_INVOICE_LINE_NUM",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PA_CC_PROCESSED_CODE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PA_CC_PROCESSED_CODE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PA_QUANTITY",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PA_QUANTITY",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PERIOD_NAME",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PERIOD_NAME",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PJC_BILLABLE_FLAG",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PJC_BILLABLE_FLAG",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PJC_CAPITALIZABLE_FLAG",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PJC_CAPITALIZABLE_FLAG",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PJC_CONTEXT_CATEGORY",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PJC_CONTEXT_CATEGORY",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PJC_CONTRACT_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PJC_CONTRACT_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PJC_CONTRACT_LINE_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PJC_CONTRACT_LINE_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PJC_EXPENDITURE_ITEM_DATE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PJC_EXPENDITURE_ITEM_DATE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PJC_EXPENDITURE_TYPE_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PJC_EXPENDITURE_TYPE_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PJC_FUNDING_ALLOCATION_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PJC_FUNDING_ALLOCATION_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PJC_ORGANIZATION_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PJC_ORGANIZATION_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PJC_PROJECT_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PJC_PROJECT_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PJC_RESERVED_ATTRIBUTE1",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PJC_RESERVED_ATTRIBUTE1",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PJC_RESERVED_ATTRIBUTE10",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PJC_RESERVED_ATTRIBUTE10",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PJC_RESERVED_ATTRIBUTE2",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PJC_RESERVED_ATTRIBUTE2",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PJC_RESERVED_ATTRIBUTE3",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PJC_RESERVED_ATTRIBUTE3",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PJC_RESERVED_ATTRIBUTE4",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PJC_RESERVED_ATTRIBUTE4",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PJC_RESERVED_ATTRIBUTE5",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PJC_RESERVED_ATTRIBUTE5",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PJC_RESERVED_ATTRIBUTE6",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PJC_RESERVED_ATTRIBUTE6",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PJC_RESERVED_ATTRIBUTE7",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PJC_RESERVED_ATTRIBUTE7",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PJC_RESERVED_ATTRIBUTE8",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PJC_RESERVED_ATTRIBUTE8",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PJC_RESERVED_ATTRIBUTE9",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PJC_RESERVED_ATTRIBUTE9",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PJC_TASK_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PJC_TASK_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PJC_USER_DEF_ATTRIBUTE1",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PJC_USER_DEF_ATTRIBUTE1",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PJC_USER_DEF_ATTRIBUTE10",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PJC_USER_DEF_ATTRIBUTE10",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PJC_USER_DEF_ATTRIBUTE2",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PJC_USER_DEF_ATTRIBUTE2",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PJC_USER_DEF_ATTRIBUTE3",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PJC_USER_DEF_ATTRIBUTE3",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PJC_USER_DEF_ATTRIBUTE4",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PJC_USER_DEF_ATTRIBUTE4",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PJC_USER_DEF_ATTRIBUTE5",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PJC_USER_DEF_ATTRIBUTE5",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PJC_USER_DEF_ATTRIBUTE6",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PJC_USER_DEF_ATTRIBUTE6",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PJC_USER_DEF_ATTRIBUTE7",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PJC_USER_DEF_ATTRIBUTE7",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PJC_USER_DEF_ATTRIBUTE8",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PJC_USER_DEF_ATTRIBUTE8",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PJC_USER_DEF_ATTRIBUTE9",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PJC_USER_DEF_ATTRIBUTE9",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PJC_WORK_TYPE_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PJC_WORK_TYPE_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PO_DISTRIBUTION_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PO_DISTRIBUTION_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PO_HEADER_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PO_HEADER_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PO_LINE_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PO_LINE_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PO_LINE_LOCATION_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PO_LINE_LOCATION_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PO_RELEASE_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PO_RELEASE_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PREPAY_APPL_REQUEST_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PREPAY_APPL_REQUEST_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PREPAY_INVOICE_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PREPAY_INVOICE_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PREPAY_LINE_NUMBER",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PREPAY_LINE_NUMBER",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PRIMARY_INTENDED_USE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PRIMARY_INTENDED_USE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PRODUCT_CATEGORY",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PRODUCT_CATEGORY",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PRODUCT_FISC_CLASSIFICATION",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PRODUCT_FISC_CLASSIFICATION",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PRODUCT_TABLE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PRODUCT_TABLE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PRODUCT_TYPE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PRODUCT_TYPE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PROD_FC_CATEG_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PROD_FC_CATEG_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PROGRAM_APPLICATION_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PROGRAM_APPLICATION_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PROGRAM_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PROGRAM_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PROGRAM_UPDATE_DATE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PROGRAM_UPDATE_DATE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PROJECT_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PROJECT_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PRORATE_ACROSS_ALL_ITEMS",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PRORATE_ACROSS_ALL_ITEMS",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PURCHASING_CATEGORY_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PURCHASING_CATEGORY_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "QUANTITY_INVOICED",
+												"type": "String"
+											},
+											"sink": {
+												"name": "QUANTITY_INVOICED",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "RCV_SHIPMENT_LINE_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "RCV_SHIPMENT_LINE_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "RCV_TRANSACTION_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "RCV_TRANSACTION_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "RECEIPT_CONVERSION_RATE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "RECEIPT_CONVERSION_RATE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "RECEIPT_CURRENCY_AMOUNT",
+												"type": "String"
+											},
+											"sink": {
+												"name": "RECEIPT_CURRENCY_AMOUNT",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "RECEIPT_CURRENCY_CODE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "RECEIPT_CURRENCY_CODE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "RECEIPT_MISSING_FLAG",
+												"type": "String"
+											},
+											"sink": {
+												"name": "RECEIPT_MISSING_FLAG",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "RECEIPT_REQUIRED_FLAG",
+												"type": "String"
+											},
+											"sink": {
+												"name": "RECEIPT_REQUIRED_FLAG",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "RECEIPT_VERIFIED_FLAG",
+												"type": "String"
+											},
+											"sink": {
+												"name": "RECEIPT_VERIFIED_FLAG",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "REFERENCE_1",
+												"type": "String"
+											},
+											"sink": {
+												"name": "REFERENCE_1",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "REFERENCE_2",
+												"type": "String"
+											},
+											"sink": {
+												"name": "REFERENCE_2",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "REFERENCE_KEY1",
+												"type": "String"
+											},
+											"sink": {
+												"name": "REFERENCE_KEY1",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "REFERENCE_KEY2",
+												"type": "String"
+											},
+											"sink": {
+												"name": "REFERENCE_KEY2",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "REFERENCE_KEY3",
+												"type": "String"
+											},
+											"sink": {
+												"name": "REFERENCE_KEY3",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "REFERENCE_KEY4",
+												"type": "String"
+											},
+											"sink": {
+												"name": "REFERENCE_KEY4",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "REFERENCE_KEY5",
+												"type": "String"
+											},
+											"sink": {
+												"name": "REFERENCE_KEY5",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "REQUESTER_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "REQUESTER_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "REQUEST_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "REQUEST_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "RETAINED_AMOUNT",
+												"type": "String"
+											},
+											"sink": {
+												"name": "RETAINED_AMOUNT",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "RETAINED_AMOUNT_REMAINING",
+												"type": "String"
+											},
+											"sink": {
+												"name": "RETAINED_AMOUNT_REMAINING",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "RETAINED_INVOICE_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "RETAINED_INVOICE_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "RETAINED_LINE_NUMBER",
+												"type": "String"
+											},
+											"sink": {
+												"name": "RETAINED_LINE_NUMBER",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ROUNDING_AMT",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ROUNDING_AMT",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "SERIAL_NUMBER",
+												"type": "String"
+											},
+											"sink": {
+												"name": "SERIAL_NUMBER",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "SET_OF_BOOKS_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "SET_OF_BOOKS_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "SHIP_FROM_LOCATION_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "SHIP_FROM_LOCATION_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "SHIP_TO_CUST_LOCATION_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "SHIP_TO_CUST_LOCATION_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "SHIP_TO_LOCATION_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "SHIP_TO_LOCATION_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "SOURCE_APPLICATION_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "SOURCE_APPLICATION_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "SOURCE_ENTITY_CODE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "SOURCE_ENTITY_CODE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "SOURCE_EVENT_CLASS_CODE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "SOURCE_EVENT_CLASS_CODE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "SOURCE_LINE_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "SOURCE_LINE_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "SOURCE_TRX_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "SOURCE_TRX_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "SOURCE_TRX_LEVEL_TYPE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "SOURCE_TRX_LEVEL_TYPE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "START_EXPENSE_DATE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "START_EXPENSE_DATE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "STAT_AMOUNT",
+												"type": "String"
+											},
+											"sink": {
+												"name": "STAT_AMOUNT",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "SUMMARY_TAX_LINE_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "SUMMARY_TAX_LINE_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "TASK_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "TASK_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "TAX",
+												"type": "String"
+											},
+											"sink": {
+												"name": "TAX",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "TAX_ALREADY_CALCULATED_FLAG",
+												"type": "String"
+											},
+											"sink": {
+												"name": "TAX_ALREADY_CALCULATED_FLAG",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "TAX_CLASSIFICATION_CODE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "TAX_CLASSIFICATION_CODE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "TAX_CODE_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "TAX_CODE_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "TAX_JURISDICTION_CODE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "TAX_JURISDICTION_CODE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "TAX_RATE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "TAX_RATE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "TAX_RATE_CODE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "TAX_RATE_CODE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "TAX_RATE_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "TAX_RATE_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "TAX_REGIME_CODE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "TAX_REGIME_CODE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "TAX_STATUS_CODE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "TAX_STATUS_CODE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "TOTAL_NREC_TAX_AMOUNT",
+												"type": "String"
+											},
+											"sink": {
+												"name": "TOTAL_NREC_TAX_AMOUNT",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "TOTAL_NREC_TAX_AMT_FUNCL_CURR",
+												"type": "String"
+											},
+											"sink": {
+												"name": "TOTAL_NREC_TAX_AMT_FUNCL_CURR",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "TOTAL_REC_TAX_AMOUNT",
+												"type": "String"
+											},
+											"sink": {
+												"name": "TOTAL_REC_TAX_AMOUNT",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "TOTAL_REC_TAX_AMT_FUNCL_CURR",
+												"type": "String"
+											},
+											"sink": {
+												"name": "TOTAL_REC_TAX_AMT_FUNCL_CURR",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "TRANSACTION_LINE_GEOGRAPHY_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "TRANSACTION_LINE_GEOGRAPHY_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "TRX_BUSINESS_CATEGORY",
+												"type": "String"
+											},
+											"sink": {
+												"name": "TRX_BUSINESS_CATEGORY",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "TYPE_1099",
+												"type": "String"
+											},
+											"sink": {
+												"name": "TYPE_1099",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "UNIT_MEAS_LOOKUP_CODE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "UNIT_MEAS_LOOKUP_CODE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "UNIT_PRICE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "UNIT_PRICE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "USER_DEFINED_FISC_CLASS",
+												"type": "String"
+											},
+											"sink": {
+												"name": "USER_DEFINED_FISC_CLASS",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "USSGL_TRANSACTION_CODE",
+												"type": "String"
+											},
+											"sink": {
+												"name": "USSGL_TRANSACTION_CODE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "WARRANTY_NUMBER",
+												"type": "String"
+											},
+											"sink": {
+												"name": "WARRANTY_NUMBER",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "WEB_PARAMETER_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "WEB_PARAMETER_ID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "WFAPPROVAL_STATUS",
+												"type": "String"
+											},
+											"sink": {
+												"name": "WFAPPROVAL_STATUS",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "source_name",
+												"type": "String"
+											},
+											"sink": {
+												"name": "source_name",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "sub_source_name",
+												"type": "String"
+											},
+											"sink": {
+												"name": "sub_source_name",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "created_date_time",
+												"type": "String"
+											},
+											"sink": {
+												"name": "created_date_time",
+												"type": "DateTime"
+											}
+										}
+									]
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_adlsg2_csv_invoice_line_ap_invoice_lines_all_source_stage_final_flatten_csv",
+									"type": "DatasetReference"
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_AzureSynapseAnalytics_invoice_line_ap_invoice_lines_all",
+									"type": "DatasetReference"
+								}
+							]
+						},
+						{
+							"name": "Set Start Date",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "lk_get_pipeline_parameters_to_lookup_dates",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "v_start_date",
+								"value": {
+									"value": "@activity('lk_get_pipeline_parameters_to_lookup_dates').output.firstRow.start_date",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Set End Date",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Set Start Date",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "v_end_date",
+								"value": {
+									"value": "@formatDateTime(addDays(activity('lk_get_pipeline_parameters_to_lookup_dates').output.firstRow.start_date,int(activity('lk_get_pipeline_parameters_to_lookup_dates').output.firstRow.number_of_days)),'yyyy-MM-dd HH:mm:ss')",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Increment Start Date",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Insert from stage to final table",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+								"storedProcedureParameters": {
+									"pParameterValue": {
+										"value": {
+											"value": "@formatDateTime(addDays(activity('lk_get_pipeline_parameters_to_lookup_dates').output.firstRow.start_date,int(activity('lk_get_pipeline_parameters_to_lookup_dates').output.firstRow.number_of_days)),'yyyy-MM-dd HH:mm:ss')",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"pPipelineCode": {
+										"value": {
+											"value": "@pipeline().Pipeline",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"pPipelineSubCode": {
+										"value": "NetworkFolder",
+										"type": "String"
+									},
+									"pParameterCode": {
+										"value": "start_date",
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "AzureSynapseDB_DEV",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "Insert from stage to final table",
+							"type": "Script",
+							"dependsOn": [
+								{
+									"activity": "Delete NULL Invoice Lines",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"linkedServiceName": {
+								"referenceName": "linkedservice_DEV_entanalytics_synapse",
+								"type": "LinkedServiceReference"
+							},
+							"typeProperties": {
+								"scripts": [
+									{
+										"type": "NonQuery",
+										"text": "insert into [rpy].[Invoice_line_ap_invoice_lines_all] select * from [rpy].[Invoice_line_ap_invoice_lines_all_stage]"
+									}
+								],
+								"scriptBlockExecutionTimeout": "02:00:00"
+							}
+						},
+						{
+							"name": "lk_get_pipeline_parameters_to_lookup_dates",
+							"description": "Get the parameters to be used in this pipeline",
+							"type": "Lookup",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SqlDWSource",
+									"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+									"storedProcedureParameters": {
+										"pPipelineCode": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().Pipeline",
+												"type": "Expression"
+											}
+										},
+										"pPipeLineSubCode": {
+											"type": "String",
+											"value": {
+												"value": "NetworkFolder",
+												"type": "Expression"
+											}
+										}
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "ds_azure_synapse_parameter",
+									"type": "DatasetReference"
+								}
+							}
+						},
+						{
+							"name": "Delete NULL Invoice Lines",
+							"type": "Script",
+							"dependsOn": [
+								{
+									"activity": "Copy Latest Data To Synapse Stage Table",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"linkedServiceName": {
+								"referenceName": "linkedservice_DEV_entanalytics_synapse",
+								"type": "LinkedServiceReference"
+							},
+							"typeProperties": {
+								"scripts": [
+									{
+										"type": "NonQuery",
+										"text": "delete from [rpy].[Invoice_line_ap_invoice_lines_all_stage] where INVOICE_ID is NULL and LINE_NUMBER is null"
+									}
+								],
+								"scriptBlockExecutionTimeout": "02:00:00"
+							}
+						},
+						{
+							"name": "Increment Start Date_copy1",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "CP_invoice_line_ap_invoices_Src_to_Stage",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+								"storedProcedureParameters": {
+									"pParameterValue": {
+										"value": {
+											"value": "@formatDateTime(addDays(activity('lk_get_pipeline_parameters_to_lookup_dates').output.firstRow.start_date,int(activity('lk_get_pipeline_parameters_to_lookup_dates').output.firstRow.number_of_days)),'yyyy-MM-dd HH:mm:ss')",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"pPipelineCode": {
+										"value": {
+											"value": "@pipeline().Pipeline",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"pPipelineSubCode": {
+										"value": "NetworkFolder",
+										"type": "String"
+									},
+									"pParameterCode": {
+										"value": "start_date",
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "AzureSynapseDB_DEV",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "Get Access Token",
+							"type": "WebActivity",
+							"dependsOn": [
+								{
+									"activity": "Set End Date",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"method": "POST",
+								"headers": {
+									"Content-Type": {
+										"value": "application/x-www-form-urlencoded",
+										"type": "Expression"
+									}
+								},
+								"url": {
+									"value": "@activity('lk_get_pipeline_parameters_to_lookup_dates').output.firstRow.token_url",
+									"type": "Expression"
+								},
+								"body": {
+									"value": "grant_type=client_credentials&client_id=@{activity('GetClientId').output.value}&client_secret=@{activity('GetClientSecret').output.value}&scope=@{activity('lk_get_pipeline_parameters').output.firstRow.scope}",
+									"type": "Expression"
+								}
+							}
+						}
+					],
+					"timeout": "6.12:00:00"
+				}
+			},
+			{
+				"name": "Update Start Date with max LAST_UPDATE_DATE",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Lookup to get max LAST_UPDATE_DATE",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+					"storedProcedureParameters": {
+						"pParameterValue": {
+							"value": {
+								"value": "@formatDateTime(activity('Lookup to get max LAST_UPDATE_DATE').output.firstRow.last_update_date,'yyyy-MM-dd HH:mm:ss')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": "NetworkFolder",
+							"type": "String"
+						},
+						"pParameterCode": {
+							"value": "start_date",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseDB_DEV",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Lookup to get max LAST_UPDATE_DATE",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Run Until start date equals to end date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderQuery": "select max(LAST_UPDATE_DATE) as last_update_date from [rpy].[Invoice_line_ap_invoice_lines_all]",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "AzureSynapseAnalyticsDB",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Send Email On Failure",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Run Until start date equals to end date",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "POST",
+					"headers": {
+						"Content-Type": "application/json"
+					},
+					"url": "https://prod-31.eastus.logic.azure.com:443/workflows/03d7da5abbab4215a05aeaceae3b96fa/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=asuyutHtoSxGFURsj1-A6AKRiNLdXZ4mTnZvZ17_8hI",
+					"connectVia": {
+						"referenceName": "integrationRuntimeEast2",
+						"type": "IntegrationRuntimeReference"
+					},
+					"body": {
+						"value": "{\n    \"DataFactoryName\": \"@{pipeline().DataFactory}\",\n    \"PipelineName\": \"@{pipeline().Pipeline}\",\n    \"ErrorMessage\": \"Pipeline Failed\",\n    \"EmailTo\": \"@{activity('lk_get_pipeline_parameters_2').output.firstRow.ncsa_master_pipeline_email_to}\",\n    \"Activity\":  \"pl_invoice_line_ap_invoice_lines_all\"\n}",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "lk_get_pipeline_parameters_2",
+				"description": "Get the parameters to be used in this pipeline",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": "pl_ncsa_master_pipelines"
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "EMAIL"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "GetClientId",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "GET",
+					"url": {
+						"value": "@activity('lk_get_pipeline_parameters').output.firstRow.client_id",
+						"type": "Expression"
+					},
+					"authentication": {
+						"type": "MSI",
+						"resource": {
+							"value": "@concat(split(activity('lk_get_pipeline_parameters').output.firstRow.client_id, '/secrets')[0], '/')",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "GetClientSecret",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "GET",
+					"url": {
+						"value": "@activity('lk_get_pipeline_parameters').output.firstRow.client_secret",
+						"type": "Expression"
+					},
+					"authentication": {
+						"type": "MSI",
+						"resource": {
+							"value": "@concat(split(activity('lk_get_pipeline_parameters').output.firstRow.client_secret, '/secrets')[0], '/')",
+							"type": "Expression"
+						}
+					}
+				}
+			}
+		],
+		"variables": {
+			"v_end_date": {
+				"type": "String"
+			},
+			"v_start_date": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/Payment Dashboard"
+		},
+		"annotations": []
+	}
+}

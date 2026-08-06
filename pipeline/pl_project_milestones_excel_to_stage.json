@@ -1,0 +1,225 @@
+{
+	"name": "pl_project_milestones_excel_to_stage",
+	"properties": {
+		"activities": [
+			{
+				"name": "cp_project_milestones_excel",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "ExcelSource",
+						"storeSettings": {
+							"type": "FileServerReadSettings",
+							"recursive": false,
+							"fileFilter": "*.xlsx"
+						}
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings",
+							"copyBehavior": "MergeFiles"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "Activity ID",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "Activity ID",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Activity Status",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "Activity Status",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Activity Name",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "Activity Name",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Start",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "Start",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Finish",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "Finish",
+									"physicalType": "String"
+								}
+							}
+						],
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_filesystem_network_excel_ncsa",
+						"type": "DatasetReference",
+						"parameters": {
+							"path": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.source_directory",
+								"type": "Expression"
+							},
+							"file": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.source_file",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_adlsg2_project_milestones_Stage_copy",
+						"type": "DatasetReference"
+					}
+				]
+			},
+			{
+				"name": "lk_get_pipeline_parameters",
+				"description": "",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "NetworkFolder"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "DeleteAfterCopy",
+				"type": "Delete",
+				"dependsOn": [
+					{
+						"activity": "cp_project_milestones_excel",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_filesystem_network_excel_ncsa",
+						"type": "DatasetReference",
+						"parameters": {
+							"path": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.source_directory",
+								"type": "Expression"
+							},
+							"file": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.source_file",
+								"type": "Expression"
+							}
+						}
+					},
+					"enableLogging": false,
+					"storeSettings": {
+						"type": "FileServerReadSettings",
+						"recursive": true,
+						"wildcardFileName": "*.*",
+						"enablePartitionDiscovery": false
+					}
+				}
+			}
+		],
+		"folder": {
+			"name": "Projects/NCSA/Project Milestones"
+		},
+		"annotations": [],
+		"lastPublishTime": "2021-04-27T11:20:36Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

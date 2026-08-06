@@ -1,0 +1,122 @@
+{
+	"name": "pl_yardkpi_dc_survey_register_stage_to_raw",
+	"properties": {
+		"activities": [
+			{
+				"name": "lk_get_pipeline_parameters",
+				"description": "Get the parameters to be used in this pipeline",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.p_pipeline_sub_code",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "DFlow_STG_to_RAW",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "1.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "df_yardkpi_dc_survey_register_stage_to_raw",
+						"type": "DataFlowReference",
+						"datasetParameters": {
+							"DCStage": {
+								"Directory": {
+									"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+									"type": "Expression"
+								},
+								"File": {
+									"value": "@activity('lk_get_pipeline_parameters').output.firstRow.file_name",
+									"type": "Expression"
+								},
+								"FileSystem": {
+									"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+									"type": "Expression"
+								}
+							},
+							"DCRaw": {
+								"Directory": {
+									"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+									"type": "Expression"
+								},
+								"FileSystem": {
+									"value": "@activity('lk_get_pipeline_parameters').output.firstRow.output_file_system",
+									"type": "Expression"
+								},
+								"FileName": {
+									"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+									"type": "Expression"
+								}
+							}
+						}
+					},
+					"compute": {
+						"coreCount": 8,
+						"computeType": "General"
+					},
+					"traceLevel": "Fine",
+					"runConcurrently": true,
+					"continueOnError": true
+				}
+			}
+		],
+		"parameters": {
+			"p_pipeline_sub_code": {
+				"type": "string",
+				"defaultValue": "SHAREPOINT"
+			}
+		},
+		"folder": {
+			"name": "Projects/YARD KPI/DC Survey Register/SharePoint"
+		},
+		"annotations": []
+	}
+}

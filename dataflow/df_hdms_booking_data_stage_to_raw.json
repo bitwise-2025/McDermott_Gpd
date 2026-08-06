@@ -1,0 +1,34 @@
+{
+	"name": "df_hdms_booking_data_stage_to_raw",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_hdms_booking_stage",
+						"type": "DatasetReference"
+					},
+					"name": "sourceHDMSBooking",
+					"description": "Import data from ds_adlsg2_csv_hdms_booking_stage"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_hdms_booking_raw",
+						"type": "DatasetReference"
+					},
+					"name": "snkHDMSBookingRaw",
+					"description": "Export data to ds_adlsg2_csv_hdms_booking_raw"
+				}
+			],
+			"transformations": [
+				{
+					"name": "setFileName"
+				}
+			],
+			"script": "source(output(\n\t\tContractNo as string,\n\t\tJobCardMainID as string,\n\t\t{Activity Code} as string,\n\t\tWorkpackCode as string,\n\t\tWorkPack as string,\n\t\tPlatForm as string,\n\t\tProgress_Grouping as string,\n\t\tVessel as string,\n\t\tDiscipline as string,\n\t\tSystemCode as string,\n\t\tSystem as string,\n\t\tSubSystemCode as string,\n\t\tSubSystem as string,\n\t\tSubDiscipline as string,\n\t\tTaskSheet_No as string,\n\t\t{Task Name} as string,\n\t\tIsTTA as string,\n\t\tScope as string,\n\t\tScopeCategory as string,\n\t\tCampaignCode as string,\n\t\tCampaign as string,\n\t\tActualId as string,\n\t\t{Estimated Mhrs} as string,\n\t\tProgressDate as string,\n\t\t{Cumm Actual Booking (Mhrs)} as string,\n\t\t{Daily Actual Booking (Mhrs)} as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\twildcardPaths:['Project_Data/NCSA/HDMS/HDMS_Booking/HDMS_Booking.csv']) ~> sourceHDMSBooking\nsourceHDMSBooking derive(FileName = concat( 'Project_Data/NCSA/HDMS/HDMS_Booking/',        substring(toString(currentTimestamp()),1,4),        '/',substring(toString(currentTimestamp()),6,2),        '/',substring(toString(currentTimestamp()),9,2),        '/',        'HDMS_Booking_',        replace(replace(toString(currentTimestamp()),'.',''),':',''),        '.csv')) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\trowUrlColumn:'FileName',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tmapColumn(\n\t\tContractNo,\n\t\tJobCardMainID,\n\t\t{Activity Code},\n\t\tWorkpackCode,\n\t\tWorkPack,\n\t\tPlatForm,\n\t\tProgress_Grouping,\n\t\tVessel,\n\t\tDiscipline,\n\t\tSystemCode,\n\t\tSystem,\n\t\tSubSystemCode,\n\t\tSubSystem,\n\t\tSubDiscipline,\n\t\tTaskSheet_No,\n\t\t{Task Name},\n\t\tIsTTA,\n\t\tScope,\n\t\tScopeCategory,\n\t\tCampaignCode,\n\t\tCampaign,\n\t\tActualId,\n\t\t{Estimated Mhrs},\n\t\tProgressDate,\n\t\t{Cumm Actual Booking (Mhrs)},\n\t\t{Daily Actual Booking (Mhrs)},\n\t\tFileName\n\t)) ~> snkHDMSBookingRaw"
+		}
+	}
+}

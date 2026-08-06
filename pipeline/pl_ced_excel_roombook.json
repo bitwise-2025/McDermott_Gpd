@@ -1,0 +1,979 @@
+{
+	"name": "pl_ced_excel_roombook",
+	"properties": {
+		"activities": [
+			{
+				"name": "lk_get_pipeline_parameters",
+				"description": "Get the parameters to be used in this pipeline",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": {
+									"value": "Excel",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "gm_check_sourcefile_exists",
+				"description": "Check if the combined file has any data to be loaded.",
+				"type": "GetMetadata",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_fileshare_excel_ced_generic",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_ds_directory": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+								"type": "Expression"
+							},
+							"p_ds_file_name": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.file_name",
+								"type": "Expression"
+							},
+							"p_ds_sheet_name": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.sheet_name",
+								"type": "Expression"
+							}
+						}
+					},
+					"fieldList": [
+						"lastModified"
+					],
+					"storeSettings": {
+						"type": "FileServerReadSettings",
+						"recursive": true,
+						"modifiedDatetimeStart": null,
+						"enablePartitionDiscovery": false
+					}
+				}
+			},
+			{
+				"name": "if_File_Exists_Copy_to_Synapse",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "gm_check_sourcefile_exists",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@greaterOrEquals(activity('gm_check_sourcefile_exists').output.lastModified,activity('lk_get_pipeline_parameters').output.firstRow.last_run_start_date)",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "cd_src_to_synapse",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "ExcelSource",
+									"additionalColumns": [
+										{
+											"name": "Load_date",
+											"value": {
+												"value": "@activity('lk_get_pipeline_parameters').output.firstRow.run_start_datetime",
+												"type": "Expression"
+											}
+										}
+									],
+									"storeSettings": {
+										"type": "FileServerReadSettings",
+										"recursive": true,
+										"modifiedDatetimeStart": null,
+										"enablePartitionDiscovery": false
+									}
+								},
+								"sink": {
+									"type": "SqlDWSink",
+									"preCopyScript": {
+										"value": "INSERT INTO @{concat(activity('lk_get_pipeline_parameters').output.firstRow.target_table,'_archive')} \nSELECT * FROM @{activity('lk_get_pipeline_parameters').output.firstRow.target_table};\n\nTRUNCATE TABLE @{activity('lk_get_pipeline_parameters').output.firstRow.target_table};\n\nDELETE FROM @{concat(activity('lk_get_pipeline_parameters').output.firstRow.target_table,'_archive')}\nWHERE Load_date < DATEADD(MONTH, -6, GETDATE());",
+										"type": "Expression"
+									},
+									"allowCopyCommand": true
+								},
+								"enableStaging": true,
+								"stagingSettings": {
+									"linkedServiceName": {
+										"referenceName": "ADGLS2 SRCDEST DEV",
+										"type": "LinkedServiceReference"
+									},
+									"path": "mdr-raw-data/Polybase_Staging_Space"
+								},
+								"translator": {
+									"type": "TabularTranslator",
+									"mappings": [
+										{
+											"source": {
+												"name": "Deck",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Deck",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "RoomAreaNumber",
+												"type": "String"
+											},
+											"sink": {
+												"name": "RoomAreaNumber",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "RoomArea",
+												"type": "String"
+											},
+											"sink": {
+												"name": "RoomArea",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "SpaceDef",
+												"type": "String"
+											},
+											"sink": {
+												"name": "SpaceDef",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "AreaClassification",
+												"type": "String"
+											},
+											"sink": {
+												"name": "AreaClassification",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "BSHSection",
+												"type": "String"
+											},
+											"sink": {
+												"name": "BSHSection",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Length",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Length",
+												"type": "Double"
+											}
+										},
+										{
+											"source": {
+												"name": "Width",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Width",
+												"type": "Double"
+											}
+										},
+										{
+											"source": {
+												"name": "Height",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Height",
+												"type": "Double"
+											}
+										},
+										{
+											"source": {
+												"name": "NetArea",
+												"type": "String"
+											},
+											"sink": {
+												"name": "NetArea",
+												"type": "Double"
+											}
+										},
+										{
+											"source": {
+												"name": "MinArea",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MinArea",
+												"type": "Double"
+											}
+										},
+										{
+											"source": {
+												"name": "CleanRainWater",
+												"type": "String"
+											},
+											"sink": {
+												"name": "CleanRainWater",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "FreshCondensedWater",
+												"type": "String"
+											},
+											"sink": {
+												"name": "FreshCondensedWater",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "CoolingMediumGlycol-Water",
+												"type": "String"
+											},
+											"sink": {
+												"name": "CoolingMediumGlycol-Water",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "CoolingMediumRainwater",
+												"type": "String"
+											},
+											"sink": {
+												"name": "CoolingMediumRainwater",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "OilyRainWater",
+												"type": "String"
+											},
+											"sink": {
+												"name": "OilyRainWater",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "OilyRainWater2",
+												"type": "String"
+											},
+											"sink": {
+												"name": "OilyRainWater2",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "BlackAndGreyWater",
+												"type": "String"
+											},
+											"sink": {
+												"name": "BlackAndGreyWater",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "TypeHeatRemovalSystem",
+												"type": "String"
+											},
+											"sink": {
+												"name": "TypeHeatRemovalSystem",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Troom-Max-NoPersRoom",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Troom-Max-NoPersRoom",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "TRoom-min-NoPersRoom_",
+												"type": "String"
+											},
+											"sink": {
+												"name": "TRoom-min-NoPersRoom_",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "AbsoluteHumidityMin-NoPersRoom",
+												"type": "String"
+											},
+											"sink": {
+												"name": "AbsoluteHumidityMin-NoPersRoom",
+												"type": "Double"
+											}
+										},
+										{
+											"source": {
+												"name": "RelativeHumidityMin-NoPersRoom",
+												"type": "String"
+											},
+											"sink": {
+												"name": "RelativeHumidityMin-NoPersRoom",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "RelativeHumidityMax-NoPersRoom",
+												"type": "String"
+											},
+											"sink": {
+												"name": "RelativeHumidityMax-NoPersRoom",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "SetPointTemperature",
+												"type": "String"
+											},
+											"sink": {
+												"name": "SetPointTemperature",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "Troom-Max-PresPersRoom",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Troom-Max-PresPersRoom",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "TRoom-min-PresPersRoom_",
+												"type": "String"
+											},
+											"sink": {
+												"name": "TRoom-min-PresPersRoom_",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "AbsoluteHumidityMin-PresPersRoom",
+												"type": "String"
+											},
+											"sink": {
+												"name": "AbsoluteHumidityMin-PresPersRoom",
+												"type": "Double"
+											}
+										},
+										{
+											"source": {
+												"name": "RelativeHumidityMin-PresPersRoom",
+												"type": "String"
+											},
+											"sink": {
+												"name": "RelativeHumidityMin-PresPersRoom",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "RelativeHumidityMax-PresPersRoom",
+												"type": "String"
+											},
+											"sink": {
+												"name": "RelativeHumidityMax-PresPersRoom",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "OverpressureAmbient",
+												"type": "String"
+											},
+											"sink": {
+												"name": "OverpressureAmbient",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "FilterClassAHU",
+												"type": "String"
+											},
+											"sink": {
+												"name": "FilterClassAHU",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "FireAndExplosionRisk",
+												"type": "String"
+											},
+											"sink": {
+												"name": "FireAndExplosionRisk",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "CombinedSmoke-HeatDetectors",
+												"type": "String"
+											},
+											"sink": {
+												"name": "CombinedSmoke-HeatDetectors",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "HeatDetectors",
+												"type": "String"
+											},
+											"sink": {
+												"name": "HeatDetectors",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "FlameDetectors",
+												"type": "String"
+											},
+											"sink": {
+												"name": "FlameDetectors",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "MCPIndoor",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MCPIndoor",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "MCPOutdoor",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MCPOutdoor",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "AspiratingSmokeDetectors",
+												"type": "String"
+											},
+											"sink": {
+												"name": "AspiratingSmokeDetectors",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "SF6GasDetectors",
+												"type": "String"
+											},
+											"sink": {
+												"name": "SF6GasDetectors",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "H2GasDetectors",
+												"type": "String"
+											},
+											"sink": {
+												"name": "H2GasDetectors",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "AutomaticFireFighting",
+												"type": "String"
+											},
+											"sink": {
+												"name": "AutomaticFireFighting",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "MaximumBackgroundNoiseLevel",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MaximumBackgroundNoiseLevel",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "MaxMannedModeNoiseLevel_",
+												"type": "String"
+											},
+											"sink": {
+												"name": "MaxMannedModeNoiseLevel_",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "FixedCamera",
+												"type": "String"
+											},
+											"sink": {
+												"name": "FixedCamera",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "PTZCamera",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PTZCamera",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "SpareRJ45ConnRoom311",
+												"type": "String"
+											},
+											"sink": {
+												"name": "SpareRJ45ConnRoom311",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "SpareRJ45ConnRoom317",
+												"type": "String"
+											},
+											"sink": {
+												"name": "SpareRJ45ConnRoom317",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "VoIPTelephConnections",
+												"type": "String"
+											},
+											"sink": {
+												"name": "VoIPTelephConnections",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "VoIPTelephSets _",
+												"type": "String"
+											},
+											"sink": {
+												"name": "VoIPTelephSets",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "PAGAMicrophoneStation",
+												"type": "String"
+											},
+											"sink": {
+												"name": "PAGAMicrophoneStation",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "DoorAccessControlSystem",
+												"type": "String"
+											},
+											"sink": {
+												"name": "DoorAccessControlSystem",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "NormalIllumination",
+												"type": "String"
+											},
+											"sink": {
+												"name": "NormalIllumination",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "EmergencyStandbyLighting",
+												"type": "String"
+											},
+											"sink": {
+												"name": "EmergencyStandbyLighting",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "EscapeLightingAaverage-Minimum",
+												"type": "String"
+											},
+											"sink": {
+												"name": "EscapeLightingAaverage-Minimum",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "230VSocketOutletsNormalSupply",
+												"type": "String"
+											},
+											"sink": {
+												"name": "230VSocketOutletsNormalSupply",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "230VSocketOutletsUPSSupply",
+												"type": "String"
+											},
+											"sink": {
+												"name": "230VSocketOutletsUPSSupply",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "400VSocketOutlets32A",
+												"type": "String"
+											},
+											"sink": {
+												"name": "400VSocketOutlets32A",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "400VSocketOutlets63A",
+												"type": "String"
+											},
+											"sink": {
+												"name": "400VSocketOutlets63A",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "400VSocketOutlets125A",
+												"type": "String"
+											},
+											"sink": {
+												"name": "400VSocketOutlets125A",
+												"type": "Int32"
+											}
+										},
+										{
+											"source": {
+												"name": "Notes",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Notes",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Status",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Status",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Load_date",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Load_date",
+												"type": "DateTime"
+											}
+										}
+									]
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_fileshare_excel_ced_generic",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_ds_directory": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+											"type": "Expression"
+										},
+										"p_ds_file_name": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.file_name",
+											"type": "Expression"
+										},
+										"p_ds_sheet_name": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.sheet_name",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "AzureSynapseAnalyticsPool",
+									"type": "DatasetReference",
+									"parameters": {
+										"schema": {
+											"value": "@split(activity('lk_get_pipeline_parameters').output.firstRow.target_table,'.')[0]",
+											"type": "Expression"
+										},
+										"TableName": {
+											"value": "@split(activity('lk_get_pipeline_parameters').output.firstRow.target_table,'.')[1]",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "sp_Update_Parameter",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "cd_src_to_synapse",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": {
+									"value": "[dbo].[updateIncrementPipelineParameterValue]",
+									"type": "Expression"
+								},
+								"storedProcedureParameters": {
+									"pParameterCode": {
+										"value": {
+											"value": "last_run_start_date",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"pParameterValue": {
+										"value": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.run_start_datetime",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"pPipelineCode": {
+										"value": {
+											"value": "@pipeline().Pipeline",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"pPipelineSubCode": {
+										"value": {
+											"value": "Excel",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "linkedservice_DEV_entanalytics_synapse",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "sp_dataload_status",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "cd_src_to_synapse",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": {
+									"value": "[edw].data_warehouse_dataload_status",
+									"type": "Expression"
+								},
+								"storedProcedureParameters": {
+									"datasource": {
+										"value": {
+											"value": "@pipeline().parameters.pPipeLineSubCode",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"description": {
+										"value": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.description",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"load_date_time": {
+										"value": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.run_start_datetime",
+											"type": "Expression"
+										},
+										"type": "DateTime"
+									},
+									"project_number": {
+										"value": {
+											"value": "@pipeline().parameters.pProjectNumber",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"table_name": {
+										"value": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.target_table",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "linkedservice_DEV_entanalytics_synapse",
+								"type": "LinkedServiceReference"
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"pPipeLineSubCode": {
+				"type": "string"
+			},
+			"pProjectNumber": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "Projects/Central Engineering Database/Excel/Room Book"
+		},
+		"annotations": []
+	}
+}

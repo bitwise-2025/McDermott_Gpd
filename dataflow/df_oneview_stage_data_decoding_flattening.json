@@ -1,0 +1,93 @@
+{
+	"name": "df_oneview_stage_data_decoding_flattening",
+	"properties": {
+		"folder": {
+			"name": "Projects/OneView/GetReferenceDataCountries"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_xml_oneview_getreferencedatacountries_source_stage_encoded_xml",
+						"type": "DatasetReference"
+					},
+					"name": "SrcEncodedXml"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_oneview_getreferencedatacountries_source_stage_final_csv",
+						"type": "DatasetReference"
+					},
+					"name": "SnkDecodedXml"
+				}
+			],
+			"transformations": [
+				{
+					"name": "Decoding"
+				},
+				{
+					"name": "SelectDecodedData"
+				},
+				{
+					"name": "ParseJSONData"
+				},
+				{
+					"name": "flattendata"
+				},
+				{
+					"name": "DerivedColumnToAddColumns"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          {http://schemas.xmlsoap.org/soap/envelope/,Envelope} as ({http://schemas.xmlsoap.org/soap/envelope/,Body} as ({http://DS.Modules.Core.Contracts.Queries/CustomDataApi,GetDataResponse} as ({http://DS.Modules.Core.Contracts.Queries/CustomDataApi,GetDataResult} as string)), {http://schemas.xmlsoap.org/soap/envelope/,Header} as ({http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd,Security} as ({http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd,Timestamp} as ({http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd,@Id} as string, {http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd,Created} as string, {http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd,Expires} as string), {http://schemas.xmlsoap.org/soap/envelope/,@mustUnderstand} as boolean)))",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     validationMode: 'none',",
+				"     namespaces: true) ~> SrcEncodedXml",
+				"SrcEncodedXml derive(GetDataResult = toString({http://schemas.xmlsoap.org/soap/envelope/,Envelope}.{http://schemas.xmlsoap.org/soap/envelope/,Body}.{http://DS.Modules.Core.Contracts.Queries/CustomDataApi,GetDataResponse}.{http://DS.Modules.Core.Contracts.Queries/CustomDataApi,GetDataResult})) ~> Decoding",
+				"Decoding select(mapColumn(",
+				"          GetDataResult",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> SelectDecodedData",
+				"SelectDecodedData parse(Parsed_Data = GetDataResult ? (Data as (CountryId as string,",
+				"     Name as string,",
+				"     CountryCode2Digits as string,",
+				"     CountryCode3Digits as string,",
+				"     Nationality as string)[],",
+				"          Count as integer),",
+				"     format: 'json',",
+				"     documentForm: 'singleDocument') ~> ParseJSONData",
+				"ParseJSONData foldDown(unroll(Parsed_Data.Data),",
+				"     mapColumn(",
+				"          CountryId = Parsed_Data.Data.CountryId,",
+				"          Name = Parsed_Data.Data.Name,",
+				"          CountryCode2Digits = Parsed_Data.Data.CountryCode2Digits,",
+				"          CountryCode3Digits = Parsed_Data.Data.CountryCode3Digits,",
+				"          Nationality = Parsed_Data.Data.Nationality",
+				"     ),",
+				"     skipDuplicateMapInputs: false,",
+				"     skipDuplicateMapOutputs: false) ~> flattendata",
+				"flattendata derive(source_name = 'Oneview',",
+				"          sub_source_name = 'GetReferenceDataCountries',",
+				"          created_date_time = currentUTC()) ~> DerivedColumnToAddColumns",
+				"DerivedColumnToAddColumns sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     emptyLinesAsHeader: 1,",
+				"     partitionFileNames:['GetReferenceDataCountries.csv'],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> SnkDecodedXml"
+			]
+		}
+	}
+}

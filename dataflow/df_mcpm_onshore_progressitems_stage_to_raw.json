@@ -1,0 +1,32 @@
+{
+	"name": "df_mcpm_onshore_progressitems_stage_to_raw",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_mcpm_onshore_progressitems_data",
+						"type": "DatasetReference"
+					},
+					"name": "sourceMCPMOnshoreProgressItems"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_mcpm_onshore_progressitems_raw",
+						"type": "DatasetReference"
+					},
+					"name": "snkMCPMOnshoreProgressItemsRaw"
+				}
+			],
+			"transformations": [
+				{
+					"name": "setFileName"
+				}
+			],
+			"script": "source(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\twildcardPaths:['Project_Data/NCSA/MCPM/MCPM_Onshore_ProgressItems/MCPM_Onshore.csv']) ~> sourceMCPMOnshoreProgressItems\nsourceMCPMOnshoreProgressItems derive(FileName = concat( 'Project_Data/NCSA/MCPM/MCPM_Onshore_ProgressItems/',        substring(toString(currentTimestamp()),1,4),        '/',substring(toString(currentTimestamp()),6,2),        '/',substring(toString(currentTimestamp()),9,2),        '/',        'MCPM_Onshore_',        replace(replace(toString(currentTimestamp()),'.',''),':',''),        '.csv')) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\trowUrlColumn:'FileName',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> snkMCPMOnshoreProgressItemsRaw"
+		}
+	}
+}

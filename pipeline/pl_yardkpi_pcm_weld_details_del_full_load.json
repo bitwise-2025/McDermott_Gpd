@@ -1,0 +1,215 @@
+{
+	"name": "pl_yardkpi_pcm_weld_details_del_full_load",
+	"properties": {
+		"activities": [
+			{
+				"name": "lk_get_pipeline_parameters",
+				"description": "Get the parameters to be used in this pipeline",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "pl_yardkpi_pcm_weld_details_source_to_stage_del",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": {
+									"value": "PCM",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "ForEach_PCM_Contract",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@split(pipeline().parameters.p_src_pipeline_pcm_contract,',')",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"activities": [
+						{
+							"name": "Copy PCM to Stage",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SqlServerSource",
+									"additionalColumns": [
+										{
+											"name": "source_code",
+											"value": {
+												"value": "SYSTEM",
+												"type": "Expression"
+											}
+										},
+										{
+											"name": "sub_source_code",
+											"value": {
+												"value": "PCM",
+												"type": "Expression"
+											}
+										}
+									],
+									"sqlReaderStoredProcedureName": "[dbo].[pcm_dl_data]",
+									"storedProcedureParameters": {
+										"fab_code": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().parameters.p_src_pipeline_pcm_fab_code",
+												"type": "Expression"
+											}
+										},
+										"sp_dataset": {
+											"type": "String",
+											"value": {
+												"value": "@activity('lk_get_pipeline_parameters').output.firstRow.sp_dataset_weld_details",
+												"type": "Expression"
+											}
+										},
+										"from_date": {
+											"type": "String",
+											"value": {
+												"value": "1900-01-01 00:00:00.000",
+												"type": "Expression"
+											}
+										},
+										"to_date": {
+											"type": "String",
+											"value": null
+										},
+										"trans_type": {
+											"type": "String",
+											"value": {
+												"value": "@activity('lk_get_pipeline_parameters').output.firstRow.trans_type",
+												"type": "Expression"
+											}
+										},
+										"contract": {
+											"type": "String",
+											"value": {
+												"value": "@trim(item())",
+												"type": "Expression"
+											}
+										},
+										"job": {
+											"type": "String",
+											"value": {
+												"value": "@activity('lk_get_pipeline_parameters').output.firstRow.job",
+												"type": "Expression"
+											}
+										},
+										"item": {
+											"type": "String",
+											"value": {
+												"value": "@activity('lk_get_pipeline_parameters').output.firstRow.item",
+												"type": "Expression"
+											}
+										}
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"sink": {
+									"type": "DelimitedTextSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									},
+									"formatSettings": {
+										"type": "DelimitedTextWriteSettings",
+										"quoteAllText": true,
+										"fileExtension": ".txt"
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_pcm_source_sql_server",
+									"type": "DatasetReference"
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_adlsg2_weld_details_stg",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_ds_filename": {
+											"value": "@concat('pcm_weld_details_del_',item(),'_',formatDateTime(utcNow(),'yyyy-MM-dd HH:mm:ss'),'.csv')",
+											"type": "Expression"
+										},
+										"p_ds_folderpath": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+										"p_ds_filesystem": "@activity('lk_get_pipeline_parameters').output.firstRow.output_file_system"
+									}
+								}
+							]
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"p_src_pipeline_pcm_contract": {
+				"type": "string"
+			},
+			"p_src_pipeline_pcm_fab_code": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "Projects/YARD KPI/PCM/weld_details_del"
+		},
+		"annotations": []
+	}
+}

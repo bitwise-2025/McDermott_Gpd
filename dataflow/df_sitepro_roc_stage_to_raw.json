@@ -1,0 +1,32 @@
+{
+	"name": "df_sitepro_roc_stage_to_raw",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_sitepro_roc_stage",
+						"type": "DatasetReference"
+					},
+					"name": "srcROCSiteproStage"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_sitepro_roc_raw",
+						"type": "DatasetReference"
+					},
+					"name": "snkROCSiteproRaw"
+				}
+			],
+			"transformations": [
+				{
+					"name": "setFileName"
+				}
+			],
+			"script": "source(output(\n\t\t{Project ID} as string,\n\t\t{ROC ID} as string,\n\t\t{ROCS ID} as string,\n\t\t{Project Number} as string,\n\t\t{Project Description} as string,\n\t\tCode as string,\n\t\tName as string,\n\t\t{Sub Prime} as string,\n\t\t{ROCS Name} as string,\n\t\t{ROCS Step} as string,\n\t\t{ROCS Percentage} as string,\n\t\t{Driving?} as string,\n\t\tQuantity as string,\n\t\t{Quantity Description} as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\trowUrlColumn: 'FileName',\n\twildcardPaths:['Project_Data/NCSA/SitePro/ROC/sitepro_roc.csv']) ~> srcROCSiteproStage\nsrcROCSiteproStage derive(FileName = concat('Project_Data/NCSA/SitePro/ROC/',substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/','roc_sitepro_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv')) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\trowUrlColumn:'FileName',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tmapColumn(\n\t\t{Project ID},\n\t\t{ROC ID},\n\t\t{ROCS ID},\n\t\t{Project Number},\n\t\t{Project Description},\n\t\tCode,\n\t\tName,\n\t\t{Sub Prime},\n\t\t{ROCS Name},\n\t\t{ROCS Step},\n\t\t{ROCS Percentage},\n\t\t{Driving?},\n\t\tQuantity,\n\t\t{Quantity Description},\n\t\tFileName\n\t)) ~> snkROCSiteproRaw"
+		}
+	}
+}

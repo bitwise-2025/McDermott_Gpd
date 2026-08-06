@@ -1,0 +1,32 @@
+{
+	"name": "df_sitepro_unit_stage_to_raw",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_sitepro_unit_stage",
+						"type": "DatasetReference"
+					},
+					"name": "sourceUNITSiteproStage"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_unit_sitepro_raw",
+						"type": "DatasetReference"
+					},
+					"name": "snkUNITSiteproRaw"
+				}
+			],
+			"transformations": [
+				{
+					"name": "setFileName"
+				}
+			],
+			"script": "source(output(\n\t\tproject_id as string,\n\t\tID as string,\n\t\tCode as string,\n\t\tDescription as string,\n\t\tCreatedByID as string,\n\t\tCreatedDate as string,\n\t\tModifiedByID as string,\n\t\tModifiedDate as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\twildcardPaths:['Project_Data/NCSA/unit/sitepro_unit.csv']) ~> sourceUNITSiteproStage\nsourceUNITSiteproStage derive(FileName = concat( 'Project_Data/NCSA/SitePro/unit/',        \r\n        substring(toString(currentTimestamp()),1,4),        \r\n        '/',substring(toString(currentTimestamp()),6,2),        \r\n        '/',substring(toString(currentTimestamp()),9,2),        \r\n        '/',        'unit_sitepro_',        \r\n        replace(replace(toString(currentTimestamp()),'.',''),':',''),        \r\n        '.csv')) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tinput(\n\t\tproject_id as string,\n\t\tID as string,\n\t\tCode as string,\n\t\tDescription as string,\n\t\tCreatedByID as string,\n\t\tCreatedDate as string,\n\t\tModifiedByID as string,\n\t\tModifiedDate as string\n\t),\n\trowUrlColumn:'FileName',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tmapColumn(\n\t\tproject_id,\n\t\tID,\n\t\tCode,\n\t\tDescription,\n\t\tCreatedByID,\n\t\tCreatedDate,\n\t\tModifiedByID,\n\t\tModifiedDate,\n\t\tFileName\n\t)) ~> snkUNITSiteproRaw"
+		}
+	}
+}

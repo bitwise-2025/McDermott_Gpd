@@ -1,0 +1,91 @@
+{
+	"name": "df_pcm_paint_details_stage_to_raw_del",
+	"properties": {
+		"folder": {
+			"name": "Projects/YARD KPI/PCM"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_paint_details_stg",
+						"type": "DatasetReference"
+					},
+					"name": "PCMStage"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_yardkpi_pcm_default",
+						"type": "DatasetReference"
+					},
+					"name": "PCMRaw"
+				}
+			],
+			"transformations": [
+				{
+					"name": "SetFileName"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          trans_date as string,",
+				"          trans_type as string,",
+				"          fab_code as string,",
+				"          contract as string,",
+				"          contract_title as string,",
+				"          job as string,",
+				"          job_title as string,",
+				"          pctrl as string,",
+				"          paint_sys_code as string,",
+				"          color as string,",
+				"          surf_cleanliness as string,",
+				"          qr_no as string,",
+				"          bpctwd_num as string,",
+				"          paint_date as string,",
+				"          insp_date as string,",
+				"          shift as string,",
+				"          inspector as string,",
+				"          report_type as string,",
+				"          report_num as string,",
+				"          steel_code as string,",
+				"          cliam_zone as string,",
+				"          signed as string,",
+				"          jrm_signed as string,",
+				"          jrm_technician as string,",
+				"          jrm_sign_date as string,",
+				"          supervisor_id as string,",
+				"          supervisor_sign_date as string,",
+				"          signatory as string,",
+				"          sign_date as string,",
+				"          pnt_report as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: true,",
+				"     purgeFiles: true,",
+				"     multiLineRow: true,",
+				"     wildcardPaths:['Project_Data/YARDKPI/PCM_Del/pcm_paint_details_del*.csv']) ~> PCMStage",
+				"PCMStage derive(FileName = concat('Project_Data/YARDKPI/PCM_Del/',substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/','PCM_PAINT_DETAILS_DEL_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv'),",
+				"          create_date_time = currentUTC(),",
+				"          inspector = trim(replace(replace(replace(replace(replace(replace(replace(inspector,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),",
+				"          report_num = trim(replace(replace(replace(replace(replace(replace(replace(report_num,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),",
+				"          job_title = trim(replace(replace(replace(replace(replace(replace(replace(job_title,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),",
+				"          contract_title = trim(replace(replace(replace(replace(replace(replace(replace(contract_title,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' '))) ~> SetFileName",
+				"SetFileName sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     rowUrlColumn:'FileName',",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     mapColumn(",
+				"          each(match(true()))",
+				"     )) ~> PCMRaw"
+			]
+		}
+	}
+}

@@ -1,0 +1,3053 @@
+{
+	"name": "pl_zycus_raw_to_destination",
+	"properties": {
+		"activities": [
+			{
+				"name": "lk_get_pipeline_parameters",
+				"description": "Get the parameters to be used in this pipeline.",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": {
+									"value": "Zycus",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Set last_run_start_date",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_raw_start_time",
+					"value": {
+						"value": "@formatDateTime(utcNow(),'yyyy-MM-dd HH:mm:ss')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "cp_get_latest_file",
+				"description": "Copy all the files created since the last start date and combine them into one file to be processed into Destination.",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Set last_run_start_date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": true,
+							"modifiedDatetimeStart": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.last_run_start_date",
+								"type": "Expression"
+							},
+							"wildcardFolderPath": {
+								"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.folder_path,'/*/*/*')",
+								"type": "Expression"
+							},
+							"wildcardFileName": {
+								"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'_*.csv')",
+								"type": "Expression"
+							},
+							"enablePartitionDiscovery": false
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings",
+							"copyBehavior": "MergeFiles"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_zycus_raw_generic",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_ds_folder_path": {
+								"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.folder_path,'/','Inbound')",
+								"type": "Expression"
+							},
+							"p_ds_file_name": {
+								"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+								"type": "Expression"
+							},
+							"p_ds_file_system": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_zycus_raw_generic",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_ds_folder_path": {
+								"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.folder_path,'/','Inbound')",
+								"type": "Expression"
+							},
+							"p_ds_file_name": {
+								"value": "@concat('Combined_',activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+								"type": "Expression"
+							},
+							"p_ds_file_system": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "Check Combined File non zero Bytes",
+				"description": "Check if the combined file has any data to be loaded",
+				"type": "GetMetadata",
+				"dependsOn": [
+					{
+						"activity": "cp_get_latest_file",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_zycus_raw_generic",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_ds_folder_path": {
+								"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.folder_path,'/','Inbound')",
+								"type": "Expression"
+							},
+							"p_ds_file_name": {
+								"value": "@concat('Combined_',activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+								"type": "Expression"
+							},
+							"p_ds_file_system": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+								"type": "Expression"
+							}
+						}
+					},
+					"fieldList": [
+						"size",
+						"exists"
+					],
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true,
+						"enablePartitionDiscovery": false
+					},
+					"formatSettings": {
+						"type": "DelimitedTextReadSettings"
+					}
+				}
+			},
+			{
+				"name": "if_file_exists_copy_to_destination",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Check Combined File non zero Bytes",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@greater(activity('Check Combined File non zero Bytes').output.size, 2)",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "cp_raw_to_stage_spm_table",
+							"description": "Copying data from raw to staging table \"SPMPurchaseOrderVendorDelivery\".",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": true,
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "SqlServerSink",
+									"preCopyScript": {
+										"value": "Delete Staging.SPMPurchaseOrderVendorDelivery",
+										"type": "Expression"
+									},
+									"writeBehavior": "insert",
+									"sqlWriterUseTableLock": true
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"mappings": [
+										{
+											"source": {
+												"name": "PROJ_ID",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "PROJ_ID",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "PROJECT_DESCRIPTION",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "Project_Description",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "JDE_PROJ_NUMBER",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "JDE_PROJ_NUMBER",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "OPERATING_GROUP",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "OPERATING_GROUP",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "SECTOR",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "SECTOR",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "CLIENT",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "Client",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "JDE_SUPPLIER_NUMBER",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "JDE_SUPPLIER_NUMBER",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "SUPPLIER_NAME",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "SUPPLIER_NAME",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "POLI_QTY",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "POLI_QTY",
+												"type": "Decimal",
+												"physicalType": "decimal",
+												"scale": 16,
+												"precision": 31
+											}
+										},
+										{
+											"source": {
+												"name": "UOM",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "UOM",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "ISH_PROM_CONTRACT_DATE",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "ISH_PROM_CONTRACT_DATE",
+												"type": "DateTime",
+												"physicalType": "date"
+											}
+										},
+										{
+											"source": {
+												"name": "MATL_RECV_DATE",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "MATL_RECV_DATE",
+												"type": "DateTime",
+												"physicalType": "date"
+											}
+										},
+										{
+											"source": {
+												"name": "ISH_ITEM_SHIP_QTY",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "ISH_ITEM_SHIP_QTY",
+												"type": "Decimal",
+												"physicalType": "decimal",
+												"scale": 16,
+												"precision": 31
+											}
+										},
+										{
+											"source": {
+												"name": "RECV_QTY",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "RECV_QTY",
+												"type": "Decimal",
+												"physicalType": "decimal",
+												"scale": 16,
+												"precision": 31
+											}
+										},
+										{
+											"source": {
+												"name": "DESCRIPTION",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "DESCRIPTION",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "PO_NUMBER",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "PO_NUMBER",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "SPM_POH_ID",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "SPM_POH_ID",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "SUPPLEMENT",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "SUPPLEMENT",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "SUP_POH_ID",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "SUP_POH_ID",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "POLI_POS",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "POLI_POS",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "POLI_SUB_POS",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "POLI_SUB_POS",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "ITEM_SHIP_POS",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "ITEM_SHIP_POS",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "ITEM_SHIP_SUB_POS",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "ITEM_SHIP_SUB_POS",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "FREIGHT_TERM",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "FREIGHT_TERM",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "RECV_TYPE",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "RECV_TYPE",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "RECV_DOC_NUMBER",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "RECV_DOC_NUMBER",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "IDENT",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "IDENT",
+												"type": "Int64",
+												"physicalType": "bigint"
+											}
+										},
+										{
+											"source": {
+												"name": "TAG_NUMBER",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "TAG_NUMBER",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										}
+									],
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_adlsg2_csv_zycus_raw_generic",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_ds_folder_path": {
+											"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.folder_path,'/','Inbound')",
+											"type": "Expression"
+										},
+										"p_ds_file_name": {
+											"value": "@concat('Combined_',activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+											"type": "Expression"
+										},
+										"p_ds_file_system": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_sql_DALDSQL03_zycus_DM_Staging",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_ds_schema": {
+											"value": "Staging",
+											"type": "Expression"
+										},
+										"p_ds_table": {
+											"value": "SPMPurchaseOrderVendorDelivery",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "cp_stage_spm_to_jde_temp",
+							"description": "Copying data from staging table \"SPMPurchaseOrderVendorDelivery\" to JDE temp table \"CBIADHOC.SPMOTEMP.",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "cp_raw_to_stage_spm_table",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SqlServerSource",
+									"sqlReaderQuery": {
+										"value": "Select DISTINCT \n case when spmpo.ProjectDescription IS NULL THEN  ltrim(rtrim([PO_NUMBER]))\nELSE ltrim(rtrim(PO_NUMBER)) + '-00' END PO_NUMBER\n ,  ([POLI_POS]  + CAST([POLI_SUB_POS] as float)/1000) * 1000 as LineNumber\nFROM [Staging].[SPMPurchaseOrderVendorDelivery] spmpovd\nleft join Conforming.SPMPO spmpo\non spmpovd.PROJ_ID = spmpo.ProjectId\nwhere  PROJ_ID <> 'US017' \nAND JDE_SUPPLIER_NUMBER <> 'No Need'",
+										"type": "Expression"
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"sink": {
+									"type": "OdbcSink",
+									"writeBatchSize": 0
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"mappings": [
+										{
+											"source": {
+												"name": "PO_NUMBER",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "PONUMBER",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "LineNumber",
+												"type": "Double",
+												"physicalType": "float"
+											},
+											"sink": {
+												"name": "LINEID",
+												"type": "Decimal"
+											}
+										}
+									],
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_sql_DALDSQL03_zycus_DM_Staging",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_ds_schema": {
+											"value": "Staging",
+											"type": "Expression"
+										},
+										"p_ds_table": {
+											"value": "SPMPurchaseOrderVendorDelivery",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_odbc_zycus_jde_cbiadhoc",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_ds_schema_name": {
+											"value": "CBIADHOC",
+											"type": "Expression"
+										},
+										"p_ds_table_name": {
+											"value": "SPMPOTEMP",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "cp_jde_temp_to_stage_loa_table",
+							"description": "Copying data from JDE temp table \"CBIADHOC.SPMOTEMP\" to staging table \"LOAPurchaseOrderVendorDelivery\".",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "cp_stage_spm_to_jde_temp",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "OdbcSource",
+									"query": {
+										"value": "SELECT distinct\n\t'NA' AS PROJ_ID,\n\tTable__3.MCDL01 AS PROJECT_DESCRIPTION,\n\tCBIDTA.F4311.PDOMCU AS JDE_PROJ_NUMBER,\n\tTable__3.MCRP03 AS OPERATING_GROUP,\n\t'NA' AS SECTOR,\n\tCBIDTA.F4311.PDMCU AS Client,\n\tCBIDTA.F4311.PDAN8 AS JDE_SUPPLIER_NUMBER,\n    PDAN8.ABALPH AS SUPPLIER_NAME,\n    CBIDTA.F4311.PDITM AS IDENT,\n    CBIDTA.F4311.PDURRF AS TAG_NUMBER,\n\tCBIDTA.F4311.PDDSC1 AS Description,\n\tCBIDTA.F4311.PDDOCO AS PO_NUMBER,\n\t'NA' AS SPM_POH_ID,\n\t'NA' AS SUPPLEMENT,\n\t'NA' AS SUP_POH_ID,\n\t'NA' AS POLI_POS,\n\t'NA' AS POLI_SUB_POS,\n    CBIDTA.F43121.PRNLIN AS ITEM_SHIP_POS,\n    CBIDTA.F43121.PRALIN/1000 AS ITEM_SHIP_SUB_POS,\n    'NA' AS FREIGHT_TERM,\n    CASE WHEN CBIDTA.F4311.PDUORG = 0 THEN 0 ELSE CBIDTA.F4311.PDUORG / DDF('UORG') END AS POLI_QTY,\n\tCBIDTA.F4311.PDUOM3 AS UOM,\n\tCJDEDTGD(CBIDTA.F4311.PDPDDJ) AS ISH_PROM_CONTRACT_DATE,\n    CJDEDTGD(CBIDTA.F43121.PRRCDJ) AS MATL_RECV_DATE,\n    'NA' AS ISH_ITEM_SHIP_QTY,  \n    CBIDTA.F43121.PRUREC/1000 AS RECV_QTY,    \n    CBIDTA.F43121.PRDCT AS RECV_TYPE,\n    CBIDTA.F43121.PRDOC AS RECV_DOC_NUMBER, \n\tCBIDTA.F4311.PDDOCO AS JDE_PO_NUMBER,\n\tCBIDTA.F4311.PDLNID/1000 AS JDE_PO_LINE,\n\tCBIDTA.F4311.PDDCTO AS ORDER_TYPE,\n\tCASE WHEN LENGTH(CBIDTA.F4311.PDSFXO) = 0 THEN '000' ELSE CBIDTA.F4311.PDSFXO END AS ORDER_SUFFIX,\n\tCBIDTA.F4311.PDCO AS ACCOUNT_COMPANY,\n\tCBIDTA.F4301.PHKCOO AS ORDER_COMPANY,\n\tCBIDTA.F4311.PDVR01 SPM_PO_NUMBER,\n\tCBIDTA.F43121.PRDOC AS SORId,\n\t'E1.CBIDTA.F43121.PRDOC' as SystemOfRecord\nFROM\n  ( \n  SELECT  aban8, alan8, abeftb, aleftb, abdc, abalph, aladd1, aladd2, aladd3, aladd4, aladdz, alcty1, alcoun, aladds, alctr, abac27\nFROM CBIDTA.f0101, CBIDTA.f0116\nWHERE aban8 = alan8\nand    abeftb = aleftb\n  ) AS PHANBY RIGHT OUTER JOIN CBIDTA.F4301 ON (PHANBY.ABAN8=CBIDTA.F4301.PHANBY)\n   LEFT OUTER JOIN CBIDTA.F4311 ON (CBIDTA.F4301.PHDOCO = CBIDTA.F4311.PDDOCO AND CBIDTA.F4301.PHDCTO = CBIDTA.F4311.PDDCTO AND CBIDTA.F4301.PHKCOO = CBIDTA.F4311.PDKCOO)\n   LEFT OUTER JOIN CBIDTA.F0006  Table__20 ON (Table__20.MCMCU=CBIDTA.F4311.PDOMCU)\n   LEFT OUTER JOIN ( \n  SELECT  aban8, alan8, abeftb, aleftb, abdc, abalph, aladd1, aladd2, aladd3, aladd4, aladdz, alcty1, alcoun, aladds, alctr, abac27\nFROM CBIDTA.f0101, CBIDTA.f0116\nWHERE aban8 = alan8\nand    abeftb = aleftb\n  ) AS PDAN8 ON (PDAN8.ABAN8=CBIDTA.F4311.PDAN8)\n   LEFT OUTER JOIN CBIDTA.F43121 ON (CBIDTA.F43121.PRKCOO = CBIDTA.F4301.PHKCOO  AND  CBIDTA.F43121.PRDCTO = CBIDTA.F4311.PDDCTO  AND  CBIDTA.F43121.PRSFXO = CBIDTA.F4311.PDSFXO  AND  CBIDTA.F43121.PRDOCO = CBIDTA.F4311.PDDOCO  AND  CBIDTA.F43121.PRLNID = CBIDTA.F4311.PDLNID)\n   INNER JOIN CBIDTA.F0006  Table__19 ON (Table__19.MCMCU=CBIDTA.F4311.PDMCU)\n   LEFT OUTER JOIN ( \n  SELECT CCCO, MCMCU, MCMCUS, MCDL01, CCNAME, MCRP03, integer(POWER(10, INTEGER(CVCDEC))) AS CDIV \nFROM CBIDTA.F0006\nINNER JOIN CBIDTA.F0010 ON MCCO = CCCO\nINNER JOIN CBIDTA.F0013 on  CCCRCD = CVCRCD\n  ) AS Table__3 ON (Table__3.MCMCU=CBIDTA.F4311.PDMCU)\n   LEFT OUTER JOIN ( \nSELECT * \nFROM CBIDTA.F0010\n  ) AS PHKCOO ON (PHKCOO.CCCO=CBIDTA.F4301.PHKCOO)  \nWHERE\n  (\n   CBIDTA.F4311.PDDCTO  IN  ( 'OS','OH','OG','OP'  )\n   AND\n   CBIDTA.F4311.PDLTTR  <>  '980'\n   AND\n   CJDEDTGD(CBIDTA.F4311.PDTRDJ)  >=  {d '2013-01-01'}\n   AND\n   CJDEDTGD(CBIDTA.F4311.PDDGL) BETWEEN DATE(CURRENT_DATE - DAY(CURRENT_DATE) DAY +1 DAY - 1 MONTH) AND DATE(CURRENT_DATE  -DAY(CURRENT_DATE) DAY)\n   AND \n   CBIDTA.F4311.PDAN8 NOT IN ('1545782','248743','203756','3838634','4382000','790516','275469','388421','2718930','3893692','3032905','3895153','5411845','2435374','3838634','3712812','5906987','3838589','1509642','3899365','738021')\n  )\n  AND length(CJDEDTGD(CBIDTA.F43121.PRRCDJ)) > 0 \n  AND CJDEDTGD(CBIDTA.F43121.PRRCDJ) between DATE(CURRENT_DATE - DAY(CURRENT_DATE) DAY +1 DAY - 1 MONTH) AND  DATE(CURRENT_DATE  -DAY(CURRENT_DATE) DAY)\n  AND (CBIDTA.F43121.PRDCT = 'OV' OR CBIDTA.F43121.PRDCT IS NULL)\nUNION ALL\nSELECT distinct\n\t'NA' AS PROJ_ID,\n\tTable__3.MCDL01 AS PROJECT_DESCRIPTION,\n\tCBIDTA.F4311.PDOMCU AS JDE_PROJ_NUMBER,\n\tTable__3.MCRP03 AS OPERATING_GROUP,\n\t'NA' AS SECTOR,\n\tCBIDTA.F4311.PDMCU AS Client,\n\tCBIDTA.F4311.PDAN8 AS JDE_SUPPLIER_NUMBER,\n    PDAN8.ABALPH AS SUPPLIER_NAME,\n    CBIDTA.F4311.PDITM AS IDENT,\n    CBIDTA.F4311.PDURRF AS TAG_NUMBER,\n\tCBIDTA.F4311.PDDSC1 AS Description,\n\tCBIDTA.F4311.PDDOCO AS PO_NUMBER,\n\t'NA' AS SPM_POH_ID,\n\t'NA' AS SUPPLEMENT,\n\t'NA' AS SUP_POH_ID,\n\t'NA' AS POLI_POS,\n\t'NA' AS POLI_SUB_POS,\n    CBIDTA.F43121.PRNLIN AS ITEM_SHIP_POS,\n    CBIDTA.F43121.PRALIN/1000 AS ITEM_SHIP_SUB_POS,\n    'NA' AS FREIGHT_TERM,\n    CASE WHEN CBIDTA.F4311.PDUORG = 0 THEN 0\n\t\tELSE\n\t\t\tCBIDTA.F4311.PDUORG / DDF('UORG') \n\tEND AS POLI_QTY,\n\tCBIDTA.F4311.PDUOM3 AS UOM,\n\tCJDEDTGD(CBIDTA.F4311.PDPDDJ) AS ISH_PROM_CONTRACT_DATE,\n    CJDEDTGD(CBIDTA.F43121.PRRCDJ) AS MATL_RECV_DATE,\n    'NA' AS ISH_ITEM_SHIP_QTY,  \n    CBIDTA.F43121.PRUREC/1000 AS RECV_QTY,    \n    CBIDTA.F43121.PRDCT AS RECV_TYPE,\n    CBIDTA.F43121.PRDOC AS RECV_DOC_NUMBER, \n\tCBIDTA.F4311.PDDOCO AS JDE_PO_NUMBER,\n\tCBIDTA.F4311.PDLNID/1000 AS JDE_PO_LINE,\n\tCBIDTA.F4311.PDDCTO AS ORDER_TYPE,\n\tCASE WHEN LENGTH(CBIDTA.F4311.PDSFXO) = 0 THEN '000' ELSE CBIDTA.F4311.PDSFXO END AS ORDER_SUFFIX,\n\tCBIDTA.F4311.PDCO AS ACCOUNT_COMPANY,\n\tCBIDTA.F4301.PHKCOO AS ORDER_COMPANY,\n\tCBIDTA.F4311.PDVR01 SPM_PO_NUMBER,\n\tCBIDTA.F43121.PRDOC AS SORId,\n\t'E1.CBIDTA.F43121.PRDOC' as SystemOfRecord\nFROM\n  ( \n  SELECT  aban8, alan8, abeftb, aleftb, abdc, abalph, aladd1, aladd2, aladd3, aladd4, aladdz, alcty1, alcoun, aladds, alctr, abac27\nFROM CBIDTA.f0101, CBIDTA.f0116\nWHERE aban8 = alan8\nand    abeftb = aleftb\n  ) AS PHANBY RIGHT OUTER JOIN CBIDTA.F4301 ON (PHANBY.ABAN8=CBIDTA.F4301.PHANBY)\n   LEFT OUTER JOIN CBIDTA.F4311 ON (CBIDTA.F4301.PHDOCO = CBIDTA.F4311.PDDOCO AND CBIDTA.F4301.PHDCTO = CBIDTA.F4311.PDDCTO AND CBIDTA.F4301.PHKCOO = CBIDTA.F4311.PDKCOO)\n   LEFT OUTER JOIN CBIDTA.F0006  Table__20 ON (Table__20.MCMCU=CBIDTA.F4311.PDOMCU)\n   LEFT OUTER JOIN ( \n  SELECT  aban8, alan8, abeftb, aleftb, abdc, abalph, aladd1, aladd2, aladd3, aladd4, aladdz, alcty1, alcoun, aladds, alctr, abac27\nFROM CBIDTA.f0101, CBIDTA.f0116\nWHERE aban8 = alan8\nand    abeftb = aleftb\n  ) AS PDAN8 ON (PDAN8.ABAN8=CBIDTA.F4311.PDAN8)\n   LEFT OUTER JOIN CBIDTA.F43121 ON (CBIDTA.F43121.PRKCOO = CBIDTA.F4301.PHKCOO  AND  CBIDTA.F43121.PRDCTO = CBIDTA.F4311.PDDCTO  AND  CBIDTA.F43121.PRSFXO = CBIDTA.F4311.PDSFXO  AND  CBIDTA.F43121.PRDOCO = CBIDTA.F4311.PDDOCO  AND  CBIDTA.F43121.PRLNID = CBIDTA.F4311.PDLNID)\n   INNER JOIN CBIDTA.F0006  Table__19 ON (Table__19.MCMCU=CBIDTA.F4311.PDMCU)\n   LEFT OUTER JOIN ( \n  SELECT   CCCO, MCMCU, MCMCUS, MCDL01, CCNAME, MCRP03, integer(POWER(10, INTEGER(CVCDEC))) AS CDIV \nFROM CBIDTA.F0006\nINNER JOIN CBIDTA.F0010 ON MCCO = CCCO\nINNER JOIN CBIDTA.F0013 on  CCCRCD = CVCRCD\n  ) AS Table__3 ON (Table__3.MCMCU=CBIDTA.F4311.PDMCU)\n   LEFT OUTER JOIN ( \n  SELECT * \nFROM CBIDTA.F0010\n  ) AS PHKCOO ON (PHKCOO.CCCO=CBIDTA.F4301.PHKCOO)\n  INNER JOIN CBIADHOC.SPMPOTEMP spmtmp\n  ON \nspmtmp.PONUMBER = CBIDTA.F4311.PDVR01\nAND spmtmp.LINEID = CBIDTA.F4311.PDLNID",
+										"type": "Expression"
+									},
+									"queryTimeout": "02:00:00"
+								},
+								"sink": {
+									"type": "SqlServerSink",
+									"preCopyScript": {
+										"value": "Delete Staging.LOAPurchaseOrderVendorDelivery",
+										"type": "Expression"
+									},
+									"writeBehavior": "insert",
+									"sqlWriterUseTableLock": true
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"mappings": [
+										{
+											"source": {
+												"name": "PROJ_ID"
+											},
+											"sink": {
+												"name": "PROJ_ID",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "PROJECT_DESCRIPTION"
+											},
+											"sink": {
+												"name": "PROJECT_DESCRIPTION",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "JDE_PROJ_NUMBER"
+											},
+											"sink": {
+												"name": "JDE_PROJ_NUMBER",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "OPERATING_GROUP"
+											},
+											"sink": {
+												"name": "OPERATING_GROUP",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "SECTOR"
+											},
+											"sink": {
+												"name": "SECTOR",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "CLIENT"
+											},
+											"sink": {
+												"name": "Client",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "JDE_SUPPLIER_NUMBER"
+											},
+											"sink": {
+												"name": "JDE_SUPPLIER_NUMBER",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "SUPPLIER_NAME"
+											},
+											"sink": {
+												"name": "SUPPLIER_NAME",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "IDENT"
+											},
+											"sink": {
+												"name": "IDENT",
+												"type": "Int64",
+												"physicalType": "bigint"
+											}
+										},
+										{
+											"source": {
+												"name": "TAG_NUMBER"
+											},
+											"sink": {
+												"name": "TAG_NUMBER",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "DESCRIPTION"
+											},
+											"sink": {
+												"name": "Description",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "PO_NUMBER"
+											},
+											"sink": {
+												"name": "PO_NUMBER",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "SPM_POH_ID"
+											},
+											"sink": {
+												"name": "SPM_POH_ID",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "SUPPLEMENT"
+											},
+											"sink": {
+												"name": "SUPPLEMENT",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "SUP_POH_ID"
+											},
+											"sink": {
+												"name": "SUP_POH_ID",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "POLI_POS"
+											},
+											"sink": {
+												"name": "POLI_POS",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "POLI_SUB_POS"
+											},
+											"sink": {
+												"name": "POLI_SUB_POS",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "ITEM_SHIP_POS"
+											},
+											"sink": {
+												"name": "ITEM_SHIP_POS",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "ITEM_SHIP_SUB_POS"
+											},
+											"sink": {
+												"name": "ITEM_SHIP_SUB_POS",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "FREIGHT_TERM"
+											},
+											"sink": {
+												"name": "FREIGHT_TERM",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "POLI_QTY"
+											},
+											"sink": {
+												"name": "POLI_QTY",
+												"type": "Decimal",
+												"physicalType": "decimal",
+												"scale": 16,
+												"precision": 31
+											}
+										},
+										{
+											"source": {
+												"name": "UOM"
+											},
+											"sink": {
+												"name": "UOM",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "ISH_PROM_CONTRACT_DATE"
+											},
+											"sink": {
+												"name": "ISH_PROM_CONTRACT_DATE",
+												"type": "DateTime",
+												"physicalType": "date"
+											}
+										},
+										{
+											"source": {
+												"name": "MATL_RECV_DATE"
+											},
+											"sink": {
+												"name": "MATL_RECV_DATE",
+												"type": "DateTime",
+												"physicalType": "date"
+											}
+										},
+										{
+											"source": {
+												"name": "ISH_ITEM_SHIP_QTY"
+											},
+											"sink": {
+												"name": "ISH_ITEM_SHIP_QTY",
+												"type": "Decimal",
+												"physicalType": "decimal",
+												"scale": 16,
+												"precision": 31
+											}
+										},
+										{
+											"source": {
+												"name": "RECV_QTY"
+											},
+											"sink": {
+												"name": "RECV_QTY",
+												"type": "Decimal",
+												"physicalType": "decimal",
+												"scale": 16,
+												"precision": 31
+											}
+										},
+										{
+											"source": {
+												"name": "RECV_TYPE"
+											},
+											"sink": {
+												"name": "RECV_TYPE",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "RECV_DOC_NUMBER"
+											},
+											"sink": {
+												"name": "RECV_DOC_NUMBER",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "JDE_PO_NUMBER"
+											},
+											"sink": {
+												"name": "JDE_PO_NUMBER",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "JDE_PO_LINE"
+											},
+											"sink": {
+												"name": "JDE_PO_LINE",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "ORDER_TYPE"
+											},
+											"sink": {
+												"name": "ORDER_TYPE",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "ORDER_SUFFIX"
+											},
+											"sink": {
+												"name": "ORDER_SUFFIX",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "ORDER_COMPANY"
+											},
+											"sink": {
+												"name": "ORDER_COMPANY",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "SPM_PO_NUMBER"
+											},
+											"sink": {
+												"name": "SPM_PO_NUMBER",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "SYSTEMOFRECORD"
+											},
+											"sink": {
+												"name": "SystemOfRecord",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "SORID"
+											},
+											"sink": {
+												"name": "SORId",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "ACCOUNT_COMPANY"
+											},
+											"sink": {
+												"name": "ACCOUNT_COMPANY",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										}
+									],
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_odbc_zycus_jde_cbiadhoc",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_ds_schema_name": {
+											"value": "CBIADHOC",
+											"type": "Expression"
+										},
+										"p_ds_table_name": {
+											"value": "SPMPOTEMP",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_sql_DALDSQL03_zycus_DM_Staging",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_ds_schema": {
+											"value": "Staging",
+											"type": "Expression"
+										},
+										"p_ds_table": {
+											"value": "LOAPurchaseOrderVendorDelivery",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "sp_LoaPurchaseOrderVendorDeliveryConsolidation",
+							"description": "This is executed to massage and consolidate all the records to be put into the final table.",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "cp_jde_temp_to_stage_loa_table",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[Filter].[LOAPurchaseOrderVendorDeliveryConsolidation]"
+							},
+							"linkedServiceName": {
+								"referenceName": "ls_SQL_Zycus_Datamart_Staging",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "cp_input_file_to_archive_folder",
+							"description": "Copies the input file to archive folder on success.",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "df_zycus_raw_to_destination",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": true,
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "DelimitedTextSink",
+									"storeSettings": {
+										"type": "FileServerWriteSettings"
+									},
+									"formatSettings": {
+										"type": "DelimitedTextWriteSettings",
+										"quoteAllText": true,
+										"fileExtension": ".txt"
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_adlsg2_csv_zycus_raw_generic",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_ds_folder_path": {
+											"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.folder_path,'/','Inbound')",
+											"type": "Expression"
+										},
+										"p_ds_file_name": {
+											"value": "@concat('Combined_',activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+											"type": "Expression"
+										},
+										"p_ds_file_system": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_fs_csv_zycus_generic",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_ds_source_directory": {
+											"value": "outbound/Archive",
+											"type": "Expression"
+										},
+										"p_ds_file_name": {
+											"value": "@replace(concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv'),'Receipt_File','SPM_Receipts')",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "cp_raw_outbound_to_final_destination",
+							"description": "Copying the data from raw outbound folder to final destination outbound folder with Timestamp format.",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "df_zycus_raw_to_destination",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": true,
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "DelimitedTextSink",
+									"storeSettings": {
+										"type": "FileServerWriteSettings"
+									},
+									"formatSettings": {
+										"type": "DelimitedTextWriteSettings",
+										"quoteAllText": true,
+										"fileExtension": ".txt"
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"mappings": [
+										{
+											"source": {
+												"name": "PROJ_ID",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "PROJ_ID",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PROJECT_DESCRIPTION",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "PROJECT_DESCRIPTION",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "JDE_PROJ_NUMBER",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "JDE_PROJ_NUMBER",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "OPERATING_GROUP",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "OPERATING_GROUP",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "SECTOR",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "SECTOR",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Client",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "Client",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "JDE_SUPPLIER_NUMBER",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "JDE_SUPPLIER_NUMBER",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "SUPPLIER_NAME",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "SUPPLIER_NAME",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "IDENT",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "IDENT",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "TAG_NUMBER",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "TAG_NUMBER",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Description",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "Description",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PO_NUMBER",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "PO_NUMBER",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "SPM_POH_ID",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "SPM_POH_ID",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "SUPPLEMENT",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "SUPPLEMENT",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "SUP_POH_ID",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "SUP_POH_ID",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "POLI_POS",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "POLI_POS",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "POLI_SUB_POS",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "POLI_SUB_POS",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ITEM_SHIP_POS",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "ITEM_SHIP_POS",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ITEM_SHIP_SUB_POS",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "ITEM_SHIP_SUB_POS",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "FREIGHT_TERM",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "FREIGHT_TERM",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "POLI_QTY",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "POLI_QTY",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "UOM",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "UOM",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ISH_PROM_CONTRACT_DATE",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "ISH_PROM_CONTRACT_DATE",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "MATL_RECV_DATE",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "MATL_RECV_DATE",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ISH_ITEM_SHIP_QTY",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "ISH_ITEM_SHIP_QTY",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "RECV_QTY",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "RECV_QTY",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "RECV_TYPE",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "RECV_TYPE",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "RECV_DOC_NUMBER",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "RECV_DOC_NUMBER",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "JDE_PO_NUMBER",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "JDE_PO_NUMBER",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "JDE_PO_LINE",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "JDE_PO_LINE",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ORDER_TYPE",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "ORDER_TYPE",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ORDER_SUFFIX",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "ORDER_SUFFIX",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ORDER_COMPANY",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "ORDER_COMPANY",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ACCOUNT_COMPANY",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "ACCOUNT_COMPANY",
+												"type": "String",
+												"physicalType": "String"
+											}
+										}
+									],
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_adlsg2_csv_zycus_raw_generic",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_ds_folder_path": {
+											"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.folder_path,'/','Outbound')",
+											"type": "Expression"
+										},
+										"p_ds_file_name": {
+											"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+											"type": "Expression"
+										},
+										"p_ds_file_system": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_fs_csv_zycus_outbound",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_ds_source_directory": {
+											"value": "outbound",
+											"type": "Expression"
+										},
+										"p_ds_file_name": {
+											"value": "@replace(concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'_',variables('v_raw_start_time'),'.csv'),':','_')",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "delete_source_inbound_file",
+							"description": "Deleting the source input file from inbound folder.",
+							"type": "Delete",
+							"dependsOn": [
+								{
+									"activity": "cp_input_file_to_archive_folder",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "cp_raw_outbound_to_final_destination",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataset": {
+									"referenceName": "ds_fs_csv_zycus_generic",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_ds_source_directory": {
+											"value": "inbound",
+											"type": "Expression"
+										},
+										"p_ds_file_name": {
+											"value": "SPM_RECEIPTS.csv",
+											"type": "Expression"
+										}
+									}
+								},
+								"logStorageSettings": {
+									"linkedServiceName": {
+										"referenceName": "ADLSG2 TimeAnalytics DEV",
+										"type": "LinkedServiceReference"
+									},
+									"path": "mdr-staging-data/Project_Data/Zycus/Logging"
+								},
+								"enableLogging": true,
+								"storeSettings": {
+									"type": "FileServerReadSettings",
+									"recursive": true,
+									"enablePartitionDiscovery": false
+								}
+							}
+						},
+						{
+							"name": "cp_input_file_to_error_folder_1",
+							"description": "Copies the input file to error folder on failure.",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "cp_raw_to_stage_spm_table",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": true,
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "DelimitedTextSink",
+									"storeSettings": {
+										"type": "FileServerWriteSettings"
+									},
+									"formatSettings": {
+										"type": "DelimitedTextWriteSettings",
+										"quoteAllText": true,
+										"fileExtension": ".txt"
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_adlsg2_csv_zycus_raw_generic",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_ds_folder_path": {
+											"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.folder_path,'/','Inbound')",
+											"type": "Expression"
+										},
+										"p_ds_file_name": {
+											"value": "@concat('Combined_',activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+											"type": "Expression"
+										},
+										"p_ds_file_system": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_fs_csv_zycus_generic",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_ds_source_directory": {
+											"value": "outbound/Error",
+											"type": "Expression"
+										},
+										"p_ds_file_name": {
+											"value": "@replace(concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv'),'Receipt_File','SPM_Receipts')",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "cp_input_file_to_error_folder_2",
+							"description": "Copies the input file to error folder on failure.",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "cp_stage_spm_to_jde_temp",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": true,
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "DelimitedTextSink",
+									"storeSettings": {
+										"type": "FileServerWriteSettings"
+									},
+									"formatSettings": {
+										"type": "DelimitedTextWriteSettings",
+										"quoteAllText": true,
+										"fileExtension": ".txt"
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_adlsg2_csv_zycus_raw_generic",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_ds_folder_path": {
+											"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.folder_path,'/','Inbound')",
+											"type": "Expression"
+										},
+										"p_ds_file_name": {
+											"value": "@concat('Combined_',activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+											"type": "Expression"
+										},
+										"p_ds_file_system": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_fs_csv_zycus_generic",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_ds_source_directory": {
+											"value": "outbound/Error",
+											"type": "Expression"
+										},
+										"p_ds_file_name": {
+											"value": "@replace(concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv'),'Receipt_File','SPM_Receipts')",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "cp_input_file_to_error_folder_3",
+							"description": "Copies the input file to error folder on failure.",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "cp_jde_temp_to_stage_loa_table",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": true,
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "DelimitedTextSink",
+									"storeSettings": {
+										"type": "FileServerWriteSettings"
+									},
+									"formatSettings": {
+										"type": "DelimitedTextWriteSettings",
+										"quoteAllText": true,
+										"fileExtension": ".txt"
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_adlsg2_csv_zycus_raw_generic",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_ds_folder_path": {
+											"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.folder_path,'/','Inbound')",
+											"type": "Expression"
+										},
+										"p_ds_file_name": {
+											"value": "@concat('Combined_',activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+											"type": "Expression"
+										},
+										"p_ds_file_system": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_fs_csv_zycus_generic",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_ds_source_directory": {
+											"value": "outbound/Error",
+											"type": "Expression"
+										},
+										"p_ds_file_name": {
+											"value": "@replace(concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv'),'Receipt_File','SPM_Receipts')",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "cp_input_file_to_error_folder_4",
+							"description": "Copies the input file to error folder on failure.",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "sp_LoaPurchaseOrderVendorDeliveryConsolidation",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": true,
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "DelimitedTextSink",
+									"storeSettings": {
+										"type": "FileServerWriteSettings"
+									},
+									"formatSettings": {
+										"type": "DelimitedTextWriteSettings",
+										"quoteAllText": true,
+										"fileExtension": ".txt"
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_adlsg2_csv_zycus_raw_generic",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_ds_folder_path": {
+											"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.folder_path,'/','Inbound')",
+											"type": "Expression"
+										},
+										"p_ds_file_name": {
+											"value": "@concat('Combined_',activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+											"type": "Expression"
+										},
+										"p_ds_file_system": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_fs_csv_zycus_generic",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_ds_source_directory": {
+											"value": "outbound/Error",
+											"type": "Expression"
+										},
+										"p_ds_file_name": {
+											"value": "@replace(concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv'),'Receipt_File','SPM_Receipts')",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "cp_input_file_to_error_folder_5",
+							"description": "Copies the input file to error folder on failure.",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "df_zycus_raw_to_destination",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": true,
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "DelimitedTextSink",
+									"storeSettings": {
+										"type": "FileServerWriteSettings"
+									},
+									"formatSettings": {
+										"type": "DelimitedTextWriteSettings",
+										"quoteAllText": true,
+										"fileExtension": ".txt"
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_adlsg2_csv_zycus_raw_generic",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_ds_folder_path": {
+											"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.folder_path,'/','Inbound')",
+											"type": "Expression"
+										},
+										"p_ds_file_name": {
+											"value": "@concat('Combined_',activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+											"type": "Expression"
+										},
+										"p_ds_file_system": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_fs_csv_zycus_generic",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_ds_source_directory": {
+											"value": "outbound/Error",
+											"type": "Expression"
+										},
+										"p_ds_file_name": {
+											"value": "@replace(concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv'),'Receipt_File','SPM_Receipts')",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "cp_final_table_to_raw_outbound",
+							"description": "Copying the data from final table \"Logistics.PurchaseOrderVendorDelivery\" into raw outbound folder.",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "sp_LoaPurchaseOrderVendorDeliveryConsolidation",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SqlServerSource",
+									"sqlReaderQuery": {
+										"value": "SELECT PROJ_ID, PROJECT_DESCRIPTION, JDE_PROJ_NUMBER, OPERATING_GROUP, SECTOR, Client, JDE_SUPPLIER_NUMBER, IDENT, Description, TAG_NUMBER, \n                         SUPPLIER_NAME, PO_NUMBER, SPM_POH_ID, SUPPLEMENT, SUP_POH_ID, POLI_POS, POLI_SUB_POS, ITEM_SHIP_POS, ITEM_SHIP_SUB_POS, \n                         FREIGHT_TERM, CAST(POLI_QTY as decimal(31,3)) as POLI_QTY, UOM, ISH_PROM_CONTRACT_DATE, MATL_RECV_DATE, ISH_ITEM_SHIP_QTY,\nCAST(RECV_QTY as decimal(31,3)) as RECV_QTY, RECV_TYPE, RECV_DOC_NUMBER, \n                         JDE_PO_NUMBER, JDE_PO_LINE, ORDER_TYPE, ORDER_SUFFIX, ORDER_COMPANY, ACCOUNT_COMPANY\nFROM [Logistics].[PurchaseOrderVendorDeliveryZycus]\nwhere  BatchDate = (SELECT MAX(BatchDate) from [Logistics].[PurchaseOrderVendorDeliveryZycus])\nAND LEN(PROJ_ID) > 0\nORDER BY PROJ_ID,MATL_RECV_DATE",
+										"type": "Expression"
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"sink": {
+									"type": "DelimitedTextSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									},
+									"formatSettings": {
+										"type": "DelimitedTextWriteSettings",
+										"quoteAllText": true,
+										"fileExtension": ".txt"
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"mappings": [
+										{
+											"source": {
+												"name": "PROJ_ID",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "PROJ_ID",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PROJECT_DESCRIPTION",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "PROJECT_DESCRIPTION",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "JDE_PROJ_NUMBER",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "JDE_PROJ_NUMBER",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "OPERATING_GROUP",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "OPERATING_GROUP",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "SECTOR",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "SECTOR",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Client",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "Client",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "JDE_SUPPLIER_NUMBER",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "JDE_SUPPLIER_NUMBER",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "IDENT",
+												"type": "Decimal",
+												"physicalType": "decimal",
+												"scale": 0,
+												"precision": 31
+											},
+											"sink": {
+												"name": "IDENT",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Description",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "Description",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "TAG_NUMBER",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "TAG_NUMBER",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "SUPPLIER_NAME",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "SUPPLIER_NAME",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PO_NUMBER",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "PO_NUMBER",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "SPM_POH_ID",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "SPM_POH_ID",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "SUPPLEMENT",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "SUPPLEMENT",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "SUP_POH_ID",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "SUP_POH_ID",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "POLI_POS",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "POLI_POS",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "POLI_SUB_POS",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "POLI_SUB_POS",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ITEM_SHIP_POS",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "ITEM_SHIP_POS",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ITEM_SHIP_SUB_POS",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "ITEM_SHIP_SUB_POS",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "FREIGHT_TERM",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "FREIGHT_TERM",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "POLI_QTY",
+												"type": "Decimal",
+												"physicalType": "decimal",
+												"scale": 3,
+												"precision": 31
+											},
+											"sink": {
+												"name": "POLI_QTY",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "UOM",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "UOM",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ISH_PROM_CONTRACT_DATE",
+												"type": "DateTime",
+												"physicalType": "date"
+											},
+											"sink": {
+												"name": "ISH_PROM_CONTRACT_DATE",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "MATL_RECV_DATE",
+												"type": "DateTime",
+												"physicalType": "date"
+											},
+											"sink": {
+												"name": "MATL_RECV_DATE",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ISH_ITEM_SHIP_QTY",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "ISH_ITEM_SHIP_QTY",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "RECV_QTY",
+												"type": "Decimal",
+												"physicalType": "decimal",
+												"scale": 3,
+												"precision": 31
+											},
+											"sink": {
+												"name": "RECV_QTY",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "RECV_TYPE",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "RECV_TYPE",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "RECV_DOC_NUMBER",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "RECV_DOC_NUMBER",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "JDE_PO_NUMBER",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "JDE_PO_NUMBER",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "JDE_PO_LINE",
+												"type": "Decimal",
+												"physicalType": "decimal",
+												"scale": 3,
+												"precision": 6
+											},
+											"sink": {
+												"name": "JDE_PO_LINE",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ORDER_TYPE",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "ORDER_TYPE",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ORDER_SUFFIX",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "ORDER_SUFFIX",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ORDER_COMPANY",
+												"type": "Int32",
+												"physicalType": "int"
+											},
+											"sink": {
+												"name": "ORDER_COMPANY",
+												"type": "String",
+												"physicalType": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ACCOUNT_COMPANY",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "ACCOUNT_COMPANY",
+												"type": "String",
+												"physicalType": "String"
+											}
+										}
+									],
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_sql_CLDQSQL14_zycus_DM",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_ds_schema": {
+											"value": "Logistics",
+											"type": "Expression"
+										},
+										"p_ds_table": {
+											"value": "PurchaseOrderVendorDelivery",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_adlsg2_csv_zycus_raw_generic",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_ds_folder_path": {
+											"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.folder_path,'/','Outbound')",
+											"type": "Expression"
+										},
+										"p_ds_file_name": {
+											"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'_','Temp','.csv')",
+											"type": "Expression"
+										},
+										"p_ds_file_system": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "df_zycus_raw_to_destination",
+							"type": "ExecuteDataFlow",
+							"dependsOn": [
+								{
+									"activity": "cp_final_table_to_raw_outbound",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataflow": {
+									"referenceName": "df_zycus_raw_to_destination",
+									"type": "DataFlowReference",
+									"parameters": {
+										"p_df_file_name": {
+											"value": "'@{concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')}'",
+											"type": "Expression"
+										}
+									},
+									"datasetParameters": {
+										"UncleanedProcessed": {
+											"p_ds_folder_path": {
+												"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.folder_path,'/','Outbound')",
+												"type": "Expression"
+											},
+											"p_ds_file_name": {
+												"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'_','Temp','.csv')",
+												"type": "Expression"
+											},
+											"p_ds_file_system": {
+												"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+												"type": "Expression"
+											}
+										},
+										"CleanedProcessed": {
+											"p_ds_folder_path": {
+												"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.folder_path,'/','Outbound')",
+												"type": "Expression"
+											},
+											"p_ds_file_name": {
+												"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+												"type": "Expression"
+											},
+											"p_ds_file_system": {
+												"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system\n",
+												"type": "Expression"
+											}
+										}
+									}
+								},
+								"compute": {
+									"coreCount": 8,
+									"computeType": "General"
+								},
+								"traceLevel": "Fine"
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Delete Temp combined File",
+				"description": "After the data has been loaded, clear the combined file from the ADLSV2 ",
+				"type": "Delete",
+				"dependsOn": [
+					{
+						"activity": "if_file_exists_copy_to_destination",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_zycus_generic",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_ds_folder_path": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+								"type": "Expression"
+							},
+							"p_ds_file_name": {
+								"value": "@concat('Temp_',activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+								"type": "Expression"
+							},
+							"p_ds_file_system": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+								"type": "Expression"
+							}
+						}
+					},
+					"enableLogging": false,
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true
+					}
+				}
+			},
+			{
+				"name": "SP Update Control Table Last Run Date",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "if_file_exists_copy_to_destination",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+					"storedProcedureParameters": {
+						"pParameterCode": {
+							"value": "last_run_start_date",
+							"type": "String"
+						},
+						"pParameterValue": {
+							"value": {
+								"value": "@variables('v_raw_start_time')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": {
+								"value": "Zycus",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "linkedservice_DEV_entanalytics_synapse",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"variables": {
+			"v_error_message": {
+				"type": "Array"
+			},
+			"v_raw_start_time": {
+				"type": "String"
+			},
+			"v_inner_error_message": {
+				"type": "Array"
+			}
+		},
+		"folder": {
+			"name": "Projects/ZYCUS"
+		},
+		"annotations": [],
+		"lastPublishTime": "2024-04-30T07:34:09Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

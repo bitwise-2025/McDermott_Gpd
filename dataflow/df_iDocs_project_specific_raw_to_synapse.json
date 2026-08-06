@@ -1,0 +1,36 @@
+{
+	"name": "df_iDocs_project_specific_raw_to_synapse",
+	"properties": {
+		"description": "Data Flow iDocs Project Specific Raw to Synapse ",
+		"folder": {
+			"name": "Projects/NCSA/iDocs/Project Specific"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_idocs_project_specific_raw_latest",
+						"type": "DatasetReference"
+					},
+					"name": "srciDocsProjectSpecificRaw"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_AzureSynapseAnalytics_idocs_project_specific",
+						"type": "DatasetReference"
+					},
+					"name": "snkiDocsProjectSpecificSynapse"
+				}
+			],
+			"transformations": [
+				{
+					"name": "iDocsProjectSepcificDataTransform"
+				}
+			],
+			"script": "source(output(\n\t\t{PROJECT NO.} as string,\n\t\t{PROJECT ID} as string,\n\t\t{PROJECT NAME} as string,\n\t\t{CLIENT NAME} as string,\n\t\tDELIVERABLE as string,\n\t\t{DOC ID} as string,\n\t\t{TYPE CLASS} as string,\n\t\t{DOCUMENT NUMBER} as string,\n\t\tPROJ_DEFINED_01 as string,\n\t\tPROJ_DEFINED_02 as float '###,###.##',\n\t\tPROJ_DEFINED_03 as float '###,###.##',\n\t\tPROJ_DEFINED_04 as float '###,###.##',\n\t\tPROJ_DEFINED_05 as float '###,###.##',\n\t\tPROJ_DEFINED_06 as string,\n\t\tPROJ_DEFINED_07 as string,\n\t\tPROJ_DEFINED_08 as string,\n\t\tPROJ_DEFINED_09 as string,\n\t\tPROJ_DEFINED_10 as string,\n\t\tPROJ_DEFINED_11 as string,\n\t\tPROJ_DEFINED_12 as string,\n\t\tPROJ_DEFINED_13 as string,\n\t\tPROJ_DEFINED_14 as string,\n\t\tPROJ_DEFINED_15 as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\twildcardPaths:['Project_Data/NCSA/iDocs/Project_Specific/Latest_iDocs_Project_Specific.csv']) ~> srciDocsProjectSpecificRaw\nsrciDocsProjectSpecificRaw derive({PROJECT NO.} = iif(length(regexSplit({PROJECT NO.},'[-]')[1])>5,concat('99',regexSplit({PROJECT NO.},'[-]')[1]),regexSplit({PROJECT NO.},'[-]')[1]),\n\t\teach(match((in(['PROJ_DEFINED_02','PROJ_DEFINED_03','PROJ_DEFINED_04','PROJ_DEFINED_05'],name))), $$ = toDecimal($$, 8, 4))) ~> iDocsProjectSepcificDataTransform\niDocsProjectSepcificDataTransform sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tinput(\n\t\tstage_idoc_proj_spec_id as integer,\n\t\tPROJECT_NUMBER as string,\n\t\tPROJECT_ID as string,\n\t\tPROJECT_NAME as string,\n\t\tCLIENT_NAME as string,\n\t\tDELIVERABLE as string,\n\t\tDOC_ID as string,\n\t\tTYPE_CLASS as string,\n\t\tDOCUMENT_NUMBER as string,\n\t\tPROJ_DEFINED_01 as string,\n\t\tPROJ_DEFINED_02 as double,\n\t\tPROJ_DEFINED_03 as double,\n\t\tPROJ_DEFINED_04 as double,\n\t\tPROJ_DEFINED_05 as double,\n\t\tPROJ_DEFINED_06 as string,\n\t\tPROJ_DEFINED_07 as string,\n\t\tPROJ_DEFINED_08 as string,\n\t\tPROJ_DEFINED_09 as string,\n\t\tPROJ_DEFINED_10 as string,\n\t\tPROJ_DEFINED_11 as string,\n\t\tPROJ_DEFINED_12 as string,\n\t\tPROJ_DEFINED_13 as string,\n\t\tPROJ_DEFINED_14 as string,\n\t\tPROJ_DEFINED_15 as string\n\t),\n\tdeletable:false,\n\tinsertable:true,\n\tupdateable:false,\n\tupsertable:false,\n\ttruncate:true,\n\tformat: 'table',\n\tstaged: true,\n\tallowCopyCommand: true,\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\terrorHandlingOption: 'stopOnFirstError',\n\tmapColumn(\n\t\tPROJECT_NUMBER = {PROJECT NO.},\n\t\tPROJECT_ID = {PROJECT ID},\n\t\tPROJECT_NAME = {PROJECT NAME},\n\t\tCLIENT_NAME = {CLIENT NAME},\n\t\tDELIVERABLE,\n\t\tDOC_ID = {DOC ID},\n\t\tTYPE_CLASS = {TYPE CLASS},\n\t\tDOCUMENT_NUMBER = {DOCUMENT NUMBER},\n\t\tPROJ_DEFINED_01,\n\t\tPROJ_DEFINED_02,\n\t\tPROJ_DEFINED_03,\n\t\tPROJ_DEFINED_04,\n\t\tPROJ_DEFINED_05,\n\t\tPROJ_DEFINED_06,\n\t\tPROJ_DEFINED_07,\n\t\tPROJ_DEFINED_08,\n\t\tPROJ_DEFINED_09,\n\t\tPROJ_DEFINED_10,\n\t\tPROJ_DEFINED_11,\n\t\tPROJ_DEFINED_12,\n\t\tPROJ_DEFINED_13,\n\t\tPROJ_DEFINED_14,\n\t\tPROJ_DEFINED_15\n\t)) ~> snkiDocsProjectSpecificSynapse"
+		}
+	}
+}

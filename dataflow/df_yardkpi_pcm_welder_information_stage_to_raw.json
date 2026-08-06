@@ -1,0 +1,88 @@
+{
+	"name": "df_yardkpi_pcm_welder_information_stage_to_raw",
+	"properties": {
+		"folder": {
+			"name": "Projects/YARD KPI/PCM"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_yardkpi_pcm_weld_info_generic",
+						"type": "DatasetReference"
+					},
+					"name": "Source"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_yardkpi_pcm_weld_info_generic",
+						"type": "DatasetReference"
+					},
+					"name": "Sink"
+				}
+			],
+			"transformations": [
+				{
+					"name": "setFileName"
+				}
+			],
+			"scriptLines": [
+				"parameters{",
+				"     p_df_folderpath as string,",
+				"     p_df_filename as string",
+				"}",
+				"source(output(",
+				"          fab_code as string,",
+				"          welder as string,",
+				"          employee_name as string,",
+				"          employee_location as string,",
+				"          location_detail as string,",
+				"          employer as string,",
+				"          employer_detail as string,",
+				"          start_date as string,",
+				"          termination_date as string,",
+				"          welder_type as string,",
+				"          Welder_type_Description as string,",
+				"          emp_status as string,",
+				"          Badge_Id as string,",
+				"          SAP_Id as string,",
+				"          source_code as string,",
+				"          sub_source_code as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: true,",
+				"     purgeFiles: true,",
+				"     rowUrlColumn: 'File_Path',",
+				"     multiLineRow: true,",
+				"     wildcardPaths:[($p_df_folderpath+'/'+$p_df_filename+'_*.csv')]) ~> Source",
+				"Source derive(fab_code = trim(replace(replace(replace(replace(replace(replace(fab_code,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+				"          welder = trim(replace(replace(replace(replace(replace(replace(welder,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+				"          employee_name = trim(replace(replace(replace(replace(replace(replace(employee_name,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+				"          employee_location = trim(replace(replace(replace(replace(replace(replace(employee_location,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+				"          location_detail = trim(replace(replace(replace(replace(replace(replace(location_detail,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+				"          employer = trim(replace(replace(replace(replace(replace(replace(employer,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+				"          employer_detail = trim(replace(replace(replace(replace(replace(replace(employer_detail,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+				"          start_date = trim(replace(replace(replace(replace(replace(replace(start_date,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+				"          termination_date = trim(replace(replace(replace(replace(replace(replace(termination_date,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+				"          welder_type = trim(replace(replace(replace(replace(replace(replace(welder_type,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+				"          Welder_type_Description = trim(replace(replace(replace(replace(replace(replace(Welder_type_Description,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+				"          emp_status = trim(replace(replace(replace(replace(replace(replace(emp_status,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+				"          Badge_Id = trim(replace(replace(replace(replace(replace(replace(Badge_Id,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+				"          SAP_Id = trim(replace(replace(replace(replace(replace(replace(SAP_Id,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+				"          File_Path = concat(concat($p_df_folderpath,'/'),substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',$p_df_filename,'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv')) ~> setFileName",
+				"setFileName sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     rowUrlColumn:'File_Path',",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> Sink"
+			]
+		}
+	}
+}

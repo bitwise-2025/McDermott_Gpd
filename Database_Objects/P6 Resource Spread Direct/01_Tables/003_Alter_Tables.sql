@@ -1,0 +1,132 @@
+Alter table [gpd].[tmp_P6_resource_activity]
+add 
+[calendar] [varchar](120) null
+,[resource_id_name] [varchar](120) null
+,[resource_name] [varchar](120) null
+,[resource_type] [varchar](120) null
+,[phase] [varchar](120) null
+,[storage_solutions] [varchar](120) null
+,[supply_chain] [varchar](120) null
+,[spreadsheet_field] [varchar](512) null
+,[work_unit] [nvarchar](100) null
+,[iwp] [nvarchar](100) null
+,[pim] [nvarchar](100) null
+,[roc] [nvarchar](100) null
+,[data_class] [nvarchar](100) null
+,[sub_source] [nvarchar](100) null
+,[source] [nvarchar](100) null
+,[unit_of_measure] [nvarchar](100) null
+,[free_float] [varchar](120) null
+,[bl_project_start]  [varchar](120) null
+,[bl_project_finish] [varchar](120) null
+,[activity_type] [varchar](120) null
+,[longest_path] [varchar](120) null
+,[primary_constraint_date] [varchar](120) null
+,[secondary_constraint_date] [varchar](120) null
+,[primary_constraint] [varchar](120) null
+,[secondary_constraint] [varchar](120) null
+,[expected_finish] [varchar](120) null
+,[suspend_date] [varchar](120) null
+,[resume_date] [varchar](120) null
+,[bl_project_labor_units] [varchar](120) null
+,[earned_value_labor_units] [varchar](120) null
+,[planned_value_labor_units] [varchar](120) null
+,[bl_project_duration] [varchar](120) null
+,[physical_percent_complete] [varchar](120) null
+,[predecessors] [varchar](120) null
+,[successors] [varchar](120) null
+,[predecessor_details] [varchar](120) null
+,[successors_details] [varchar](120) null
+,[late_start] [varchar](120) null
+,[late_finish] [varchar](120) null
+
+GO
+-----------------------------------------------------------------------------
+
+Alter table [gpd].[reprocess_tmp_P6_resource_activity]
+add 
+[calendar] [varchar](120) null
+,[resource_id_name] [varchar](120) null
+,[resource_name] [varchar](120) null
+,[resource_type] [varchar](120) null
+,[phase] [varchar](120) null
+,[storage_solutions] [varchar](120) null
+,[supply_chain] [varchar](120) null
+,[spreadsheet_field] [varchar](512) null
+,[work_unit] [nvarchar](100) null
+,[iwp] [nvarchar](100) null
+,[pim] [nvarchar](100) null
+,[roc] [nvarchar](100) null
+,[data_class] [nvarchar](100) null
+,[sub_source] [nvarchar](100) null
+,[source] [nvarchar](100) null
+,[unit_of_measure] [nvarchar](100) null
+,[free_float] [varchar](120) null
+,[bl_project_start]  [varchar](120) null
+,[bl_project_finish] [varchar](120) null
+,[activity_type] [varchar](120) null
+,[longest_path] [varchar](120) null
+,[primary_constraint_date] [varchar](120) null
+,[secondary_constraint_date] [varchar](120) null
+,[primary_constraint] [varchar](120) null
+,[secondary_constraint] [varchar](120) null
+,[expected_finish] [varchar](120) null
+,[suspend_date] [varchar](120) null
+,[resume_date] [varchar](120) null
+,[bl_project_labor_units] [varchar](120) null
+,[earned_value_labor_units] [varchar](120) null
+,[planned_value_labor_units] [varchar](120) null
+,[bl_project_duration] [varchar](120) null
+,[physical_percent_complete] [varchar](120) null
+,[predecessors] [varchar](120) null
+,[successors] [varchar](120) null
+,[predecessor_details] [varchar](120) null
+,[successors_details] [varchar](120) null
+,[late_start] [varchar](120) null
+,[late_finish] [varchar](120) null
+
+GO
+-----------------------------------------------------------------------------
+
+Alter table dbo.dim_entp_activity_resource
+add 
+[calendar] [varchar](120) null
+,[resource_id_name] [varchar](120) null
+,[resource_name] [varchar](120) null
+,[resource_type] [varchar](120) null
+,[phase] [varchar](120) null
+,[storage_solutions] [varchar](120) null
+,[supply_chain] [varchar](120) null
+,[spreadsheet_field] [varchar](512) null
+,[work_unit] [nvarchar](100) null
+,[iwp] [nvarchar](100) null
+,[pim] [nvarchar](100) null
+,[roc] [nvarchar](100) null
+,[data_class] [nvarchar](100) null
+,[sub_source] [nvarchar](100) null
+,[source] [nvarchar](100) null
+,[unit_of_measure] [nvarchar](100) null
+,[free_float] [varchar](120) null
+,[bl_project_start]  [varchar](120) null
+,[bl_project_finish] [varchar](120) null
+,[activity_type] [varchar](120) null
+,[longest_path] [varchar](120) null
+,[primary_constraint_date] [varchar](120) null
+,[secondary_constraint_date] [varchar](120) null
+,[primary_constraint] [varchar](120) null
+,[secondary_constraint] [varchar](120) null
+,[expected_finish] [varchar](120) null
+,[suspend_date] [varchar](120) null
+,[resume_date] [varchar](120) null
+,[bl_project_labor_units] [varchar](120) null
+,[earned_value_labor_units] [varchar](120) null
+,[planned_value_labor_units] [varchar](120) null
+,[bl_project_duration] [varchar](120) null
+,[physical_percent_complete] [varchar](120) null
+,[predecessors] [varchar](120) null
+,[successors] [varchar](120) null
+,[predecessor_details] [varchar](120) null
+,[successors_details] [varchar](120) null
+,[late_start] [varchar](120) null
+,[late_finish] [varchar](120) null
+

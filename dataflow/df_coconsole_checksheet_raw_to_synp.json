@@ -1,0 +1,39 @@
+{
+	"name": "df_coconsole_checksheet_raw_to_synp",
+	"properties": {
+		"description": "Data Flow to pull data from ADLS RAW to Synapse database\nData Transformation used to update PROJECT  and perform other ETL activities",
+		"folder": {
+			"name": "Projects/NCSA/Co Console"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_coconsole_cs_raw_latest",
+						"type": "DatasetReference"
+					},
+					"name": "srcCheckSheetRAWLatest"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_AzureSynapseAnalytics_coconsole_checksheet",
+						"type": "DatasetReference"
+					},
+					"name": "snkChekSheetRptSynapse"
+				}
+			],
+			"transformations": [
+				{
+					"name": "DataTransformation"
+				},
+				{
+					"name": "FltNULL"
+				}
+			],
+			"script": "source(output(\n\t\tProject as string,\n\t\t{System No} as string,\n\t\t{System Description} as string,\n\t\t{Sub System} as string,\n\t\t{Sub System Descr.} as string,\n\t\tObject as string,\n\t\t{Object Description} as string,\n\t\tType as string,\n\t\tDisc as string,\n\t\t{Discipline Description} as string,\n\t\tSheet as string,\n\t\t{Sheet Des} as string,\n\t\t{Sheet Status} as string,\n\t\t{Ok Y/N} as string,\n\t\tApprover as string,\n\t\t{Status date} as string,\n\t\tA as string,\n\t\tB as string,\n\t\tC as string,\n\t\tD as string,\n\t\tBarcode as string,\n\t\t{Phase No} as string,\n\t\tSrcFileNam as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false) ~> srcCheckSheetRAWLatest\nsrcCheckSheetRAWLatest derive(Project = iif(length(Project)>5,concat('99',Project),Project)) ~> DataTransformation\nDataTransformation filter(!isNull(Project) && !isNull({System No}) && !isNull({Sub System})) ~> FltNULL\nFltNULL sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tinput(\n\t\tstage_coconsole_checksheet_id as integer,\n\t\tProject as string,\n\t\tSystem_No as string,\n\t\tSystem_Description as string,\n\t\tSub_System as string,\n\t\tSub_System_Descr as string,\n\t\tObject as string,\n\t\tObject_Description as string,\n\t\tType as string,\n\t\tDisc as string,\n\t\tDiscipline_Description as string,\n\t\tSheet as string,\n\t\tSheet_Des as string,\n\t\tSheet_Status as string,\n\t\tOk as string,\n\t\tApprover as string,\n\t\tStatus_date as string,\n\t\tA as string,\n\t\tB as string,\n\t\tC as string,\n\t\tD as string,\n\t\tBarcode as string,\n\t\tPhase_No as string,\n\t\tSrcFileName as string\n\t),\n\tdeletable:false,\n\tinsertable:true,\n\tupdateable:false,\n\tupsertable:false,\n\ttruncate:true,\n\tformat: 'table',\n\tstaged: true,\n\tallowCopyCommand: true,\n\terrorHandlingOption: 'stopOnFirstError',\n\tmapColumn(\n\t\tProject,\n\t\tSystem_No = {System No},\n\t\tSystem_Description = {System Description},\n\t\tSub_System = {Sub System},\n\t\tSub_System_Descr = {Sub System Descr.},\n\t\tObject,\n\t\tObject_Description = {Object Description},\n\t\tType,\n\t\tDisc,\n\t\tDiscipline_Description = {Discipline Description},\n\t\tSheet,\n\t\tSheet_Des = {Sheet Des},\n\t\tSheet_Status = {Sheet Status},\n\t\tOk = {Ok Y/N},\n\t\tApprover,\n\t\tStatus_date = {Status date},\n\t\tA,\n\t\tB,\n\t\tC,\n\t\tD,\n\t\tBarcode,\n\t\tPhase_No = {Phase No},\n\t\tSrcFileName = SrcFileNam\n\t)) ~> snkChekSheetRptSynapse"
+		}
+	}
+}

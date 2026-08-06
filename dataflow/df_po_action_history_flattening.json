@@ -1,0 +1,97 @@
+{
+	"name": "df_po_action_history_flattening",
+	"properties": {
+		"folder": {
+			"name": "Projects/Payment Dashboard/Po Action History"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_xml_po_action_history_source_stage_decoded_xml",
+						"type": "DatasetReference"
+					},
+					"name": "SrcXMl"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_po_action_history_source_stage_final_csv",
+						"type": "DatasetReference"
+					},
+					"name": "SnkCsv"
+				}
+			],
+			"transformations": [
+				{
+					"name": "XmlToCsvflatten"
+				},
+				{
+					"name": "addLoadDetails"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          DATA_DS as (G_1 as (ACTION_CODE as string, ACTION_DATE as string, ACTION_LEVEL as short, ASSIGNMENT_DATE as string, CORRELATION_ID as string, CREATED_BY as string, CREATION_DATE as string, EMAIL_MESSAGE_ID as string, ERROR_CODE as string, ESIGN_ENVELOPE_ID as string, ESIGN_ENV_OWNER_EMAIL_ID as string, IDENTIFICATION_KEY as string, LAST_UPDATED_BY as string, LAST_UPDATE_DATE as string, LAST_UPDATE_LOGIN as string, NOTE as string, NOTE_MESSAGE_CODE_FLAG as boolean, OBJECT_ID as long, OBJECT_REVISION_NUM as short, OBJECT_SUB_TYPE_CODE as string, OBJECT_TYPE_CODE as string, OBJECT_VERSION_NUMBER as short, OFFLINE_CODE as string, PARENT_VERSION_ID as long, PERFORMER_ID as long, PO_VERSION_ID as long, PROGRAM_DATE as string, REQUEST_ID as string, ROLE_CODE as string, SEQUENCE_NUM as short, SUPPLIER_ACCESSIBLE_FLAG as boolean)[], P_FROM_DATE as timestamp, P_TO_DATE as timestamp)",
+				"     ),",
+				"     allowSchemaDrift: false,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     validationMode: 'none',",
+				"     namespaces: true) ~> SrcXMl",
+				"SrcXMl foldDown(unroll(DATA_DS.G_1),",
+				"     mapColumn(",
+				"          ACTION_CODE = DATA_DS.G_1.ACTION_CODE,",
+				"          ACTION_DATE = DATA_DS.G_1.ACTION_DATE,",
+				"          ACTION_LEVEL = DATA_DS.G_1.ACTION_LEVEL,",
+				"          ASSIGNMENT_DATE = DATA_DS.G_1.ASSIGNMENT_DATE,",
+				"          CORRELATION_ID = DATA_DS.G_1.CORRELATION_ID,",
+				"          CREATED_BY = DATA_DS.G_1.CREATED_BY,",
+				"          CREATION_DATE = DATA_DS.G_1.CREATION_DATE,",
+				"          EMAIL_MESSAGE_ID = DATA_DS.G_1.EMAIL_MESSAGE_ID,",
+				"          ERROR_CODE = DATA_DS.G_1.ERROR_CODE,",
+				"          ESIGN_ENVELOPE_ID = DATA_DS.G_1.ESIGN_ENVELOPE_ID,",
+				"          ESIGN_ENV_OWNER_EMAIL_ID = DATA_DS.G_1.ESIGN_ENV_OWNER_EMAIL_ID,",
+				"          IDENTIFICATION_KEY = DATA_DS.G_1.IDENTIFICATION_KEY,",
+				"          LAST_UPDATED_BY = DATA_DS.G_1.LAST_UPDATED_BY,",
+				"          LAST_UPDATE_DATE = DATA_DS.G_1.LAST_UPDATE_DATE,",
+				"          LAST_UPDATE_LOGIN = DATA_DS.G_1.LAST_UPDATE_LOGIN,",
+				"          NOTE = DATA_DS.G_1.NOTE,",
+				"          NOTE_MESSAGE_CODE_FLAG = DATA_DS.G_1.NOTE_MESSAGE_CODE_FLAG,",
+				"          OBJECT_ID = DATA_DS.G_1.OBJECT_ID,",
+				"          OBJECT_REVISION_NUM = DATA_DS.G_1.OBJECT_REVISION_NUM,",
+				"          OBJECT_SUB_TYPE_CODE = DATA_DS.G_1.OBJECT_SUB_TYPE_CODE,",
+				"          OBJECT_TYPE_CODE = DATA_DS.G_1.OBJECT_TYPE_CODE,",
+				"          OBJECT_VERSION_NUMBER = DATA_DS.G_1.OBJECT_VERSION_NUMBER,",
+				"          OFFLINE_CODE = DATA_DS.G_1.OFFLINE_CODE,",
+				"          PARENT_VERSION_ID = DATA_DS.G_1.PARENT_VERSION_ID,",
+				"          PERFORMER_ID = DATA_DS.G_1.PERFORMER_ID,",
+				"          PO_VERSION_ID = DATA_DS.G_1.PO_VERSION_ID,",
+				"          PROGRAM_DATE = DATA_DS.G_1.PROGRAM_DATE,",
+				"          REQUEST_ID = DATA_DS.G_1.REQUEST_ID,",
+				"          ROLE_CODE = DATA_DS.G_1.ROLE_CODE,",
+				"          SEQUENCE_NUM = DATA_DS.G_1.SEQUENCE_NUM,",
+				"          SUPPLIER_ACCESSIBLE_FLAG = DATA_DS.G_1.SUPPLIER_ACCESSIBLE_FLAG,",
+				"          P_FROM_DATE = DATA_DS.P_FROM_DATE,",
+				"          P_TO_DATE = DATA_DS.P_TO_DATE",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> XmlToCsvflatten",
+				"XmlToCsvflatten derive(source_name = 'SYSTEM',",
+				"          sub_source_name = 'R2P',",
+				"          created_date_time = currentUTC()) ~> addLoadDetails",
+				"addLoadDetails sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     partitionFileNames:['Po_Action_History.csv'],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> SnkCsv"
+			]
+		}
+	}
+}

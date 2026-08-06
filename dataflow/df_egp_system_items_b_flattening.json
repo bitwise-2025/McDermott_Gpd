@@ -1,0 +1,75 @@
+{
+	"name": "df_egp_system_items_b_flattening",
+	"properties": {
+		"folder": {
+			"name": "Projects/Payment Dashboard/Egp System Items B"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_xml_egp_system_items_b_source_stage_decoded_xml",
+						"type": "DatasetReference"
+					},
+					"name": "SrcXMl"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_egp_system_items_b_source_stage_final_csv",
+						"type": "DatasetReference"
+					},
+					"name": "SnkCsv"
+				}
+			],
+			"transformations": [
+				{
+					"name": "XmlToCsvflatten"
+				},
+				{
+					"name": "addLoadDetails"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          DATA_DS as (G_1 as (APPROVAL_STATUS as string, CREATED_BY as string, CREATION_DATE as string, DESCRIPTION as string, INVENTORY_ITEM_ID as long, INVENTORY_ITEM_STATUS_CODE as string, ITEM_NUMBER as string, LAST_UPDATED_BY as string, LAST_UPDATE_DATE as string, LAST_UPDATE_LOGIN as string, PRIMARY_UOM_CODE as string)[])",
+				"     ),",
+				"     allowSchemaDrift: false,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     validationMode: 'none',",
+				"     namespaces: true) ~> SrcXMl",
+				"SrcXMl foldDown(unroll(DATA_DS.G_1),",
+				"     mapColumn(",
+				"          APPROVAL_STATUS = DATA_DS.G_1.APPROVAL_STATUS,",
+				"          CREATED_BY = DATA_DS.G_1.CREATED_BY,",
+				"          CREATION_DATE = DATA_DS.G_1.CREATION_DATE,",
+				"          DESCRIPTION = DATA_DS.G_1.DESCRIPTION,",
+				"          INVENTORY_ITEM_ID = DATA_DS.G_1.INVENTORY_ITEM_ID,",
+				"          INVENTORY_ITEM_STATUS_CODE = DATA_DS.G_1.INVENTORY_ITEM_STATUS_CODE,",
+				"          ITEM_NUMBER = DATA_DS.G_1.ITEM_NUMBER,",
+				"          LAST_UPDATED_BY = DATA_DS.G_1.LAST_UPDATED_BY,",
+				"          LAST_UPDATE_DATE = DATA_DS.G_1.LAST_UPDATE_DATE,",
+				"          LAST_UPDATE_LOGIN = DATA_DS.G_1.LAST_UPDATE_LOGIN,",
+				"          PRIMARY_UOM_CODE = DATA_DS.G_1.PRIMARY_UOM_CODE",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> XmlToCsvflatten",
+				"XmlToCsvflatten derive(source_name = 'SYSTEM',",
+				"          sub_source_name = 'R2P',",
+				"          created_date_time = currentUTC()) ~> addLoadDetails",
+				"addLoadDetails sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     partitionFileNames:['Egp_System_Items_B.csv'],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> SnkCsv"
+			]
+		}
+	}
+}

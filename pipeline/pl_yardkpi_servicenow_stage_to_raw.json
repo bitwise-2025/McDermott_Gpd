@@ -1,0 +1,125 @@
+{
+	"name": "pl_yardkpi_servicenow_stage_to_raw",
+	"properties": {
+		"activities": [
+			{
+				"name": "df_yardkpi_servicenow_stage_to_raw",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "1.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "df_yardkpi_servicenow_stage_to_raw",
+						"type": "DataFlowReference",
+						"parameters": {
+							"Directory": {
+								"value": "'@{activity('lk_get_pipeline_parameters').output.firstRow.Directory}'",
+								"type": "Expression"
+							},
+							"File": {
+								"value": "'@{activity('lk_get_pipeline_parameters').output.firstRow.file_name}'",
+								"type": "Expression"
+							}
+						},
+						"datasetParameters": {
+							"source": {
+								"p_ds_filesystem": {
+									"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+									"type": "Expression"
+								},
+								"p_ds_directory": {
+									"value": "@activity('lk_get_pipeline_parameters').output.firstRow.Directory",
+									"type": "Expression"
+								},
+								"p_ds_filename": {
+									"value": "@activity('lk_get_pipeline_parameters').output.firstRow.file_name",
+									"type": "Expression"
+								}
+							},
+							"sink": {
+								"p_ds_filesystem": {
+									"value": "@activity('lk_get_pipeline_parameters').output.firstRow.output_file_system",
+									"type": "Expression"
+								},
+								"p_ds_directory": {
+									"value": "@activity('lk_get_pipeline_parameters').output.firstRow.Directory",
+									"type": "Expression"
+								},
+								"p_ds_filename": {
+									"value": "@activity('lk_get_pipeline_parameters').output.firstRow.file_name",
+									"type": "Expression"
+								}
+							}
+						}
+					},
+					"compute": {
+						"coreCount": 16,
+						"computeType": "General"
+					},
+					"traceLevel": "Fine"
+				}
+			},
+			{
+				"name": "lk_get_pipeline_parameters",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "[dbo].[getPipelineParametersValues]",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": {
+									"value": "SERVICENOW",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "AzureSynapseAnalyticsDB",
+						"type": "DatasetReference"
+					}
+				}
+			}
+		],
+		"folder": {
+			"name": "Projects/YARD KPI/ServiceNow"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-09-12T19:34:45Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

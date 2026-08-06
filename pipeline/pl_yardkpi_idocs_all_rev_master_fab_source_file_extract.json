@@ -1,0 +1,134 @@
+{
+	"name": "pl_yardkpi_idocs_all_rev_master_fab_source_file_extract",
+	"properties": {
+		"activities": [
+			{
+				"name": "ForEach File",
+				"type": "ForEach",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.filtered_file_list",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "Copy Src to Stage",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"additionalColumns": [
+										{
+											"name": "Contract_No",
+											"value": "$$FILEPATH"
+										}
+									],
+									"storeSettings": {
+										"type": "FileServerReadSettings",
+										"recursive": false,
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "DelimitedTextSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									},
+									"formatSettings": {
+										"type": "DelimitedTextWriteSettings",
+										"quoteAllText": true,
+										"fileExtension": ".txt"
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_fs_csv_yardkpi_idocs_source_generic",
+									"type": "DatasetReference",
+									"parameters": {
+										"directory": {
+											"value": "@pipeline().parameters.source_directory",
+											"type": "Expression"
+										},
+										"file": {
+											"value": "@item().name",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_adlsg2_csv_yardkpi_idocs_generic",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_ds_filesystem": {
+											"value": "@pipeline().parameters.stage_file_system",
+											"type": "Expression"
+										},
+										"p_ds_directory": {
+											"value": "@pipeline().parameters.stage_folder_path",
+											"type": "Expression"
+										},
+										"p_ds_filename": {
+											"value": "@item().name",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"filtered_file_list": {
+				"type": "array"
+			},
+			"source_directory": {
+				"type": "string"
+			},
+			"stage_file_system": {
+				"type": "string"
+			},
+			"stage_folder_path": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"v_docmas_src_start_time": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/YARD KPI/iDocs/All Revision Master Fab"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-02-20T09:56:05Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

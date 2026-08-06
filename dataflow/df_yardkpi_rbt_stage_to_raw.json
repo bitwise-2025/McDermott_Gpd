@@ -1,0 +1,96 @@
+{
+	"name": "df_yardkpi_rbt_stage_to_raw",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_Src_snk_adgls2_src_ykpi",
+						"type": "DatasetReference"
+					},
+					"name": "srcYardKPIMwinRBT"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_Src_snk_adgls2_src_ykpi",
+						"type": "DatasetReference"
+					},
+					"name": "snkYardKPIMwinRBT"
+				}
+			],
+			"transformations": [
+				{
+					"name": "derivedColumn1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          rbt_id as short,",
+				"          rbt_no_formtd as string,",
+				"          location as string,",
+				"          rbt_hdr_category as string,",
+				"          rbt_version as double,",
+				"          project_id as string,",
+				"          rbt_revision as boolean,",
+				"          qr_number as short,",
+				"          rbt_number as string,",
+				"          rbt_title as string,",
+				"          qc_inspector as string,",
+				"          qc_inspector_name as string,",
+				"          area_id as string,",
+				"          area_title as string,",
+				"          discipline_id as string,",
+				"          discipline_title as string,",
+				"          project_title as string,",
+				"          rbt_hdr_categoryname as string,",
+				"          drawing_no as string,",
+				"          qc_inspection_date as string,",
+				"          qc_inspection_time as string,",
+				"          qc_inspection_enddate as string,",
+				"          qc_inspection_endtime as string,",
+				"          submitted_date as string,",
+				"          inspection_date as string,",
+				"          remark as string,",
+				"          rbt_status as string,",
+				"          rbt_type as string,",
+				"          appr1_title as string,",
+				"          appr1_name as string,",
+				"          appr1_approval_dt as string,",
+				"          appr2_title as string,",
+				"          appr2_name as string,",
+				"          appr2_approval_dt as string,",
+				"          appr3_title as string,",
+				"          appr3_name as string,",
+				"          appr3_approval_dt as string,",
+				"          appr3_appr_status as string,",
+				"          appr4_title as string,",
+				"          appr4_name as string,",
+				"          appr4_approval_dt as string,",
+				"          appr4_appr_status as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     purgeFiles: true,",
+				"     multiLineRow: true) ~> srcYardKPIMwinRBT",
+				"srcYardKPIMwinRBT derive(FileName = concat('Project_Data/YARDKPI/MWIN/',substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/','MWIN_RBT',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv'),",
+				"          rbt_title_new = regexReplace(regexReplace(replace(rbt_title,' ',''),`[\\n]`,''),`[\\r]`,'')) ~> derivedColumn1",
+				"derivedColumn1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     rowUrlColumn:'FileName',",
+				"     truncate: true,",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     mapColumn(",
+				"          each(match(true()))",
+				"     )) ~> snkYardKPIMwinRBT"
+			]
+		}
+	}
+}

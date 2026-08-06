@@ -1,0 +1,73 @@
+{
+	"name": "df_dashboard_data_security_flattening",
+	"properties": {
+		"folder": {
+			"name": "Projects/Payment Dashboard/Dashboard Data Security"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_xml_dashboard_data_security_source_stage_decoded_xml",
+						"type": "DatasetReference"
+					},
+					"name": "SrcXMl"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_dashboard_data_security_source_stage_final_csv",
+						"type": "DatasetReference"
+					},
+					"name": "SnkCsv"
+				}
+			],
+			"transformations": [
+				{
+					"name": "XmlToCsvflatten"
+				},
+				{
+					"name": "addLoadDetails"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          DATA_DS as (G_1 as (CREATION_DATE as string, EMAIL_ADDRESS as string, IS_DATA_ACCESS_ACTIVE as string, JOB_ROLE_NAME as string, LAST_UPDATE_DATE as string, SECURITY_CONTEXT as string, SECURITY_CONTEXT_VALUE as string, USERNAME as string, USER_ROLE_DATA_ASSIGNMENT_ID as string)[])",
+				"     ),",
+				"     allowSchemaDrift: false,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     validationMode: 'none',",
+				"     namespaces: true) ~> SrcXMl",
+				"SrcXMl foldDown(unroll(DATA_DS.G_1),",
+				"     mapColumn(",
+				"          CREATION_DATE = DATA_DS.G_1.CREATION_DATE,",
+				"          EMAIL_ADDRESS = DATA_DS.G_1.EMAIL_ADDRESS,",
+				"          IS_DATA_ACCESS_ACTIVE = DATA_DS.G_1.IS_DATA_ACCESS_ACTIVE,",
+				"          JOB_ROLE_NAME = DATA_DS.G_1.JOB_ROLE_NAME,",
+				"          LAST_UPDATE_DATE = DATA_DS.G_1.LAST_UPDATE_DATE,",
+				"          SECURITY_CONTEXT = DATA_DS.G_1.SECURITY_CONTEXT,",
+				"          SECURITY_CONTEXT_VALUE = DATA_DS.G_1.SECURITY_CONTEXT_VALUE,",
+				"          USERNAME = DATA_DS.G_1.USERNAME,",
+				"          USER_ROLE_DATA_ASSIGNMENT_ID = DATA_DS.G_1.USER_ROLE_DATA_ASSIGNMENT_ID",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> XmlToCsvflatten",
+				"XmlToCsvflatten derive(source_name = 'SYSTEM',",
+				"          sub_source_name = 'R2P',",
+				"          created_date_time = currentUTC()) ~> addLoadDetails",
+				"addLoadDetails sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     partitionFileNames:['Dashboard_Data_Security.csv'],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> SnkCsv"
+			]
+		}
+	}
+}

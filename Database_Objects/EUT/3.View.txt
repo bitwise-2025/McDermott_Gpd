@@ -1,0 +1,188 @@
+
+Create VIEW [eud].[EUT_v]
+AS
+SELECT
+rssk,Vendor,usageDate,productName,userName,usageType,tokensConsumed,[Usage Date],Application,Persona,Gross,Start,App,[User],[Date],Product,[Tokens Consumed by License],Duration,Usage_Date,Usage_Log_App,zSourceFileName,
+zCreatedDateTime,zVersionNo
+FROM (
+		SELECT rssk,  [KEY] as [colName], value AS RowValue  
+		FROM [eud].[EUT_JSON] 
+			CROSS APPLY OPENJSON(JSON_Attribute)
+		) as j PIVOT (MAX(RowValue) for  [colName] in ( 
+Vendor,usageDate,productName,userName,usageType,tokensConsumed,[Usage Date],Application,Persona,Gross,Start,App,[User],[Date],Product,[Tokens Consumed by License],Duration,Usage_Date,Usage_Log_App,zSourceFileName,
+zCreatedDateTime,zVersionNo		
+		)) as p;
+
+
+
+Create VIEW [EUD].[EUT_Vendor_v]
+AS
+SELECT
+ID,Vendor,zSourceFileName,
+zCreatedDateTime,zVersionNo
+FROM (
+		SELECT rssk,  [KEY] as [colName], value AS RowValue  
+		FROM [EUD].[EUT_JSON] 
+			CROSS APPLY OPENJSON(JSON_Attribute)
+		) as j PIVOT (MAX(RowValue) for  [colName] in ( 
+ID,Vendor,zSourceFileName,
+zCreatedDateTime,zVersionNo		
+		)) as p;
+
+ Create VIEW [EUD].[EUT_Vendor_app_v]
+AS
+SELECT
+Vendor,Application,zSourceFileName,
+zCreatedDateTime,zVersionNo
+FROM (
+		SELECT rssk,  [KEY] as [colName], value AS RowValue  
+		FROM [EUD].[EUT_JSON] 
+			CROSS APPLY OPENJSON(JSON_Attribute)
+		) as j PIVOT (MAX(RowValue) for  [colName] in ( 
+Vendor,Application,zSourceFileName,
+zCreatedDateTime,zVersionNo		
+		)) as p;
+
+
+
+
+
+
+Create VIEW [EUD].[dim_eut_vendor_vw] as
+select 
+dim_eut_vendor_sk  ,
+dim_eut_vendor_nk  ,
+start_date ,
+end_date ,
+hash_code    ,
+active   ,
+created_date_time ,
+modified_date_time   ,
+late_arrival_flag  ,
+[id] ,
+[Vendor]
+
+from EUD.dim_eut_vendor where active =1;
+
+
+
+Create VIEW [EUD].[dim_eut_vendor_app_vw] as
+select 
+dim_eut_vendor_app_sk ,
+dim_eut_vendor_app_nk ,
+dim_eut_vendor_nk ,
+start_date    ,
+end_date   ,
+hash_code    ,
+active     ,
+created_date_time    ,
+modified_date_time,
+late_arrival_flag   ,
+[Vendor] ,
+Application 
+from EUD.dim_eut_vendor_app where active =1
+
+
+CREATE VIEW [EUD].[dim_eut_vendor_source_vw] as
+
+SELECT
+
+b.dim_eut_vendor_nk As dim_eut_vendor_nk ,
+
+c.dim_eut_vendor_app_nk As dim_eut_vendor_app_nk ,
+
+a.Vendor As Vendor ,
+
+CONVERT(DATETIME,a.usage_Date,101) As usage_Date,
+
+a.Application As Application ,
+
+CONCAT(Replace(a.Network_ID,'@mcdermott.com',''),'@mcdermott.com') as Network_ID,
+
+a.Gross As Gross,
+
+a.token As token ,
+
+a.Duration As Duration,
+
+a.SourceFileName As SourceFileName,
+
+a.CreatedDateTime As CreatedDateTime
+
+ 
+
+FROM EUD.EUT_exl a
+
+ LEFT JOIN EUD.dim_eut_vendor b on a.vendor=b.vendor
+
+ LEFT JOIN EUD.dim_eut_vendor_app c on a.vendor=c.vendor AND a.Application=c.Application
+
+ 
+
+Create VIEW [EUD].[dim_eut_vendor_source_vw] as
+select 
+dim_eut_vendor_source_sk ,
+dim_eut_vendor_source_nk ,
+dim_eut_vendor_nk ,
+dim_eut_vendor_app_nk ,
+start_date   ,
+end_date   ,
+hash_code     ,
+active    ,
+created_date_time   ,
+modified_date_time  ,
+late_arrival_flag   ,
+Vendor ,
+CONVERT(DATETIME,usage_Date,101) As usage_Date,
+Application ,
+Concat(Replace(Network_ID,'@mcdermott.com',''),'@mcdermott.com') as Network_ID,
+Gross,
+token ,
+Duration,
+SourceFileName,
+CreatedDateTime 
+
+from EUD.dim_eut_vendor_source where active =1
+
+
+ Create VIEW [eud].[EUT_Cost_Config_v]
+AS
+SELECT
+rssk,Vendor,[Start Date],[End Date],[Discount %],App,[Base Fees],License,Cost,Comments,zSourceFileName,
+zCreatedDateTime,zVersionNo
+FROM (
+		SELECT rssk,  [KEY] as [colName], value AS RowValue  
+		FROM [eud].[EUT_JSON] 
+			CROSS APPLY OPENJSON(JSON_Attribute)
+		) as j PIVOT (MAX(RowValue) for  [colName] in ( 
+Vendor,[Start Date],[End Date],[Discount %],App,[Base Fees],License,Cost,Comments,zSourceFileName,
+zCreatedDateTime,zVersionNo		
+		)) as p;
+
+
+CREATE VIEW [eud].[dim_eut_cost_config_vw] as
+select 
+dim_eut_cost_config_sk,
+dim_eut_cost_config_nk,
+dim_eut_vendor_nk,
+Start_date  ,
+End_date ,
+hash_code ,
+active  ,
+created_date_time   ,
+modified_date_time   ,
+late_arrival_flag   ,
+Vendor ,
+Start_DT ,
+End_DT ,
+Discount,
+App ,
+Base_Fees ,
+License ,
+Cost ,
+Comments 
+from eud.dim_eut_cost_config where active =1
+
+
+
+

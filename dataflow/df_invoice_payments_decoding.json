@@ -1,0 +1,63 @@
+{
+	"name": "df_invoice_payments_decoding",
+	"properties": {
+		"folder": {
+			"name": "Projects/Payment Dashboard/Invoice Payments"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_xml_invoice_payments_source_stage_encoded_xml",
+						"type": "DatasetReference"
+					},
+					"name": "SrcEncodedXml"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_delimited_xml_invoice_payments_source_stage_decoded_xml",
+						"type": "DatasetReference"
+					},
+					"name": "SnkDecodedXml"
+				}
+			],
+			"transformations": [
+				{
+					"name": "Decoding"
+				},
+				{
+					"name": "SelectDecodedData"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          {http://www.w3.org/2003/05/soap-envelope,Envelope} as ({http://www.w3.org/2003/05/soap-envelope,Body} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,runReportResponse} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,runReportReturn} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,metaDataList} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean), {http://xmlns.oracle.com/oxp/service/PublicReportService,reportBytes} as string, {http://xmlns.oracle.com/oxp/service/PublicReportService,reportContentType} as string, {http://xmlns.oracle.com/oxp/service/PublicReportService,reportFileID} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean), {http://xmlns.oracle.com/oxp/service/PublicReportService,reportLocale} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean)))), {http://www.w3.org/2003/05/soap-envelope,Header} as string)",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     validationMode: 'none',",
+				"     namespaces: true) ~> SrcEncodedXml",
+				"SrcEncodedXml derive(ReportBytes = fromBase64(toString({http://www.w3.org/2003/05/soap-envelope,Envelope}.{http://www.w3.org/2003/05/soap-envelope,Body}.{http://xmlns.oracle.com/oxp/service/PublicReportService,runReportResponse}.{http://xmlns.oracle.com/oxp/service/PublicReportService,runReportReturn}.{http://xmlns.oracle.com/oxp/service/PublicReportService,reportBytes}))) ~> Decoding",
+				"Decoding select(mapColumn(",
+				"          ReportBytes",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> SelectDecodedData",
+				"SelectDecodedData sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     emptyLinesAsHeader: 1,",
+				"     partitionFileNames:['source_data_decoded.xml'],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> SnkDecodedXml"
+			]
+		}
+	}
+}

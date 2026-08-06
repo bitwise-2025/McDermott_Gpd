@@ -1,0 +1,310 @@
+drop table dim_entp_fss_business_line
+CREATE TABLE [dbo].dim_entp_fss_business_line
+(
+	[dim_entp_fss_business_line_sk] [bigint] IDENTITY(1,1) NOT NULL,
+	[dim_entp_fss_business_line_nk] [bigint] NOT NULL,
+	[start_date] [datetime] NOT NULL,
+	[end_date] [datetime] NOT NULL,
+	[hash_code] [varchar](8000) NOT NULL,
+	[active] [int] NULL,
+	[created_date_time] [datetime] NULL,
+	[modified_date_time] [datetime] NULL,
+	[late_arrival_flag] [varchar](1) NOT NULL,
+	[dim_ent_source_nk] [bigint] NULL,
+	[dim_ent_sub_source_nk] [bigint] NULL,
+	[business_line] [varchar](200) NULL,
+	[alternative_business_line] [varchar](200) NULL,
+	[reporting_order] INT,
+      [Consolidated BL] varchar(200)
+ CONSTRAINT [PK_dim_entp_fss_business_line_sk] PRIMARY KEY NONCLUSTERED 
+	(
+		[dim_entp_fss_business_line_sk] ASC
+	) NOT ENFORCED 
+)
+WITH
+(
+	DISTRIBUTION = ROUND_ROBIN,
+	CLUSTERED COLUMNSTORE INDEX
+)
+GO
+/**********************************************/
+
+CREATE VIEW dim_entp_fss_business_line_v
+AS SELECT * FROM dim_entp_fss_business_line WHERE active=1
+
+/**********************************************/
+/****** Object:  View [fss].[stage_fss_business_line_v]    Script Date: 11/30/2023 11:52:55 AM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE VIEW [fss].[stage_fss_business_line_v] AS select distinct
+   ROW_NUMBER() over(ORDER BY business_line ASC) as  stage_fss_business_line_id,
+   source_Code,
+sub_source_Code,
+      business_line,
+      alternative_business_line,
+reporting_order
+from
+(SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as business_line
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as alternative_business_line,
+1 as [reporting_order] 
+      FROM
+  fss.stage_fss_neworders_v  
+  union 
+  SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as business_line
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as alternative_business_line,
+1 as [reporting_order] 
+      FROM
+  fss.stage_fss_revenue_v
+  
+
+  union 
+  SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as business_line
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as alternative_business_line,
+1 as [reporting_order] 
+      FROM
+  fss.stage_fss_gross_profit_v
+
+  union
+  
+  SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as business_line
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as alternative_business_line,
+1 as [reporting_order] 
+      FROM
+  fss.stage_fss_PandL_v
+  
+  union
+
+   SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as business_line
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as alternative_business_line,
+1 as [reporting_order] 
+      FROM
+  fss.stage_fss_PandL_YTD_v
+
+  union
+
+  SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as business_line
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as alternative_business_line,
+1 as [reporting_order] 
+      FROM
+fss.stage_fss_DOE_Breakdown_v
+
+Union
+ SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as business_line
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as alternative_business_line,
+1 as [reporting_order] 
+      FROM fss.stage_fss_Gross_DOE_Changes_v
+
+	  
+Union
+ SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as business_line
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as alternative_business_line,
+1 as [reporting_order] 
+      FROM fss.stage_fss_Backlog_Revenue_Rolloff_v
+
+	  Union
+ SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as business_line
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as alternative_business_line,
+1 as [reporting_order] 
+      FROM
+	  fss.stage_fss_capex_and_dd_v
+
+	  Union
+
+ SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as business_line
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as alternative_business_line,
+1 as [reporting_order] 
+      FROM fss.stage_fss_functional_support_cost_v
+
+  union 
+
+  SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as business_line
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as alternative_business_line,
+1 as [reporting_order] 
+      FROM
+  fss.stage_fss_revenue_mb_v
+   union 
+  SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as business_line
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as alternative_business_line,
+1 as [reporting_order] 
+      FROM
+  fss.stage_fss_gross_profit_mb_v
+ union
+  SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as business_line
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as alternative_business_line,
+1 as [reporting_order] 
+      FROM
+  fss.stage_fss_neworders_mb_v  
+  
+  /*sprint 2*/
+  union
+  SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as business_line
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as alternative_business_line,
+1 as [reporting_order] 
+      FROM
+  fss.stage_fss_project_eac_v
+  union
+   SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as business_line
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as alternative_business_line,
+1 as [reporting_order] 
+      FROM
+  fss.stage_fss_CI_R_O_v
+     union
+   SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as business_line
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as alternative_business_line,
+1 as [reporting_order] 
+      FROM
+  fss.stage_fss_ped_hc_v
+
+    union
+   SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as business_line
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as alternative_business_line,
+1 as [reporting_order] 
+      FROM
+  fss.stage_fss_wc_by_comp_by_proj_v
+
+  union
+  SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as business_line
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as alternative_business_line,
+1 as [reporting_order] 
+      FROM
+  fss.stage_fss_indirect_cashflow_v
+
+  union
+  SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as business_line
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as alternative_business_line,
+1 as [reporting_order] 
+     FROM fss.stage_fss_loss_projects_v
+ 
+union
+  SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as business_line
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as alternative_business_line,
+1 as [reporting_order] 
+     FROM fss.stage_fss_direct_cashflow_v
+union
+  SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as business_line
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as alternative_business_line,
+1 as [reporting_order] 
+     FROM fss.stage_fss_actual_eac_changes_v
+ 
+union
+  SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as business_line
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as alternative_business_line,
+1 as [reporting_order] 
+     FROM fss.stage_fss_UCO_v
+
+union
+  SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as business_line
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as alternative_business_line,
+1 as [reporting_order] 
+     FROM fss.stage_fss_AR_Aging_v
+union
+  SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as business_line
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as alternative_business_line,
+1 as [reporting_order] 
+     FROM fss.stage_fss_contracts_WIP_v     
+
+union
+  SELECT DISTINCT cast('Manual' as varchar(50)) as source_Code
+                ,cast('Excel' as varchar(50)) as sub_source_Code
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as business_line
+                ,ISNULL(cast([Business Line] as varchar(200)),'') as alternative_business_line,
+1 as [reporting_order] 
+     FROM fss.stage_fss_gp_changes_in_estimates_v
+
+  ) M
+where NOT EXISTS(select 1 from dim_entp_fss_business_line_v P where M.business_line = P.business_line)
+and isnull(business_line,'')<>''
+AND business_line NOT IN ('Backlog Projects'
+,'Business Line'
+,'New Awards'
+,'Project Title'
+,'Total')
+and 1=2;
+GO
+
+
+
+
+
+
+
+/********REPROCESS PROJECT TABLE *************/
+
+/****** Object:  Table [fss].[reprocess_fss_business_line]    Script Date: 8/23/2023 12:04:13 PM ******/
+
+
+CREATE TABLE [fss].[reprocess_fss_business_line]
+(
+	[rssk] [bigint] IDENTITY(1,1) NOT NULL,
+	[source_code] [varchar](50) NOT NULL,
+	[sub_source_code] [varchar](50) NOT NULL,
+	[business_line] [varchar](200) NULL,
+	[alternative_business_line] [varchar](200) NULL,
+	[reporting_order] INT,
+	[hash_code] [varchar](8000) NOT NULL,
+	[rk_failure_info] [varchar](5000) NULL,
+	[created_date_time] [datetime] NOT NULL,
+ CONSTRAINT [PK_rsskb] PRIMARY KEY NONCLUSTERED 
+	(
+		[rssk] ASC
+	) NOT ENFORCED 
+)
+WITH
+(
+	DISTRIBUTION = ROUND_ROBIN,
+	CLUSTERED COLUMNSTORE INDEX
+)
+GO
+

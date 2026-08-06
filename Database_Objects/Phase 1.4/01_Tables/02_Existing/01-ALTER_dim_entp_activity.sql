@@ -1,0 +1,21 @@
+Alter table [dbo].[dim_entp_activity]
+Add 
+actual_duration [int] NULL,
+remaining_late_start [date] NULL,
+remaining_late_finish  [date] NULL,
+calendar [varchar](200) NULL,
+budgeted_units [varchar](30) NULL,
+actual_units [varchar](30) NULL,
+remaining_units [varchar](30) NULL,
+wbs [varchar](100) NULL,
+wbs_name [varchar](200) NULL,
+cost_account [varchar](100) NULL,
+[role_is] [varchar](100) NULL,
+change_management [varchar](50) NULL,
+[funct] [varchar](50) NULL,
+milestones [varchar](50) NULL,
+office [varchar](50) NULL,
+dim_entp_phase_nk [int] NULL,
+region [varchar](50) NULL,
+schedule_risk_assessment [varchar](50) NULL,
+supply_chain [varchar](50) NULL ;

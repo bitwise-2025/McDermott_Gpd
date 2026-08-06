@@ -1,0 +1,32 @@
+{
+	"name": "df_p6_labor_units_stage_to_raw",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_labor_units_p6_stage",
+						"type": "DatasetReference"
+					},
+					"name": "srcLaborUnitsStage"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_labor_units_p6_raw",
+						"type": "DatasetReference"
+					},
+					"name": "snkROCSiteproRaw"
+				}
+			],
+			"transformations": [
+				{
+					"name": "setFileName"
+				}
+			],
+			"script": "source(output(\n\t\t{Activity ID} as string,\n\t\t{Activity Name} as string,\n\t\t{Resource ID Name} as string,\n\t\t{GLOBAL - EXECUTED BY TYPE} as string,\n\t\tStart as string,\n\t\tFinish as string,\n\t\t{Spreadsheet Field} as string,\n\t\tperiod as string,\n\t\tunits as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\trowUrlColumn: 'FileName',\n\twildcardPaths:['Project_Data/NCSA/P6/Labor_Units/p6_labor_stage.csv']) ~> srcLaborUnitsStage\nsrcLaborUnitsStage derive(FileName = concat('Project_Data/NCSA/P6/Labor_Units/',substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/','p6_labor_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv')) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\trowUrlColumn:'FileName',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tmapColumn(\n\t\t{Activity ID},\n\t\t{Activity Name},\n\t\t{Resource ID Name},\n\t\t{GLOBAL - EXECUTED BY TYPE},\n\t\tStart,\n\t\tFinish,\n\t\t{Spreadsheet Field},\n\t\tperiod,\n\t\tunits,\n\t\tFileName\n\t)) ~> snkROCSiteproRaw"
+		}
+	}
+}

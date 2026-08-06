@@ -1,0 +1,37 @@
+CREATE TABLE [gpd].[Financials_1_PMR_JSON]
+(
+	[rssk] [bigint] IDENTITY(1,1) NOT NULL,
+	[JSON_Attribute] [varchar](8000) NULL
+)
+WITH
+(
+	DISTRIBUTION = ROUND_ROBIN,
+	CLUSTERED COLUMNSTORE INDEX
+)
+GO
+
+
+CREATE TABLE [gpd].[Financials_2_PMR_JSON]
+(
+	[rssk] [bigint] IDENTITY(1,1) NOT NULL,
+	[JSON_Attribute] [varchar](8000) NULL
+)
+WITH
+(
+	DISTRIBUTION = ROUND_ROBIN,
+	CLUSTERED COLUMNSTORE INDEX
+)
+GO
+
+
+CREATE TABLE [gpd].[Financials_3_LDs_Guarantees_PMR_JSON]
+(
+	[rssk] [bigint] IDENTITY(1,1) NOT NULL,
+	[JSON_Attribute] [varchar](8000) NULL
+)
+WITH
+(
+	DISTRIBUTION = ROUND_ROBIN,
+	CLUSTERED COLUMNSTORE INDEX
+)
+GO

@@ -1,0 +1,1 @@
+insert into plp_pipeline (pipeline_code,subject_area_code,description,comment,active,touched_by,touched_dtm,sec_sa_id) Values('pl_R2P_PO_Commitment_Details_source_to_stage','NCSA','pl_R2P_PO_Commitment_Details_source_to_stage',NULL,'1','aditya.anand2@mcdermott.com','2025-02-11 06:42:19.043',9)

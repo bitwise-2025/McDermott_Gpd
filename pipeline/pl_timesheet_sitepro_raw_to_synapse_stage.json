@@ -1,0 +1,829 @@
+{
+	"name": "pl_timesheet_sitepro_raw_to_synapse_stage",
+	"properties": {
+		"activities": [
+			{
+				"name": "cp_Get_Latest_File",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Set_current_date_time",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": true,
+							"modifiedDatetimeStart": {
+								"value": "@variables('v_lrd_src_to_stage')",
+								"type": "Expression"
+							},
+							"wildcardFolderPath": "Project_Data/NCSA/SitePro/SiteproTimesheet/*/*/*",
+							"wildcardFileName": "Sitepro_Timesheet*.csv"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings",
+							"copyBehavior": "MergeFiles"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "Project_id",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Project_id",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "function_code",
+									"type": "String"
+								},
+								"sink": {
+									"name": "function_code",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "source_name",
+									"type": "String"
+								},
+								"sink": {
+									"name": "source_name",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "sub_source_name",
+									"type": "String"
+								},
+								"sink": {
+									"name": "sub_source_name",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "class_name",
+									"type": "String"
+								},
+								"sink": {
+									"name": "class_name",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "sub_class_name",
+									"type": "String"
+								},
+								"sink": {
+									"name": "sub_class_name",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "unit_of_measure",
+									"type": "String"
+								},
+								"sink": {
+									"name": "unit_of_measure",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "pim_code",
+									"type": "String"
+								},
+								"sink": {
+									"name": "pim_code",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "roc_code",
+									"type": "String"
+								},
+								"sink": {
+									"name": "roc_code",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Phase_Code",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Phase_Code",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "WorkArea_Code",
+									"type": "String"
+								},
+								"sink": {
+									"name": "WorkArea_Code",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "WorkUnit_Code",
+									"type": "String"
+								},
+								"sink": {
+									"name": "WorkUnit_Code",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ScheduleResource_Code",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ScheduleResource_Code",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "cwp_code",
+									"type": "String"
+								},
+								"sink": {
+									"name": "cwp_code",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Activity",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Activity",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "iwp_Code",
+									"type": "String"
+								},
+								"sink": {
+									"name": "iwp_Code",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "DateWorked",
+									"type": "String"
+								},
+								"sink": {
+									"name": "DateWorked",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "EmployeeID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "EmployeeID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "coa_value",
+									"type": "String"
+								},
+								"sink": {
+									"name": "coa_value",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Spent_Hours",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Spent_Hours",
+									"type": "String"
+								}
+							}
+						]
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_adlsg2_timesheet_sitepro_raw",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_adlsg2_CSV_timesheet_sitepro_raw",
+						"type": "DatasetReference"
+					}
+				]
+			},
+			{
+				"name": "Check Combined File non zero Bytes",
+				"type": "GetMetadata",
+				"dependsOn": [
+					{
+						"activity": "cp_Get_Latest_File",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_adlsg2_CSV_timesheet_sitepro_raw",
+						"type": "DatasetReference"
+					},
+					"fieldList": [
+						"size",
+						"exists"
+					],
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true
+					},
+					"formatSettings": {
+						"type": "DelimitedTextReadSettings"
+					}
+				}
+			},
+			{
+				"name": "if_File_Exists_Copy_to_Synapse",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Check Combined File non zero Bytes",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@greater(activity('Check Combined File non zero Bytes').output.Size, 2)",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "Copy Raw Parquet Folder To Synapse Stage Table",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": true
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "SqlDWSink",
+									"preCopyScript": "truncate table gpd.NCSA_Sitepro_Timesheet",
+									"allowPolyBase": true,
+									"polyBaseSettings": {
+										"rejectValue": 0,
+										"rejectType": "value",
+										"useTypeDefault": true
+									},
+									"disableMetricsCollection": false
+								},
+								"enableStaging": true,
+								"stagingSettings": {
+									"linkedServiceName": {
+										"referenceName": "ADLSG2 TimeAnalytics DEV",
+										"type": "LinkedServiceReference"
+									}
+								},
+								"translator": {
+									"type": "TabularTranslator",
+									"mappings": [
+										{
+											"source": {
+												"name": "Project_id",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Project_id",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "function_code",
+												"type": "String"
+											},
+											"sink": {
+												"name": "function_code",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "source_name",
+												"type": "String"
+											},
+											"sink": {
+												"name": "source_name",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "sub_source_name",
+												"type": "String"
+											},
+											"sink": {
+												"name": "sub_source_name",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "class_name",
+												"type": "String"
+											},
+											"sink": {
+												"name": "class_name",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "sub_class_name",
+												"type": "String"
+											},
+											"sink": {
+												"name": "sub_class_name",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "unit_of_measure",
+												"type": "String"
+											},
+											"sink": {
+												"name": "unit_of_measure",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "pim_code",
+												"type": "String"
+											},
+											"sink": {
+												"name": "pim_code",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "roc_code",
+												"type": "String"
+											},
+											"sink": {
+												"name": "roc_code",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Phase_Code",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Phase_Code",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "WorkArea_Code",
+												"type": "String"
+											},
+											"sink": {
+												"name": "WorkArea_Code",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "WorkUnit_Code",
+												"type": "String"
+											},
+											"sink": {
+												"name": "WorkUnit_Code",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ScheduleResource_Code",
+												"type": "String"
+											},
+											"sink": {
+												"name": "ScheduleResource_Code",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "cwp_code",
+												"type": "String"
+											},
+											"sink": {
+												"name": "cwp_code",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Activity",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Activity",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "iwp_Code",
+												"type": "String"
+											},
+											"sink": {
+												"name": "iwp_Code",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "DateWorked",
+												"type": "String"
+											},
+											"sink": {
+												"name": "DateWorked",
+												"type": "DateTime"
+											}
+										},
+										{
+											"source": {
+												"name": "EmployeeID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "EmployeeID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Spent_Hours",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Spent_Hours",
+												"type": "Decimal"
+											}
+										},
+										{
+											"source": {
+												"name": "coa_value",
+												"type": "String"
+											},
+											"sink": {
+												"name": "coa_value",
+												"type": "String"
+											}
+										}
+									]
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_adlsg2_CSV_timesheet_sitepro_raw",
+									"type": "DatasetReference"
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_AzureSynapseAnalytics_timesheet_sitepro_stage",
+									"type": "DatasetReference"
+								}
+							]
+						}
+					]
+				}
+			},
+			{
+				"name": "Delete Temp combined File",
+				"type": "Delete",
+				"dependsOn": [
+					{
+						"activity": "if_File_Exists_Copy_to_Synapse",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_adlsg2_CSV_timesheet_sitepro_raw",
+						"type": "DatasetReference"
+					},
+					"enableLogging": false,
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true
+					}
+				}
+			},
+			{
+				"name": "lkup_Get_Pipeline_parameters_getlrd",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": "Sitepro"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Set start date",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lkup_Get_Pipeline_parameters_getlrd",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_lrd_src_to_stage",
+					"value": {
+						"value": "@activity('lkup_Get_Pipeline_parameters_getlrd').output.firstRow.file_merge_start_date",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "SP Update Control Table Last Run Date",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Delete Temp combined File",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[updateIncrementPipelineParameterValue]",
+					"storedProcedureParameters": {
+						"pParameterCode": {
+							"value": "file_merge_start_date",
+							"type": "String"
+						},
+						"pParameterValue": {
+							"value": {
+								"value": "@formatDateTime(variables('v_current_date_time'),'yyyy-MM-dd HH:mm:ss')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": "Sitepro",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Set_current_date_time",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Set start date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_current_date_time",
+					"value": {
+						"value": "@string(utcnow())",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "sp_execute_final_sp_validate",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "SP Update Control Table Last Run Date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[load_NCSA_fact_sitepro_timesheet_validate]"
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "sp_execute_final_sp_fact_load",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "sp_execute_final_sp_validate",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[load_NCSA_fact_sitepro_timesheet_fact_load]"
+				},
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"variables": {
+			"v_lrd_src_to_stage": {
+				"type": "String"
+			},
+			"v_current_date_time": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/NCSA/SiteproTimesheet"
+		},
+		"annotations": [],
+		"lastPublishTime": "2021-04-16T06:56:49Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

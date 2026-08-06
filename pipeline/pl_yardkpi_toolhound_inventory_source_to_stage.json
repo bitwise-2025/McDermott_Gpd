@@ -1,0 +1,227 @@
+{
+	"name": "pl_yardkpi_toolhound_inventory_source_to_stage",
+	"properties": {
+		"activities": [
+			{
+				"name": "lk_get_pipeline_parameters",
+				"description": "Get the parameters to be used in this pipeline",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+						"storedProcedureParameters": {
+							"pPipelineCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"pPipeLineSubCode": {
+								"type": "String",
+								"value": {
+									"value": "Toolhound",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azure_synapse_parameter",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "cp_toolhound_inventory_source_to_stage",
+				"description": "Copies data from source to stage.",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Set last_run_start_date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"sqlReaderQuery": {
+							"value": "@concat('select partno.varPartNo as partNo,\n       replace(replace(parttxt.varDescription, CHAR(10),''''),CHAR(13),'''') as Description,\n       parttxt.varUserField1 as ident,\n       invID.varInventoryID as ItemID,\n       categorytbl.varCategory as category,\n       subcategorytbl.varCategory as subcategory,\n       invType.varInventoryType as InventoryType,\n       invLocationtxt.varLocationName as LocationName,\n       invLocation.varBinShelf as BinShelf,\n       invLocation.intMinOnHand as MinOnHand,\n       invLocation.intMaxOnHand as MaxOnHand,\n       invLocation.intQtyOnHand as QtyOnHand,\n       invLocation.intIssued as Issued,\n       invLocation.intInTransitInbound as TransitInBound,\n       invLocation.intReserved as Reserved,\n       invLocation.intInKit as InKit,\n       invLocation.intTotal as Total,\n       invLocation.intInTransitOutbound as InTransitOutBound,\n       invLocation.intOnPurchaseOrder as OnPurchaseOrder\nfrom [dbo].[tblInventory] partno,\n     [dbo].[tblInventoryText] parttxt,\n     [dbo].[tblInventoryID] invID,\n     [dbo].[tblCategoryText] categorytbl,\n     [dbo].[tblCategoryText] subcategorytbl,\n     [dbo].[tblInventoryTypeText] invType,\n     [dbo].[tblInventoryLocation] invLocation,\n     [dbo].[tblLocationText] invLocationtxt\nwhere partno.intInventoryID = parttxt.intInventoryID\n  and partno.intInventoryTypeID = invType.intInventoryTypeID\n  and partno.intInventoryID = invID.intInventoryID\n  and parttxt.varLocaleID = invType.varLocaleID\n  and partno.intInventoryID = invLocation.intInventoryID\n  and invLocation.intLocationID = invLocationtxt.intLocationID \n  and partno.intCategoryID = categorytbl.intCategoryID\n  and parttxt.varLocaleID = categorytbl.varLocaleID\n  and partno.intSubCategoryID = subcategorytbl.intCategoryID\n  and parttxt.varLocaleID = subcategorytbl.varLocaleID\n  and partno.dteModifiedDate >= ''', activity('lk_get_pipeline_parameters').output.firstRow.last_run_start_date,'''')",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_sql_query_yardkpi_toolhound_source",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_adlsg2_csv_yardkpi_toolhound_inventory",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_ds_filesystem": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.file_system",
+								"type": "Expression"
+							},
+							"p_ds_directory": {
+								"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+								"type": "Expression"
+							},
+							"p_ds_filename": {
+								"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "Set last_run_start_date",
+				"description": "Sets start and current date.",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lk_get_pipeline_parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_src_start_time",
+					"value": {
+						"value": "@formatDateTime(utcNow(),'yyyy-MM-dd HH:mm:ss')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "sp_update_parameter",
+				"description": "Updates the parameters and it's values",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "cp_toolhound_inventory_source_to_stage",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": {
+						"value": "[dbo].[updateIncrementPipelineParameterValue]",
+						"type": "Expression"
+					},
+					"storedProcedureParameters": {
+						"pParameterCode": {
+							"value": {
+								"value": "last_run_start_date",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pParameterValue": {
+							"value": {
+								"value": "@variables('v_src_start_time')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineCode": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pPipelineSubCode": {
+							"value": {
+								"value": "Toolhound",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseAnalytics",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"variables": {
+			"v_current_date_time": {
+				"type": "String"
+			},
+			"v_src_start_time": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Projects/YARD KPI/Toolhound/Inventory"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-11-17T05:36:04Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

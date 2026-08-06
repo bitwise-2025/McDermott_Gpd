@@ -1,0 +1,35 @@
+{
+	"name": "df_yardkpi_tabware_stage_to_raw",
+	"properties": {
+		"folder": {
+			"name": "Projects/YARD KPI/Tabware"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_yardkpi_tabware_wildcard_generic",
+						"type": "DatasetReference"
+					},
+					"name": "srcTabwareStage"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_yardkpi_tabware_wildcard_generic",
+						"type": "DatasetReference"
+					},
+					"name": "snkTabwareRaw"
+				}
+			],
+			"transformations": [
+				{
+					"name": "setFileName"
+				}
+			],
+			"script": "parameters{\n\tfolder_path as string,\n\tinput_file_name as string\n}\nsource(output(\n\t\tequipment as string,\n\t\tequipment_class as string,\n\t\tentered_date as string,\n\t\trequested_completion as string,\n\t\tcompleted_date as string,\n\t\tlast_modified as string,\n\t\tstatus as string,\n\t\twork_class as string,\n\t\tiso9000 as string,\n\t\tworkers as string,\n\t\two_planned_hours as string,\n\t\tdown_hours as string,\n\t\tres_planned_hours as string,\n\t\tactual_hours as string,\n\t\tplanned_hours_total as string,\n\t\tinternal_labor as string,\n\t\tcontract_labor as string,\n\t\tinternal_nonstock as string,\n\t\tcontract_nonstock as string,\n\t\tstores_material as string,\n\t\tservices as string,\n\t\tinternal_tool as string,\n\t\tcontract_tool as string,\n\t\tinternal_other as string,\n\t\tcontract_other as string,\n\t\two_base as string,\n\t\two_task as string,\n\t\two_subtask as string,\n\t\tfailure_flag as string,\n\t\tplanned_labor as string,\n\t\tplanned_nonstock as string,\n\t\tplanned_stores as string,\n\t\tplanned_services as string,\n\t\tplanned_tools as string,\n\t\tplant as string,\n\t\tresource_id as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: true,\n\tpurgeFiles: true,\n\trowUrlColumn: 'File_Path',\n\twildcardPaths:[($folder_path+'/'+$input_file_name+'_*_*.csv')]) ~> srcTabwareStage\nsrcTabwareStage derive(File_Path = concat(concat(trim(substringIndex(File_Path,'/',4),'/'),'/'),substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',$input_file_name,'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv')) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\trowUrlColumn:'File_Path',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> snkTabwareRaw"
+		}
+	}
+}

@@ -1,0 +1,72 @@
+{
+	"name": "df_yardkpi_intelex_audit_stage_to_raw",
+	"properties": {
+		"folder": {
+			"name": "Projects/YARD KPI/Intelex"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_yardkpi_intelex_generic",
+						"type": "DatasetReference"
+					},
+					"name": "IntelexAuditSource"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_adlsg2_csv_yardkpi_intelex_generic",
+						"type": "DatasetReference"
+					},
+					"name": "IntelexAuditSink"
+				}
+			],
+			"transformations": [
+				{
+					"name": "setFileName"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          RowNum as string,",
+				"          Record_x0020_No as string,",
+				"          Date_x0020_Created as string,",
+				"          Location as string,",
+				"          Profile_x0020_Type as string,",
+				"          Profile as string,",
+				"          Type as string,",
+				"          Audit_x0020_Scope as string,",
+				"          Scope as string,",
+				"          Audit_x0020_Due_x0020_Date as string,",
+				"          Scheduled_x0020_Date as string,",
+				"          Audit_x0020_Start_x0020_Date as string,",
+				"          Projected_x0020_End_x0020_Date as string,",
+				"          End_x0020_Date as string,",
+				"          Lead_x0020_Auditor as string,",
+				"          Summary as string,",
+				"          b_x0023__x0020_of_x0020_Findings as string,",
+				"          b_x0023__x0020_Questionnaires as string,",
+				"          Current_x0020_Stage as string,",
+				"          Status as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: true,",
+				"     rowUrlColumn: 'File_Path') ~> IntelexAuditSource",
+				"IntelexAuditSource derive(Summary = trim(replace(Summary, '\\n', ' ')),",
+				"          File_Path = concat(concat(trim(substringIndex(File_Path,'/',5),'/'),'/'),substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',split(substringIndex(File_Path,'/',-1),'.')[1],'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv')) ~> setFileName",
+				"setFileName sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     rowUrlColumn:'File_Path',",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> IntelexAuditSink"
+			]
+		}
+	}
+}
