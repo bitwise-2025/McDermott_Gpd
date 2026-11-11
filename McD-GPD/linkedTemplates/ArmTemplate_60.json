@@ -1,0 +1,1506 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "McD-GPD"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/df_oracle_data_count_summary_report_flattening')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/Payment Dashboard/Oracle Data Count Summary Report"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_xml_oracle_data_count_summary_report_source_stage_decoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SrcXMl"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_oracle_data_count_summary_report_source_stage_final_csv",
+								"type": "DatasetReference"
+							},
+							"name": "SnkCsv"
+						}
+					],
+					"transformations": [
+						{
+							"name": "XmlToCsvflatten"
+						},
+						{
+							"name": "addLoadDetails"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          DATA_DS as (G_1 as (DATA_COUNT as short, LAST_UPDATE_DATE as string, LAST_UPDATE_DATE_DD as short, LAST_UPDATE_DATE_MM as short, LAST_UPDATE_DATE_YYYY as short, SOURCE as string, TABLE_NAME as string)[], P_FROM_DATE as timestamp, P_TO_DATE as timestamp)",
+						"     ),",
+						"     allowSchemaDrift: false,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     validationMode: 'none',",
+						"     namespaces: true) ~> SrcXMl",
+						"SrcXMl foldDown(unroll(DATA_DS.G_1),",
+						"     mapColumn(",
+						"          DATA_COUNT = DATA_DS.G_1.DATA_COUNT,",
+						"          LAST_UPDATE_DATE = DATA_DS.G_1.LAST_UPDATE_DATE,",
+						"          LAST_UPDATE_DATE_DD = DATA_DS.G_1.LAST_UPDATE_DATE_DD,",
+						"          LAST_UPDATE_DATE_MM = DATA_DS.G_1.LAST_UPDATE_DATE_MM,",
+						"          LAST_UPDATE_DATE_YYYY = DATA_DS.G_1.LAST_UPDATE_DATE_YYYY,",
+						"          SOURCE = DATA_DS.G_1.SOURCE,",
+						"          TABLE_NAME = DATA_DS.G_1.TABLE_NAME,",
+						"          P_FROM_DATE = DATA_DS.P_FROM_DATE,",
+						"          P_TO_DATE = DATA_DS.P_TO_DATE",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> XmlToCsvflatten",
+						"XmlToCsvflatten derive(source_name = 'SYSTEM',",
+						"          sub_source_name = 'R2P',",
+						"          created_date_time = currentUTC()) ~> addLoadDetails",
+						"addLoadDetails sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     partitionFileNames:['Oracle_Data_Count_Summary_Report.csv'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SnkCsv"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_p6_engr_hc_fcst_pivot_to_stagev2')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Dataflow to convert P6 Engineering data with unpivot per date",
+				"folder": {
+					"name": "Projects/NCSA/P6 Engineering"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_engr_hc_fcst_p6_stage_initial",
+								"type": "DatasetReference"
+							},
+							"name": "SrcP6EngrManHrs"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_P6engr_hc_fcst_stage",
+								"type": "DatasetReference"
+							},
+							"name": "SnkP6EngrManHrs"
+						}
+					],
+					"transformations": [
+						{
+							"name": "dcGetProjectPrime"
+						},
+						{
+							"name": "UnpivotData"
+						},
+						{
+							"name": "FltDummyRows"
+						},
+						{
+							"name": "FltIncorrectActivity"
+						}
+					],
+					"script": "parameters{\n\tp_df_sub_class as string\n}\nsource(output(\n\t\t{Activity ID} as string,\n\t\t{Activity Name} as string,\n\t\t{Original Duration} as string,\n\t\t{Actual Duration} as string,\n\t\t{Remaining Duration} as string,\n\t\tStart as string,\n\t\tFinish as string,\n\t\t{Actual Start} as string,\n\t\t{Actual Finish} as string,\n\t\t{Remaining Late Start} as string,\n\t\t{Remaining Late Finish} as string,\n\t\tCalendar as string,\n\t\t{Budgeted Units} as string,\n\t\t{Actual Units} as string,\n\t\t{Remaining Units} as string,\n\t\tWBS as string,\n\t\t{WBS Name} as string,\n\t\t{Cost Account} as string,\n\t\tRole as string,\n\t\t{GLOBAL - CHANGE MANAGEMENT} as string,\n\t\t{GLOBAL - EXECUTED BY TYPE} as string,\n\t\t{GLOBAL - FUNCTION} as string,\n\t\t{GLOBAL - MILESTONES} as string,\n\t\t{GLOBAL - OFFICE} as string,\n\t\t{GLOBAL - PHASE} as string,\n\t\t{GLOBAL - PRIME (GCOA V11)} as string,\n\t\t{GLOBAL - PRIME (GCOA V13)} as string,\n\t\t{GLOBAL - REGION} as string,\n\t\t{GLOBAL - SCHEDULE RISK ASSESSMENT} as string,\n\t\t{GLOBAL - STORAGE SOLUTIONS} as string,\n\t\t{GLOBAL - SUBPRIME (GCOA V11)} as string,\n\t\t{GLOBAL - SUBPRIME (GCOA V13)} as string,\n\t\t{GLOBAL - SUPPLY CHAIN} as string,\n\t\t{Spreadsheet Field} as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true) ~> SrcP6EngrManHrs\nFltIncorrectActivity derive(Project_Number = iif(length(regexSplit(WBS,'[-]')[1])>5,concat('99',regexSplit(WBS,'[-]')[1]),regexSplit(WBS,'[-]')[1]),\n\t\tPRIME = coalesce({GLOBAL - PRIME (GCOA V11)},{GLOBAL - PRIME (GCOA V13)}),\n\t\tSUBPRIME = coalesce({GLOBAL - SUBPRIME (GCOA V11)},{GLOBAL - SUBPRIME (GCOA V13)}),\n\t\t{Activity ID} = trim({Activity ID}),\n\t\t{Spreadsheet Field} = concat($p_df_sub_class,{Spreadsheet Field})) ~> dcGetProjectPrime\ndcGetProjectPrime unpivot(output(\n\t\tPeriod as string,\n\t\tUnits as string\n\t),\n\tungroupBy(Project_Number,\n\t\t{Activity ID},\n\t\t{Activity Name},\n\t\t{Original Duration},\n\t\t{Actual Duration},\n\t\t{Remaining Duration},\n\t\tStart,\n\t\tFinish,\n\t\t{Actual Start},\n\t\t{Actual Finish},\n\t\t{Remaining Late Start},\n\t\t{Remaining Late Finish},\n\t\tCalendar,\n\t\t{Budgeted Units},\n\t\t{Actual Units},\n\t\t{Remaining Units},\n\t\tWBS,\n\t\t{WBS Name},\n\t\t{Cost Account},\n\t\tRole,\n\t\t{GLOBAL - CHANGE MANAGEMENT},\n\t\t{GLOBAL - EXECUTED BY TYPE},\n\t\t{GLOBAL - FUNCTION},\n\t\t{GLOBAL - MILESTONES},\n\t\t{GLOBAL - OFFICE},\n\t\t{GLOBAL - PHASE},\n\t\t{GLOBAL - REGION},\n\t\t{GLOBAL - SCHEDULE RISK ASSESSMENT},\n\t\t{GLOBAL - STORAGE SOLUTIONS},\n\t\t{GLOBAL - SUPPLY CHAIN},\n\t\t{GLOBAL - PRIME (GCOA V11)},\n\t\t{GLOBAL - PRIME (GCOA V13)},\n\t\tPRIME,\n\t\t{GLOBAL - SUBPRIME (GCOA V11)},\n\t\t{GLOBAL - SUBPRIME (GCOA V13)},\n\t\tSUBPRIME,\n\t\t{Spreadsheet Field}),\n\tlateral: false,\n\tignoreNullPivots: true) ~> UnpivotData\nUnpivotData filter(Units != '-99') ~> FltDummyRows\nSrcP6EngrManHrs filter(!({Activity ID}=='No Activity ID'||isNull({Activity Name}))) ~> FltIncorrectActivity\nFltDummyRows sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['p6_engr_hc_fcst.csv'],\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tmapColumn(\n\t\tProject_Number,\n\t\t{Activity ID},\n\t\t{Activity Name},\n\t\t{Original Duration},\n\t\t{Actual Duration},\n\t\t{Remaining Duration},\n\t\tStart,\n\t\tFinish,\n\t\t{Actual Start},\n\t\t{Actual Finish},\n\t\t{Remaining Late Start},\n\t\t{Remaining Late Finish},\n\t\tCalendar,\n\t\t{Budgeted Units},\n\t\t{Actual Units},\n\t\t{Remaining Units},\n\t\tWBS,\n\t\t{WBS Name},\n\t\t{Cost Account},\n\t\tRole,\n\t\t{GLOBAL - CHANGE MANAGEMENT},\n\t\t{GLOBAL - EXECUTED BY TYPE},\n\t\t{GLOBAL - FUNCTION},\n\t\t{GLOBAL - MILESTONES},\n\t\t{GLOBAL - OFFICE},\n\t\t{GLOBAL - PHASE},\n\t\t{GLOBAL - REGION},\n\t\t{GLOBAL - SCHEDULE RISK ASSESSMENT},\n\t\t{GLOBAL - STORAGE SOLUTIONS},\n\t\t{GLOBAL - SUPPLY CHAIN},\n\t\tPRIME,\n\t\tSUBPRIME,\n\t\t{Spreadsheet Field},\n\t\tPeriod,\n\t\tUnits\n\t),\n\tpartitionBy('hash', 1)) ~> SnkP6EngrManHrs"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_p6_engr_hc_fcst_stage_to_raw')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Data Flow to pull data from ADLS Stg to ADLS Raw.\nNo schema defined in source or Target, Schema drift was used along with column rules to direct data into Sink.",
+				"folder": {
+					"name": "Projects/NCSA/P6 Engineering"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_P6engr_hc_fcst_stage",
+								"type": "DatasetReference"
+							},
+							"name": "srcP6EngrHeadCountStage"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_P6engr_hc_fcst_raw",
+								"type": "DatasetReference"
+							},
+							"name": "snkP6EngrHeadCountRaw"
+						}
+					],
+					"transformations": [
+						{
+							"name": "setFileName"
+						}
+					],
+					"script": "parameters{\n\tWildPath as string,\n\tFileName as string\n}\nsource(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\trowUrlColumn: 'Filename',\n\twildcardPaths:[($WildPath + $FileName + '.csv')]) ~> srcP6EngrHeadCountStage\nsrcP6EngrHeadCountStage derive(Filename = concat($WildPath,substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',$FileName,'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv')) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\trowUrlColumn:'Filename',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: []) ~> snkP6EngrHeadCountRaw"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_p6_engr_histogram_stage_to_raw')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Data Flow to pull data from ADLS Stg to ADLS Raw.\nNo schema defined in source or Target, Schema drift was used along with column rules to direct data into Sink.",
+				"folder": {
+					"name": "Projects/NCSA/P6 Engr Histogram"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_P6engr_mhrs_histo_stage",
+								"type": "DatasetReference"
+							},
+							"name": "srcP6EngrHistogramStage"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_engr_mhrs_histo_raw",
+								"type": "DatasetReference"
+							},
+							"name": "snkP6EngrHistogramRaw"
+						}
+					],
+					"transformations": [
+						{
+							"name": "setFileName"
+						}
+					],
+					"script": "parameters{\n\tWildPath as string,\n\tFileName as string\n}\nsource(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\trowUrlColumn: 'Filename',\n\twildcardPaths:[($WildPath + $FileName + '.csv')]) ~> srcP6EngrHistogramStage\nsrcP6EngrHistogramStage derive(Filename = concat($WildPath,substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',$FileName,'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv')) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tinput(\n\t\tContract as string,\n\t\tPhase as string,\n\t\tOffice as string,\n\t\tTYPE as string,\n\t\tPrime as string,\n\t\t{Sub Prime} as string,\n\t\tSFN as string,\n\t\t{Activity Code} as string,\n\t\tDiscipline as string,\n\t\tPSRL1Code as string,\n\t\tPSRL2Code as string,\n\t\tPeriod as string,\n\t\tUnits as string\n\t),\n\trowUrlColumn:'Filename',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: []) ~> snkP6EngrHistogramRaw"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_p6_engr_mhrs_histo_unpivot_to_stage')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Dataflow to convert P6 Engineering histogram data with unpivot per date",
+				"folder": {
+					"name": "Projects/NCSA/P6 Engr Histogram"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_engr_mhrs_histo_p6_stage_initial",
+								"type": "DatasetReference"
+							},
+							"name": "SrcP6EngrManHrsHisto"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_P6engr_mhrs_histo_stage",
+								"type": "DatasetReference"
+							},
+							"name": "SnkP6EngrManHrs"
+						}
+					],
+					"transformations": [
+						{
+							"name": "dcGetProject"
+						},
+						{
+							"name": "UnpivotData"
+						},
+						{
+							"name": "FltDummyRows"
+						},
+						{
+							"name": "FltIncorrectActivity"
+						}
+					],
+					"script": "source(output(\n\t\tContract as string,\n\t\tPhase as string,\n\t\tPSRL1Code as string,\n\t\tPSRL2Code as string,\n\t\tOffice as string,\n\t\tTYPE as string,\n\t\tPrime as string,\n\t\t{Sub Prime} as string,\n\t\tSFN as string,\n\t\t{Activity Code} as string,\n\t\tDiscipline as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true) ~> SrcP6EngrManHrsHisto\nFltIncorrectActivity derive(Contract = iif(length(trim(Contract))>5,concat('99',trim(Contract)),trim(Contract)),\n\t\tOffice = trim(Office),\n\t\teach(match(in(['TYPE','Prime','Sub Prime','SFN','Activity Code','Discipline','Phase','PSRL1Code','PSRL2Code'],name)), $$ = trim($$))) ~> dcGetProject\ndcGetProject unpivot(output(\n\t\tPeriod as string,\n\t\tUnits as string\n\t),\n\tungroupBy(Contract,\n\t\tPhase,\n\t\tOffice,\n\t\tTYPE,\n\t\tPrime,\n\t\t{Sub Prime},\n\t\tSFN,\n\t\t{Activity Code},\n\t\tDiscipline,\n\t\tPSRL1Code,\n\t\tPSRL2Code),\n\tlateral: false,\n\tignoreNullPivots: true) ~> UnpivotData\nUnpivotData filter(Units != '-') ~> FltDummyRows\nSrcP6EngrManHrsHisto filter(!(isNull(Contract))) ~> FltIncorrectActivity\nFltDummyRows sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['p6_engr_histo.csv'],\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tmapColumn(\n\t\tContract,\n\t\tPhase,\n\t\tOffice,\n\t\tTYPE,\n\t\tPrime,\n\t\t{Sub Prime},\n\t\tSFN,\n\t\t{Activity Code},\n\t\tDiscipline,\n\t\tPSRL1Code,\n\t\tPSRL2Code,\n\t\tPeriod,\n\t\tUnits\n\t),\n\tpartitionBy('hash', 1)) ~> SnkP6EngrManHrs"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_p6_engr_mhrs_pivot_to_stage')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Dataflow to convert P6 Engineering data with unpivot per date",
+				"folder": {
+					"name": "Projects/NCSA/P6 Engineering"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_engr_hc_fcst_p6_stage_initial",
+								"type": "DatasetReference"
+							},
+							"name": "SrcP6EngrManHrs"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_P6engr_hc_fcst_stage",
+								"type": "DatasetReference"
+							},
+							"name": "SnkP6EngrManHrs"
+						}
+					],
+					"transformations": [
+						{
+							"name": "dcConvertNulltoDummyVal"
+						},
+						{
+							"name": "UnpivotData"
+						},
+						{
+							"name": "FltDummyRows"
+						}
+					],
+					"script": "source(output(\n\t\tProject_code as string,\n\t\t{Activity ID} as string,\n\t\t{Activity Name} as string,\n\t\t{Remaining Duration} as string,\n\t\tStart as string,\n\t\tFinish as string,\n\t\t{Budgeted Labor Units} as string,\n\t\t{Actual Labor Units} as string,\n\t\t{Remaining Labor Units} as string,\n\t\t{GLOBAL - OFFICE} as string,\n\t\tDisciplines as string,\n\t\tFacility as string,\n\t\t{GLOBAL - PRIME (GCOA V13)} as string,\n\t\t{GLOBAL - SUBPRIME (GCOA V13)} as string,\n\t\t{Spreadsheet Field} as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true) ~> SrcP6EngrManHrs\nSrcP6EngrManHrs derive(each(match(!(in(['Project_code','Activity ID','Activity Name','Remaining Duration','Start','Finish','Budgeted Labor Units','Actual Labor Units','Remaining Labor Units','GLOBAL - OFFICE','Disciplines','Facility','GLOBAL - PRIME (GCOA V13)','GLOBAL - SUBPRIME (GCOA V13)','Spreadsheet Field'],name))), $$ = iif(isNull($$) || !isDecimal($$), '-99', toString($$)))) ~> dcConvertNulltoDummyVal\ndcConvertNulltoDummyVal unpivot(output(\n\t\tPeriod as string,\n\t\tUnits as string\n\t),\n\tungroupBy(Project_code,\n\t\t{Activity ID},\n\t\t{Activity Name},\n\t\t{Remaining Duration},\n\t\tStart,\n\t\tFinish,\n\t\t{Budgeted Labor Units},\n\t\t{Actual Labor Units},\n\t\t{Remaining Labor Units},\n\t\t{GLOBAL - OFFICE},\n\t\tDisciplines,\n\t\tFacility,\n\t\t{GLOBAL - PRIME (GCOA V13)},\n\t\t{GLOBAL - SUBPRIME (GCOA V13)},\n\t\t{Spreadsheet Field}),\n\tlateral: false,\n\tignoreNullPivots: true) ~> UnpivotData\nUnpivotData filter(Units != '-99') ~> FltDummyRows\nFltDummyRows sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['p6_engr_mhrs.csv'],\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> SnkP6EngrManHrs"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_p6_excel_pivot_to_stage')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_labor_units_p6_stage_sample_file",
+								"type": "DatasetReference"
+							},
+							"name": "srcP6UnitsOverTime"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_P6L3UnitsOverTime",
+								"type": "DatasetReference"
+							},
+							"name": "sinkL3UnitsOverTime"
+						}
+					],
+					"transformations": [
+						{
+							"name": "unpivotData"
+						},
+						{
+							"name": "dcConvertNulltoDummyVal"
+						},
+						{
+							"name": "FilterDummyRows"
+						}
+					],
+					"script": "source(output(\n\t\t{Activity ID} as string,\n\t\t{Activity Name} as string,\n\t\t{Resource ID Name} as string,\n\t\t{GLOBAL - EXECUTED BY TYPE} as string,\n\t\tStart as string,\n\t\tFinish as string,\n\t\t{Spreadsheet Field} as string,\n\t\tperiod as string,\n\t\tunits as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: true) ~> srcP6UnitsOverTime\ndcConvertNulltoDummyVal unpivot(output(\n\t\tperiod as string,\n\t\tunits as string\n\t),\n\tungroupBy({Activity ID},\n\t\t{Activity Name},\n\t\t{Resource ID Name},\n\t\tStart,\n\t\tFinish,\n\t\t{Spreadsheet Field}),\n\tlateral: false,\n\tignoreNullPivots: true) ~> unpivotData\nsrcP6UnitsOverTime derive(each(match(!(in(['Activity ID','Activity Name','Resource ID Name','Start','Finish','Spreadsheet Field'],name))), $$ = iif(isNull($$) || !isDecimal($$), '-99', $$))) ~> dcConvertNulltoDummyVal\nunpivotData filter(units != '-99') ~> FilterDummyRows\nFilterDummyRows sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tinput(\n\t\t{project code} as string,\n\t\t{from function} as string,\n\t\t{to function} as string,\n\t\tquantity as string,\n\t\tuom as string,\n\t\t{amount in USD} as string,\n\t\tcomments as string\n\t),\n\tpartitionFileNames:['p6_labor_stage.csv'],\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> sinkL3UnitsOverTime"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_p6_labor_units_stage_to_raw')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_labor_units_p6_stage",
+								"type": "DatasetReference"
+							},
+							"name": "srcLaborUnitsStage"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_labor_units_p6_raw",
+								"type": "DatasetReference"
+							},
+							"name": "snkROCSiteproRaw"
+						}
+					],
+					"transformations": [
+						{
+							"name": "setFileName"
+						}
+					],
+					"script": "source(output(\n\t\t{Activity ID} as string,\n\t\t{Activity Name} as string,\n\t\t{Resource ID Name} as string,\n\t\t{GLOBAL - EXECUTED BY TYPE} as string,\n\t\tStart as string,\n\t\tFinish as string,\n\t\t{Spreadsheet Field} as string,\n\t\tperiod as string,\n\t\tunits as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\trowUrlColumn: 'FileName',\n\twildcardPaths:['Project_Data/NCSA/P6/Labor_Units/p6_labor_stage.csv']) ~> srcLaborUnitsStage\nsrcLaborUnitsStage derive(FileName = concat('Project_Data/NCSA/P6/Labor_Units/',substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/','p6_labor_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv')) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\trowUrlColumn:'FileName',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tmapColumn(\n\t\t{Activity ID},\n\t\t{Activity Name},\n\t\t{Resource ID Name},\n\t\t{GLOBAL - EXECUTED BY TYPE},\n\t\tStart,\n\t\tFinish,\n\t\t{Spreadsheet Field},\n\t\tperiod,\n\t\tunits,\n\t\tFileName\n\t)) ~> snkROCSiteproRaw"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_p6_office_stage_to_raw')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Data Flow to pull data from ADLS Stg to ADLS Raw.\n",
+				"folder": {
+					"name": "Projects/NCSA/P6 Office"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_p6_office_stg",
+								"type": "DatasetReference"
+							},
+							"name": "srcP6OfficeStage"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_p6_office_raw",
+								"type": "DatasetReference"
+							},
+							"name": "snkP6OfficeRaw"
+						}
+					],
+					"transformations": [
+						{
+							"name": "setFileName"
+						}
+					],
+					"script": "parameters{\n\tWildPath as string,\n\tFileName as string\n}\nsource(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\trowUrlColumn: 'Filename',\n\twildcardPaths:[($WildPath + $FileName + '.csv')]) ~> srcP6OfficeStage\nsrcP6OfficeStage derive(Filename = concat($WildPath,substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',$FileName,'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv')) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\trowUrlColumn:'Filename',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: []) ~> snkP6OfficeRaw"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_p6_resource_spread_direct_pivot_to_stagev2')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Dataflow to convert P6 Engineering data with unpivot per date",
+				"folder": {
+					"name": "Projects/NCSA/P6 Engineering"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_resource_spread_direct_p6_stage_initial",
+								"type": "DatasetReference"
+							},
+							"name": "SrcP6ResourceSpread"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_P6_resource_spread_direct_stage",
+								"type": "DatasetReference"
+							},
+							"name": "SnkP6ResourceSpread"
+						}
+					],
+					"transformations": [
+						{
+							"name": "dcGetProjectPrime"
+						},
+						{
+							"name": "FltIncorrectActivity"
+						}
+					],
+					"script": "source(output(\n\t\thid as string,\n\t\t{project no} as string,\n\t\t{project description} as string,\n\t\t{Activity ID} as string,\n\t\t{Activity Name} as string,\n\t\t{Original Duration} as string,\n\t\t{Actual Duration} as string,\n\t\t{Remaining Duration} as string,\n\t\tStart as string,\n\t\tFinish as string,\n\t\t{Actual Start} as string,\n\t\t{Actual Finish} as string,\n\t\tCalendar as string,\n\t\t{Budgeted Units} as string,\n\t\t{Actual Units} as string,\n\t\t{Remaining Units} as string,\n\t\tWBS as string,\n\t\t{WBS Name} as string,\n\t\t{Cost Account} as string,\n\t\tRole as string,\n\t\t{Resource ID} as string,\n\t\t{Resource ID Name} as string,\n\t\t{Resource Name} as string,\n\t\t{Resource Type} as string,\n\t\t{Total Float} as string,\n\t\t{Free Float} as string,\n\t\t{BL Project Start} as string,\n\t\t{BL Project Finish} as string,\n\t\tCritical as string,\n\t\t{Activity Type} as string,\n\t\t{Longest Path} as string,\n\t\t{Primary Constraint Date} as string,\n\t\t{Secondary Constraint Date} as string,\n\t\t{Primary Constraint} as string,\n\t\t{Secondary Constraint} as string,\n\t\t{Expected Finish} as string,\n\t\t{Suspend Date} as string,\n\t\t{Resume Date} as string,\n\t\t{BL Project Labor Units} as string,\n\t\t{Earned Value Labor Units} as string,\n\t\t{Planned Value Labor Units} as string,\n\t\t{BL Project Duration} as string,\n\t\t{Physical Percent Complete} as string,\n\t\tPredecessors as string,\n\t\tSuccessors as string,\n\t\t{Predecessor Details} as string,\n\t\t{Successors Details} as string,\n\t\t{Late Start} as string,\n\t\t{Late Finish} as string,\n\t\t{GLOBAL - CHANGE MANAGEMENT} as string,\n\t\t{GLOBAL - EXECUTED BY TYPE} as string,\n\t\t{GLOBAL - FUNCTION} as string,\n\t\t{GLOBAL - MILESTONES} as string,\n\t\t{GLOBAL - OFFICE} as string,\n\t\t{GLOBAL - PHASE} as string,\n\t\t{GLOBAL - PRIME (GCOA V11)} as string,\n\t\t{GLOBAL - PRIME (GCOA V13)} as string,\n\t\t{GLOBAL - REGION} as string,\n\t\t{GLOBAL - SCHEDULE RISK ASSESSMENT} as string,\n\t\t{GLOBAL - STORAGE SOLUTIONS} as string,\n\t\t{GLOBAL - SUBPRIME (GCOA V11)} as string,\n\t\t{GLOBAL - SUBPRIME (GCOA V13)} as string,\n\t\t{GLOBAL - SUPPLY CHAIN} as string,\n\t\t{Spreadsheet Field} as string,\n\t\tPeriod as string,\n\t\t{Period Value} as string,\n\t\t{created date time} as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false) ~> SrcP6ResourceSpread\nFltIncorrectActivity derive(PRIME = coalesce({GLOBAL - PRIME (GCOA V11)},{GLOBAL - PRIME (GCOA V13)}),\n\t\tSUBPRIME = coalesce({GLOBAL - SUBPRIME (GCOA V11)},{GLOBAL - SUBPRIME (GCOA V13)}),\n\t\t{Activity ID} = trim({Activity ID})) ~> dcGetProjectPrime\nSrcP6ResourceSpread filter(!({Activity ID}=='No Activity ID'||isNull({Activity Name}))) ~> FltIncorrectActivity\ndcGetProjectPrime sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['p6_resource_spread_direct.csv'],\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tmapColumn(\n\t\thid,\n\t\t{project no},\n\t\t{project description},\n\t\t{Activity ID},\n\t\t{Activity Name},\n\t\t{Original Duration},\n\t\t{Actual Duration},\n\t\t{Remaining Duration},\n\t\tStart,\n\t\tFinish,\n\t\t{Actual Start},\n\t\t{Actual Finish},\n\t\tCalendar,\n\t\t{Budgeted Units},\n\t\t{Actual Units},\n\t\t{Remaining Units},\n\t\tWBS,\n\t\t{WBS Name},\n\t\t{Cost Account},\n\t\tRole,\n\t\t{Resource ID},\n\t\t{Resource ID Name},\n\t\t{Resource Name},\n\t\t{Resource Type},\n\t\t{Total Float},\n\t\t{Free Float},\n\t\t{BL Project Start},\n\t\t{BL Project Finish},\n\t\tCritical,\n\t\t{Activity Type},\n\t\t{Longest Path},\n\t\t{Primary Constraint Date},\n\t\t{Secondary Constraint Date},\n\t\t{Primary Constraint},\n\t\t{Secondary Constraint},\n\t\t{Expected Finish},\n\t\t{Suspend Date},\n\t\t{Resume Date},\n\t\t{BL Project Labor Units},\n\t\t{Earned Value Labor Units},\n\t\t{Planned Value Labor Units},\n\t\t{BL Project Duration},\n\t\t{Physical Percent Complete},\n\t\tPredecessors,\n\t\tSuccessors,\n\t\t{Predecessor Details},\n\t\t{Successors Details},\n\t\t{Late Start},\n\t\t{Late Finish},\n\t\t{GLOBAL - CHANGE MANAGEMENT},\n\t\t{GLOBAL - EXECUTED BY TYPE},\n\t\t{GLOBAL - FUNCTION},\n\t\t{GLOBAL - MILESTONES},\n\t\t{GLOBAL - OFFICE},\n\t\t{GLOBAL - PHASE},\n\t\t{GLOBAL - PRIME (GCOA V11)},\n\t\t{GLOBAL - PRIME (GCOA V13)},\n\t\t{GLOBAL - REGION},\n\t\t{GLOBAL - SCHEDULE RISK ASSESSMENT},\n\t\t{GLOBAL - STORAGE SOLUTIONS},\n\t\t{GLOBAL - SUBPRIME (GCOA V11)},\n\t\t{GLOBAL - SUBPRIME (GCOA V13)},\n\t\t{GLOBAL - SUPPLY CHAIN},\n\t\t{Spreadsheet Field},\n\t\tPeriod,\n\t\t{Period Value},\n\t\t{created date time},\n\t\tPRIME,\n\t\tSUBPRIME\n\t),\n\tpartitionBy('hash', 1)) ~> SnkP6ResourceSpread"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_p6_resource_spread_pivot_to_stagev2')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Dataflow to convert P6 Engineering data with unpivot per date",
+				"folder": {
+					"name": "Projects/NCSA/P6 Engineering"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_resource_spread_p6_stage_initial",
+								"type": "DatasetReference"
+							},
+							"name": "SrcP6ResourceSpread"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_P6_resource_spread_stage",
+								"type": "DatasetReference"
+							},
+							"name": "SnkP6ResourceSpread"
+						}
+					],
+					"transformations": [
+						{
+							"name": "dcGetProjectPrime"
+						},
+						{
+							"name": "UnpivotData"
+						},
+						{
+							"name": "FltDummyRows"
+						},
+						{
+							"name": "FltIncorrectActivity"
+						}
+					],
+					"script": "parameters{\n\tp_df_sub_class as string\n}\nsource(output(\n\t\t{Activity ID} as string,\n\t\t{Activity Name} as string,\n\t\t{Original Duration} as string,\n\t\t{Actual Duration} as string,\n\t\t{Remaining Duration} as string,\n\t\tStart as string,\n\t\tFinish as string,\n\t\t{Actual Start} as string,\n\t\t{Actual Finish} as string,\n\t\t{Remaining Late Start} as string,\n\t\t{Remaining Late Finish} as string,\n\t\tCalendar as string,\n\t\t{Budgeted Units} as string,\n\t\t{Actual Units} as string,\n\t\t{Remaining Units} as string,\n\t\tWBS as string,\n\t\t{WBS Name} as string,\n\t\t{Cost Account} as string,\n\t\tRole as string,\n\t\t{Resource ID} as string,\n\t\t{Resource ID Name} as string,\n\t\t{Resource Name} as string,\n\t\t{Resource Type} as string,\n\t\t{GLOBAL - CHANGE MANAGEMENT} as string,\n\t\t{GLOBAL - EXECUTED BY TYPE} as string,\n\t\t{GLOBAL - FUNCTION} as string,\n\t\t{GLOBAL - MILESTONES} as string,\n\t\t{GLOBAL - OFFICE} as string,\n\t\t{GLOBAL - PHASE} as string,\n\t\t{GLOBAL - PRIME (GCOA V11)} as string,\n\t\t{GLOBAL - PRIME (GCOA V13)} as string,\n\t\t{GLOBAL - REGION} as string,\n\t\t{GLOBAL - SCHEDULE RISK ASSESSMENT} as string,\n\t\t{GLOBAL - STORAGE SOLUTIONS} as string,\n\t\t{GLOBAL - SUBPRIME (GCOA V11)} as string,\n\t\t{GLOBAL - SUBPRIME (GCOA V13)} as string,\n\t\t{GLOBAL - SUPPLY CHAIN} as string,\n\t\t{Spreadsheet Field} as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true) ~> SrcP6ResourceSpread\nFltIncorrectActivity derive(Project_Number = iif(length(regexSplit(WBS,'[-]')[1])>5,concat('99',regexSplit(WBS,'[-]')[1]),regexSplit(WBS,'[-]')[1]),\n\t\tPRIME = coalesce({GLOBAL - PRIME (GCOA V11)},{GLOBAL - PRIME (GCOA V13)}),\n\t\tSUBPRIME = coalesce({GLOBAL - SUBPRIME (GCOA V11)},{GLOBAL - SUBPRIME (GCOA V13)}),\n\t\t{Activity ID} = trim({Activity ID}),\n\t\t{Spreadsheet Field} = concat($p_df_sub_class,{Spreadsheet Field})) ~> dcGetProjectPrime\ndcGetProjectPrime unpivot(output(\n\t\tPeriod as string,\n\t\tUnits as string\n\t),\n\tungroupBy(Project_Number,\n\t\t{Activity ID},\n\t\t{Activity Name},\n\t\t{Original Duration},\n\t\t{Actual Duration},\n\t\t{Remaining Duration},\n\t\tStart,\n\t\tFinish,\n\t\t{Actual Start},\n\t\t{Actual Finish},\n\t\t{Remaining Late Start},\n\t\t{Remaining Late Finish},\n\t\tCalendar,\n\t\t{Budgeted Units},\n\t\t{Actual Units},\n\t\t{Remaining Units},\n\t\tWBS,\n\t\t{WBS Name},\n\t\t{Cost Account},\n\t\tRole,\n\t\t{Resource ID},\n\t\t{Resource ID Name},\n\t\t{Resource Name},\n\t\t{Resource Type},\n\t\t{GLOBAL - CHANGE MANAGEMENT},\n\t\t{GLOBAL - EXECUTED BY TYPE},\n\t\t{GLOBAL - FUNCTION},\n\t\t{GLOBAL - MILESTONES},\n\t\t{GLOBAL - OFFICE},\n\t\t{GLOBAL - PHASE},\n\t\t{GLOBAL - REGION},\n\t\t{GLOBAL - SCHEDULE RISK ASSESSMENT},\n\t\t{GLOBAL - STORAGE SOLUTIONS},\n\t\t{GLOBAL - SUPPLY CHAIN},\n\t\t{GLOBAL - PRIME (GCOA V11)},\n\t\t{GLOBAL - PRIME (GCOA V13)},\n\t\tPRIME,\n\t\t{GLOBAL - SUBPRIME (GCOA V11)},\n\t\t{GLOBAL - SUBPRIME (GCOA V13)},\n\t\tSUBPRIME,\n\t\t{Spreadsheet Field}),\n\tlateral: false,\n\tignoreNullPivots: true) ~> UnpivotData\nUnpivotData filter(Units != '-99') ~> FltDummyRows\nSrcP6ResourceSpread filter(!({Activity ID}=='No Activity ID'||isNull({Activity Name}))) ~> FltIncorrectActivity\nFltDummyRows sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['p6_resource_spread.csv'],\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tmapColumn(\n\t\tProject_Number,\n\t\t{Activity ID},\n\t\t{Activity Name},\n\t\t{Original Duration},\n\t\t{Actual Duration},\n\t\t{Remaining Duration},\n\t\tStart,\n\t\tFinish,\n\t\t{Actual Start},\n\t\t{Actual Finish},\n\t\t{Remaining Late Start},\n\t\t{Remaining Late Finish},\n\t\tCalendar,\n\t\t{Budgeted Units},\n\t\t{Actual Units},\n\t\t{Remaining Units},\n\t\tWBS,\n\t\t{WBS Name},\n\t\t{Cost Account},\n\t\tRole,\n\t\t{Resource ID},\n\t\t{Resource ID Name},\n\t\t{Resource Name},\n\t\t{Resource Type},\n\t\t{GLOBAL - CHANGE MANAGEMENT},\n\t\t{GLOBAL - EXECUTED BY TYPE},\n\t\t{GLOBAL - FUNCTION},\n\t\t{GLOBAL - MILESTONES},\n\t\t{GLOBAL - OFFICE},\n\t\t{GLOBAL - PHASE},\n\t\t{GLOBAL - REGION},\n\t\t{GLOBAL - SCHEDULE RISK ASSESSMENT},\n\t\t{GLOBAL - STORAGE SOLUTIONS},\n\t\t{GLOBAL - SUPPLY CHAIN},\n\t\tPRIME,\n\t\tSUBPRIME,\n\t\t{Spreadsheet Field},\n\t\tPeriod,\n\t\tUnits\n\t),\n\tpartitionBy('hash', 1)) ~> SnkP6ResourceSpread"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_payment_accounting_data_decoding')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/Payment Dashboard/Payment Accounting Data"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_xml_payment_accounting_data_source_stage_encoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SrcEncodedXml"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_delimited_xml_payment_accounting_data_source_stage_decoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SnkDecodedXml"
+						}
+					],
+					"transformations": [
+						{
+							"name": "Decoding"
+						},
+						{
+							"name": "SelectDecodedData"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          {http://www.w3.org/2003/05/soap-envelope,Envelope} as ({http://www.w3.org/2003/05/soap-envelope,Body} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,runReportResponse} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,runReportReturn} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,metaDataList} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean), {http://xmlns.oracle.com/oxp/service/PublicReportService,reportBytes} as string, {http://xmlns.oracle.com/oxp/service/PublicReportService,reportContentType} as string, {http://xmlns.oracle.com/oxp/service/PublicReportService,reportFileID} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean), {http://xmlns.oracle.com/oxp/service/PublicReportService,reportLocale} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean)))), {http://www.w3.org/2003/05/soap-envelope,Header} as string)",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     validationMode: 'none',",
+						"     namespaces: true) ~> SrcEncodedXml",
+						"SrcEncodedXml derive(ReportBytes = fromBase64(toString({http://www.w3.org/2003/05/soap-envelope,Envelope}.{http://www.w3.org/2003/05/soap-envelope,Body}.{http://xmlns.oracle.com/oxp/service/PublicReportService,runReportResponse}.{http://xmlns.oracle.com/oxp/service/PublicReportService,runReportReturn}.{http://xmlns.oracle.com/oxp/service/PublicReportService,reportBytes}))) ~> Decoding",
+						"Decoding select(mapColumn(",
+						"          ReportBytes",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> SelectDecodedData",
+						"SelectDecodedData sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     emptyLinesAsHeader: 1,",
+						"     partitionFileNames:['source_data_decoded.xml'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SnkDecodedXml"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_payment_accounting_data_flattening')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/Payment Dashboard/Payment Accounting Data"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_xml_payment_accounting_data_source_stage_decoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SrcXMl"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_payment_accounting_data_source_stage_final_csv",
+								"type": "DatasetReference"
+							},
+							"name": "SnkCsv"
+						}
+					],
+					"transformations": [
+						{
+							"name": "XmlToCsvflatten"
+						},
+						{
+							"name": "addLoadDetails"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          DATA_DS as (G_1 as (ACCOUNT as long, ACCOUNTED_CREDIT_INV_CURR as double, ACCOUNTED_DEBIT_INV_CURR as double, ACCOUNTING_PERIOD as string, ACCOUNTING_SEQUENCE_NAME as string, ACCOUNTING_SEQUENCE_NUMBER as integer, ACC_CLASS as string, ACC_DATE as string, BAL_TYPE as string, ENTERED_CREDIT_USD as double, ENTERED_DEBIT_USD as double, EVENT as string, EVENT_DATE as string, EVENT_ID as integer, GL_TRANSFER_DATE as string, JOURNAL_BATCH as string, JOURNAL_ENTRY as string, JOURNAL_LINE_NUMBER as short, LEGAL_ENTITY_ID as long, LEGAL_ENTITY_NAME as string, LINE as short, LINE_DESCRIPTION as string)[])",
+						"     ),",
+						"     allowSchemaDrift: false,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     validationMode: 'none',",
+						"     namespaces: true) ~> SrcXMl",
+						"SrcXMl foldDown(unroll(DATA_DS.G_1),",
+						"     mapColumn(",
+						"          ACCOUNT = DATA_DS.G_1.ACCOUNT,",
+						"          ACCOUNTED_CREDIT_INV_CURR = DATA_DS.G_1.ACCOUNTED_CREDIT_INV_CURR,",
+						"          ACCOUNTED_DEBIT_INV_CURR = DATA_DS.G_1.ACCOUNTED_DEBIT_INV_CURR,",
+						"          ACCOUNTING_PERIOD = DATA_DS.G_1.ACCOUNTING_PERIOD,",
+						"          ACCOUNTING_SEQUENCE_NAME = DATA_DS.G_1.ACCOUNTING_SEQUENCE_NAME,",
+						"          ACCOUNTING_SEQUENCE_NUMBER = DATA_DS.G_1.ACCOUNTING_SEQUENCE_NUMBER,",
+						"          ACC_CLASS = DATA_DS.G_1.ACC_CLASS,",
+						"          ACC_DATE = DATA_DS.G_1.ACC_DATE,",
+						"          BAL_TYPE = DATA_DS.G_1.BAL_TYPE,",
+						"          ENTERED_CREDIT_USD = DATA_DS.G_1.ENTERED_CREDIT_USD,",
+						"          ENTERED_DEBIT_USD = DATA_DS.G_1.ENTERED_DEBIT_USD,",
+						"          EVENT = DATA_DS.G_1.EVENT,",
+						"          EVENT_DATE = DATA_DS.G_1.EVENT_DATE,",
+						"          EVENT_ID = DATA_DS.G_1.EVENT_ID,",
+						"          GL_TRANSFER_DATE = DATA_DS.G_1.GL_TRANSFER_DATE,",
+						"          JOURNAL_BATCH = DATA_DS.G_1.JOURNAL_BATCH,",
+						"          JOURNAL_ENTRY = DATA_DS.G_1.JOURNAL_ENTRY,",
+						"          JOURNAL_LINE_NUMBER = DATA_DS.G_1.JOURNAL_LINE_NUMBER,",
+						"          LEGAL_ENTITY_ID = DATA_DS.G_1.LEGAL_ENTITY_ID,",
+						"          LEGAL_ENTITY_NAME = DATA_DS.G_1.LEGAL_ENTITY_NAME,",
+						"          LINE = DATA_DS.G_1.LINE,",
+						"          LINE_DESCRIPTION = DATA_DS.G_1.LINE_DESCRIPTION",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> XmlToCsvflatten",
+						"XmlToCsvflatten derive(source_name = 'SYSTEM',",
+						"          sub_source_name = 'R2P',",
+						"          created_date_time = currentUTC()) ~> addLoadDetails",
+						"addLoadDetails sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     partitionFileNames:['Payment_Accounting_Data.csv'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SnkCsv"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_payment_details_decoding')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/Payment Dashboard/Payment Details"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_xml_payment_details_source_stage_encoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SrcEncodedXml"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_delimited_xml_payment_details_source_stage_decoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SnkDecodedXml"
+						}
+					],
+					"transformations": [
+						{
+							"name": "Decoding"
+						},
+						{
+							"name": "SelectDecodedData"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          {http://www.w3.org/2003/05/soap-envelope,Envelope} as ({http://www.w3.org/2003/05/soap-envelope,Body} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,runReportResponse} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,runReportReturn} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,metaDataList} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean), {http://xmlns.oracle.com/oxp/service/PublicReportService,reportBytes} as string, {http://xmlns.oracle.com/oxp/service/PublicReportService,reportContentType} as string, {http://xmlns.oracle.com/oxp/service/PublicReportService,reportFileID} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean), {http://xmlns.oracle.com/oxp/service/PublicReportService,reportLocale} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean)))), {http://www.w3.org/2003/05/soap-envelope,Header} as string)",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     validationMode: 'none',",
+						"     namespaces: true) ~> SrcEncodedXml",
+						"SrcEncodedXml derive(ReportBytes = fromBase64(toString({http://www.w3.org/2003/05/soap-envelope,Envelope}.{http://www.w3.org/2003/05/soap-envelope,Body}.{http://xmlns.oracle.com/oxp/service/PublicReportService,runReportResponse}.{http://xmlns.oracle.com/oxp/service/PublicReportService,runReportReturn}.{http://xmlns.oracle.com/oxp/service/PublicReportService,reportBytes}))) ~> Decoding",
+						"Decoding select(mapColumn(",
+						"          ReportBytes",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> SelectDecodedData",
+						"SelectDecodedData sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     emptyLinesAsHeader: 1,",
+						"     partitionFileNames:['source_data_decoded.xml'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SnkDecodedXml"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_payment_details_flattening')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/Payment Dashboard/Payment Details"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_xml_payment_details_source_stage_decoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SrcXMl"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_payment_details_source_stage_final_csv",
+								"type": "DatasetReference"
+							},
+							"name": "SnkCsv"
+						}
+					],
+					"transformations": [
+						{
+							"name": "XmlToCsvflatten"
+						},
+						{
+							"name": "addLoadDetails"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          DATA_DS as (G_1 as (ACTUAL_VALUE_DATE as string, ADDRESS_LINE1 as string, ADDRESS_LINE2 as string, ADDRESS_LINE3 as string, ADDRESS_LINE4 as string, ADDRESS_STYLE as string, AMOUNT as string, ANTICIPATED_VALUE_DATE as string, ATTRIBUTE1 as string, ATTRIBUTE10 as string, ATTRIBUTE11 as string, ATTRIBUTE12 as string, ATTRIBUTE13 as string, ATTRIBUTE14 as string, ATTRIBUTE15 as string, ATTRIBUTE2 as string, ATTRIBUTE3 as string, ATTRIBUTE4 as string, ATTRIBUTE5 as string, ATTRIBUTE6 as string, ATTRIBUTE7 as string, ATTRIBUTE8 as string, ATTRIBUTE9 as string, ATTRIBUTE_CATEGORY as string, ATTRIBUTE_DATE1 as string, ATTRIBUTE_DATE2 as string, ATTRIBUTE_DATE3 as string, ATTRIBUTE_DATE4 as string, ATTRIBUTE_DATE5 as string, ATTRIBUTE_NUMBER1 as string, ATTRIBUTE_NUMBER2 as string, ATTRIBUTE_NUMBER3 as string, ATTRIBUTE_NUMBER4 as string, ATTRIBUTE_NUMBER5 as string, BANK_ACCOUNT_NAME as string, BANK_ACCOUNT_NUM as string, BANK_ACCOUNT_TYPE as string, BANK_CHARGE_BEARER as string, BANK_NUM as string, BASE_AMOUNT as string, BEP_RESPONSE_CODE as string, BEP_RESPONSE_DATE as string, BEP_STATUS as string, BEP_TRXN_RESPONSE_ID as string, CE_BANK_ACCT_USE_ID as string, CHECKRUN_ID as string, CHECKRUN_NAME as string, CHECK_DATE as string, CHECK_FORMAT_ID as string, CHECK_ID as string, CHECK_NUMBER as string, CHECK_STOCK_ID as string, CHECK_VOUCHER_NUM as string, CITY as string, CLEARED_AMOUNT as string, CLEARED_BASE_AMOUNT as string, CLEARED_CHARGES_AMOUNT as string, CLEARED_CHARGES_BASE_AMOUNT as string, CLEARED_DATE as string, CLEARED_ERROR_AMOUNT as string, CLEARED_ERROR_BASE_AMOUNT as string, CLEARED_EXCHANGE_DATE as string, CLEARED_EXCHANGE_RATE as string, CLEARED_EXCHANGE_RATE_TYPE as string, COMPLETED_PMTS_GROUP_ID as string, COUNTRY as string, COUNTY as string, CREATED_BY as string, CREATION_DATE as string, CURRENCY_CODE as string, DESCRIPTION as string, DOC_CATEGORY_CODE as string, DOC_SEQUENCE_ID as string, DOC_SEQUENCE_VALUE as string, EMPLOYEE_ADDRESS_CODE as string, ESCHEATMENT_INVOICE_ID as string, ESCHEATMENT_VENDOR_ID as string, ESCHEATMENT_VENDOR_SITE_ID as string, EXCHANGE_DATE as string, EXCHANGE_RATE as string, EXCHANGE_RATE_TYPE as string, EXTERNAL_BANK_ACCOUNT_ID as string, FUTURE_PAY_DUE_DATE as string, GLOBAL_ATTRIBUTE1 as string, GLOBAL_ATTRIBUTE10 as string, GLOBAL_ATTRIBUTE11 as string, GLOBAL_ATTRIBUTE12 as string, GLOBAL_ATTRIBUTE13 as string, GLOBAL_ATTRIBUTE14 as string, GLOBAL_ATTRIBUTE15 as string, GLOBAL_ATTRIBUTE16 as string, GLOBAL_ATTRIBUTE17 as string, GLOBAL_ATTRIBUTE18 as string, GLOBAL_ATTRIBUTE19 as string, GLOBAL_ATTRIBUTE2 as string, GLOBAL_ATTRIBUTE20 as string, GLOBAL_ATTRIBUTE3 as string, GLOBAL_ATTRIBUTE4 as string, GLOBAL_ATTRIBUTE5 as string, GLOBAL_ATTRIBUTE6 as string, GLOBAL_ATTRIBUTE7 as string, GLOBAL_ATTRIBUTE8 as string, GLOBAL_ATTRIBUTE9 as string, GLOBAL_ATTRIBUTE_CATEGORY as string, GLOBAL_ATTRIBUTE_DATE1 as string, GLOBAL_ATTRIBUTE_DATE2 as string, GLOBAL_ATTRIBUTE_DATE3 as string, GLOBAL_ATTRIBUTE_DATE4 as string, GLOBAL_ATTRIBUTE_DATE5 as string, GLOBAL_ATTRIBUTE_NUMBER1 as string, GLOBAL_ATTRIBUTE_NUMBER2 as string, GLOBAL_ATTRIBUTE_NUMBER3 as string, GLOBAL_ATTRIBUTE_NUMBER4 as string, GLOBAL_ATTRIBUTE_NUMBER5 as string, IBAN_NUMBER as string, LAST_UPDATED_BY as string, LAST_UPDATE_DATE as string, LAST_UPDATE_LOGIN as string, LEGAL_ENTITY_ID as string, LOGICAL_GROUP_REFERENCE as string, MATURITY_EXCHANGE_DATE as string, MATURITY_EXCHANGE_RATE as string, MATURITY_EXCHANGE_RATE_TYPE as string, MRC_BASE_AMOUNT as string, MRC_CLEARED_BASE_AMOUNT as string, MRC_CLEARED_CHARGES_BASE_AMT as string, MRC_CLEARED_ERROR_BASE_AMOUNT as string, MRC_CLEARED_EXCHANGE_DATE as string, MRC_CLEARED_EXCHANGE_RATE as string, MRC_CLEARED_EXCHANGE_RATE_TYPE as string, MRC_EXCHANGE_DATE as string, MRC_EXCHANGE_RATE as string, MRC_EXCHANGE_RATE_TYPE as string, MRC_MATURITY_EXG_DATE as string, MRC_MATURITY_EXG_RATE as string, MRC_MATURITY_EXG_RATE_TYPE as string, MRC_STAMP_DUTY_BASE_AMT as string, OBJECT_VERSION_NUMBER as string, ORG_ID as string, PARTY_ID as string, PARTY_SITE_ID as string, PAYMENT_DOCUMENT_ID as string, PAYMENT_ID as string, PAYMENT_INSTRUCTION_ID as string, PAYMENT_INSTRUMENT_ID as string, PAYMENT_METHOD_CODE as string, PAYMENT_METHOD_LOOKUP_CODE as string, PAYMENT_MODE_CODE as string, PAYMENT_PROFILE_ID as string, PAYMENT_TYPE_FLAG as string, PMT_INSTR_BU_ASSIGNMENT_ID as string, PMT_TO_BANK_AMOUNT as string, PMT_TO_BANK_RATE as string, PMT_TO_BANK_RATE_TYPE as string, POSITIVE_PAY_STATUS_CODE as string, PROVINCE as string, RECONCILIATION_BATCH_ID as string, RECON_FLAG as string, RELATIONSHIP_ID as string, RELEASED_BY as string, RELEASED_DATE as string, REMIT_TO_ADDRESS_ID as string, REMIT_TO_ADDRESS_NAME as string, REMIT_TO_SUPPLIER_ID as string, REMIT_TO_SUPPLIER_NAME as string, REQUEST_ID as string, SETTLEMENT_PRIORITY as string, STAMP_DUTY_AMT as string, STAMP_DUTY_BASE_AMT as string, STATE as string, STATUS_LOOKUP_CODE as string, STOPPED_BY as string, STOPPED_DATE as string, TRANSFER_PRIORITY as string, TREASURY_PAY_DATE as string, TREASURY_PAY_NUMBER as string, USSGL_TRANSACTION_CODE as string, USSGL_TRX_CODE_CONTEXT as string, VENDOR_ID as string, VENDOR_NAME as string, VENDOR_SITE_CODE as string, VENDOR_SITE_ID as string, VOID_DATE as string, X_CURR_RATE_TYPE as string, ZIP as string)[])",
+						"     ),",
+						"     allowSchemaDrift: false,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     validationMode: 'none',",
+						"     namespaces: true) ~> SrcXMl",
+						"SrcXMl foldDown(unroll(DATA_DS.G_1),",
+						"     mapColumn(",
+						"          ACTUAL_VALUE_DATE = DATA_DS.G_1.ACTUAL_VALUE_DATE,",
+						"          ADDRESS_LINE1 = DATA_DS.G_1.ADDRESS_LINE1,",
+						"          ADDRESS_LINE2 = DATA_DS.G_1.ADDRESS_LINE2,",
+						"          ADDRESS_LINE3 = DATA_DS.G_1.ADDRESS_LINE3,",
+						"          ADDRESS_LINE4 = DATA_DS.G_1.ADDRESS_LINE4,",
+						"          ADDRESS_STYLE = DATA_DS.G_1.ADDRESS_STYLE,",
+						"          AMOUNT = DATA_DS.G_1.AMOUNT,",
+						"          ANTICIPATED_VALUE_DATE = DATA_DS.G_1.ANTICIPATED_VALUE_DATE,",
+						"          ATTRIBUTE1 = DATA_DS.G_1.ATTRIBUTE1,",
+						"          ATTRIBUTE10 = DATA_DS.G_1.ATTRIBUTE10,",
+						"          ATTRIBUTE11 = DATA_DS.G_1.ATTRIBUTE11,",
+						"          ATTRIBUTE12 = DATA_DS.G_1.ATTRIBUTE12,",
+						"          ATTRIBUTE13 = DATA_DS.G_1.ATTRIBUTE13,",
+						"          ATTRIBUTE14 = DATA_DS.G_1.ATTRIBUTE14,",
+						"          ATTRIBUTE15 = DATA_DS.G_1.ATTRIBUTE15,",
+						"          ATTRIBUTE2 = DATA_DS.G_1.ATTRIBUTE2,",
+						"          ATTRIBUTE3 = DATA_DS.G_1.ATTRIBUTE3,",
+						"          ATTRIBUTE4 = DATA_DS.G_1.ATTRIBUTE4,",
+						"          ATTRIBUTE5 = DATA_DS.G_1.ATTRIBUTE5,",
+						"          ATTRIBUTE6 = DATA_DS.G_1.ATTRIBUTE6,",
+						"          ATTRIBUTE7 = DATA_DS.G_1.ATTRIBUTE7,",
+						"          ATTRIBUTE8 = DATA_DS.G_1.ATTRIBUTE8,",
+						"          ATTRIBUTE9 = DATA_DS.G_1.ATTRIBUTE9,",
+						"          ATTRIBUTE_CATEGORY = DATA_DS.G_1.ATTRIBUTE_CATEGORY,",
+						"          ATTRIBUTE_DATE1 = DATA_DS.G_1.ATTRIBUTE_DATE1,",
+						"          ATTRIBUTE_DATE2 = DATA_DS.G_1.ATTRIBUTE_DATE2,",
+						"          ATTRIBUTE_DATE3 = DATA_DS.G_1.ATTRIBUTE_DATE3,",
+						"          ATTRIBUTE_DATE4 = DATA_DS.G_1.ATTRIBUTE_DATE4,",
+						"          ATTRIBUTE_DATE5 = DATA_DS.G_1.ATTRIBUTE_DATE5,",
+						"          ATTRIBUTE_NUMBER1 = DATA_DS.G_1.ATTRIBUTE_NUMBER1,",
+						"          ATTRIBUTE_NUMBER2 = DATA_DS.G_1.ATTRIBUTE_NUMBER2,",
+						"          ATTRIBUTE_NUMBER3 = DATA_DS.G_1.ATTRIBUTE_NUMBER3,",
+						"          ATTRIBUTE_NUMBER4 = DATA_DS.G_1.ATTRIBUTE_NUMBER4,",
+						"          ATTRIBUTE_NUMBER5 = DATA_DS.G_1.ATTRIBUTE_NUMBER5,",
+						"          BANK_ACCOUNT_NAME = DATA_DS.G_1.BANK_ACCOUNT_NAME,",
+						"          BANK_ACCOUNT_NUM = DATA_DS.G_1.BANK_ACCOUNT_NUM,",
+						"          BANK_ACCOUNT_TYPE = DATA_DS.G_1.BANK_ACCOUNT_TYPE,",
+						"          BANK_CHARGE_BEARER = DATA_DS.G_1.BANK_CHARGE_BEARER,",
+						"          BANK_NUM = DATA_DS.G_1.BANK_NUM,",
+						"          BASE_AMOUNT = DATA_DS.G_1.BASE_AMOUNT,",
+						"          BEP_RESPONSE_CODE = DATA_DS.G_1.BEP_RESPONSE_CODE,",
+						"          BEP_RESPONSE_DATE = DATA_DS.G_1.BEP_RESPONSE_DATE,",
+						"          BEP_STATUS = DATA_DS.G_1.BEP_STATUS,",
+						"          BEP_TRXN_RESPONSE_ID = DATA_DS.G_1.BEP_TRXN_RESPONSE_ID,",
+						"          CE_BANK_ACCT_USE_ID = DATA_DS.G_1.CE_BANK_ACCT_USE_ID,",
+						"          CHECKRUN_ID = DATA_DS.G_1.CHECKRUN_ID,",
+						"          CHECKRUN_NAME = DATA_DS.G_1.CHECKRUN_NAME,",
+						"          CHECK_DATE = DATA_DS.G_1.CHECK_DATE,",
+						"          CHECK_FORMAT_ID = DATA_DS.G_1.CHECK_FORMAT_ID,",
+						"          CHECK_ID = DATA_DS.G_1.CHECK_ID,",
+						"          CHECK_NUMBER = DATA_DS.G_1.CHECK_NUMBER,",
+						"          CHECK_STOCK_ID = DATA_DS.G_1.CHECK_STOCK_ID,",
+						"          CHECK_VOUCHER_NUM = DATA_DS.G_1.CHECK_VOUCHER_NUM,",
+						"          CITY = DATA_DS.G_1.CITY,",
+						"          CLEARED_AMOUNT = DATA_DS.G_1.CLEARED_AMOUNT,",
+						"          CLEARED_BASE_AMOUNT = DATA_DS.G_1.CLEARED_BASE_AMOUNT,",
+						"          CLEARED_CHARGES_AMOUNT = DATA_DS.G_1.CLEARED_CHARGES_AMOUNT,",
+						"          CLEARED_CHARGES_BASE_AMOUNT = DATA_DS.G_1.CLEARED_CHARGES_BASE_AMOUNT,",
+						"          CLEARED_DATE = DATA_DS.G_1.CLEARED_DATE,",
+						"          CLEARED_ERROR_AMOUNT = DATA_DS.G_1.CLEARED_ERROR_AMOUNT,",
+						"          CLEARED_ERROR_BASE_AMOUNT = DATA_DS.G_1.CLEARED_ERROR_BASE_AMOUNT,",
+						"          CLEARED_EXCHANGE_DATE = DATA_DS.G_1.CLEARED_EXCHANGE_DATE,",
+						"          CLEARED_EXCHANGE_RATE = DATA_DS.G_1.CLEARED_EXCHANGE_RATE,",
+						"          CLEARED_EXCHANGE_RATE_TYPE = DATA_DS.G_1.CLEARED_EXCHANGE_RATE_TYPE,",
+						"          COMPLETED_PMTS_GROUP_ID = DATA_DS.G_1.COMPLETED_PMTS_GROUP_ID,",
+						"          COUNTRY = DATA_DS.G_1.COUNTRY,",
+						"          COUNTY = DATA_DS.G_1.COUNTY,",
+						"          CREATED_BY = DATA_DS.G_1.CREATED_BY,",
+						"          CREATION_DATE = DATA_DS.G_1.CREATION_DATE,",
+						"          CURRENCY_CODE = DATA_DS.G_1.CURRENCY_CODE,",
+						"          DESCRIPTION = DATA_DS.G_1.DESCRIPTION,",
+						"          DOC_CATEGORY_CODE = DATA_DS.G_1.DOC_CATEGORY_CODE,",
+						"          DOC_SEQUENCE_ID = DATA_DS.G_1.DOC_SEQUENCE_ID,",
+						"          DOC_SEQUENCE_VALUE = DATA_DS.G_1.DOC_SEQUENCE_VALUE,",
+						"          EMPLOYEE_ADDRESS_CODE = DATA_DS.G_1.EMPLOYEE_ADDRESS_CODE,",
+						"          ESCHEATMENT_INVOICE_ID = DATA_DS.G_1.ESCHEATMENT_INVOICE_ID,",
+						"          ESCHEATMENT_VENDOR_ID = DATA_DS.G_1.ESCHEATMENT_VENDOR_ID,",
+						"          ESCHEATMENT_VENDOR_SITE_ID = DATA_DS.G_1.ESCHEATMENT_VENDOR_SITE_ID,",
+						"          EXCHANGE_DATE = DATA_DS.G_1.EXCHANGE_DATE,",
+						"          EXCHANGE_RATE = DATA_DS.G_1.EXCHANGE_RATE,",
+						"          EXCHANGE_RATE_TYPE = DATA_DS.G_1.EXCHANGE_RATE_TYPE,",
+						"          EXTERNAL_BANK_ACCOUNT_ID = DATA_DS.G_1.EXTERNAL_BANK_ACCOUNT_ID,",
+						"          FUTURE_PAY_DUE_DATE = DATA_DS.G_1.FUTURE_PAY_DUE_DATE,",
+						"          GLOBAL_ATTRIBUTE1 = DATA_DS.G_1.GLOBAL_ATTRIBUTE1,",
+						"          GLOBAL_ATTRIBUTE10 = DATA_DS.G_1.GLOBAL_ATTRIBUTE10,",
+						"          GLOBAL_ATTRIBUTE11 = DATA_DS.G_1.GLOBAL_ATTRIBUTE11,",
+						"          GLOBAL_ATTRIBUTE12 = DATA_DS.G_1.GLOBAL_ATTRIBUTE12,",
+						"          GLOBAL_ATTRIBUTE13 = DATA_DS.G_1.GLOBAL_ATTRIBUTE13,",
+						"          GLOBAL_ATTRIBUTE14 = DATA_DS.G_1.GLOBAL_ATTRIBUTE14,",
+						"          GLOBAL_ATTRIBUTE15 = DATA_DS.G_1.GLOBAL_ATTRIBUTE15,",
+						"          GLOBAL_ATTRIBUTE16 = DATA_DS.G_1.GLOBAL_ATTRIBUTE16,",
+						"          GLOBAL_ATTRIBUTE17 = DATA_DS.G_1.GLOBAL_ATTRIBUTE17,",
+						"          GLOBAL_ATTRIBUTE18 = DATA_DS.G_1.GLOBAL_ATTRIBUTE18,",
+						"          GLOBAL_ATTRIBUTE19 = DATA_DS.G_1.GLOBAL_ATTRIBUTE19,",
+						"          GLOBAL_ATTRIBUTE2 = DATA_DS.G_1.GLOBAL_ATTRIBUTE2,",
+						"          GLOBAL_ATTRIBUTE20 = DATA_DS.G_1.GLOBAL_ATTRIBUTE20,",
+						"          GLOBAL_ATTRIBUTE3 = DATA_DS.G_1.GLOBAL_ATTRIBUTE3,",
+						"          GLOBAL_ATTRIBUTE4 = DATA_DS.G_1.GLOBAL_ATTRIBUTE4,",
+						"          GLOBAL_ATTRIBUTE5 = DATA_DS.G_1.GLOBAL_ATTRIBUTE5,",
+						"          GLOBAL_ATTRIBUTE6 = DATA_DS.G_1.GLOBAL_ATTRIBUTE6,",
+						"          GLOBAL_ATTRIBUTE7 = DATA_DS.G_1.GLOBAL_ATTRIBUTE7,",
+						"          GLOBAL_ATTRIBUTE8 = DATA_DS.G_1.GLOBAL_ATTRIBUTE8,",
+						"          GLOBAL_ATTRIBUTE9 = DATA_DS.G_1.GLOBAL_ATTRIBUTE9,",
+						"          GLOBAL_ATTRIBUTE_CATEGORY = DATA_DS.G_1.GLOBAL_ATTRIBUTE_CATEGORY,",
+						"          GLOBAL_ATTRIBUTE_DATE1 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_DATE1,",
+						"          GLOBAL_ATTRIBUTE_DATE2 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_DATE2,",
+						"          GLOBAL_ATTRIBUTE_DATE3 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_DATE3,",
+						"          GLOBAL_ATTRIBUTE_DATE4 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_DATE4,",
+						"          GLOBAL_ATTRIBUTE_DATE5 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_DATE5,",
+						"          GLOBAL_ATTRIBUTE_NUMBER1 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_NUMBER1,",
+						"          GLOBAL_ATTRIBUTE_NUMBER2 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_NUMBER2,",
+						"          GLOBAL_ATTRIBUTE_NUMBER3 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_NUMBER3,",
+						"          GLOBAL_ATTRIBUTE_NUMBER4 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_NUMBER4,",
+						"          GLOBAL_ATTRIBUTE_NUMBER5 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_NUMBER5,",
+						"          IBAN_NUMBER = DATA_DS.G_1.IBAN_NUMBER,",
+						"          LAST_UPDATED_BY = DATA_DS.G_1.LAST_UPDATED_BY,",
+						"          LAST_UPDATE_DATE = DATA_DS.G_1.LAST_UPDATE_DATE,",
+						"          LAST_UPDATE_LOGIN = DATA_DS.G_1.LAST_UPDATE_LOGIN,",
+						"          LEGAL_ENTITY_ID = DATA_DS.G_1.LEGAL_ENTITY_ID,",
+						"          LOGICAL_GROUP_REFERENCE = DATA_DS.G_1.LOGICAL_GROUP_REFERENCE,",
+						"          MATURITY_EXCHANGE_DATE = DATA_DS.G_1.MATURITY_EXCHANGE_DATE,",
+						"          MATURITY_EXCHANGE_RATE = DATA_DS.G_1.MATURITY_EXCHANGE_RATE,",
+						"          MATURITY_EXCHANGE_RATE_TYPE = DATA_DS.G_1.MATURITY_EXCHANGE_RATE_TYPE,",
+						"          MRC_BASE_AMOUNT = DATA_DS.G_1.MRC_BASE_AMOUNT,",
+						"          MRC_CLEARED_BASE_AMOUNT = DATA_DS.G_1.MRC_CLEARED_BASE_AMOUNT,",
+						"          MRC_CLEARED_CHARGES_BASE_AMT = DATA_DS.G_1.MRC_CLEARED_CHARGES_BASE_AMT,",
+						"          MRC_CLEARED_ERROR_BASE_AMOUNT = DATA_DS.G_1.MRC_CLEARED_ERROR_BASE_AMOUNT,",
+						"          MRC_CLEARED_EXCHANGE_DATE = DATA_DS.G_1.MRC_CLEARED_EXCHANGE_DATE,",
+						"          MRC_CLEARED_EXCHANGE_RATE = DATA_DS.G_1.MRC_CLEARED_EXCHANGE_RATE,",
+						"          MRC_CLEARED_EXCHANGE_RATE_TYPE = DATA_DS.G_1.MRC_CLEARED_EXCHANGE_RATE_TYPE,",
+						"          MRC_EXCHANGE_DATE = DATA_DS.G_1.MRC_EXCHANGE_DATE,",
+						"          MRC_EXCHANGE_RATE = DATA_DS.G_1.MRC_EXCHANGE_RATE,",
+						"          MRC_EXCHANGE_RATE_TYPE = DATA_DS.G_1.MRC_EXCHANGE_RATE_TYPE,",
+						"          MRC_MATURITY_EXG_DATE = DATA_DS.G_1.MRC_MATURITY_EXG_DATE,",
+						"          MRC_MATURITY_EXG_RATE = DATA_DS.G_1.MRC_MATURITY_EXG_RATE,",
+						"          MRC_MATURITY_EXG_RATE_TYPE = DATA_DS.G_1.MRC_MATURITY_EXG_RATE_TYPE,",
+						"          MRC_STAMP_DUTY_BASE_AMT = DATA_DS.G_1.MRC_STAMP_DUTY_BASE_AMT,",
+						"          OBJECT_VERSION_NUMBER = DATA_DS.G_1.OBJECT_VERSION_NUMBER,",
+						"          ORG_ID = DATA_DS.G_1.ORG_ID,",
+						"          PARTY_ID = DATA_DS.G_1.PARTY_ID,",
+						"          PARTY_SITE_ID = DATA_DS.G_1.PARTY_SITE_ID,",
+						"          PAYMENT_DOCUMENT_ID = DATA_DS.G_1.PAYMENT_DOCUMENT_ID,",
+						"          PAYMENT_ID = DATA_DS.G_1.PAYMENT_ID,",
+						"          PAYMENT_INSTRUCTION_ID = DATA_DS.G_1.PAYMENT_INSTRUCTION_ID,",
+						"          PAYMENT_INSTRUMENT_ID = DATA_DS.G_1.PAYMENT_INSTRUMENT_ID,",
+						"          PAYMENT_METHOD_CODE = DATA_DS.G_1.PAYMENT_METHOD_CODE,",
+						"          PAYMENT_METHOD_LOOKUP_CODE = DATA_DS.G_1.PAYMENT_METHOD_LOOKUP_CODE,",
+						"          PAYMENT_MODE_CODE = DATA_DS.G_1.PAYMENT_MODE_CODE,",
+						"          PAYMENT_PROFILE_ID = DATA_DS.G_1.PAYMENT_PROFILE_ID,",
+						"          PAYMENT_TYPE_FLAG = DATA_DS.G_1.PAYMENT_TYPE_FLAG,",
+						"          PMT_INSTR_BU_ASSIGNMENT_ID = DATA_DS.G_1.PMT_INSTR_BU_ASSIGNMENT_ID,",
+						"          PMT_TO_BANK_AMOUNT = DATA_DS.G_1.PMT_TO_BANK_AMOUNT,",
+						"          PMT_TO_BANK_RATE = DATA_DS.G_1.PMT_TO_BANK_RATE,",
+						"          PMT_TO_BANK_RATE_TYPE = DATA_DS.G_1.PMT_TO_BANK_RATE_TYPE,",
+						"          POSITIVE_PAY_STATUS_CODE = DATA_DS.G_1.POSITIVE_PAY_STATUS_CODE,",
+						"          PROVINCE = DATA_DS.G_1.PROVINCE,",
+						"          RECONCILIATION_BATCH_ID = DATA_DS.G_1.RECONCILIATION_BATCH_ID,",
+						"          RECON_FLAG = DATA_DS.G_1.RECON_FLAG,",
+						"          RELATIONSHIP_ID = DATA_DS.G_1.RELATIONSHIP_ID,",
+						"          RELEASED_BY = DATA_DS.G_1.RELEASED_BY,",
+						"          RELEASED_DATE = DATA_DS.G_1.RELEASED_DATE,",
+						"          REMIT_TO_ADDRESS_ID = DATA_DS.G_1.REMIT_TO_ADDRESS_ID,",
+						"          REMIT_TO_ADDRESS_NAME = DATA_DS.G_1.REMIT_TO_ADDRESS_NAME,",
+						"          REMIT_TO_SUPPLIER_ID = DATA_DS.G_1.REMIT_TO_SUPPLIER_ID,",
+						"          REMIT_TO_SUPPLIER_NAME = DATA_DS.G_1.REMIT_TO_SUPPLIER_NAME,",
+						"          REQUEST_ID = DATA_DS.G_1.REQUEST_ID,",
+						"          SETTLEMENT_PRIORITY = DATA_DS.G_1.SETTLEMENT_PRIORITY,",
+						"          STAMP_DUTY_AMT = DATA_DS.G_1.STAMP_DUTY_AMT,",
+						"          STAMP_DUTY_BASE_AMT = DATA_DS.G_1.STAMP_DUTY_BASE_AMT,",
+						"          STATE = DATA_DS.G_1.STATE,",
+						"          STATUS_LOOKUP_CODE = DATA_DS.G_1.STATUS_LOOKUP_CODE,",
+						"          STOPPED_BY = DATA_DS.G_1.STOPPED_BY,",
+						"          STOPPED_DATE = DATA_DS.G_1.STOPPED_DATE,",
+						"          TRANSFER_PRIORITY = DATA_DS.G_1.TRANSFER_PRIORITY,",
+						"          TREASURY_PAY_DATE = DATA_DS.G_1.TREASURY_PAY_DATE,",
+						"          TREASURY_PAY_NUMBER = DATA_DS.G_1.TREASURY_PAY_NUMBER,",
+						"          USSGL_TRANSACTION_CODE = DATA_DS.G_1.USSGL_TRANSACTION_CODE,",
+						"          USSGL_TRX_CODE_CONTEXT = DATA_DS.G_1.USSGL_TRX_CODE_CONTEXT,",
+						"          VENDOR_ID = DATA_DS.G_1.VENDOR_ID,",
+						"          VENDOR_NAME = DATA_DS.G_1.VENDOR_NAME,",
+						"          VENDOR_SITE_CODE = DATA_DS.G_1.VENDOR_SITE_CODE,",
+						"          VENDOR_SITE_ID = DATA_DS.G_1.VENDOR_SITE_ID,",
+						"          VOID_DATE = DATA_DS.G_1.VOID_DATE,",
+						"          X_CURR_RATE_TYPE = DATA_DS.G_1.X_CURR_RATE_TYPE,",
+						"          ZIP = DATA_DS.G_1.ZIP",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> XmlToCsvflatten",
+						"XmlToCsvflatten derive(source_name = 'SYSTEM',",
+						"          sub_source_name = 'R2P',",
+						"          created_date_time = currentUTC()) ~> addLoadDetails",
+						"addLoadDetails sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     partitionFileNames:['Payment_Details.csv'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SnkCsv"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_payment_history_decoding')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/Payment Dashboard/Payment History"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_xml_payment_history_source_stage_encoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SrcEncodedXml"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_delimited_xml_payment_history_source_stage_decoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SnkDecodedXml"
+						}
+					],
+					"transformations": [
+						{
+							"name": "Decoding"
+						},
+						{
+							"name": "SelectDecodedData"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          {http://www.w3.org/2003/05/soap-envelope,Envelope} as ({http://www.w3.org/2003/05/soap-envelope,Body} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,runReportResponse} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,runReportReturn} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,metaDataList} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean), {http://xmlns.oracle.com/oxp/service/PublicReportService,reportBytes} as string, {http://xmlns.oracle.com/oxp/service/PublicReportService,reportContentType} as string, {http://xmlns.oracle.com/oxp/service/PublicReportService,reportFileID} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean), {http://xmlns.oracle.com/oxp/service/PublicReportService,reportLocale} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean)))), {http://www.w3.org/2003/05/soap-envelope,Header} as string)",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     validationMode: 'none',",
+						"     namespaces: true) ~> SrcEncodedXml",
+						"SrcEncodedXml derive(ReportBytes = fromBase64(toString({http://www.w3.org/2003/05/soap-envelope,Envelope}.{http://www.w3.org/2003/05/soap-envelope,Body}.{http://xmlns.oracle.com/oxp/service/PublicReportService,runReportResponse}.{http://xmlns.oracle.com/oxp/service/PublicReportService,runReportReturn}.{http://xmlns.oracle.com/oxp/service/PublicReportService,reportBytes}))) ~> Decoding",
+						"Decoding select(mapColumn(",
+						"          ReportBytes",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> SelectDecodedData",
+						"SelectDecodedData sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     emptyLinesAsHeader: 1,",
+						"     partitionFileNames:['source_data_decoded.xml'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SnkDecodedXml"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_payment_history_flattening')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/Payment Dashboard/Payment History"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_xml_payment_history_source_stage_decoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SrcXMl"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_payment_history_source_stage_final_csv",
+								"type": "DatasetReference"
+							},
+							"name": "SnkCsv"
+						}
+					],
+					"transformations": [
+						{
+							"name": "XmlToCsvflatten"
+						},
+						{
+							"name": "addLoadDetails"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          DATA_DS as (G_1 as (ACCOUNTING_DATE as string, ACCOUNTING_EVENT_ID as string, BANK_CURRENCY_CODE as string, BANK_TO_BASE_XRATE as string, BANK_TO_BASE_XRATE_DATE as string, BANK_TO_BASE_XRATE_TYPE as string, CHARGES_BANK_AMOUNT as string, CHARGES_BASE_AMOUNT as string, CHARGES_PMT_AMOUNT as string, CHARGE_AMOUNT as string, CHECK_ID as string, CREATED_BY as string, CREATION_DATE as string, CURRENCY_CODE as string, ERRORS_BANK_AMOUNT as string, ERRORS_BASE_AMOUNT as string, ERRORS_PMT_AMOUNT as string, ERROR_AMOUNT as string, GAIN_LOSS_INDICATOR as string, HISTORICAL_FLAG as string, INVOICE_ADJUSTMENT_EVENT_ID as string, JOB_DEFINITION_NAME as string, JOB_DEFINITION_PACKAGE as string, LAST_UPDATED_BY as string, LAST_UPDATE_DATE as string, LAST_UPDATE_LOGIN as string, MATCHED_FLAG as string, MRC_BANK_TO_BASE_XRATE as string, MRC_BANK_TO_BASE_XRATE_DATE as string, MRC_BANK_TO_BASE_XRATE_TYPE as string, MRC_CHARGES_BASE_AMOUNT as string, MRC_ERRORS_BASE_AMOUNT as string, MRC_EXCHANGE_RATE as string, MRC_EXCHANGE_RATE_DATE as string, MRC_EXCHANGE_RATE_TYPE as string, MRC_PMT_TO_BASE_XRATE as string, MRC_PMT_TO_BASE_XRATE_DATE as string, MRC_PMT_TO_BASE_XRATE_TYPE as string, MRC_TRX_BASE_AMOUNT as string, OBJECT_VERSION_NUMBER as short, ORG_ID as string, PAYMENT_HISTORY_ID as string, PMT_CURRENCY_CODE as string, PMT_TO_BANK_XRATE as string, PMT_TO_BANK_XRATE_DATE as string, PMT_TO_BANK_XRATE_TYPE as string, PMT_TO_BASE_XRATE as string, PMT_TO_BASE_XRATE_DATE as string, PMT_TO_BASE_XRATE_TYPE as string, POSTED_FLAG as string, PROGRAM_APPLICATION_ID as string, PROGRAM_ID as string, PROGRAM_UPDATE_DATE as string, RELATED_EVENT_ID as string, REQUEST_ID as string, REV_PMT_HIST_ID as string, TRANSACTION_AMOUNT as string, TRANSACTION_DATE as string, TRANSACTION_TYPE as string, TRX_BANK_AMOUNT as string, TRX_BASE_AMOUNT as string, TRX_PMT_AMOUNT as string)[])",
+						"     ),",
+						"     allowSchemaDrift: false,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     validationMode: 'none',",
+						"     namespaces: true) ~> SrcXMl",
+						"SrcXMl foldDown(unroll(DATA_DS.G_1),",
+						"     mapColumn(",
+						"          ACCOUNTING_DATE = DATA_DS.G_1.ACCOUNTING_DATE,",
+						"          ACCOUNTING_EVENT_ID = DATA_DS.G_1.ACCOUNTING_EVENT_ID,",
+						"          BANK_CURRENCY_CODE = DATA_DS.G_1.BANK_CURRENCY_CODE,",
+						"          BANK_TO_BASE_XRATE = DATA_DS.G_1.BANK_TO_BASE_XRATE,",
+						"          BANK_TO_BASE_XRATE_DATE = DATA_DS.G_1.BANK_TO_BASE_XRATE_DATE,",
+						"          BANK_TO_BASE_XRATE_TYPE = DATA_DS.G_1.BANK_TO_BASE_XRATE_TYPE,",
+						"          CHARGES_BANK_AMOUNT = DATA_DS.G_1.CHARGES_BANK_AMOUNT,",
+						"          CHARGES_BASE_AMOUNT = DATA_DS.G_1.CHARGES_BASE_AMOUNT,",
+						"          CHARGES_PMT_AMOUNT = DATA_DS.G_1.CHARGES_PMT_AMOUNT,",
+						"          CHARGE_AMOUNT = DATA_DS.G_1.CHARGE_AMOUNT,",
+						"          CHECK_ID = DATA_DS.G_1.CHECK_ID,",
+						"          CREATED_BY = DATA_DS.G_1.CREATED_BY,",
+						"          CREATION_DATE = DATA_DS.G_1.CREATION_DATE,",
+						"          CURRENCY_CODE = DATA_DS.G_1.CURRENCY_CODE,",
+						"          ERRORS_BANK_AMOUNT = DATA_DS.G_1.ERRORS_BANK_AMOUNT,",
+						"          ERRORS_BASE_AMOUNT = DATA_DS.G_1.ERRORS_BASE_AMOUNT,",
+						"          ERRORS_PMT_AMOUNT = DATA_DS.G_1.ERRORS_PMT_AMOUNT,",
+						"          ERROR_AMOUNT = DATA_DS.G_1.ERROR_AMOUNT,",
+						"          GAIN_LOSS_INDICATOR = DATA_DS.G_1.GAIN_LOSS_INDICATOR,",
+						"          HISTORICAL_FLAG = DATA_DS.G_1.HISTORICAL_FLAG,",
+						"          INVOICE_ADJUSTMENT_EVENT_ID = DATA_DS.G_1.INVOICE_ADJUSTMENT_EVENT_ID,",
+						"          JOB_DEFINITION_NAME = DATA_DS.G_1.JOB_DEFINITION_NAME,",
+						"          JOB_DEFINITION_PACKAGE = DATA_DS.G_1.JOB_DEFINITION_PACKAGE,",
+						"          LAST_UPDATED_BY = DATA_DS.G_1.LAST_UPDATED_BY,",
+						"          LAST_UPDATE_DATE = DATA_DS.G_1.LAST_UPDATE_DATE,",
+						"          LAST_UPDATE_LOGIN = DATA_DS.G_1.LAST_UPDATE_LOGIN,",
+						"          MATCHED_FLAG = DATA_DS.G_1.MATCHED_FLAG,",
+						"          MRC_BANK_TO_BASE_XRATE = DATA_DS.G_1.MRC_BANK_TO_BASE_XRATE,",
+						"          MRC_BANK_TO_BASE_XRATE_DATE = DATA_DS.G_1.MRC_BANK_TO_BASE_XRATE_DATE,",
+						"          MRC_BANK_TO_BASE_XRATE_TYPE = DATA_DS.G_1.MRC_BANK_TO_BASE_XRATE_TYPE,",
+						"          MRC_CHARGES_BASE_AMOUNT = DATA_DS.G_1.MRC_CHARGES_BASE_AMOUNT,",
+						"          MRC_ERRORS_BASE_AMOUNT = DATA_DS.G_1.MRC_ERRORS_BASE_AMOUNT,",
+						"          MRC_EXCHANGE_RATE = DATA_DS.G_1.MRC_EXCHANGE_RATE,",
+						"          MRC_EXCHANGE_RATE_DATE = DATA_DS.G_1.MRC_EXCHANGE_RATE_DATE,",
+						"          MRC_EXCHANGE_RATE_TYPE = DATA_DS.G_1.MRC_EXCHANGE_RATE_TYPE,",
+						"          MRC_PMT_TO_BASE_XRATE = DATA_DS.G_1.MRC_PMT_TO_BASE_XRATE,",
+						"          MRC_PMT_TO_BASE_XRATE_DATE = DATA_DS.G_1.MRC_PMT_TO_BASE_XRATE_DATE,",
+						"          MRC_PMT_TO_BASE_XRATE_TYPE = DATA_DS.G_1.MRC_PMT_TO_BASE_XRATE_TYPE,",
+						"          MRC_TRX_BASE_AMOUNT = DATA_DS.G_1.MRC_TRX_BASE_AMOUNT,",
+						"          OBJECT_VERSION_NUMBER = DATA_DS.G_1.OBJECT_VERSION_NUMBER,",
+						"          ORG_ID = DATA_DS.G_1.ORG_ID,",
+						"          PAYMENT_HISTORY_ID = DATA_DS.G_1.PAYMENT_HISTORY_ID,",
+						"          PMT_CURRENCY_CODE = DATA_DS.G_1.PMT_CURRENCY_CODE,",
+						"          PMT_TO_BANK_XRATE = DATA_DS.G_1.PMT_TO_BANK_XRATE,",
+						"          PMT_TO_BANK_XRATE_DATE = DATA_DS.G_1.PMT_TO_BANK_XRATE_DATE,",
+						"          PMT_TO_BANK_XRATE_TYPE = DATA_DS.G_1.PMT_TO_BANK_XRATE_TYPE,",
+						"          PMT_TO_BASE_XRATE = DATA_DS.G_1.PMT_TO_BASE_XRATE,",
+						"          PMT_TO_BASE_XRATE_DATE = DATA_DS.G_1.PMT_TO_BASE_XRATE_DATE,",
+						"          PMT_TO_BASE_XRATE_TYPE = DATA_DS.G_1.PMT_TO_BASE_XRATE_TYPE,",
+						"          POSTED_FLAG = DATA_DS.G_1.POSTED_FLAG,",
+						"          PROGRAM_APPLICATION_ID = DATA_DS.G_1.PROGRAM_APPLICATION_ID,",
+						"          PROGRAM_ID = DATA_DS.G_1.PROGRAM_ID,",
+						"          PROGRAM_UPDATE_DATE = DATA_DS.G_1.PROGRAM_UPDATE_DATE,",
+						"          RELATED_EVENT_ID = DATA_DS.G_1.RELATED_EVENT_ID,",
+						"          REQUEST_ID = DATA_DS.G_1.REQUEST_ID,",
+						"          REV_PMT_HIST_ID = DATA_DS.G_1.REV_PMT_HIST_ID,",
+						"          TRANSACTION_AMOUNT = DATA_DS.G_1.TRANSACTION_AMOUNT,",
+						"          TRANSACTION_DATE = DATA_DS.G_1.TRANSACTION_DATE,",
+						"          TRANSACTION_TYPE = DATA_DS.G_1.TRANSACTION_TYPE,",
+						"          TRX_BANK_AMOUNT = DATA_DS.G_1.TRX_BANK_AMOUNT,",
+						"          TRX_BASE_AMOUNT = DATA_DS.G_1.TRX_BASE_AMOUNT,",
+						"          TRX_PMT_AMOUNT = DATA_DS.G_1.TRX_PMT_AMOUNT",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> XmlToCsvflatten",
+						"XmlToCsvflatten derive(source_name = 'SYSTEM',",
+						"          sub_source_name = 'R2P',",
+						"          created_date_time = currentUTC()) ~> addLoadDetails",
+						"addLoadDetails sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     partitionFileNames:['Payment_History.csv'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SnkCsv"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_pcm_certificate_package_stage_to_raw')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/YARD KPI/PCM"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_certificate_package_stg",
+								"type": "DatasetReference"
+							},
+							"name": "PCMWelderActivityStage"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_yardkpi_pcm_default",
+								"type": "DatasetReference"
+							},
+							"name": "PCMRaw"
+						}
+					],
+					"transformations": [
+						{
+							"name": "SetFileName"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          trans_date as string,",
+						"          trans_type as string,",
+						"          fab_code as string,",
+						"          contract as string,",
+						"          contract_title as string,",
+						"          job as string,",
+						"          job_title as string,",
+						"          item as string,",
+						"          item_title as string,",
+						"          ndt_drawing as string,",
+						"          ndt_drawing_desc as string,",
+						"          ndt_drawing_rev as string,",
+						"          ndt_drawing_date as string,",
+						"          line as string,",
+						"          line_desc as string,",
+						"          discipline as string,",
+						"          recap as string,",
+						"          weldcount as string,",
+						"          clear_date as string,",
+						"          clear_run as string,",
+						"          submit_date as string,",
+						"          accept_date as string,",
+						"          cert_pack_complete as string,",
+						"          package_recall_date as string,",
+						"          package_date as string,",
+						"          ndt_percent as string,",
+						"          mtn_completed as string,",
+						"          markup_received as string,",
+						"          inspector as string,",
+						"          insp_name as string,",
+						"          wh_report_num as string,",
+						"          cl_name1 as string,",
+						"          cl_date1 as string,",
+						"          cl_name2 as string,",
+						"          cl_date2 as string,",
+						"          cl_name3 as string,",
+						"          cl_date3 as string,",
+						"          include_in_rr_calc as string,",
+						"          source_code as string,",
+						"          sub_source_code as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: true,",
+						"     purgeFiles: true,",
+						"     multiLineRow: true,",
+						"     wildcardPaths:['Project_Data/YARDKPI/PCM/pcm_certification_package*_*.csv']) ~> PCMWelderActivityStage",
+						"PCMWelderActivityStage derive(FileName = concat('Project_Data/YARDKPI/PCM/',substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/','PCM_CERTIFICATION_PACKAGE_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv'),",
+						"          create_date_time = currentUTC(),",
+						"          ndt_drawing_desc = trim(replace(replace(replace(replace(replace(replace(replace(replace(replace(ndt_drawing_desc,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'CHAR(10)','CHAR 10'),'CHAR(13)','CHAR 13'),'  ',' ')),",
+						"          ndt_drawing = trim(replace(replace(replace(replace(replace(replace(replace(ndt_drawing,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),",
+						"          line_desc = trim(replace(replace(replace(replace(replace(replace(replace(line_desc,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),",
+						"          contract_title = trim(replace(replace(replace(replace(replace(replace(replace(contract_title,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),",
+						"          job_title = trim(replace(replace(replace(replace(replace(replace(replace(job_title,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),",
+						"          item_title = trim(replace(replace(replace(replace(replace(replace(replace(item_title,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),",
+						"          contract = trim(replace(replace(replace(replace(replace(replace(replace(contract,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),",
+						"          ndt_drawing_rev = trim(replace(replace(replace(replace(replace(replace(replace(ndt_drawing_rev,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),",
+						"          line = trim(replace(replace(replace(replace(replace(replace(replace(line,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),",
+						"          recap = trim(replace(replace(replace(replace(replace(replace(replace(recap,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' '))) ~> SetFileName",
+						"SetFileName sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     rowUrlColumn:'FileName',",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> PCMRaw"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_pcm_certificate_package_stage_to_raw_del')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/YARD KPI/PCM"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_certificate_package_stg",
+								"type": "DatasetReference"
+							},
+							"name": "PCMWelderActivityStage"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_yardkpi_pcm_default",
+								"type": "DatasetReference"
+							},
+							"name": "PCMRaw"
+						}
+					],
+					"transformations": [
+						{
+							"name": "SetFileName"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          trans_date as string,",
+						"          trans_type as string,",
+						"          fab_code as string,",
+						"          contract as string,",
+						"          contract_title as string,",
+						"          job as string,",
+						"          job_title as string,",
+						"          item as string,",
+						"          item_title as string,",
+						"          ndt_drawing as string,",
+						"          ndt_drawing_desc as string,",
+						"          ndt_drawing_rev as string,",
+						"          ndt_drawing_date as string,",
+						"          line as string,",
+						"          line_desc as string,",
+						"          discipline as string,",
+						"          recap as string,",
+						"          weldcount as string,",
+						"          clear_date as string,",
+						"          clear_run as string,",
+						"          submit_date as string,",
+						"          accept_date as string,",
+						"          cert_pack_complete as string,",
+						"          package_recall_date as string,",
+						"          package_date as string,",
+						"          ndt_percent as string,",
+						"          mtn_completed as string,",
+						"          markup_received as string,",
+						"          inspector as string,",
+						"          insp_name as string,",
+						"          wh_report_num as string,",
+						"          cl_name1 as string,",
+						"          cl_date1 as string,",
+						"          cl_name2 as string,",
+						"          cl_date2 as string,",
+						"          cl_name3 as string,",
+						"          cl_date3 as string,",
+						"          include_in_rr_calc as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: true,",
+						"     purgeFiles: true,",
+						"     multiLineRow: true,",
+						"     wildcardPaths:['Project_Data/YARDKPI/PCM_Del/pcm_certification_package_del_*_*.csv']) ~> PCMWelderActivityStage",
+						"PCMWelderActivityStage derive(FileName = concat('Project_Data/YARDKPI/PCM_Del/',substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/','PCM_CERTIFICATION_PACKAGE_DEL_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv'),",
+						"          create_date_time = currentUTC(),",
+						"          ndt_drawing_desc = trim(replace(replace(replace(replace(replace(replace(replace(replace(replace(ndt_drawing_desc,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'CHAR(10)','CHAR 10'),'CHAR(13)','CHAR 13'),'  ',' ')),",
+						"          contract_title = trim(replace(replace(replace(replace(replace(replace(replace(contract_title,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),",
+						"          job_title = trim(replace(replace(replace(replace(replace(replace(replace(job_title,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),",
+						"          item_title = trim(replace(replace(replace(replace(replace(replace(replace(item_title,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),",
+						"          ndt_drawing = trim(replace(replace(replace(replace(replace(replace(replace(ndt_drawing,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),",
+						"          line_desc = trim(replace(replace(replace(replace(replace(replace(replace(line_desc,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),",
+						"          contract = trim(replace(replace(replace(replace(replace(replace(replace(contract,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),",
+						"          ndt_drawing_rev = trim(replace(replace(replace(replace(replace(replace(replace(ndt_drawing_rev,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),",
+						"          line = trim(replace(replace(replace(replace(replace(replace(replace(line,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),",
+						"          recap = trim(replace(replace(replace(replace(replace(replace(replace(recap,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' '))) ~> SetFileName",
+						"SetFileName sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     rowUrlColumn:'FileName',",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> PCMRaw"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_pcm_ndt_details_stage_to_raw')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/YARD KPI/PCM"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_pcm_ndt_details_stg_generic",
+								"type": "DatasetReference"
+							},
+							"name": "PCMStage"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_yardkpi_pcm_default",
+								"type": "DatasetReference"
+							},
+							"name": "PCMRaw"
+						}
+					],
+					"transformations": [
+						{
+							"name": "SetFileName"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          trans_date as string,",
+						"          trans_type as string,",
+						"          fab_code as string,",
+						"          contract as string,",
+						"          contract_title as string,",
+						"          job as string,",
+						"          job_title as string,",
+						"          item as string,",
+						"          item_title as string,",
+						"          ndt_drawing as string,",
+						"          ndt_drawing_desc as string,",
+						"          wctrl as string,",
+						"          weld_suffix as string,",
+						"          stress_relief as string,",
+						"          weld_repair_ref as string,",
+						"          ndt_type as string,",
+						"          weldcount as string,",
+						"          spool as string,",
+						"          report_num as string,",
+						"          ndt_procedure as string,",
+						"          ndt_percent as string,",
+						"          test_percent as string,",
+						"          test_date as string,",
+						"          pass_fail as string,",
+						"          narrative as string,",
+						"          inspector as string,",
+						"          insp_name as string,",
+						"          signed as string,",
+						"          sign_override as string,",
+						"          clt_jrm as string,",
+						"          signatory as string,",
+						"          sign_date as string,",
+						"          remarks as string,",
+						"          jrm_signed as string,",
+						"          jrm_sign_date as string,",
+						"          jrm_technician as string,",
+						"          jrm_technician_org as string,",
+						"          ndt_report_format as string,",
+						"          is_approval_required as string,",
+						"          jrm_approver as string,",
+						"          jrm_approver_signed as string,",
+						"          jrm_approver_sign_date as string,",
+						"          defect_type as string,",
+						"          defect_title as string,",
+						"          defect_length as string,",
+						"          include_in_rr_calc as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: true,",
+						"     purgeFiles: true,",
+						"     multiLineRow: true,",
+						"     wildcardPaths:['Project_Data/YARDKPI/PCM/pcm_ndt_details*.csv']) ~> PCMStage",
+						"PCMStage derive(FileName = concat('Project_Data/YARDKPI/PCM/',substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/','PCM_NDT_DETAIL_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv'),",
+						"          create_date_time = currentUTC(),",
+						"          ndt_drawing_desc = trim(replace(replace(replace(replace(replace(replace(replace(ndt_drawing_desc,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),",
+						"          contract_title = trim(replace(replace(replace(replace(replace(replace(replace(contract_title,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),",
+						"          job_title = trim(replace(replace(replace(replace(replace(replace(replace(job_title,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),",
+						"          ndt_drawing = trim(replace(replace(replace(replace(replace(replace(replace(ndt_drawing,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' '))) ~> SetFileName",
+						"SetFileName sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     rowUrlColumn:'FileName',",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     mapColumn(",
+						"          each(match(true()))",
+						"     )) ~> PCMRaw"
+					]
+				}
+			},
+			"dependsOn": []
+		}
+	]
+}

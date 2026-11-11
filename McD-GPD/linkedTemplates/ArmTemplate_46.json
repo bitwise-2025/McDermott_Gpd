@@ -1,0 +1,754 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "McD-GPD"
+		},
+		"ls_ced_oracle_password": {
+			"type": "secureString",
+			"metadata": "Secure string for 'password' of 'ls_ced_oracle'"
+		},
+		"ls_ecm_restapi_pagination_password": {
+			"type": "secureString",
+			"metadata": "Secure string for 'password' of 'ls_ecm_restapi_pagination'"
+		},
+		"ls_pmcs_oracle_password": {
+			"type": "secureString",
+			"metadata": "Secure string for 'password' of 'ls_pmcs_oracle'"
+		},
+		"ls_ced_oracle_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "(DESCRIPTION = (ADDRESS_LIST = (ADDRESS = (PROTOCOL = TCP)(HOST = @{linkedService().ls_p_hostname})(PORT = @{linkedService().ls_p_port})))(CONNECT_DATA = (SID = @{linkedService().ls_p_database})))"
+		},
+		"ls_ced_oracle_properties_typeProperties_username": {
+			"type": "string",
+			"defaultValue": "GLB_DATALAKE_RO"
+		},
+		"ls_ecm_restapi_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "http://10.204.13.103:8080/alfresco/s/com/mcdermott/hr/employeedata?sitename=craftworker-humanresources,humanresources&max=250&skip={skip}"
+		},
+		"ls_ecm_restapi_properties_typeProperties_userName": {
+			"type": "string",
+			"defaultValue": "admin"
+		},
+		"ls_ecm_restapi_pagination_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "http://10.204.8.48:8080/alfresco/s/com/mcdermott/hr/employeedata?&sitename=hr&max=1000&skip={skip}"
+		},
+		"ls_ecm_restapi_pagination_properties_typeProperties_userName": {
+			"type": "string",
+			"defaultValue": "admin"
+		},
+		"ls_ecm_user_roles_groups_restapi_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://ecmqa.mcdermott.com/alfresco/s/com/mcdermott/employee/sites/roles/groups?max=1000&skip={skip}"
+		},
+		"ls_ecm_user_roles_groups_restapi_properties_typeProperties_userName": {
+			"type": "string",
+			"defaultValue": "admin"
+		},
+		"ls_epr_smat_oracle_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "(DESCRIPTION=(ADDRESS=(PROTOCOL=tcp)(HOST=dalpor37.mcdcorp.net)(PORT=1550))(CONNECT_DATA=(SERVICE_NAME=SPMP03)))"
+		},
+		"ls_epr_smat_oracle_properties_typeProperties_username": {
+			"type": "string",
+			"defaultValue": "SVC_GLB_AZURADF"
+		},
+		"ls_epr_smat_oracle_db_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "(DESCRIPTION=(ADDRESS=(PROTOCOL=tcp)(HOST=daltor37.mcdcorp.net)(PORT=1560))(CONNECT_DATA=(SERVICE_NAME=SPMT02)))"
+		},
+		"ls_epr_smat_oracle_db_properties_typeProperties_username": {
+			"type": "string",
+			"defaultValue": "SVC_GLB_AZURADF"
+		},
+		"ls_epr_spc_smat_oracle_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "(DESCRIPTION=(ADDRESS=(PROTOCOL=tcp)(HOST=dalpor37.mcdcorp.net)(PORT=1550))(CONNECT_DATA=(SERVICE_NAME=SPMS03)))"
+		},
+		"ls_epr_spc_smat_oracle_properties_typeProperties_username": {
+			"type": "string",
+			"defaultValue": "SVC_GLB_AZURADF"
+		},
+		"ls_epr_svc_smat_oracle_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "(DESCRIPTION=(ADDRESS=(PROTOCOL=tcp)(HOST=daltor37.mcdcorp.net)(PORT=1560))(CONNECT_DATA=(SERVICE_NAME=SPMD03)))"
+		},
+		"ls_epr_svc_smat_oracle_properties_typeProperties_username": {
+			"type": "string",
+			"defaultValue": "SVC_GLB_AZURADF"
+		},
+		"ls_fileshare_ced_properties_typeProperties_host": {
+			"type": "string",
+			"defaultValue": "\\\\hague-fs3.mcdcorp.net\\251360536\\InfTech\\General"
+		},
+		"ls_fileshare_ced_properties_typeProperties_userId": {
+			"type": "string",
+			"defaultValue": "mcdcorp\\SVC-GLB-AZURADF_DEV"
+		},
+		"ls_filesystem_zycus_dir_properties_typeProperties_host": {
+			"type": "string",
+			"defaultValue": "\\\\mcdcorp\\share\\Dubai\\Group\\DataLake\\Development\\ZYCUS"
+		},
+		"ls_filesystem_zycus_dir_properties_typeProperties_userId": {
+			"type": "string",
+			"defaultValue": "MCDCORP\\SVC-GLB-AZURADF_DEV"
+		},
+		"ls_generic_api_servicenow_v2_properties_typeProperties_endpoint": {
+			"type": "string",
+			"defaultValue": "https://mcdermottdev.service-now.com/"
+		},
+		"ls_generic_api_servicenow_v2_properties_typeProperties_username": {
+			"type": "string",
+			"defaultValue": "SVC-GLB-AZURADF_DEV"
+		},
+		"ls_generic_filelist_sharepoint_properties_typeProperties_servicePrincipalId": {
+			"type": "string",
+			"defaultValue": "07b5a4a8-5a40-496f-9215-ffb04cf7fda5"
+		},
+		"ls_generic_yardkpi_oracle_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "(DESCRIPTION = (ADDRESS_LIST = (ADDRESS = (PROTOCOL = TCP)(HOST = @{linkedService().ls_p_hostname})(PORT = @{linkedService().ls_p_port})))(CONNECT_DATA = (SID = @{linkedService().ls_p_database})))"
+		},
+		"ls_generic_yardkpi_oracle_properties_typeProperties_username": {
+			"type": "string",
+			"defaultValue": "SVC-GLB-AZURADF_QA"
+		},
+		"ls_network_file_share_properties_typeProperties_host": {
+			"type": "string",
+			"defaultValue": "\\\\mcdcorp\\share\\Dubai\\Group\\DataLake"
+		},
+		"ls_network_file_share_properties_typeProperties_userId": {
+			"type": "string",
+			"defaultValue": "mcdcorp\\SVC-GLB-AZURADF_PROD"
+		},
+		"ls_network_file_share_epr_properties_typeProperties_host": {
+			"type": "string",
+			"defaultValue": "\\\\mcdcorp\\share\\Dubai\\Depts\\Planning\\Power BI\\14. Data Lake - Power BI Files\\02. Projects\\"
+		},
+		"ls_network_file_share_epr_properties_typeProperties_userId": {
+			"type": "string",
+			"defaultValue": "mcdcorp\\SVC-GLB-AZURADF_DEV"
+		},
+		"ls_network_file_share_epr_Marine_properties_typeProperties_host": {
+			"type": "string",
+			"defaultValue": "\\\\mcdcorp\\share\\Dubai\\Depts\\Planning\\Home\\DPPLALL\\Moses\\This Is It\\Marine Files Listing"
+		},
+		"ls_network_file_share_epr_Marine_properties_typeProperties_userId": {
+			"type": "string",
+			"defaultValue": "mcdcorp\\SVC-GLB-AZURADF_DEV"
+		},
+		"ls_network_file_timesheet_epr_properties_typeProperties_host": {
+			"type": "string",
+			"defaultValue": "\\\\mcdcorp\\share\\Dubai\\Depts\\Planning\\Tableau\\Planning\\1. EMEA\\03. Fabrication\\02. Projects"
+		},
+		"ls_network_file_timesheet_epr_properties_typeProperties_userId": {
+			"type": "string",
+			"defaultValue": "mcdcorp\\SVC-GLB-AZURADF_DEV"
+		},
+		"ls_oneview_oci_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "(DESCRIPTION=(ADDRESS=(PROTOCOL=tcp)(HOST=https://edsv-dev2.fa.us2.oraclecloud.com)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=edsv)))"
+		},
+		"ls_oneview_oci_properties_typeProperties_username": {
+			"type": "string",
+			"defaultValue": "SVC-GLB-AZURADF_DEV"
+		},
+		"ls_oracle_fusion_api_rest_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://edsv-dev2.fa.us2.oraclecloud.com/Oneview-ApiServiceUser/resources/latest/"
+		},
+		"ls_pmcs_oracle_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "(DESCRIPTION = (ADDRESS_LIST = (ADDRESS = (PROTOCOL = TCP)(HOST = @{linkedService().ls_p_hostname})(PORT = @{linkedService().ls_p_port})))(CONNECT_DATA = (SID = @{linkedService().ls_p_database})))"
+		},
+		"ls_pmcs_oracle_properties_typeProperties_username": {
+			"type": "string",
+			"defaultValue": "SVC_GLB_AZURADF"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_ced_oracle')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"parameters": {
+					"ls_p_hostname": {
+						"type": "string"
+					},
+					"ls_p_port": {
+						"type": "string"
+					},
+					"ls_p_database": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "Oracle",
+				"version": "2.0",
+				"typeProperties": {
+					"server": "[parameters('ls_ced_oracle_properties_typeProperties_server')]",
+					"authenticationType": "Basic",
+					"username": "[parameters('ls_ced_oracle_properties_typeProperties_username')]",
+					"password": {
+						"type": "SecureString",
+						"value": "[parameters('ls_ced_oracle_password')]"
+					}
+				},
+				"connectVia": {
+					"referenceName": "mdrdevshir",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_ecm_restapi')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "RestService",
+				"typeProperties": {
+					"url": "[parameters('ls_ecm_restapi_properties_typeProperties_url')]",
+					"enableServerCertificateValidation": true,
+					"authenticationType": "Basic",
+					"userName": "[parameters('ls_ecm_restapi_properties_typeProperties_userName')]",
+					"password": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "MDREntAnltxAzureKeyVault1",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "ECM-RESTAPI-KEY"
+					}
+				},
+				"connectVia": {
+					"referenceName": "mdrdevshir",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_ecm_restapi_pagination')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "RestService",
+				"typeProperties": {
+					"url": "[parameters('ls_ecm_restapi_pagination_properties_typeProperties_url')]",
+					"enableServerCertificateValidation": true,
+					"authenticationType": "Basic",
+					"userName": "[parameters('ls_ecm_restapi_pagination_properties_typeProperties_userName')]",
+					"password": {
+						"type": "SecureString",
+						"value": "[parameters('ls_ecm_restapi_pagination_password')]"
+					}
+				},
+				"connectVia": {
+					"referenceName": "mdrdevshir",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_ecm_user_roles_groups_restapi')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "RestService",
+				"typeProperties": {
+					"url": "[parameters('ls_ecm_user_roles_groups_restapi_properties_typeProperties_url')]",
+					"enableServerCertificateValidation": true,
+					"authenticationType": "Basic",
+					"userName": "[parameters('ls_ecm_user_roles_groups_restapi_properties_typeProperties_userName')]",
+					"password": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "MDREntAnltxAzureKeyVault1",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "ECM-USER-ROLE-GROUP-KV"
+					}
+				},
+				"connectVia": {
+					"referenceName": "mdrdevshir",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_epr_smat_oracle')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "SMAT 8.x Oracle DB connection",
+				"annotations": [],
+				"type": "Oracle",
+				"version": "2.0",
+				"typeProperties": {
+					"server": "[parameters('ls_epr_smat_oracle_properties_typeProperties_server')]",
+					"authenticationType": "Basic",
+					"username": "[parameters('ls_epr_smat_oracle_properties_typeProperties_username')]",
+					"password": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "MDREntAnltxAzureKeyVault1",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "spmp03"
+					}
+				},
+				"connectVia": {
+					"referenceName": "mdrdevshir",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_epr_smat_oracle_db')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "Oracle",
+				"version": "2.0",
+				"typeProperties": {
+					"server": "[parameters('ls_epr_smat_oracle_db_properties_typeProperties_server')]",
+					"authenticationType": "Basic",
+					"username": "[parameters('ls_epr_smat_oracle_db_properties_typeProperties_username')]",
+					"password": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "MDREntAnltxAzureKeyVault1",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "SPMT02"
+					}
+				},
+				"connectVia": {
+					"referenceName": "mdrdevshir",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_epr_spc_smat_oracle')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "Oracle",
+				"version": "2.0",
+				"typeProperties": {
+					"server": "[parameters('ls_epr_spc_smat_oracle_properties_typeProperties_server')]",
+					"authenticationType": "Basic",
+					"username": "[parameters('ls_epr_spc_smat_oracle_properties_typeProperties_username')]",
+					"password": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "MDREntAnltxAzureKeyVault1",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "SPMT02"
+					},
+					"encryptionClient": "accepted",
+					"encryptionTypesClient": "(AES128, AES192, AES256, 3DES112, 3DES168)",
+					"cryptoChecksumClient": "accepted",
+					"cryptoChecksumTypesClient": "(SHA1, SHA256, SHA384, SHA512)"
+				},
+				"connectVia": {
+					"referenceName": "mdrdevshir",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_epr_svc_smat_oracle')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "Oracle",
+				"version": "2.0",
+				"typeProperties": {
+					"server": "[parameters('ls_epr_svc_smat_oracle_properties_typeProperties_server')]",
+					"authenticationType": "Basic",
+					"username": "[parameters('ls_epr_svc_smat_oracle_properties_typeProperties_username')]",
+					"password": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "MDREntAnltxAzureKeyVault1",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "SPMT02"
+					},
+					"encryptionClient": "accepted",
+					"encryptionTypesClient": "(AES128, AES192, AES256, 3DES112, 3DES168)",
+					"cryptoChecksumClient": "accepted",
+					"cryptoChecksumTypesClient": "(SHA1, SHA256, SHA384, SHA512)"
+				},
+				"connectVia": {
+					"referenceName": "mdrdevshir",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_fileshare_ced')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Linked service for Central Engineering Database file share Network folder",
+				"annotations": [],
+				"type": "FileServer",
+				"typeProperties": {
+					"host": "[parameters('ls_fileshare_ced_properties_typeProperties_host')]",
+					"userId": "[parameters('ls_fileshare_ced_properties_typeProperties_userId')]",
+					"password": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "MDREntAnltxAzureKeyVault1",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "AZURE-ADF-SVC-ACCT-NW-PWD"
+					}
+				},
+				"connectVia": {
+					"referenceName": "mdrdevshir",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_filesystem_zycus_dir')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Linked service for Zycus inbound and outbound file access.",
+				"annotations": [],
+				"type": "FileServer",
+				"typeProperties": {
+					"host": "[parameters('ls_filesystem_zycus_dir_properties_typeProperties_host')]",
+					"userId": "[parameters('ls_filesystem_zycus_dir_properties_typeProperties_userId')]",
+					"password": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "MDREntAnltxAzureKeyVault1",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "AZURE-ADF-SVC-ACCT-NW-PWD"
+					}
+				},
+				"connectVia": {
+					"referenceName": "mdrdevshir",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_generic_api_servicenow_v2')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "ServiceNowV2",
+				"typeProperties": {
+					"endpoint": "[parameters('ls_generic_api_servicenow_v2_properties_typeProperties_endpoint')]",
+					"authenticationType": "Basic",
+					"username": "[parameters('ls_generic_api_servicenow_v2_properties_typeProperties_username')]",
+					"password": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "MDREntAnltxAzureKeyVault1",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "SVC-GLB-AZURADF-DEV-ServiceNow"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_generic_filelist_sharepoint')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"parameters": {
+					"SharePointLink": {
+						"type": "String"
+					}
+				},
+				"annotations": [],
+				"type": "SharePointOnlineList",
+				"typeProperties": {
+					"siteUrl": "@{linkedService().SharePointLink}",
+					"tenantId": "73faca80-f981-4662-85da-6c374785348d",
+					"servicePrincipalId": "[parameters('ls_generic_filelist_sharepoint_properties_typeProperties_servicePrincipalId')]",
+					"servicePrincipalKey": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "MDREntAnltxAzureKeyVault1",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "MDR-ENT-ANALYTICS-DEV"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_generic_yardkpi_oracle')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"parameters": {
+					"ls_p_hostname": {
+						"type": "string"
+					},
+					"ls_p_port": {
+						"type": "string"
+					},
+					"ls_p_database": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "Oracle",
+				"version": "2.0",
+				"typeProperties": {
+					"server": "[parameters('ls_generic_yardkpi_oracle_properties_typeProperties_server')]",
+					"authenticationType": "Basic",
+					"username": "[parameters('ls_generic_yardkpi_oracle_properties_typeProperties_username')]",
+					"password": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "MDREntAnltxAzureKeyVault1",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "NON-AD-SVC-GLB-AZURADF-QA"
+					}
+				},
+				"connectVia": {
+					"referenceName": "mdrdevshir",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_network_file_share')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "FileServer",
+				"typeProperties": {
+					"host": "[parameters('ls_network_file_share_properties_typeProperties_host')]",
+					"userId": "[parameters('ls_network_file_share_properties_typeProperties_userId')]",
+					"password": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "MDREntAnltxAzureKeyVault1",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "AZURE-ADF-SVC-ACCT-PROD-NW-PWD"
+					}
+				},
+				"connectVia": {
+					"referenceName": "mdrdevshir",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_network_file_share_epr')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "FileServer",
+				"typeProperties": {
+					"host": "[parameters('ls_network_file_share_epr_properties_typeProperties_host')]",
+					"userId": "[parameters('ls_network_file_share_epr_properties_typeProperties_userId')]",
+					"password": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "MDREntAnltxAzureKeyVault1",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "AZURE-ADF-SVC-ACCT-NW-PWD"
+					}
+				},
+				"connectVia": {
+					"referenceName": "mdrdevshir",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_network_file_share_epr_Marine')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "FileServer",
+				"typeProperties": {
+					"host": "[parameters('ls_network_file_share_epr_Marine_properties_typeProperties_host')]",
+					"userId": "[parameters('ls_network_file_share_epr_Marine_properties_typeProperties_userId')]",
+					"password": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "MDREntAnltxAzureKeyVault1",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "AZURE-ADF-SVC-ACCT-NW-PWD"
+					}
+				},
+				"connectVia": {
+					"referenceName": "mdrdevshir",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_network_file_timesheet_epr')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "FileServer",
+				"typeProperties": {
+					"host": "[parameters('ls_network_file_timesheet_epr_properties_typeProperties_host')]",
+					"userId": "[parameters('ls_network_file_timesheet_epr_properties_typeProperties_userId')]",
+					"password": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "MDREntAnltxAzureKeyVault1",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "AZURE-ADF-SVC-ACCT-NW-PWD"
+					}
+				},
+				"connectVia": {
+					"referenceName": "mdrdevshir",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_oneview_oci')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "Oracle",
+				"version": "2.0",
+				"typeProperties": {
+					"server": "[parameters('ls_oneview_oci_properties_typeProperties_server')]",
+					"authenticationType": "Basic",
+					"username": "[parameters('ls_oneview_oci_properties_typeProperties_username')]",
+					"password": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "MDREntAnltxAzureKeyVault1",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "Oneview-ApiServiceUser"
+					},
+					"encryptionClient": "accepted",
+					"encryptionTypesClient": "(AES128, AES192, AES256, 3DES112, 3DES168)",
+					"cryptoChecksumClient": "accepted",
+					"cryptoChecksumTypesClient": "(SHA1, SHA256, SHA384, SHA512)"
+				},
+				"connectVia": {
+					"referenceName": "mdrdevshir",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_oracle_fusion_api_rest')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "RestService",
+				"typeProperties": {
+					"url": "[parameters('ls_oracle_fusion_api_rest_properties_typeProperties_url')]",
+					"enableServerCertificateValidation": true,
+					"authenticationType": "Anonymous"
+				},
+				"connectVia": {
+					"referenceName": "mdrdevshir",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_pmcs_oracle')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Oracle Linked Service for PMCS",
+				"parameters": {
+					"ls_p_hostname": {
+						"type": "string",
+						"defaultValue": "DALPOR17"
+					},
+					"ls_p_port": {
+						"type": "string",
+						"defaultValue": "1521"
+					},
+					"ls_p_database": {
+						"type": "string",
+						"defaultValue": "PMCSPLP"
+					}
+				},
+				"annotations": [],
+				"type": "Oracle",
+				"version": "2.0",
+				"typeProperties": {
+					"server": "[parameters('ls_pmcs_oracle_properties_typeProperties_server')]",
+					"authenticationType": "Basic",
+					"username": "[parameters('ls_pmcs_oracle_properties_typeProperties_username')]",
+					"password": {
+						"type": "SecureString",
+						"value": "[parameters('ls_pmcs_oracle_password')]"
+					}
+				},
+				"connectVia": {
+					"referenceName": "mdrdevshir",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": []
+		}
+	]
+}

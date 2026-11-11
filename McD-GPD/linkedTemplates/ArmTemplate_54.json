@@ -1,0 +1,774 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "McD-GPD"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_oracle_SMP8_SMAT_src')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Source for the SMAT pipelines, connected to the Oracle server",
+				"linkedServiceName": {
+					"referenceName": "linked_svc_spm8_oracle",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/NCSA/SMAT"
+				},
+				"annotations": [],
+				"type": "OracleTable",
+				"schema": [],
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_oracle_db_yardkpi_spc_source')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_generic_yardkpi_oracle",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"ls_p_hostname": {
+							"value": "@dataset().ds_p_hostname",
+							"type": "Expression"
+						},
+						"ls_p_port": {
+							"value": "@dataset().ds_p_port",
+							"type": "Expression"
+						},
+						"ls_p_database": {
+							"value": "@dataset().ds_p_database",
+							"type": "Expression"
+						}
+					}
+				},
+				"parameters": {
+					"ds_p_tablename": {
+						"type": "string"
+					},
+					"ds_p_hostname": {
+						"type": "string"
+					},
+					"ds_p_port": {
+						"type": "string"
+					},
+					"ds_p_database": {
+						"type": "string"
+					}
+				},
+				"folder": {
+					"name": "Projects/YARD KPI/SPC"
+				},
+				"annotations": [],
+				"type": "OracleTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": {
+						"value": "@split(dataset().ds_p_tablename,'.')[0]",
+						"type": "Expression"
+					},
+					"table": {
+						"value": "@split(dataset().ds_p_tablename,'.')[1]",
+						"type": "Expression"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_oracle_plm_source')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "linkedservice_oraclel_plm",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "OracleTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": "PLMDATA",
+					"table": "PLM_DT_INBOXTASK"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_oracle_spm10x_yardkpi_smat_src')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Source for the SMAT pipelines, connected to the Oracle server",
+				"linkedServiceName": {
+					"referenceName": "linked_svc_spm8_oracle",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/YARD KPI/SMAT"
+				},
+				"annotations": [],
+				"type": "OracleTable",
+				"schema": [],
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_pcm_source_sql_server')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "linkedservice_sql_PCM_YardKPI",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/YARD KPI/PCM"
+				},
+				"annotations": [],
+				"type": "SqlServerTable",
+				"schema": [],
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_pqr_filelist_sharepoint')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_generic_filelist_sharepoint",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"SharePointLink": {
+							"value": "@dataset().SharePointLink",
+							"type": "Expression"
+						}
+					}
+				},
+				"parameters": {
+					"SharePointLink": {
+						"type": "string"
+					},
+					"ListName": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "SharePointOnlineListResource",
+				"schema": [],
+				"typeProperties": {
+					"listName": {
+						"value": "@dataset().ListName",
+						"type": "Expression"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_promt_datalake_export_simulationresult_source')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_yardkpi_sql_toolhound",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"TableName": {
+						"type": "String"
+					}
+				},
+				"folder": {
+					"name": "Projects/PROMT/Datalake Export Simulationresult"
+				},
+				"annotations": [],
+				"type": "SqlServerTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": {
+						"value": "@dataset().TableName",
+						"type": "Expression"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_punchitem_excel_coconsole_source')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_network_file_share",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"Path": {
+						"type": "string"
+					},
+					"File": {
+						"type": "string"
+					}
+				},
+				"folder": {
+					"name": "Projects/NCSA/Co Console"
+				},
+				"annotations": [],
+				"type": "Excel",
+				"typeProperties": {
+					"location": {
+						"type": "FileServerLocation",
+						"folderPath": {
+							"value": "@dataset().path",
+							"type": "Expression"
+						}
+					},
+					"sheetIndex": 0,
+					"firstRowAsHeader": true
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_sitepro_bb3')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "linked_service_sitepro_production",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "SqlServerTable",
+				"schema": [],
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_sitepro_prod')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "linked_service_sitepro_parameterization",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"p_ls_dbname": {
+							"value": "@dataset().p_ds_dbname",
+							"type": "Expression"
+						}
+					}
+				},
+				"parameters": {
+					"p_ds_dbname": {
+						"type": "String"
+					}
+				},
+				"annotations": [],
+				"type": "SqlServerTable",
+				"schema": [],
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_smat_11_extracts')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_epr_smat_oracle",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "OracleTable",
+				"schema": [],
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_smat_11_extracts_db')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_epr_smat_oracle_db",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "OracleTable",
+				"schema": [],
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_smat_11_extracts_spc')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_epr_spc_smat_oracle",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "OracleTable",
+				"schema": [],
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_smat_11_extracts_svc')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_epr_svc_smat_oracle",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "OracleTable",
+				"schema": [],
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_spc_common')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Common dataset used to connect to SPC LS",
+				"linkedServiceName": {
+					"referenceName": "linkedservice_oracle_spc",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"p_ls_dbname": {
+							"value": "@dataset().p_ds_dbname",
+							"type": "Expression"
+						}
+					}
+				},
+				"parameters": {
+					"p_ds_dbname": {
+						"type": "string"
+					}
+				},
+				"folder": {
+					"name": "Projects/NCSA/SPC"
+				},
+				"annotations": [],
+				"type": "OracleTable",
+				"schema": [],
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_sql_CLDQSQL14_zycus_DM')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_SQL_Zycus_Datamart",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"p_ds_schema": {
+						"type": "string"
+					},
+					"p_ds_table": {
+						"type": "string"
+					}
+				},
+				"folder": {
+					"name": "Projects/ZYCUS"
+				},
+				"annotations": [],
+				"type": "SqlServerTable",
+				"schema": [
+					{
+						"name": "PROJ_ID",
+						"type": "nvarchar"
+					},
+					{
+						"name": "Project_Description",
+						"type": "nvarchar"
+					},
+					{
+						"name": "JDE_PROJ_NUMBER",
+						"type": "nvarchar"
+					},
+					{
+						"name": "OPERATING_GROUP",
+						"type": "nvarchar"
+					},
+					{
+						"name": "SECTOR",
+						"type": "nvarchar"
+					},
+					{
+						"name": "Client",
+						"type": "nvarchar"
+					},
+					{
+						"name": "JDE_SUPPLIER_NUMBER",
+						"type": "nvarchar"
+					},
+					{
+						"name": "SUPPLIER_NAME",
+						"type": "nvarchar"
+					},
+					{
+						"name": "POLI_QTY",
+						"type": "decimal",
+						"precision": 31,
+						"scale": 16
+					},
+					{
+						"name": "UOM",
+						"type": "nvarchar"
+					},
+					{
+						"name": "ISH_PROM_CONTRACT_DATE",
+						"type": "date"
+					},
+					{
+						"name": "MATL_RECV_DATE",
+						"type": "date"
+					},
+					{
+						"name": "ISH_ITEM_SHIP_QTY",
+						"type": "decimal",
+						"precision": 31,
+						"scale": 16
+					},
+					{
+						"name": "RECV_QTY",
+						"type": "decimal",
+						"precision": 31,
+						"scale": 16
+					},
+					{
+						"name": "DESCRIPTION",
+						"type": "nvarchar"
+					},
+					{
+						"name": "PO_NUMBER",
+						"type": "nvarchar"
+					},
+					{
+						"name": "SPM_POH_ID",
+						"type": "nvarchar"
+					},
+					{
+						"name": "SUPPLEMENT",
+						"type": "nvarchar"
+					},
+					{
+						"name": "SUP_POH_ID",
+						"type": "nvarchar"
+					},
+					{
+						"name": "POLI_POS",
+						"type": "nvarchar"
+					},
+					{
+						"name": "POLI_SUB_POS",
+						"type": "nvarchar"
+					},
+					{
+						"name": "ITEM_SHIP_POS",
+						"type": "nvarchar"
+					},
+					{
+						"name": "ITEM_SHIP_SUB_POS",
+						"type": "nvarchar"
+					},
+					{
+						"name": "FREIGHT_TERM",
+						"type": "nvarchar"
+					},
+					{
+						"name": "RECV_TYPE",
+						"type": "nvarchar"
+					},
+					{
+						"name": "RECV_DOC_NUMBER",
+						"type": "nvarchar"
+					},
+					{
+						"name": "IDENT",
+						"type": "bigint",
+						"precision": 19
+					},
+					{
+						"name": "TAG_NUMBER",
+						"type": "nvarchar"
+					},
+					{
+						"name": "SystemOfRecord",
+						"type": "nvarchar"
+					},
+					{
+						"name": "SORId",
+						"type": "nvarchar"
+					}
+				],
+				"typeProperties": {
+					"schema": {
+						"value": "@dataset().p_ds_schema",
+						"type": "Expression"
+					},
+					"table": {
+						"value": "@dataset().p_ds_table",
+						"type": "Expression"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_sql_DALDSQL03_zycus_DM_Staging')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_SQL_Zycus_Datamart_Staging",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"p_ds_schema": {
+						"type": "string"
+					},
+					"p_ds_table": {
+						"type": "string"
+					}
+				},
+				"folder": {
+					"name": "Projects/ZYCUS"
+				},
+				"annotations": [],
+				"type": "SqlServerTable",
+				"schema": [
+					{
+						"name": "PROJ_ID",
+						"type": "nvarchar"
+					},
+					{
+						"name": "Project_Description",
+						"type": "nvarchar"
+					},
+					{
+						"name": "JDE_PROJ_NUMBER",
+						"type": "nvarchar"
+					},
+					{
+						"name": "OPERATING_GROUP",
+						"type": "nvarchar"
+					},
+					{
+						"name": "SECTOR",
+						"type": "nvarchar"
+					},
+					{
+						"name": "Client",
+						"type": "nvarchar"
+					},
+					{
+						"name": "JDE_SUPPLIER_NUMBER",
+						"type": "nvarchar"
+					},
+					{
+						"name": "SUPPLIER_NAME",
+						"type": "nvarchar"
+					},
+					{
+						"name": "POLI_QTY",
+						"type": "decimal",
+						"precision": 31,
+						"scale": 16
+					},
+					{
+						"name": "UOM",
+						"type": "nvarchar"
+					},
+					{
+						"name": "ISH_PROM_CONTRACT_DATE",
+						"type": "date"
+					},
+					{
+						"name": "MATL_RECV_DATE",
+						"type": "date"
+					},
+					{
+						"name": "ISH_ITEM_SHIP_QTY",
+						"type": "decimal",
+						"precision": 31,
+						"scale": 16
+					},
+					{
+						"name": "RECV_QTY",
+						"type": "decimal",
+						"precision": 31,
+						"scale": 16
+					},
+					{
+						"name": "DESCRIPTION",
+						"type": "nvarchar"
+					},
+					{
+						"name": "PO_NUMBER",
+						"type": "nvarchar"
+					},
+					{
+						"name": "SPM_POH_ID",
+						"type": "nvarchar"
+					},
+					{
+						"name": "SUPPLEMENT",
+						"type": "nvarchar"
+					},
+					{
+						"name": "SUP_POH_ID",
+						"type": "nvarchar"
+					},
+					{
+						"name": "POLI_POS",
+						"type": "nvarchar"
+					},
+					{
+						"name": "POLI_SUB_POS",
+						"type": "nvarchar"
+					},
+					{
+						"name": "ITEM_SHIP_POS",
+						"type": "nvarchar"
+					},
+					{
+						"name": "ITEM_SHIP_SUB_POS",
+						"type": "nvarchar"
+					},
+					{
+						"name": "FREIGHT_TERM",
+						"type": "nvarchar"
+					},
+					{
+						"name": "RECV_TYPE",
+						"type": "nvarchar"
+					},
+					{
+						"name": "RECV_DOC_NUMBER",
+						"type": "nvarchar"
+					},
+					{
+						"name": "IDENT",
+						"type": "bigint",
+						"precision": 19
+					},
+					{
+						"name": "TAG_NUMBER",
+						"type": "nvarchar"
+					},
+					{
+						"name": "SystemOfRecord",
+						"type": "nvarchar"
+					},
+					{
+						"name": "SORId",
+						"type": "nvarchar"
+					}
+				],
+				"typeProperties": {
+					"schema": {
+						"value": "@dataset().p_ds_schema",
+						"type": "Expression"
+					},
+					"table": {
+						"value": "@dataset().p_ds_table",
+						"type": "Expression"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_sql_query_yardkpi_tabware_source')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_yardkpi_sql_tabware",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/YARD KPI/Tabware"
+				},
+				"annotations": [],
+				"type": "SqlServerTable",
+				"schema": [],
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_sql_query_yardkpi_toolhound_source')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_yardkpi_sql_toolhound",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/YARD KPI/Toolhound"
+				},
+				"annotations": [],
+				"type": "SqlServerTable",
+				"schema": [],
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_time_works_db')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "linkedservice_timeworksDB",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "1.Enterprise Data Sets/General/COA"
+				},
+				"annotations": [],
+				"type": "SqlServerTable",
+				"schema": [],
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		}
+	]
+}

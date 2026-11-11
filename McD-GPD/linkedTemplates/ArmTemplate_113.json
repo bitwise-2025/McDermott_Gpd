@@ -1,0 +1,2764 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "McD-GPD"
+		},
+		"YARDKPI_Trigger_schedule_PCM_BTY_SMTWTFS_2130_WIB_properties_pl_yardkpi_pcm_master_of_master_parameters_p_pcm_fab_code": {
+			"type": "string",
+			"defaultValue": "BTY"
+		},
+		"YARDKPI_Trigger_schedule_PCM_JAY_SMTWTFS_2130_GST_properties_pl_yardkpi_pcm_master_of_master_parameters_p_pcm_fab_code": {
+			"type": "string",
+			"defaultValue": "JAY"
+		},
+		"YARDKPI_Trigger_schedule_PCM_QFY_SMTWTFS_2030_AST_properties_pl_yardkpi_pcm_master_of_master_parameters_p_pcm_fab_code": {
+			"type": "string",
+			"defaultValue": "QFY"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/pl_master_pipeline_dimension')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "procedure_dummy_values",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[dbo].[usp_update_dummy_values]"
+						},
+						"linkedServiceName": {
+							"referenceName": "linkedservice_DEV_entanalytics_synapse",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "pl_prime_mcpm_master_pipeline",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "procedure_dummy_values",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_prime_mcpm_master_pipeline",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "pl_sub_prime_mcpm_master_pipeline",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "pl_prime_mcpm_master_pipeline",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_sub_prime_mcpm_master_pipeline",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "pl_summary_cost_type_mcpm_master_pipeline",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "pl_sub_prime_mcpm_master_pipeline",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_summary_cost_type_mcpm_master_pipeline",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "pl_subcontract_employee_master_pipeline",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "procedure_dummy_values",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_subcontract_employee_master_pipeline",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "pl_uom_mcpm_master_pipeline",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "pl_summary_cost_type_mcpm_master_pipeline",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_uom_mcpm_master_pipeline",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "pl_phases_mcpm_master_pipeline",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "pl_master_pipeline_sitepro_dimension",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_phases_mcpm_master_pipeline",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "pl_unit_mcpm_master_pipeline",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "pl_phases_mcpm_master_pipeline",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_unit_mcpm_master_pipeline",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "pl_wa_mcpm_master_pipeline",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "pl_unit_mcpm_master_pipeline",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_wa_mcpm_master_pipeline",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "pl_master_pipeline_sitepro_dimension",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "pl_subcontract_employee_master_pipeline",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_master_pipeline_sitepro_dimension",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "pl_contracts_mcpm_master_pipeline",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "pl_uom_mcpm_master_pipeline",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_contracts_mcpm_master_pipeline",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "pl_contract_coa_mcpm_master_pipeline",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "pl_costtypes_mcpm_master_pipeline",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_contract_mcpm_master_pipeline",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "pl_coa_units_workarea_mcpm_master_pipeline",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "pl_wa_mcpm_master_pipeline",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_coa_units_workarea_mcpm_master_pipeline",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "pl_costtypes_mcpm_master_pipeline",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "pl_contracts_mcpm_master_pipeline",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_cost_types_mcpm_master_pipeline",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"folder": {
+					"name": "Projects/NCSA/Master Pipeline"
+				},
+				"annotations": [],
+				"lastPublishTime": "2023-04-12T05:22:22Z"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pl_master_risk_opportunity_dimension_fact_load')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "sp_update_dimension_keys_for_promt_risk",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "pl_master_risk_opportunity_dimension_load",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.07:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[promt].[sp_update_dimension_keys_for_promt_datalake_export_risk]"
+						},
+						"linkedServiceName": {
+							"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "sp_update_dimension_keys_for_promt_opportunity",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "sp_fact_load_promt_risk",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.07:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[promt].[sp_update_dimension_keys_for_promt_datalake_export_opportunity]"
+						},
+						"linkedServiceName": {
+							"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "sp_validate_for_promt_datalake_export_risk",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "sp_update_dimension_keys_for_promt_risk",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.07:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[promt].[sp_validate_for_promt_datalake_export_risk]"
+						},
+						"linkedServiceName": {
+							"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "sp_fact_load_promt_risk",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "sp_validate_for_promt_datalake_export_risk",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.07:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[promt].[sp_fact_load_promt_risk]"
+						},
+						"linkedServiceName": {
+							"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "sp_validate_for_promt_datalake_export_opportunity",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "sp_update_dimension_keys_for_promt_opportunity",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.07:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[promt].[sp_validate_for_promt_datalake_export_opportunity]"
+						},
+						"linkedServiceName": {
+							"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "sp_fact_load_promt_opportunity",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "sp_validate_for_promt_datalake_export_opportunity",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.07:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[promt].[sp_fact_load_promt_opportunity]"
+						},
+						"linkedServiceName": {
+							"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "pl_master_risk_opportunity_dimension_load",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "lk_get_pipeline_parameters_2",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_master_risk_opportunity_dimension_load",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "sp_update_dimension_keys_for_risk_snapshot",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "sp_fact_load_promt_opportunity",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.07:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[promt].[sp_update_dimension_keys_for_promt_datalake_export_risk_snapshot]"
+						},
+						"linkedServiceName": {
+							"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "sp_validate_for_promt_datalake_export_risk_snapshot",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "sp_update_dimension_keys_for_risk_snapshot",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.07:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[promt].[sp_validate_for_promt_datalake_export_risk_snapshot]"
+						},
+						"linkedServiceName": {
+							"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "sp_fact_load_promt_risk_snapshot",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "sp_validate_for_promt_datalake_export_risk_snapshot",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.07:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[promt].[sp_fact_load_promt_risk_snapshot]"
+						},
+						"linkedServiceName": {
+							"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "sp_update_dimension_keys_opportunity_snapshot",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "sp_fact_load_promt_risk_snapshot",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.07:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[promt].[sp_update_dimension_keys_for_promt_datalake_export_opportunity_snapshot]"
+						},
+						"linkedServiceName": {
+							"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "sp_validate_for_promt_datalake_opportunity_snapshot",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "sp_update_dimension_keys_opportunity_snapshot",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.07:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[promt].[sp_validate_for_promt_datalake_export_opportunity_snapshot]"
+						},
+						"linkedServiceName": {
+							"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "sp_fact_load_promt_opportunity_snapshot",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "sp_validate_for_promt_datalake_opportunity_snapshot",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.07:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[promt].[sp_fact_load_promt_opportunity_snapshot]"
+						},
+						"linkedServiceName": {
+							"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "Send Email On Failure",
+						"type": "WebActivity",
+						"dependsOn": [
+							{
+								"activity": "sp_fact_load_promt_opportunity_snapshot",
+								"dependencyConditions": [
+									"Failed"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"method": "POST",
+							"headers": {
+								"Content-Type": "application/json"
+							},
+							"url": "https://prod-31.eastus.logic.azure.com:443/workflows/03d7da5abbab4215a05aeaceae3b96fa/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=asuyutHtoSxGFURsj1-A6AKRiNLdXZ4mTnZvZ17_8hI",
+							"connectVia": {
+								"referenceName": "integrationRuntimeEast2",
+								"type": "IntegrationRuntimeReference"
+							},
+							"body": {
+								"value": "{\n    \"DataFactoryName\": \"@{pipeline().DataFactory}\",\n    \"PipelineName\": \"@{pipeline().Pipeline}\",\n    \"ErrorMessage\": \"PROMT FACT Load Pipeline Failed\",\n    \"EmailTo\": \"@{activity('lk_get_pipeline_parameters_2').output.firstRow.ncsa_master_pipeline_email_to}\",\n    \"Activity\":  \"pl_master_risk_opportunity_dimension_fact_load\"\n}",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "lk_get_pipeline_parameters_2",
+						"description": "Get the parameters to be used in this pipeline",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlDWSource",
+								"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+								"storedProcedureParameters": {
+									"pPipelineCode": {
+										"type": "String",
+										"value": "pl_ncsa_master_pipelines"
+									},
+									"pPipeLineSubCode": {
+										"type": "String",
+										"value": "EMAIL"
+									}
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "ds_azure_synapse_parameter",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"folder": {
+					"name": "Projects/PROMT/Risk Opportunity Dimension Fact Loads"
+				},
+				"annotations": [],
+				"lastPublishTime": "2024-04-09T06:13:43Z"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pl_procurement_status_excel_master_pipeline')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "This is Master pipeline for Global Procurement status",
+				"activities": [
+					{
+						"name": "src_to_synstg_wrapper",
+						"type": "ExecutePipeline",
+						"dependsOn": [],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_procurement_status_excel_wrapper_pipeline",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {
+								"p_plw_pipelineCode": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								},
+								"p_plw_pipelineSubCode": "NetworkFolder"
+							}
+						}
+					},
+					{
+						"name": "ADF_Log",
+						"description": "SPU to log the details of the Pipeline run",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "Append SYNSTG to SYN Error",
+								"dependencyConditions": [
+									"Skipped",
+									"Completed"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "1.00:00:00",
+							"retry": 1,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[dbo].[usp_InsertADFLogs]",
+							"storedProcedureParameters": {
+								"DataFactoryName": {
+									"value": {
+										"value": "@pipeline().DataFactory",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"Error_pipeline_name": {
+									"value": {
+										"value": "@if(empty(variables('v_error_message')),\nif( not(empty(activity('src_to_synstg_wrapper').error))\n,NULL\n,activity('synstg_to_synapse').output.pipelineName)\n,split(join(variables('v_error_message'),';'),'|' )[1])",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"Error_pipeline_runid": {
+									"value": {
+										"value": "@if(empty(variables('v_error_message')),NULL,split(join(variables('v_error_message'),';'),'|' )[2])",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"ErrorMessage": {
+									"value": {
+										"value": "@if(empty(variables('v_error_message'))\n,NULL\n,split(join(variables('v_error_message'),';'),'|' )[0])",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"PipelineName": {
+									"value": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"runid": {
+									"value": {
+										"value": "@pipeline().RunId",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"status": {
+									"value": {
+										"value": "@if(empty(variables('v_error_message')),'Success','Failed')",
+										"type": "Expression"
+									},
+									"type": "String"
+								}
+							}
+						},
+						"linkedServiceName": {
+							"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "Append SYNSTG to SYN Error",
+						"type": "AppendVariable",
+						"dependsOn": [
+							{
+								"activity": "synstg_to_synapse",
+								"dependencyConditions": [
+									"Failed"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "v_error_message",
+							"value": {
+								"value": "@concat('SynStage to Synapse Failure: ',\nactivity('synstg_to_synapse').error.message ,'|',\nactivity('synstg_to_synapse').output.pipelineName,'|',\nactivity('synstg_to_synapse').output.pipelineRunId,'|')",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "synstg_to_synapse",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "src_to_synstg_wrapper",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_procurement_status_synstg_to_dim",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {
+								"p_pl_pipelineCode": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								},
+								"p_pl_pipelineSubCode": "NetworkFolder"
+							}
+						}
+					},
+					{
+						"name": "If failure detected send mail",
+						"type": "IfCondition",
+						"dependsOn": [
+							{
+								"activity": "ADF_Log",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"expression": {
+								"value": "@if(empty(variables('v_error_message')),false,true)",
+								"type": "Expression"
+							},
+							"ifTrueActivities": [
+								{
+									"name": "Send Email On Failure",
+									"type": "WebActivity",
+									"dependsOn": [
+										{
+											"activity": "lk_get_pipeline_parameters",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "1.00:00:00",
+										"retry": 1,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"method": "POST",
+										"headers": {
+											"Content-Type": "application/json"
+										},
+										"url": "https://prod-31.eastus.logic.azure.com:443/workflows/03d7da5abbab4215a05aeaceae3b96fa/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=asuyutHtoSxGFURsj1-A6AKRiNLdXZ4mTnZvZ17_8hI",
+										"connectVia": {
+											"referenceName": "integrationRuntimeEast2",
+											"type": "IntegrationRuntimeReference"
+										},
+										"body": {
+											"value": "{\n    \"DataFactoryName\": \"@{pipeline().DataFactory}\",\n    \"PipelineName\": \"@{pipeline().Pipeline}\",\n    \"ErrorMessage\": \"@{replace(replace(join(variables('v_error_message'),';'),'\"',''),'\\','/')}\",\n\"EmailTo\": \"@{activity('lk_get_pipeline_parameters').output.firstRow.ncsa_master_pipeline_email_to}\",\n    \"Activity\":  \"@{if(empty(variables('v_error_message')),'',split(join(variables('v_error_message'),';'),'|' )[1])}\"\n}",
+											"type": "Expression"
+										}
+									}
+								},
+								{
+									"name": "lk_get_pipeline_parameters",
+									"description": "Get the parameters to be used in this pipeline",
+									"type": "Lookup",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "SqlDWSource",
+											"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+											"storedProcedureParameters": {
+												"pPipelineCode": {
+													"type": "String",
+													"value": "pl_ncsa_master_pipelines"
+												},
+												"pPipeLineSubCode": {
+													"type": "String",
+													"value": "EMAIL"
+												}
+											},
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"dataset": {
+											"referenceName": "ds_azure_synapse_parameter",
+											"type": "DatasetReference",
+											"parameters": {}
+										}
+									}
+								}
+							]
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"variables": {
+					"v_error_message": {
+						"type": "Array"
+					}
+				},
+				"folder": {
+					"name": "Projects/NCSA/SCM/Global Procurement Status"
+				},
+				"annotations": [],
+				"lastPublishTime": "2022-08-12T05:23:49Z"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pl_sample_fss_master_of_master_pipeline')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "New Orders",
+						"type": "ExecutePipeline",
+						"dependsOn": [],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_sample_fss_neworders_stagejson_master_pipeline",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "Revenue",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "New Orders",
+								"dependencyConditions": [
+									"Succeeded",
+									"Failed"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_sample_fss_revenue_stagejson_master_pipeline",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "Backlog Revenue RollOff",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "P and L YTD",
+								"dependencyConditions": [
+									"Succeeded",
+									"Failed"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_sample_fss_Backlog_Revenue_Rolloff_stagejson_master_pipeline",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "CapEx And DD",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "Backlog Revenue RollOff",
+								"dependencyConditions": [
+									"Succeeded",
+									"Failed"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_sample_fss_CapEx_And_DD_stagejson_master_pipeline",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "DOE Breakdown",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "CapEx And DD",
+								"dependencyConditions": [
+									"Succeeded",
+									"Failed"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_sample_fss_DOE_Breakdown_stagejson_master_pipeline",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "Functional Support Cost",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "DOE Breakdown",
+								"dependencyConditions": [
+									"Succeeded",
+									"Failed"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_sample_fss_functional_support_cost_stagejson_master_pipeline",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "Gross DOE Changes",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "Functional Support Cost",
+								"dependencyConditions": [
+									"Succeeded",
+									"Failed"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_sample_fss_Gross_DOE_Changes_stagejson_master_pipeline",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "Gross Profit",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "Revenue",
+								"dependencyConditions": [
+									"Succeeded",
+									"Failed"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_sample_fss_gross_profit_stagejson_master_pipeline",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "P and L",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "Gross Profit",
+								"dependencyConditions": [
+									"Succeeded",
+									"Failed"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_sample_fss_PandL_stagejson_master_pipeline",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "P and L YTD",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "P and L",
+								"dependencyConditions": [
+									"Succeeded",
+									"Failed"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_sample_fss_PandL_YTD_stagejson_master_pipeline",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"folder": {
+					"name": "Projects/BLUEPRINT FSS"
+				},
+				"annotations": [],
+				"lastPublishTime": "2024-01-12T10:37:09Z"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pl_subcontract_status_excel_master_pipeline')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "This is Master pipeline for Global Procurement status",
+				"activities": [
+					{
+						"name": "src_to_synstg_wrapper",
+						"type": "ExecutePipeline",
+						"dependsOn": [],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_subcontract_excel_wrapper_pipeline",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {
+								"p_plw_pipelineCode": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								},
+								"p_plw_pipelineSubCode": "NetworkFolder"
+							}
+						}
+					},
+					{
+						"name": "ADF_Log",
+						"description": "SPU to log the details of the Pipeline run",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "Append SYNSTG to SYN Error",
+								"dependencyConditions": [
+									"Skipped",
+									"Completed"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "1.00:00:00",
+							"retry": 1,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[dbo].[usp_InsertADFLogs]",
+							"storedProcedureParameters": {
+								"DataFactoryName": {
+									"value": {
+										"value": "@pipeline().DataFactory",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"Error_pipeline_name": {
+									"value": {
+										"value": "@if(empty(variables('v_error_message')),\nif( not(empty(activity('src_to_synstg_wrapper').error))\n,NULL\n,activity('synstg_to_synapse').output.pipelineName)\n,split(join(variables('v_error_message'),';'),'|' )[1])",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"Error_pipeline_runid": {
+									"value": {
+										"value": "@if(empty(variables('v_error_message')),NULL,split(join(variables('v_error_message'),';'),'|' )[2])",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"ErrorMessage": {
+									"value": {
+										"value": "@if(empty(variables('v_error_message'))\n,NULL\n,split(join(variables('v_error_message'),';'),'|' )[0])",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"PipelineName": {
+									"value": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"runid": {
+									"value": {
+										"value": "@pipeline().RunId",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"status": {
+									"value": {
+										"value": "@if(empty(variables('v_error_message')),'Success','Failed')",
+										"type": "Expression"
+									},
+									"type": "String"
+								}
+							}
+						},
+						"linkedServiceName": {
+							"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "Append SYNSTG to SYN Error",
+						"type": "AppendVariable",
+						"dependsOn": [
+							{
+								"activity": "synstg_to_synapse",
+								"dependencyConditions": [
+									"Failed"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "v_error_message",
+							"value": {
+								"value": "@concat('SynStage to Synapse Failure: ',\nactivity('synstg_to_synapse').error.message ,'|',\nactivity('synstg_to_synapse').output.pipelineName,'|',\nactivity('synstg_to_synapse').output.pipelineRunId,'|')",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "synstg_to_synapse",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "src_to_synstg_wrapper",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_subcontract_status_synstg_to_dim",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {
+								"p_pl_pipelineCode": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								},
+								"p_pl_pipelineSubCode": "NetworkFolder"
+							}
+						}
+					},
+					{
+						"name": "If failure detected send mail",
+						"type": "IfCondition",
+						"dependsOn": [
+							{
+								"activity": "ADF_Log",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"expression": {
+								"value": "@if(empty(variables('v_error_message')),false,true)",
+								"type": "Expression"
+							},
+							"ifTrueActivities": [
+								{
+									"name": "Send Email On Failure",
+									"type": "WebActivity",
+									"dependsOn": [
+										{
+											"activity": "lk_get_pipeline_parameters",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "1.00:00:00",
+										"retry": 1,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"method": "POST",
+										"headers": {
+											"Content-Type": "application/json"
+										},
+										"url": "https://prod-31.eastus.logic.azure.com:443/workflows/03d7da5abbab4215a05aeaceae3b96fa/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=asuyutHtoSxGFURsj1-A6AKRiNLdXZ4mTnZvZ17_8hI",
+										"connectVia": {
+											"referenceName": "integrationRuntimeEast2",
+											"type": "IntegrationRuntimeReference"
+										},
+										"body": {
+											"value": "{\n    \"DataFactoryName\": \"@{pipeline().DataFactory}\",\n    \"PipelineName\": \"@{pipeline().Pipeline}\",\n    \"ErrorMessage\": \"@{replace(replace(join(variables('v_error_message'),';'),'\"',''),'\\','/')}\",\n\"EmailTo\": \"@{activity('lk_get_pipeline_parameters').output.firstRow.ncsa_master_pipeline_email_to}\",\n    \"Activity\":  \"@{if(empty(variables('v_error_message')),'',split(join(variables('v_error_message'),';'),'|' )[1])}\"\n}",
+											"type": "Expression"
+										}
+									}
+								},
+								{
+									"name": "lk_get_pipeline_parameters",
+									"description": "Get the parameters to be used in this pipeline",
+									"type": "Lookup",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "SqlDWSource",
+											"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+											"storedProcedureParameters": {
+												"pPipelineCode": {
+													"type": "String",
+													"value": "pl_ncsa_master_pipelines"
+												},
+												"pPipeLineSubCode": {
+													"type": "String",
+													"value": "EMAIL"
+												}
+											},
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"dataset": {
+											"referenceName": "ds_azure_synapse_parameter",
+											"type": "DatasetReference",
+											"parameters": {}
+										}
+									}
+								}
+							]
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"variables": {
+					"v_error_message": {
+						"type": "Array"
+					}
+				},
+				"folder": {
+					"name": "Projects/NCSA/SCM/Global Subcontract Status"
+				},
+				"annotations": [],
+				"lastPublishTime": "2022-08-12T05:23:49Z"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pl_yardkpi_idocs_loop_project')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "An idocs pipeline that loops through valid Project folders, which provide the source files needed by underlying ADF.",
+				"activities": [
+					{
+						"name": "iDocs Doc Master Fab",
+						"type": "ExecutePipeline",
+						"dependsOn": [],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_yardkpi_idocs_doc_master_fab_master_pipeline",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "iDocs All Revision Fab",
+						"type": "ExecutePipeline",
+						"dependsOn": [],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_yardkpi_idocs_all_rev_master_fab_master_pipeline",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "iDocs Milestone Master Fab",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "iDocs Doc Master Fab",
+								"dependencyConditions": [
+									"Completed"
+								]
+							},
+							{
+								"activity": "iDocs All Revision Fab",
+								"dependencyConditions": [
+									"Completed"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_yardkpi_idocs_ms_master_fab_master_pipeline",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"variables": {
+					"v_allrev_src_start_time": {
+						"type": "String"
+					},
+					"v_allrev_raw_start_time": {
+						"type": "String"
+					},
+					"v_docmas_src_start_time": {
+						"type": "String"
+					},
+					"v_docmas_raw_start_time": {
+						"type": "String"
+					}
+				},
+				"folder": {
+					"name": "Projects/YARD KPI/iDocs"
+				},
+				"annotations": [],
+				"lastPublishTime": "2022-12-27T06:02:07Z"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pl_yardkpi_pcm_master_of_master')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "pl_yardkpi_pcm_dl_master_defect_master_pipeline",
+						"type": "ExecutePipeline",
+						"dependsOn": [],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_yardkpi_pcm_dl_master_defect_master_pipeline",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {
+								"p_pipeline_pcm_fab_code": {
+									"value": "@pipeline().parameters.p_pcm_fab_code",
+									"type": "Expression"
+								}
+							}
+						}
+					},
+					{
+						"name": "pl_yardkpi_pcm_dl_master_weld_process_master_pipeline",
+						"type": "ExecutePipeline",
+						"dependsOn": [],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_yardkpi_pcm_dl_master_weld_process_master_pipeline",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {
+								"p_pipeline_pcm_fab_code": {
+									"value": "@pipeline().parameters.p_pcm_fab_code",
+									"type": "Expression"
+								}
+							}
+						}
+					},
+					{
+						"name": "pl_yardkpi_pcm_dl_master_job_item_master_pipeline",
+						"type": "ExecutePipeline",
+						"dependsOn": [],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_yardkpi_pcm_dl_master_job_item_master_pipeline",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {
+								"p_pipeline_pcm_fab_code": {
+									"value": "@pipeline().parameters.p_pcm_fab_code",
+									"type": "Expression"
+								}
+							}
+						}
+					},
+					{
+						"name": "pl_yardkpi_pcm_certification_package_master",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "pl_yardkpi_pcm_dl_master_defect_master_pipeline",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "pl_yardkpi_pcm_dl_master_job_item_master_pipeline",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "pl_yardkpi_pcm_dl_master_weld_process_master_pipeline",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_yardkpi_pcm_certification_package_master",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {
+								"p_pipeline_pcm_fab_code": {
+									"value": "@pipeline().parameters.p_pcm_fab_code",
+									"type": "Expression"
+								}
+							}
+						}
+					},
+					{
+						"name": "pl_yardkpi_pcm_inprocess_inspection_master",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "pl_yardkpi_pcm_dl_master_defect_master_pipeline",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "pl_yardkpi_pcm_dl_master_job_item_master_pipeline",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "pl_yardkpi_pcm_dl_master_weld_process_master_pipeline",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_yardkpi_pcm_inprocess_inspection_master",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {
+								"p_pipeline_pcm_fab_code": {
+									"value": "@pipeline().parameters.p_pcm_fab_code",
+									"type": "Expression"
+								}
+							}
+						}
+					},
+					{
+						"name": "pl_yardkpi_pcm_ndt_details_master",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "pl_yardkpi_pcm_dl_master_weld_process_master_pipeline",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "pl_yardkpi_pcm_dl_master_job_item_master_pipeline",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "pl_yardkpi_pcm_dl_master_defect_master_pipeline",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "pl_yardkpi_pcm_welder_information_master_pipeline",
+								"dependencyConditions": [
+									"Completed"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_yardkpi_pcm_ndt_details_master",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {
+								"p_pipeline_pcm_fab_code": {
+									"value": "@pipeline().parameters.p_pcm_fab_code",
+									"type": "Expression"
+								}
+							}
+						}
+					},
+					{
+						"name": "pl_yardkpi_pcm_paint_details_master",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "pl_yardkpi_pcm_certification_package_master",
+								"dependencyConditions": [
+									"Completed"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_yardkpi_pcm_paint_details_master",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {
+								"p_pipeline_pcm_fab_code": {
+									"value": "@pipeline().parameters.p_pcm_fab_code",
+									"type": "Expression"
+								}
+							}
+						}
+					},
+					{
+						"name": "pl_yardkpi_pcm_weld_details_master",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "pl_yardkpi_pcm_inprocess_inspection_master",
+								"dependencyConditions": [
+									"Completed"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_yardkpi_pcm_weld_details_master",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {
+								"p_pipeline_pcm_fab_code": {
+									"value": "@pipeline().parameters.p_pcm_fab_code",
+									"type": "Expression"
+								}
+							}
+						}
+					},
+					{
+						"name": "pl_yardkpi_pcm_welder_activity_master",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "pl_yardkpi_pcm_ndt_details_master",
+								"dependencyConditions": [
+									"Completed"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_yardkpi_pcm_welder_activity_master",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {
+								"p_pipeline_pcm_fab_code": {
+									"value": "@pipeline().parameters.p_pcm_fab_code",
+									"type": "Expression"
+								}
+							}
+						}
+					},
+					{
+						"name": "pl_yardkpi_pcm_del_master_of_master",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "pl_yardkpi_pcm_paint_details_master",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "pl_yardkpi_pcm_weld_details_master",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "pl_yardkpi_pcm_welder_activity_master",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_yardkpi_pcm_del_master_of_master",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {
+								"p_pcm_fab_code": {
+									"value": "@pipeline().parameters.p_pcm_fab_code",
+									"type": "Expression"
+								}
+							}
+						}
+					},
+					{
+						"name": "pl_yardkpi_pcm_welder_information_master_pipeline",
+						"type": "ExecutePipeline",
+						"dependsOn": [],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_yardkpi_pcm_welder_information_master_pipeline",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {
+								"p_pipeline_pcm_fab_code": {
+									"value": "@pipeline().parameters.p_pcm_fab_code",
+									"type": "Expression"
+								}
+							}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"parameters": {
+					"p_pcm_fab_code": {
+						"type": "string"
+					}
+				},
+				"variables": {
+					"v_error_message": {
+						"type": "Array"
+					}
+				},
+				"folder": {
+					"name": "Projects/YARD KPI/PCM"
+				},
+				"annotations": [],
+				"lastPublishTime": "2023-11-17T05:36:07Z"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/MAPS_Trigger_Schedule_Weekly_xxxxxFx')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "MAPS_Trigger_Schedule FOR EVERY Friday",
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pl_master_maps_data_load",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Week",
+						"interval": 1,
+						"startTime": "2024-09-04T09:25:00",
+						"timeZone": "Arabian Standard Time",
+						"schedule": {
+							"minutes": [
+								0
+							],
+							"hours": [
+								16
+							],
+							"weekDays": [
+								"Friday"
+							]
+						}
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/R2P_PO_Commitment_Details_Trigger_schedule_SMTWTFS')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pl_R2P_PO_Commitment_Details_master_pipeline_projects_specific",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					},
+					{
+						"pipelineReference": {
+							"referenceName": "pl_R2P_PO_Commitment_Details_source_to_stage",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Day",
+						"interval": 1,
+						"startTime": "2025-03-10T12:29:00",
+						"timeZone": "Arabian Standard Time",
+						"schedule": {
+							"minutes": [
+								0
+							],
+							"hours": [
+								18
+							]
+						}
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/Trigger_schedule_xMTWTFx_0215UTC')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "IDOCS Load - Scheduled trigger to kickoff every weekday i.e. Monday to Friday, to run at  2:15 AM UTC",
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pl_master_pipeline_idocs_loop_project",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Week",
+						"interval": 1,
+						"startTime": "2022-04-12T10:13:00Z",
+						"timeZone": "UTC",
+						"schedule": {
+							"minutes": [
+								15
+							],
+							"hours": [
+								2
+							],
+							"weekDays": [
+								"Monday",
+								"Tuesday",
+								"Wednesday",
+								"Thursday",
+								"Friday"
+							]
+						}
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/Trigger_schedule_xMTWTFx_0600UTC')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Scheduled trigger to kickoff every weekday i.e. Monday to Friday, to run at  9:00 PM CST/ 6:00 AM UTC",
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pl_master_pipeline_sitepro",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					},
+					{
+						"pipelineReference": {
+							"referenceName": "pl_RIM_exlstgjsn_master_pipeline_BKP_29th_May_2025",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Week",
+						"interval": 1,
+						"startTime": "2021-04-27T00:00:00Z",
+						"timeZone": "UTC",
+						"schedule": {
+							"minutes": [
+								0
+							],
+							"hours": [
+								6
+							],
+							"weekDays": [
+								"Monday",
+								"Tuesday",
+								"Wednesday",
+								"Friday",
+								"Thursday"
+							]
+						}
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/YARDKPI_Trigger_Schedule_xxxWxxx1300CST')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "YARDKPI_Trigger_Schedule_FOR EVERY Wednesday 1300CST (12:30 am IST)",
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pl_yardkpi_intelex_master_of master_pipeline",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					},
+					{
+						"pipelineReference": {
+							"referenceName": "pl_yardkpi_load_and_training_master",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					},
+					{
+						"pipelineReference": {
+							"referenceName": "pl_yardkpi_mcr_master_of_master",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					},
+					{
+						"pipelineReference": {
+							"referenceName": "pl_yardkpi_pqr_master_of_master",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					},
+					{
+						"pipelineReference": {
+							"referenceName": "pl_yardkpi_weldingprocess_master_pipelines",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					},
+					{
+						"pipelineReference": {
+							"referenceName": "pl_yardkpi_benchmark_master_pipelines",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					},
+					{
+						"pipelineReference": {
+							"referenceName": "pl_yardkpi_gmps_master_of_master",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Week",
+						"interval": 1,
+						"startTime": "2023-12-05T05:35:00",
+						"timeZone": "Central Standard Time",
+						"schedule": {
+							"minutes": [
+								0
+							],
+							"hours": [
+								13
+							],
+							"weekDays": [
+								"Wednesday"
+							]
+						}
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/CED_Trigger_schedule_xMTWTFx_0100CET')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Central Engineering Database Trigger_schedule_xMTWTFx_0100CET",
+				"annotations": [],
+				"runtimeState": "Started",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pl_ced_master_pipeline",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Week",
+						"interval": 1,
+						"startTime": "2026-01-05T11:35:00",
+						"timeZone": "W. Europe Standard Time",
+						"schedule": {
+							"minutes": [
+								0
+							],
+							"hours": [
+								1
+							],
+							"weekDays": [
+								"Monday",
+								"Tuesday",
+								"Wednesday",
+								"Thursday",
+								"Friday"
+							]
+						}
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/PROMT_Trigger_schedule_SMTWTFS')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pl_master_risk_opportunity_dimension_fact_load",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Day",
+						"interval": 1,
+						"startTime": "2024-02-12T15:55:00",
+						"timeZone": "Central Standard Time",
+						"schedule": {
+							"minutes": [
+								0
+							],
+							"hours": [
+								23
+							]
+						}
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/pipelines/pl_master_risk_opportunity_dimension_fact_load')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/Trigger_schedule_fss_hourly_xxxxxxS_UTC')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pl_sample_fss_master_of_master_pipeline",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Hour",
+						"interval": 5,
+						"startTime": "2023-11-30T05:45:00",
+						"timeZone": "India Standard Time"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/pipelines/pl_sample_fss_master_of_master_pipeline')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/Trigger_schedule_xMTWTFx_0001UTC')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Scheduled trigger to kickoff every days of the week. i.e. Monday to Friday, to run at the end of business day 7:01 PM CST/ 12:01 AM UTC",
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pl_master_pipeline_dimension",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Week",
+						"interval": 1,
+						"startTime": "2021-04-27T00:00:00Z",
+						"timeZone": "UTC",
+						"schedule": {
+							"minutes": [
+								1
+							],
+							"hours": [
+								0
+							],
+							"weekDays": [
+								"Monday",
+								"Tuesday",
+								"Wednesday",
+								"Thursday",
+								"Friday"
+							]
+						}
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/pipelines/pl_master_pipeline_dimension')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/YARDKPI_Trigger_schedule_PCM_BTY_SMTWTFS_2130_WIB')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Trigger for YARDKPI PCM BATAM YARD",
+				"annotations": [
+					"PCM_BTY"
+				],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pl_yardkpi_pcm_master_of_master",
+							"type": "PipelineReference"
+						},
+						"parameters": {
+							"p_pcm_fab_code": "[parameters('YARDKPI_Trigger_schedule_PCM_BTY_SMTWTFS_2130_WIB_properties_pl_yardkpi_pcm_master_of_master_parameters_p_pcm_fab_code')]"
+						}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Week",
+						"interval": 1,
+						"startTime": "2025-01-16T11:02:00",
+						"timeZone": "India Standard Time",
+						"schedule": {
+							"minutes": [
+								0
+							],
+							"hours": [
+								0
+							],
+							"weekDays": [
+								"Friday",
+								"Thursday",
+								"Wednesday",
+								"Tuesday",
+								"Monday",
+								"Saturday",
+								"Sunday"
+							]
+						}
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/pipelines/pl_yardkpi_pcm_master_of_master')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/YARDKPI_Trigger_schedule_PCM_JAY_SMTWTFS_2130_GST')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Trigger for YARDKPI PCM JAY YARD",
+				"annotations": [
+					"PCM_JAY"
+				],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pl_yardkpi_pcm_master_of_master",
+							"type": "PipelineReference"
+						},
+						"parameters": {
+							"p_pcm_fab_code": "[parameters('YARDKPI_Trigger_schedule_PCM_JAY_SMTWTFS_2130_GST_properties_pl_yardkpi_pcm_master_of_master_parameters_p_pcm_fab_code')]"
+						}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Week",
+						"interval": 1,
+						"startTime": "2025-03-20T09:57:00",
+						"timeZone": "India Standard Time",
+						"schedule": {
+							"minutes": [
+								0
+							],
+							"hours": [
+								2
+							],
+							"weekDays": [
+								"Monday",
+								"Tuesday",
+								"Thursday",
+								"Wednesday",
+								"Friday",
+								"Saturday",
+								"Sunday"
+							]
+						}
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/pipelines/pl_yardkpi_pcm_master_of_master')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/YARDKPI_Trigger_schedule_PCM_QFY_SMTWTFS_2030_AST')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Trigger for YARDKPI PCM Qatar Yard",
+				"annotations": [
+					"PCM_QFY"
+				],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pl_yardkpi_pcm_master_of_master",
+							"type": "PipelineReference"
+						},
+						"parameters": {
+							"p_pcm_fab_code": "[parameters('YARDKPI_Trigger_schedule_PCM_QFY_SMTWTFS_2030_AST_properties_pl_yardkpi_pcm_master_of_master_parameters_p_pcm_fab_code')]"
+						}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Week",
+						"interval": 1,
+						"startTime": "2025-03-20T10:07:00",
+						"timeZone": "India Standard Time",
+						"schedule": {
+							"minutes": [
+								0
+							],
+							"hours": [
+								4
+							],
+							"weekDays": [
+								"Sunday",
+								"Monday",
+								"Tuesday",
+								"Wednesday",
+								"Thursday",
+								"Friday",
+								"Saturday"
+							]
+						}
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/pipelines/pl_yardkpi_pcm_master_of_master')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/YARDKPI_Trigger_schedule_xMTWTFx_1400CST')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "YARDKPI_Trigger_schedule FOR Every week days 1400CST (1:30 am ist)",
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pl_yardkpi_idocs_loop_project",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					},
+					{
+						"pipelineReference": {
+							"referenceName": "pl_yardkpi_tabware_master_pipeline",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					},
+					{
+						"pipelineReference": {
+							"referenceName": "pl_yardkpi_servicenow_master_pipelines",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					},
+					{
+						"pipelineReference": {
+							"referenceName": "pl_yardkpi_toolhound_transaction_master_pipeline",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					},
+					{
+						"pipelineReference": {
+							"referenceName": "pl_yardkpi_toolhound_inventory_master_pipeline",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					},
+					{
+						"pipelineReference": {
+							"referenceName": "pl_yardkpi_spc_master",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					},
+					{
+						"pipelineReference": {
+							"referenceName": "pl_yardkpi_R2P_master_pipeline",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					},
+					{
+						"pipelineReference": {
+							"referenceName": "pl_yardkpi_smat_master_pipeline",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					},
+					{
+						"pipelineReference": {
+							"referenceName": "pl_yardkpi_mwin_master",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Week",
+						"interval": 1,
+						"startTime": "2023-12-05T05:41:00",
+						"timeZone": "Central Standard Time",
+						"schedule": {
+							"minutes": [
+								30
+							],
+							"hours": [
+								14
+							],
+							"weekDays": [
+								"Monday",
+								"Tuesday",
+								"Wednesday",
+								"Thursday",
+								"Friday",
+								"Saturday",
+								"Sunday"
+							]
+						}
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/pipelines/pl_yardkpi_idocs_loop_project')]"
+			]
+		}
+	]
+}

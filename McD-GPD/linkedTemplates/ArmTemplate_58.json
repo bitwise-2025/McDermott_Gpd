@@ -1,0 +1,1755 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "McD-GPD"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/df_iDocs_P21A_SpoolStatus_schemadrift_stage_to_raw')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Data Flow to pull data from ADLS Stg to ADLS Raw.\nNo schema defined in source or Target, Schema drift was used along with column rules to direct data into Sink.",
+				"folder": {
+					"name": "Projects/iDocs"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_iDocs_SpoolStatus_stg",
+								"type": "DatasetReference"
+							},
+							"name": "srcSpoolStatusReportStage"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_iDocs_SpoolStatus_raw",
+								"type": "DatasetReference"
+							},
+							"name": "snkSpoolStatusRptRaw"
+						}
+					],
+					"transformations": [
+						{
+							"name": "setFileName"
+						}
+					],
+					"script": "parameters{\n\tWildPath as string,\n\tFileName as string\n}\nsource(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\trowUrlColumn: 'Filename',\n\twildcardPaths:[($WildPath + $FileName + '.csv')]) ~> srcSpoolStatusReportStage\nsrcSpoolStatusReportStage derive(Filename = concat($WildPath,substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',$FileName,'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv')) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\trowUrlColumn:'Filename',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tmapColumn(\n\t\tFilename,\n\t\teach(match('PROJNAME'==upper(name)),\n\t\t\t'PROJNAME' = $$),\n\t\teach(match('PROJNO'==upper(name)),\n\t\t\t'PROJNO' = $$),\n\t\teach(match('DOC_ID'==upper(name)),\n\t\t\t'DOC_ID' = $$),\n\t\teach(match('DOCUMENT NUMBER'==upper(name)),\n\t\t\t'DOCUMENT NUMBER' = $$),\n\t\teach(match('REVISION'==upper(name)),\n\t\t\t'REVISION' = $$),\n\t\teach(match('REVISION DATE'==upper(name)),\n\t\t\t'REVISION DATE' = $$),\n\t\teach(match('TITLE'==upper(name)),\n\t\t\t'TITLE' = $$),\n\t\teach(match('ISSUE STATE'==upper(name)),\n\t\t\t'ISSUE STATE' = $$),\n\t\teach(match('TRANSMITTAL NUMBER'==upper(name)),\n\t\t\t'TRANSMITTAL NUMBER' = $$),\n\t\teach(match('TRANSMITTAL DATE'==upper(name)),\n\t\t\t'TRANSMITTAL DATE' = $$),\n\t\teach(match('DELIVERABLE'==upper(name)),\n\t\t\t'DELIVERABLE' = $$),\n\t\teach(match('IDOCS FOLDER'==upper(name)),\n\t\t\t'IDOCS FOLDER' = $$),\n\t\teach(match('REF DOC'==upper(name)),\n\t\t\t'REF DOC' = $$)\n\t)) ~> snkSpoolStatusRptRaw"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_iDocs_P24B_ConsMSMaster_stage_to_raw')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_iDocs_ConsMSMaster_stg",
+								"type": "DatasetReference"
+							},
+							"name": "srcConsMSMasterStage"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_iDocs_ConsMSMaster_raw",
+								"type": "DatasetReference"
+							},
+							"name": "snkConsMSMastertRaw"
+						}
+					],
+					"transformations": [
+						{
+							"name": "setFileName"
+						}
+					],
+					"script": "parameters{\n\tWildPath as string,\n\tFileName as string\n}\nsource(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\trowUrlColumn: 'Filename',\n\twildcardPaths:[($WildPath+$FileName+'.csv')]) ~> srcConsMSMasterStage\nsrcConsMSMasterStage derive(Filename = concat($WildPath,substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',$FileName,'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv')) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\trowUrlColumn:'Filename',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> snkConsMSMastertRaw"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_iDocs_ProjectSpecific_stage_to_raw')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Data Flow to pull data from ADLS Stg to ADLS Raw.\n",
+				"folder": {
+					"name": "Projects/NCSA/iDocs/Project Specific"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_iDocs_ProjectSpecific_stg",
+								"type": "DatasetReference"
+							},
+							"name": "srcProjectSpecificStage"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_iDocs_ProjectSpecific_raw",
+								"type": "DatasetReference"
+							},
+							"name": "snkProjectSpecificRaw"
+						}
+					],
+					"transformations": [
+						{
+							"name": "setFileName"
+						}
+					],
+					"script": "parameters{\n\tWildPath as string,\n\tFileName as string\n}\nsource(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\trowUrlColumn: 'Filename',\n\twildcardPaths:[($WildPath + $FileName + '.csv')]) ~> srcProjectSpecificStage\nsrcProjectSpecificStage derive(Filename = concat($WildPath,substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',$FileName,'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv')) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\trowUrlColumn:'Filename',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: []) ~> snkProjectSpecificRaw"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_iDocs_closed_m_raw_to_synapse')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_idocs_closed_m_raw_latest",
+								"type": "DatasetReference"
+							},
+							"name": "srcClosedMasterRAWLatest"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_AzureSynapseAnalytics_idocs_closed_m",
+								"type": "DatasetReference"
+							},
+							"name": "snkClosedMSynapse"
+						}
+					],
+					"transformations": [
+						{
+							"name": "DataTransformationClosedM"
+						}
+					],
+					"script": "source(output(\n\t\t{PROJECT NO.} as string,\n\t\t{PROJECT ID} as string,\n\t\t{PROJECT NAME} as string,\n\t\t{DOC ID} as string,\n\t\tDELIVERABLE as string,\n\t\t{DOCUMENT NUMBER} as string,\n\t\t{EXPEDITED ISSUE STATE} as string,\n\t\t{TYPE CLASS} as string,\n\t\t{EXPEDITED VERSION} as string,\n\t\t{EXPEDITED REVISION} as string,\n\t\t{CURRENT VERSION} as string,\n\t\t{CURRENT REVISION} as string,\n\t\t{USER TYPE} as string,\n\t\tRECIPIENT as string,\n\t\tCOMPANY as string,\n\t\t{EXPEDITING START} as string,\n\t\t{EXPEDITING DUE} as string,\n\t\t{EXPEDITING FORECAST} as string,\n\t\t{EXPEDITING ACTUAL} as string,\n\t\t{RESPONSE STATUS} as string,\n\t\t{CLIENT RETURN TRANS. DATE} as string,\n\t\t{EXP ID} as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true) ~> srcClosedMasterRAWLatest\nsrcClosedMasterRAWLatest derive({PROJECT NO.} = iif(length(regexSplit({PROJECT NO.},'[-]')[1])>5,concat('99',regexSplit({PROJECT NO.},'[-]')[1]),regexSplit({PROJECT NO.},'[-]')[1])) ~> DataTransformationClosedM\nDataTransformationClosedM sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tdeletable:false,\n\tinsertable:true,\n\tupdateable:false,\n\tupsertable:false,\n\ttruncate:true,\n\tformat: 'table',\n\tstaged: true,\n\tallowCopyCommand: true,\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\terrorHandlingOption: 'stopOnFirstError',\n\tmapColumn(\n\t\tproject_number = {PROJECT NO.},\n\t\tproject_id = {PROJECT ID},\n\t\tproject_name = {PROJECT NAME},\n\t\tdocument_id = {DOC ID},\n\t\tdeliverable = DELIVERABLE,\n\t\tdocument_number = {DOCUMENT NUMBER},\n\t\tdocument_status = {EXPEDITED ISSUE STATE},\n\t\ttype_class = {TYPE CLASS},\n\t\texpedited_version = {EXPEDITED VERSION},\n\t\texpedited_revision = {EXPEDITED REVISION},\n\t\tcurrent_version = {CURRENT VERSION},\n\t\tcurrent_revision = {CURRENT REVISION},\n\t\tuser_type = {USER TYPE},\n\t\trecipient = RECIPIENT,\n\t\tcompany = COMPANY,\n\t\texpediting_start = {EXPEDITING START},\n\t\texpediting_due = {EXPEDITING DUE},\n\t\texpediting_forecast = {EXPEDITING FORECAST},\n\t\texpediting_actual = {EXPEDITING ACTUAL},\n\t\tresponse_status = {RESPONSE STATUS},\n\t\tclient_return_date = {CLIENT RETURN TRANS. DATE},\n\t\texpediting_id = {EXP ID}\n\t)) ~> snkClosedMSynapse"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_iDocs_doc_eng_raw_to_synapse')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/NCSA/iDocs/Doc Master Eng"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_idocs_doc_eng_raw_latest",
+								"type": "DatasetReference"
+							},
+							"name": "srcDocEngRaw"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_AzureSynapseAnalytics_idocs_doc_eng",
+								"type": "DatasetReference"
+							},
+							"name": "snkDocEngSynapse"
+						}
+					],
+					"transformations": [
+						{
+							"name": "DataTransform"
+						}
+					],
+					"script": "source(output(\n\t\t{PROJECT NO.} as string,\n\t\t{PROJECT ID} as string,\n\t\t{PROJECT NAME} as string,\n\t\t{CLIENT NAME} as string,\n\t\tDELIVERABLE as string,\n\t\t{DOC ID} as string,\n\t\t{TYPE CLASS} as string,\n\t\t{DOC. TYPE} as string,\n\t\t{DOCUMENT NUMBER} as string,\n\t\t{ALTERNATE DOCUMENT NUMBER} as string,\n\t\tTITLE as string,\n\t\t{REVISION NO.} as string,\n\t\t{REVISION DATE} as string,\n\t\t{ISSUE STATE} as string,\n\t\t{OFFICE LOCATION} as string,\n\t\tDISCIPLINE as string,\n\t\tFACILITY_PLANT_UNIT as string,\n\t\t{TOTAL CURRENT PROGRESS} as string,\n\t\tEWP as string,\n\t\tCWA as string,\n\t\tCWP as string,\n\t\tHOLD as string,\n\t\t{TAG_EQUIPMENT NUMBER} as string,\n\t\t{COST CODE} as string,\n\t\tAPPROVER as string,\n\t\tCHECKER as string,\n\t\t{REASON FOR CHANGE-ENGINEERING} as string,\n\t\tISO_LINU as string,\n\t\tISO_NAME as string,\n\t\t{SUPERSEDED BY} as string,\n\t\tSTART_ACTIVITY_ID as string,\n\t\tIDC_ACTIVITY_ID as string,\n\t\tIFI_ACTIVITY_ID as string,\n\t\tIFR_ACTIVITY_ID as string,\n\t\tIFA_ACTIVITY_ID as string,\n\t\tICA_ACTIVITY_ID as string,\n\t\tIFB_ACTIVITY_ID as string,\n\t\tTBE_ACTIVITY_ID as string,\n\t\tIFP_ACTIVITY_ID as string,\n\t\tAFD_ACTIVITY_ID as string,\n\t\tAFC_FINAL_ACTIVITY_ID as string,\n\t\tPROJ_DEFINED_01_ACTIVITY_ID as string,\n\t\tPROJ_DEFINED_02_ACTIVITY_ID as string,\n\t\tPROJ_DEFINED_03_ACTIVITY_ID as string,\n\t\tPROJ_DEFINED_04_ACTIVITY_ID as string,\n\t\tPROJ_DEFINED_05_ACTIVITY_ID as string,\n\t\tPROJ_DEFINED_06_ACTIVITY_ID as string,\n\t\tPROJ_DEFINED_07_ACTIVITY_ID as string,\n\t\tPROJ_DEFINED_08_ACTIVITY_ID as string,\n\t\tPROJ_DEFINED_09_ACTIVITY_ID as string,\n\t\tPROJ_DEFINED_10_ACTIVITY_ID as string,\n\t\t{CONTRACT NO.} as string,\n\t\t{DELIVERABLE TYPE} as string,\n\t\t{IDOCS FOLDER} as string,\n\t\t{IDOCS URL} as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['Project_Data/NCSA/iDocs/Doc_Master_Eng/Latest_iDocs_doc_eng.csv']) ~> srcDocEngRaw\nsrcDocEngRaw derive(WORK_PACKAGE = iif(length(trim(regexExtract(CWP,`(\\d+-[a-zA-Z]{2}\\d+)`,1)))>0,regexExtract(CWP,`(\\d+-[a-zA-Z]{2}\\d+)`,1),'null')) ~> DataTransform\nDataTransform sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tinput(\n\t\tstage_idoc_doc_eng_id as integer,\n\t\tPROJECT_NAME as string,\n\t\tPROJECT_NUMBER as string,\n\t\tPROJECT_ID as string,\n\t\tCLIENT_NAME as string,\n\t\tDOC_ID as string,\n\t\tDELIVERABLE as string,\n\t\tTYPE_CLASS as string,\n\t\tDOCUMENT_TYPE as string,\n\t\tDOCUMENT_NUMBER as string,\n\t\tALTERNATE_DOC_NUMBER as string,\n\t\tTitle as string,\n\t\tIssue_State as string,\n\t\tRevision as string,\n\t\tRevision_Date as string,\n\t\tDISCIPLINE as string,\n\t\tFACILITY_PLANT_UNIT as string,\n\t\tOFFICE_LOCATION as string,\n\t\tTOTAL_CURRENT_PROGRESS as string,\n\t\tEWP as string,\n\t\tCWA as string,\n\t\tCWP as string,\n\t\tHOLDS as string,\n\t\tTAG_EQUIPMENT_NUMBER as string,\n\t\tWORK_PACKAGE as string,\n\t\tcost_code as string,\n\t\tapprover as string,\n\t\tchecker as string,\n\t\tReason_for_change as string,\n\t\tISO_LINU as string,\n\t\tISO_NAME as string,\n\t\tSUPERSEDED_BY as string,\n\t\tSTART_ACTIVITY_ID as string,\n\t\tIDC_ACTIVITY_ID as string,\n\t\tIFI_ACTIVITY_ID as string,\n\t\tIFR_ACTIVITY_ID as string,\n\t\tIFA_ACTIVITY_ID as string,\n\t\tICA_ACTIVITY_ID as string,\n\t\tIFB_ACTIVITY_ID as string,\n\t\tTBE_ACTIVITY_ID as string,\n\t\tIFP_ACTIVITY_ID as string,\n\t\tAFD_ACTIVITY_ID as string,\n\t\tAFC_FINAL_ACTIVITY_ID as string,\n\t\tPROJ_DEFINED_01_ACTIVITY_ID as string,\n\t\tPROJ_DEFINED_02_ACTIVITY_ID as string,\n\t\tPROJ_DEFINED_03_ACTIVITY_ID as string,\n\t\tPROJ_DEFINED_04_ACTIVITY_ID as string,\n\t\tPROJ_DEFINED_05_ACTIVITY_ID as string,\n\t\tPROJ_DEFINED_06_ACTIVITY_ID as string,\n\t\tPROJ_DEFINED_07_ACTIVITY_ID as string,\n\t\tPROJ_DEFINED_08_ACTIVITY_ID as string,\n\t\tPROJ_DEFINED_09_ACTIVITY_ID as string,\n\t\tPROJ_DEFINED_10_ACTIVITY_ID as string,\n\t\tCONTRACT_NO as string,\n\t\tDELIVERABLE_TYPE as string,\n\t\tIDOCS_FOLDER as string,\n\t\tIDOCS_URL as string\n\t),\n\tdeletable:false,\n\tinsertable:true,\n\tupdateable:false,\n\tupsertable:false,\n\ttruncate:true,\n\tformat: 'table',\n\tstaged: true,\n\tallowCopyCommand: true,\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\terrorHandlingOption: 'stopOnFirstError',\n\tmapColumn(\n\t\tPROJECT_NAME = {PROJECT NAME},\n\t\tPROJECT_NUMBER = {PROJECT NO.},\n\t\tPROJECT_ID = {PROJECT ID},\n\t\tCLIENT_NAME = {CLIENT NAME},\n\t\tDOC_ID = {DOC ID},\n\t\tDELIVERABLE,\n\t\tTYPE_CLASS = {TYPE CLASS},\n\t\tDOCUMENT_TYPE = {DOC. TYPE},\n\t\tDOCUMENT_NUMBER = {DOCUMENT NUMBER},\n\t\tALTERNATE_DOC_NUMBER = {ALTERNATE DOCUMENT NUMBER},\n\t\tTitle = TITLE,\n\t\tIssue_State = {ISSUE STATE},\n\t\tRevision = {REVISION NO.},\n\t\tRevision_Date = {REVISION DATE},\n\t\tDISCIPLINE,\n\t\tFACILITY_PLANT_UNIT,\n\t\tOFFICE_LOCATION = {OFFICE LOCATION},\n\t\tTOTAL_CURRENT_PROGRESS = {TOTAL CURRENT PROGRESS},\n\t\tEWP,\n\t\tCWA,\n\t\tCWP,\n\t\tHOLDS = HOLD,\n\t\tTAG_EQUIPMENT_NUMBER = {TAG_EQUIPMENT NUMBER},\n\t\tWORK_PACKAGE,\n\t\tcost_code = {COST CODE},\n\t\tapprover = APPROVER,\n\t\tchecker = CHECKER,\n\t\tReason_for_change = {REASON FOR CHANGE-ENGINEERING},\n\t\tISO_LINU,\n\t\tISO_NAME,\n\t\tSUPERSEDED_BY = {SUPERSEDED BY},\n\t\tSTART_ACTIVITY_ID,\n\t\tIDC_ACTIVITY_ID,\n\t\tIFI_ACTIVITY_ID,\n\t\tIFR_ACTIVITY_ID,\n\t\tIFA_ACTIVITY_ID,\n\t\tICA_ACTIVITY_ID,\n\t\tIFB_ACTIVITY_ID,\n\t\tTBE_ACTIVITY_ID,\n\t\tIFP_ACTIVITY_ID,\n\t\tAFD_ACTIVITY_ID,\n\t\tAFC_FINAL_ACTIVITY_ID,\n\t\tPROJ_DEFINED_01_ACTIVITY_ID,\n\t\tPROJ_DEFINED_02_ACTIVITY_ID,\n\t\tPROJ_DEFINED_03_ACTIVITY_ID,\n\t\tPROJ_DEFINED_04_ACTIVITY_ID,\n\t\tPROJ_DEFINED_05_ACTIVITY_ID,\n\t\tPROJ_DEFINED_06_ACTIVITY_ID,\n\t\tPROJ_DEFINED_07_ACTIVITY_ID,\n\t\tPROJ_DEFINED_08_ACTIVITY_ID,\n\t\tPROJ_DEFINED_09_ACTIVITY_ID,\n\t\tPROJ_DEFINED_10_ACTIVITY_ID,\n\t\tIDOCS_FOLDER = {IDOCS FOLDER},\n\t\tIDOCS_URL = {IDOCS URL},\n\t\tCONTRACT_NO = {CONTRACT NO.},\n\t\tDELIVERABLE_TYPE = {DELIVERABLE TYPE}\n\t)) ~> snkDocEngSynapse"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_iDocs_doc_eng_stage_to_raw')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/NCSA/iDocs/Doc Master Eng"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_idocs_doc_eng_stg",
+								"type": "DatasetReference"
+							},
+							"name": "srcDocEngStage"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_idocs_doc_eng_raw",
+								"type": "DatasetReference"
+							},
+							"name": "snkDocEngRaw"
+						}
+					],
+					"transformations": [
+						{
+							"name": "setFileName"
+						}
+					],
+					"script": "parameters{\n\tWildPath as string,\n\tFileName as string\n}\nsource(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\trowUrlColumn: 'Filename',\n\twildcardPaths:[($WildPath+$FileName+'.csv')]) ~> srcDocEngStage\nsrcDocEngStage derive(Filename = concat($WildPath,substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',$FileName,'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv'),\n\t\teach(match(name=='PROJECT NO.'), $$ = iif(length(regexSplit($$,'[-]')[1])>5,concat('99',regexSplit($$,'[-]')[1]),regexSplit($$,'[-]')[1]))) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\trowUrlColumn:'Filename',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> snkDocEngRaw"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_iDocs_doc_ven_raw_to_synapse')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/NCSA/iDocs/Doc Master Ven"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_idocs_doc_ven_raw_latest",
+								"type": "DatasetReference"
+							},
+							"name": "srcDocVenRaw"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_AzureSynapseAnalytics_idocs_doc_ven",
+								"type": "DatasetReference"
+							},
+							"name": "snkDocVenSynapse"
+						}
+					],
+					"transformations": [
+						{
+							"name": "DataTransform"
+						}
+					],
+					"script": "source(output(\n\t\t{PROJECT NO.} as string,\n\t\t{PROJECT ID} as string,\n\t\t{PROJECT NAME} as string,\n\t\t{CLIENT NAME} as string,\n\t\t{SUPPLIER NAME} as string,\n\t\t{REQ_PO NO.} as string,\n\t\tDELIVERABLE as string,\n\t\t{DOC ID} as string,\n\t\t{TYPE CLASS} as string,\n\t\t{DOCUMENT NUMBER} as string,\n\t\t{SUPPLIER DOC. NO.} as string,\n\t\tTITLE as string,\n\t\t{REVISION NO.} as string,\n\t\t{SUPPLIER REVISION} as string,\n\t\t{RECEIVED DATE} as string,\n\t\t{RETURN DATE} as string,\n\t\t{REVISION DATE} as string,\n\t\t{ISSUE STATE} as string,\n\t\t{OFFICE LOCATION} as string,\n\t\tDISCIPLINE as string,\n\t\t{DOCUMENT CLASS} as string,\n\t\t{SDR CODE} as string,\n\t\t{TOTAL CURRENT PROGRESS} as string,\n\t\t{SUPERSEDED BY} as string,\n\t\tFACILITY_PLANT_UNIT as string,\n\t\tEWP as string,\n\t\tCWA as string,\n\t\tCWP as string,\n\t\tHOLD as string,\n\t\t{TAG_EQUIPMENT NUMBER} as string,\n\t\t{REQUISITION ENGINEER} as string,\n\t\t{REASON FOR CHANGE SUPPLIER} as string,\n\t\tEXPEDITOR as string,\n\t\tSUPPLIER_RECEIVED_ACTIVITY_ID as string,\n\t\tAPPROVED_WCOMMENTS_ACTIVITY_ID as string,\n\t\tAPPROVED_ACTIVITY_ID as string,\n\t\t{CONTRACT NO.} as string,\n\t\t{IDOCS FOLDER} as string,\n\t\t{IDOCS URL} as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['Project_Data/NCSA/iDocs/Doc_Master_Ven/Latest_iDocs_doc_ven.csv']) ~> srcDocVenRaw\nsrcDocVenRaw derive(WORK_PACKAGE = iif(\r\n    isNull(CWP),\r\n    'null',\r\n    regexExtract(CWP,`(\\d+-[a-zA-Z]{2}\\d+)`,1)\r\n)) ~> DataTransform\nDataTransform sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tinput(\n\t\tstage_idoc_doc_ven_id as integer,\n\t\tPROJECT_NAME as string,\n\t\tPROJECT_NUMBER as string,\n\t\tPROJECT_ID as string,\n\t\tCLIENT_NAME as string,\n\t\tSUPPLIER_NAME as string,\n\t\tREQ_PO_NUMBER as string,\n\t\tDOC_ID as string,\n\t\tDELIVERABLE as string,\n\t\tTYPE_CLASS as string,\n\t\tDOCUMENT_NUMBER as string,\n\t\tSUPPLIER_DOC_NUMBER as string,\n\t\tTitle as string,\n\t\tRevision_Number as string,\n\t\tSUPPLIER_REVISION as string,\n\t\tReceived_Date as string,\n\t\tReturn_Date as string,\n\t\tRevision_Date as string,\n\t\tIssue_State as string,\n\t\tDISCIPLINE as string,\n\t\tOFFICE_LOCATION as string,\n\t\tDOCUMENT_CLASS as string,\n\t\tSDR_Code as string,\n\t\tTOTAL_CURRENT_PROGRESS as string,\n\t\tSUPERSEDED_BY as string,\n\t\tFACILITY_PLANT_UNIT as string,\n\t\tEWP as string,\n\t\tCWA as string,\n\t\tCWP as string,\n\t\tHOLDS as string,\n\t\tTAG_EQUIPMENT_NUMBER as string,\n\t\tREQUISITION_ENGINEER as string,\n\t\tReason_for_change as string,\n\t\tEXPEDITOR as string,\n\t\tSUPPLIER_RECEIVED_ACTIVITY_ID as string,\n\t\tAPPROVED_WCOMMENTS_ACTIVITY_ID as string,\n\t\tAPPROVED_ACTIVITY_ID as string,\n\t\tCONTRACT_NO as string,\n\t\tIDOCS_FOLDER as string,\n\t\tIDOCS_URL as string,\n\t\tWORK_PACKAGE as string\n\t),\n\tdeletable:false,\n\tinsertable:true,\n\tupdateable:false,\n\tupsertable:false,\n\ttruncate:true,\n\tformat: 'table',\n\tstaged: true,\n\tallowCopyCommand: true,\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\terrorHandlingOption: 'stopOnFirstError',\n\tmapColumn(\n\t\tPROJECT_NUMBER = {PROJECT NO.},\n\t\tPROJECT_ID = {PROJECT ID},\n\t\tPROJECT_NAME = {PROJECT NAME},\n\t\tCLIENT_NAME = {CLIENT NAME},\n\t\tSUPPLIER_NAME = {SUPPLIER NAME},\n\t\tREQ_PO_NUMBER = {REQ_PO NO.},\n\t\tDELIVERABLE,\n\t\tDOC_ID = {DOC ID},\n\t\tTYPE_CLASS = {TYPE CLASS},\n\t\tDOCUMENT_NUMBER = {DOCUMENT NUMBER},\n\t\tSUPPLIER_DOC_NUMBER = {SUPPLIER DOC. NO.},\n\t\tTitle = TITLE,\n\t\tRevision_Number = {REVISION NO.},\n\t\tSUPPLIER_REVISION = {SUPPLIER REVISION},\n\t\tReceived_Date = {RECEIVED DATE},\n\t\tReturn_Date = {RETURN DATE},\n\t\tRevision_Date = {REVISION DATE},\n\t\tIssue_State = {ISSUE STATE},\n\t\tOFFICE_LOCATION = {OFFICE LOCATION},\n\t\tDISCIPLINE,\n\t\tDOCUMENT_CLASS = {DOCUMENT CLASS},\n\t\tSDR_Code = {SDR CODE},\n\t\tTOTAL_CURRENT_PROGRESS = {TOTAL CURRENT PROGRESS},\n\t\tSUPERSEDED_BY = {SUPERSEDED BY},\n\t\tFACILITY_PLANT_UNIT,\n\t\tEWP,\n\t\tCWA,\n\t\tCWP,\n\t\tHOLDS = HOLD,\n\t\tTAG_EQUIPMENT_NUMBER = {TAG_EQUIPMENT NUMBER},\n\t\tREQUISITION_ENGINEER = {REQUISITION ENGINEER},\n\t\tReason_for_change = {REASON FOR CHANGE SUPPLIER},\n\t\tEXPEDITOR,\n\t\tWORK_PACKAGE,\n\t\tSUPPLIER_RECEIVED_ACTIVITY_ID,\n\t\tAPPROVED_WCOMMENTS_ACTIVITY_ID,\n\t\tAPPROVED_ACTIVITY_ID,\n\t\tCONTRACT_NO = {CONTRACT NO.},\n\t\tIDOCS_FOLDER = {IDOCS FOLDER},\n\t\tIDOCS_URL = {IDOCS URL}\n\t)) ~> snkDocVenSynapse"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_iDocs_doc_ven_stage_to_raw')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/NCSA/iDocs/Doc Master Ven"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_idocs_doc_ven_stg",
+								"type": "DatasetReference"
+							},
+							"name": "srcDocVenStage"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_idocs_doc_ven_raw",
+								"type": "DatasetReference"
+							},
+							"name": "snkDocVenRaw"
+						}
+					],
+					"transformations": [
+						{
+							"name": "setFileName"
+						}
+					],
+					"script": "parameters{\n\tWildPath as string,\n\tFileName as string\n}\nsource(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\trowUrlColumn: 'Filename',\n\twildcardPaths:[($WildPath+$FileName+'.csv')]) ~> srcDocVenStage\nsrcDocVenStage derive(Filename = concat($WildPath,substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',$FileName,'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv'),\n\t\teach(match(name=='PROJECT NO.'), $$ = iif(length(regexSplit($$,'[-]')[1])>5,concat('99',regexSplit($$,'[-]')[1]),regexSplit($$,'[-]')[1]))) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\trowUrlColumn:'Filename',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> snkDocVenRaw"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_iDocs_open_exp_stage_to_raw')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/NCSA/iDocs/Open Expediting"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_idocs_open_exp_stg",
+								"type": "DatasetReference"
+							},
+							"name": "srcOpenExpedStage"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_idocs_open_exp_raw",
+								"type": "DatasetReference"
+							},
+							"name": "snkOpenExpedRaw"
+						}
+					],
+					"transformations": [
+						{
+							"name": "setFileName"
+						}
+					],
+					"script": "parameters{\n\tWildPath as string,\n\tFileName as string\n}\nsource(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\trowUrlColumn: 'Filename',\n\twildcardPaths:[($WildPath+$FileName+'.csv')]) ~> srcOpenExpedStage\nsrcOpenExpedStage derive(Filename = concat($WildPath,substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',$FileName,'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv'),\n\t\teach(match(name=='PROJECT NO.'), $$ = iif(length(regexSplit($$,'[-]')[1])>5,concat('99',regexSplit($$,'[-]')[1]),regexSplit($$,'[-]')[1]))) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\trowUrlColumn:'Filename',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> snkOpenExpedRaw"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_iDocs_project_specific_raw_to_synapse')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Data Flow iDocs Project Specific Raw to Synapse ",
+				"folder": {
+					"name": "Projects/NCSA/iDocs/Project Specific"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_idocs_project_specific_raw_latest",
+								"type": "DatasetReference"
+							},
+							"name": "srciDocsProjectSpecificRaw"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_AzureSynapseAnalytics_idocs_project_specific",
+								"type": "DatasetReference"
+							},
+							"name": "snkiDocsProjectSpecificSynapse"
+						}
+					],
+					"transformations": [
+						{
+							"name": "iDocsProjectSepcificDataTransform"
+						}
+					],
+					"script": "source(output(\n\t\t{PROJECT NO.} as string,\n\t\t{PROJECT ID} as string,\n\t\t{PROJECT NAME} as string,\n\t\t{CLIENT NAME} as string,\n\t\tDELIVERABLE as string,\n\t\t{DOC ID} as string,\n\t\t{TYPE CLASS} as string,\n\t\t{DOCUMENT NUMBER} as string,\n\t\tPROJ_DEFINED_01 as string,\n\t\tPROJ_DEFINED_02 as float '###,###.##',\n\t\tPROJ_DEFINED_03 as float '###,###.##',\n\t\tPROJ_DEFINED_04 as float '###,###.##',\n\t\tPROJ_DEFINED_05 as float '###,###.##',\n\t\tPROJ_DEFINED_06 as string,\n\t\tPROJ_DEFINED_07 as string,\n\t\tPROJ_DEFINED_08 as string,\n\t\tPROJ_DEFINED_09 as string,\n\t\tPROJ_DEFINED_10 as string,\n\t\tPROJ_DEFINED_11 as string,\n\t\tPROJ_DEFINED_12 as string,\n\t\tPROJ_DEFINED_13 as string,\n\t\tPROJ_DEFINED_14 as string,\n\t\tPROJ_DEFINED_15 as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\twildcardPaths:['Project_Data/NCSA/iDocs/Project_Specific/Latest_iDocs_Project_Specific.csv']) ~> srciDocsProjectSpecificRaw\nsrciDocsProjectSpecificRaw derive({PROJECT NO.} = iif(length(regexSplit({PROJECT NO.},'[-]')[1])>5,concat('99',regexSplit({PROJECT NO.},'[-]')[1]),regexSplit({PROJECT NO.},'[-]')[1]),\n\t\teach(match((in(['PROJ_DEFINED_02','PROJ_DEFINED_03','PROJ_DEFINED_04','PROJ_DEFINED_05'],name))), $$ = toDecimal($$, 8, 4))) ~> iDocsProjectSepcificDataTransform\niDocsProjectSepcificDataTransform sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tinput(\n\t\tstage_idoc_proj_spec_id as integer,\n\t\tPROJECT_NUMBER as string,\n\t\tPROJECT_ID as string,\n\t\tPROJECT_NAME as string,\n\t\tCLIENT_NAME as string,\n\t\tDELIVERABLE as string,\n\t\tDOC_ID as string,\n\t\tTYPE_CLASS as string,\n\t\tDOCUMENT_NUMBER as string,\n\t\tPROJ_DEFINED_01 as string,\n\t\tPROJ_DEFINED_02 as double,\n\t\tPROJ_DEFINED_03 as double,\n\t\tPROJ_DEFINED_04 as double,\n\t\tPROJ_DEFINED_05 as double,\n\t\tPROJ_DEFINED_06 as string,\n\t\tPROJ_DEFINED_07 as string,\n\t\tPROJ_DEFINED_08 as string,\n\t\tPROJ_DEFINED_09 as string,\n\t\tPROJ_DEFINED_10 as string,\n\t\tPROJ_DEFINED_11 as string,\n\t\tPROJ_DEFINED_12 as string,\n\t\tPROJ_DEFINED_13 as string,\n\t\tPROJ_DEFINED_14 as string,\n\t\tPROJ_DEFINED_15 as string\n\t),\n\tdeletable:false,\n\tinsertable:true,\n\tupdateable:false,\n\tupsertable:false,\n\ttruncate:true,\n\tformat: 'table',\n\tstaged: true,\n\tallowCopyCommand: true,\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\terrorHandlingOption: 'stopOnFirstError',\n\tmapColumn(\n\t\tPROJECT_NUMBER = {PROJECT NO.},\n\t\tPROJECT_ID = {PROJECT ID},\n\t\tPROJECT_NAME = {PROJECT NAME},\n\t\tCLIENT_NAME = {CLIENT NAME},\n\t\tDELIVERABLE,\n\t\tDOC_ID = {DOC ID},\n\t\tTYPE_CLASS = {TYPE CLASS},\n\t\tDOCUMENT_NUMBER = {DOCUMENT NUMBER},\n\t\tPROJ_DEFINED_01,\n\t\tPROJ_DEFINED_02,\n\t\tPROJ_DEFINED_03,\n\t\tPROJ_DEFINED_04,\n\t\tPROJ_DEFINED_05,\n\t\tPROJ_DEFINED_06,\n\t\tPROJ_DEFINED_07,\n\t\tPROJ_DEFINED_08,\n\t\tPROJ_DEFINED_09,\n\t\tPROJ_DEFINED_10,\n\t\tPROJ_DEFINED_11,\n\t\tPROJ_DEFINED_12,\n\t\tPROJ_DEFINED_13,\n\t\tPROJ_DEFINED_14,\n\t\tPROJ_DEFINED_15\n\t)) ~> snkiDocsProjectSpecificSynapse"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_iDocs_weight_stage_to_raw')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/NCSA/iDocs/Weight Master"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_idocs_weight_stg",
+								"type": "DatasetReference"
+							},
+							"name": "srcWeightStage"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_idocs_weight_raw",
+								"type": "DatasetReference"
+							},
+							"name": "snkWeightRaw"
+						}
+					],
+					"transformations": [
+						{
+							"name": "setFileName"
+						}
+					],
+					"script": "parameters{\n\tWildPath as string,\n\tFileName as string\n}\nsource(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\trowUrlColumn: 'Filename',\n\twildcardPaths:[($WildPath+$FileName+'.csv')]) ~> srcWeightStage\nsrcWeightStage derive(Filename = concat($WildPath,substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',$FileName,'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv'),\n\t\teach(match(name=='PROJECT NO.'), $$ = iif(length(regexSplit($$,'[-]')[1])>5,concat('99',regexSplit($$,'[-]')[1]),regexSplit($$,'[-]')[1]))) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\trowUrlColumn:'Filename',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> snkWeightRaw"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_inboxtask_plm_raw_to_synapse')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/NCSA/PLM"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_dt_inboxtask_plm_stage",
+								"type": "DatasetReference"
+							},
+							"name": "SrcInboxTaskDTFile"
+						},
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_rf_inboxtask_plm_stage",
+								"type": "DatasetReference"
+							},
+							"name": "SrcInboxTaskRFFile"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_InboxTask_StageJSON",
+								"type": "DatasetReference"
+							},
+							"name": "snkJsonSTG"
+						}
+					],
+					"transformations": [
+						{
+							"name": "UnpivotInboxTaskDTData"
+						},
+						{
+							"name": "selectInboxTaskRFColumns"
+						},
+						{
+							"name": "joinInboxTaskRFDTData"
+						},
+						{
+							"name": "DerivedColSwapAttributeNames"
+						},
+						{
+							"name": "selectSTGColumns"
+						},
+						{
+							"name": "aggregateKeyColumns"
+						},
+						{
+							"name": "SnkJSONFormat"
+						}
+					],
+					"scriptLines": [
+						"parameters{",
+						"     p_ds_stgfilepath as string,",
+						"     p_ds_snkstgpath as string,",
+						"     p_ds_snkstgfilename as string",
+						"}",
+						"source(output(",
+						"          ID as string,",
+						"          TYPE as string,",
+						"          NAME as string,",
+						"          REVISION as string,",
+						"          DESCRIPTION as string,",
+						"          OWNER as string,",
+						"          STATE as string,",
+						"          POLICY as string,",
+						"          VAULT as string,",
+						"          LATESTR as string,",
+						"          ORGANIZATION as string,",
+						"          PROJECT as string,",
+						"          ORIGINATED as string,",
+						"          MODIFIED as string,",
+						"          TIMESTAMP as string,",
+						"          DELETED as string,",
+						"          ORIGINATOR as string,",
+						"          TASK_REQUIREMENT as string,",
+						"          TITLE as string,",
+						"          ASSIGNEE_SET_DUE_DATE as string,",
+						"          DATE_OFFSET_FROM as string,",
+						"          TASK_COMMENTS_NEEDED as string,",
+						"          ISSUE_CATEGORY as string,",
+						"          ISSUE_CLASSIFICATION as string,",
+						"          ALLOW_DELEGATION as string,",
+						"          ESCALATION_RECIPIENTS as string,",
+						"          ROUTE_TASK_USER as string,",
+						"          ROUTE_TASK_USER_COMPANY as string,",
+						"          COMMENTS as string,",
+						"          REVIEWERS_COMMENTS as string,",
+						"          DUE_DATE_OFFSET as string,",
+						"          REVIEW_COMMENTS_NEEDED as string,",
+						"          REVIEW_TASK as string,",
+						"          TEMPLATE_TASK as string,",
+						"          ROUTE_INSTRUCTIONS as string,",
+						"          ACTUAL_COMPLETION_DATE as string,",
+						"          APPROVAL_STATUS as string,",
+						"          ROUTE_ACTION as string,",
+						"          SCHEDULED_COMPLETION_DATE as string,",
+						"          ROUTE_NODE_ID as string,",
+						"          APPROVERS_RESPONSIBILITY as string,",
+						"          ATTRIBUTEVALUE1 as string,",
+						"          ATTRIBUTEVALUE2 as string,",
+						"          ATTRIBUTEVALUE3 as string,",
+						"          ATTRIBUTEVALUE4 as string,",
+						"          ATTRIBUTEVALUE5 as string,",
+						"          ATTRIBUTEVALUE6 as string,",
+						"          ATTRIBUTEVALUE7 as string,",
+						"          ATTRIBUTEVALUE8 as string,",
+						"          ATTRIBUTEVALUE9 as string,",
+						"          ATTRIBUTEVALUE10 as string,",
+						"          ATTRIBUTEVALUE11 as string,",
+						"          ATTRIBUTEVALUE12 as string,",
+						"          ATTRIBUTEVALUE13 as string,",
+						"          ATTRIBUTEVALUE14 as string,",
+						"          ATTRIBUTEVALUE15 as string,",
+						"          FORECASTDATE as string,",
+						"          ROUTE_ID as string,",
+						"          PERSON_TYPE as string,",
+						"          FIRSTNAME as string,",
+						"          LASTNAME as string,",
+						"          PROJECT_NUMBER as string,",
+						"          MDR_IDOCSDOCID as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     purgeFiles: true,",
+						"     multiLineRow: true) ~> SrcInboxTaskDTFile",
+						"source(output(",
+						"          COLLABSPACE_TASK as string,",
+						"          ATTRIBUTE1 as string,",
+						"          ATTRIBUTE2 as string,",
+						"          ATTRIBUTE3 as string,",
+						"          ATTRIBUTE4 as string,",
+						"          ATTRIBUTE5 as string,",
+						"          ATTRIBUTE6 as string,",
+						"          ATTRIBUTE7 as string,",
+						"          ATTRIBUTE8 as string,",
+						"          ATTRIBUTE9 as string,",
+						"          ATTRIBUTE10 as string,",
+						"          ATTRIBUTE11 as string,",
+						"          ATTRIBUTE12 as string,",
+						"          ATTRIBUTE13 as string,",
+						"          ATTRIBUTE14 as string,",
+						"          ATTRIBUTE15 as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     purgeFiles: true,",
+						"     multiLineRow: true) ~> SrcInboxTaskRFFile",
+						"SrcInboxTaskDTFile unpivot(output(",
+						"          CKey as string,",
+						"          RValue as string",
+						"     ),",
+						"     ungroupBy(PROJECT,",
+						"          ID,",
+						"          PROJECT_NUMBER,",
+						"          MDR_IDOCSDOCID),",
+						"     lateral: false,",
+						"     ignoreNullPivots: true) ~> UnpivotInboxTaskDTData",
+						"SrcInboxTaskRFFile select(mapColumn(",
+						"          PROJECT = COLLABSPACE_TASK,",
+						"          ATTRIBUTEVALUE1 = ATTRIBUTE1,",
+						"          ATTRIBUTEVALUE2 = ATTRIBUTE2,",
+						"          ATTRIBUTEVALUE3 = ATTRIBUTE3,",
+						"          ATTRIBUTEVALUE4 = ATTRIBUTE4,",
+						"          ATTRIBUTEVALUE5 = ATTRIBUTE5,",
+						"          ATTRIBUTEVALUE6 = ATTRIBUTE6,",
+						"          ATTRIBUTEVALUE7 = ATTRIBUTE7,",
+						"          ATTRIBUTEVALUE8 = ATTRIBUTE8,",
+						"          ATTRIBUTEVALUE9 = ATTRIBUTE9,",
+						"          ATTRIBUTEVALUE10 = ATTRIBUTE10,",
+						"          ATTRIBUTEVALUE11 = ATTRIBUTE11,",
+						"          ATTRIBUTEVALUE12 = ATTRIBUTE12,",
+						"          ATTRIBUTEVALUE13 = ATTRIBUTE13,",
+						"          ATTRIBUTEVALUE14 = ATTRIBUTE14,",
+						"          ATTRIBUTEVALUE15 = ATTRIBUTE15",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> selectInboxTaskRFColumns",
+						"selectInboxTaskRFColumns, UnpivotInboxTaskDTData join(selectInboxTaskRFColumns@PROJECT == UnpivotInboxTaskDTData@PROJECT,",
+						"     joinType:'right',",
+						"     matchType:'exact',",
+						"     ignoreSpaces: false,",
+						"     broadcast: 'auto')~> joinInboxTaskRFDTData",
+						"joinInboxTaskRFDTData derive(CKey = case(CKey == 'ATTRIBUTEVALUE1',ATTRIBUTEVALUE1,CKey == 'ATTRIBUTEVALUE2', ATTRIBUTEVALUE2,CKey == 'ATTRIBUTEVALUE3', ATTRIBUTEVALUE3,CKey == 'ATTRIBUTEVALUE4', ATTRIBUTEVALUE4,CKey == 'ATTRIBUTEVALUE5', ATTRIBUTEVALUE5,CKey == 'ATTRIBUTEVALUE6', ATTRIBUTEVALUE6,CKey == 'ATTRIBUTEVALUE7', ATTRIBUTEVALUE7,CKey == 'ATTRIBUTEVALUE8', ATTRIBUTEVALUE8,CKey == 'ATTRIBUTEVALUE9', ATTRIBUTEVALUE9,CKey == 'ATTRIBUTEVALUE10', ATTRIBUTEVALUE10,CKey == 'ATTRIBUTEVALUE11', ATTRIBUTEVALUE11,CKey == 'ATTRIBUTEVALUE12', ATTRIBUTEVALUE12,CKey == 'ATTRIBUTEVALUE13', ATTRIBUTEVALUE13,CKey == 'ATTRIBUTEVALUE14', ATTRIBUTEVALUE14,CKey == 'ATTRIBUTEVALUE15', ATTRIBUTEVALUE15,CKey)) ~> DerivedColSwapAttributeNames",
+						"DerivedColSwapAttributeNames select(mapColumn(",
+						"          PROJECT = selectInboxTaskRFColumns@PROJECT,",
+						"          ID,",
+						"          PROJECT_NUMBER,",
+						"          MDR_IDOCSDOCID,",
+						"          CKey,",
+						"          RValue",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> selectSTGColumns",
+						"selectSTGColumns aggregate(groupBy(PROJECT,",
+						"          ID,",
+						"          PROJECT_NUMBER,",
+						"          MDR_IDOCSDOCID),",
+						"     JSON_ATTRIBUTE = collect(CKey+'::'+replace(replace(RValue,'\\n',' '),'\\r',' '))) ~> aggregateKeyColumns",
+						"aggregateKeyColumns derive(JSON_ATTRIBUTE = '{ '+trim(replace(toString(JSON_ATTRIBUTE),'::','\" : \"'),'[]')+' }') ~> SnkJSONFormat",
+						"SnkJSONFormat sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     partitionFileNames:[($p_ds_snkstgfilename)],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     mapColumn(",
+						"          PROJECT,",
+						"          ID,",
+						"          PROJECT_NUMBER,",
+						"          MDR_IDOCSDOCID,",
+						"          JSON_ATTRIBUTE",
+						"     ),",
+						"     partitionBy('hash', 1)) ~> snkJsonSTG"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_inv_units_of_measure_b_decoding')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/Payment Dashboard/Inv Units Of Measure B"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_xml_inv_units_of_measure_b_source_stage_encoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SrcEncodedXml"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_delimited_xml_inv_units_of_measure_b_source_stage_decoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SnkDecodedXml"
+						}
+					],
+					"transformations": [
+						{
+							"name": "Decoding"
+						},
+						{
+							"name": "SelectDecodedData"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          {http://www.w3.org/2003/05/soap-envelope,Envelope} as ({http://www.w3.org/2003/05/soap-envelope,Body} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,runReportResponse} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,runReportReturn} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,metaDataList} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean), {http://xmlns.oracle.com/oxp/service/PublicReportService,reportBytes} as string, {http://xmlns.oracle.com/oxp/service/PublicReportService,reportContentType} as string, {http://xmlns.oracle.com/oxp/service/PublicReportService,reportFileID} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean), {http://xmlns.oracle.com/oxp/service/PublicReportService,reportLocale} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean)))), {http://www.w3.org/2003/05/soap-envelope,Header} as string)",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     validationMode: 'none',",
+						"     namespaces: true) ~> SrcEncodedXml",
+						"SrcEncodedXml derive(ReportBytes = fromBase64(toString({http://www.w3.org/2003/05/soap-envelope,Envelope}.{http://www.w3.org/2003/05/soap-envelope,Body}.{http://xmlns.oracle.com/oxp/service/PublicReportService,runReportResponse}.{http://xmlns.oracle.com/oxp/service/PublicReportService,runReportReturn}.{http://xmlns.oracle.com/oxp/service/PublicReportService,reportBytes}))) ~> Decoding",
+						"Decoding select(mapColumn(",
+						"          ReportBytes",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> SelectDecodedData",
+						"SelectDecodedData sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     emptyLinesAsHeader: 1,",
+						"     partitionFileNames:['source_data_decoded.xml'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SnkDecodedXml"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_inv_units_of_measure_b_flattening')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/Payment Dashboard/Inv Units Of Measure B"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_xml_inv_units_of_measure_b_source_stage_decoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SrcXMl"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_inv_units_of_measure_b_source_stage_final_csv",
+								"type": "DatasetReference"
+							},
+							"name": "SnkCsv"
+						}
+					],
+					"transformations": [
+						{
+							"name": "XmlToCsvflatten"
+						},
+						{
+							"name": "addLoadDetails"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          DATA_DS as (G_1 as (ATTRIBUTE1 as string, ATTRIBUTE10 as string, ATTRIBUTE11 as string, ATTRIBUTE12 as string, ATTRIBUTE13 as string, ATTRIBUTE14 as string, ATTRIBUTE15 as string, ATTRIBUTE2 as string, ATTRIBUTE3 as string, ATTRIBUTE4 as string, ATTRIBUTE5 as string, ATTRIBUTE6 as string, ATTRIBUTE7 as string, ATTRIBUTE8 as string, ATTRIBUTE9 as string, ATTRIBUTE_CATEGORY as string, BASE_UOM_FLAG as boolean, CREATED_BY as string, CREATION_DATE as string, DERIVED_UNIT_PARENT_CODE as string, DISABLE_DATE as string, GLOBAL_ATTRIBUTE1 as string, GLOBAL_ATTRIBUTE10 as string, GLOBAL_ATTRIBUTE11 as string, GLOBAL_ATTRIBUTE12 as string, GLOBAL_ATTRIBUTE13 as string, GLOBAL_ATTRIBUTE14 as string, GLOBAL_ATTRIBUTE15 as string, GLOBAL_ATTRIBUTE16 as string, GLOBAL_ATTRIBUTE17 as string, GLOBAL_ATTRIBUTE18 as string, GLOBAL_ATTRIBUTE19 as string, GLOBAL_ATTRIBUTE2 as string, GLOBAL_ATTRIBUTE20 as string, GLOBAL_ATTRIBUTE3 as string, GLOBAL_ATTRIBUTE4 as string, GLOBAL_ATTRIBUTE5 as string, GLOBAL_ATTRIBUTE6 as string, GLOBAL_ATTRIBUTE7 as string, GLOBAL_ATTRIBUTE8 as string, GLOBAL_ATTRIBUTE9 as string, GLOBAL_ATTRIBUTE_CATEGORY as string, GLOBAL_ATTRIBUTE_DATE1 as string, GLOBAL_ATTRIBUTE_DATE2 as string, GLOBAL_ATTRIBUTE_DATE3 as string, GLOBAL_ATTRIBUTE_DATE4 as string, GLOBAL_ATTRIBUTE_DATE5 as string, GLOBAL_ATTRIBUTE_NUMBER1 as string, GLOBAL_ATTRIBUTE_NUMBER2 as string, GLOBAL_ATTRIBUTE_NUMBER3 as string, GLOBAL_ATTRIBUTE_NUMBER4 as string, GLOBAL_ATTRIBUTE_NUMBER5 as string, HAS_GENERATED_CODE as boolean, JOB_DEFINITION_NAME as string, JOB_DEFINITION_PACKAGE as string, LAST_UPDATED_BY as string, LAST_UPDATE_DATE as string, LAST_UPDATE_LOGIN as string, OBJECT_VERSION_NUMBER as short, REQUEST_ID as string, STANDARD_PACK_FLAG as string, UNIT_OF_MEASURE_ID as long, UOM_CLASS as short, UOM_CODE as string)[])",
+						"     ),",
+						"     allowSchemaDrift: false,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     validationMode: 'none',",
+						"     namespaces: true) ~> SrcXMl",
+						"SrcXMl foldDown(unroll(DATA_DS.G_1),",
+						"     mapColumn(",
+						"          ATTRIBUTE1 = DATA_DS.G_1.ATTRIBUTE1,",
+						"          ATTRIBUTE10 = DATA_DS.G_1.ATTRIBUTE10,",
+						"          ATTRIBUTE11 = DATA_DS.G_1.ATTRIBUTE11,",
+						"          ATTRIBUTE12 = DATA_DS.G_1.ATTRIBUTE12,",
+						"          ATTRIBUTE13 = DATA_DS.G_1.ATTRIBUTE13,",
+						"          ATTRIBUTE14 = DATA_DS.G_1.ATTRIBUTE14,",
+						"          ATTRIBUTE15 = DATA_DS.G_1.ATTRIBUTE15,",
+						"          ATTRIBUTE2 = DATA_DS.G_1.ATTRIBUTE2,",
+						"          ATTRIBUTE3 = DATA_DS.G_1.ATTRIBUTE3,",
+						"          ATTRIBUTE4 = DATA_DS.G_1.ATTRIBUTE4,",
+						"          ATTRIBUTE5 = DATA_DS.G_1.ATTRIBUTE5,",
+						"          ATTRIBUTE6 = DATA_DS.G_1.ATTRIBUTE6,",
+						"          ATTRIBUTE7 = DATA_DS.G_1.ATTRIBUTE7,",
+						"          ATTRIBUTE8 = DATA_DS.G_1.ATTRIBUTE8,",
+						"          ATTRIBUTE9 = DATA_DS.G_1.ATTRIBUTE9,",
+						"          ATTRIBUTE_CATEGORY = DATA_DS.G_1.ATTRIBUTE_CATEGORY,",
+						"          BASE_UOM_FLAG = DATA_DS.G_1.BASE_UOM_FLAG,",
+						"          CREATED_BY = DATA_DS.G_1.CREATED_BY,",
+						"          CREATION_DATE = DATA_DS.G_1.CREATION_DATE,",
+						"          DERIVED_UNIT_PARENT_CODE = DATA_DS.G_1.DERIVED_UNIT_PARENT_CODE,",
+						"          DISABLE_DATE = DATA_DS.G_1.DISABLE_DATE,",
+						"          GLOBAL_ATTRIBUTE1 = DATA_DS.G_1.GLOBAL_ATTRIBUTE1,",
+						"          GLOBAL_ATTRIBUTE10 = DATA_DS.G_1.GLOBAL_ATTRIBUTE10,",
+						"          GLOBAL_ATTRIBUTE11 = DATA_DS.G_1.GLOBAL_ATTRIBUTE11,",
+						"          GLOBAL_ATTRIBUTE12 = DATA_DS.G_1.GLOBAL_ATTRIBUTE12,",
+						"          GLOBAL_ATTRIBUTE13 = DATA_DS.G_1.GLOBAL_ATTRIBUTE13,",
+						"          GLOBAL_ATTRIBUTE14 = DATA_DS.G_1.GLOBAL_ATTRIBUTE14,",
+						"          GLOBAL_ATTRIBUTE15 = DATA_DS.G_1.GLOBAL_ATTRIBUTE15,",
+						"          GLOBAL_ATTRIBUTE16 = DATA_DS.G_1.GLOBAL_ATTRIBUTE16,",
+						"          GLOBAL_ATTRIBUTE17 = DATA_DS.G_1.GLOBAL_ATTRIBUTE17,",
+						"          GLOBAL_ATTRIBUTE18 = DATA_DS.G_1.GLOBAL_ATTRIBUTE18,",
+						"          GLOBAL_ATTRIBUTE19 = DATA_DS.G_1.GLOBAL_ATTRIBUTE19,",
+						"          GLOBAL_ATTRIBUTE2 = DATA_DS.G_1.GLOBAL_ATTRIBUTE2,",
+						"          GLOBAL_ATTRIBUTE20 = DATA_DS.G_1.GLOBAL_ATTRIBUTE20,",
+						"          GLOBAL_ATTRIBUTE3 = DATA_DS.G_1.GLOBAL_ATTRIBUTE3,",
+						"          GLOBAL_ATTRIBUTE4 = DATA_DS.G_1.GLOBAL_ATTRIBUTE4,",
+						"          GLOBAL_ATTRIBUTE5 = DATA_DS.G_1.GLOBAL_ATTRIBUTE5,",
+						"          GLOBAL_ATTRIBUTE6 = DATA_DS.G_1.GLOBAL_ATTRIBUTE6,",
+						"          GLOBAL_ATTRIBUTE7 = DATA_DS.G_1.GLOBAL_ATTRIBUTE7,",
+						"          GLOBAL_ATTRIBUTE8 = DATA_DS.G_1.GLOBAL_ATTRIBUTE8,",
+						"          GLOBAL_ATTRIBUTE9 = DATA_DS.G_1.GLOBAL_ATTRIBUTE9,",
+						"          GLOBAL_ATTRIBUTE_CATEGORY = DATA_DS.G_1.GLOBAL_ATTRIBUTE_CATEGORY,",
+						"          GLOBAL_ATTRIBUTE_DATE1 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_DATE1,",
+						"          GLOBAL_ATTRIBUTE_DATE2 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_DATE2,",
+						"          GLOBAL_ATTRIBUTE_DATE3 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_DATE3,",
+						"          GLOBAL_ATTRIBUTE_DATE4 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_DATE4,",
+						"          GLOBAL_ATTRIBUTE_DATE5 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_DATE5,",
+						"          GLOBAL_ATTRIBUTE_NUMBER1 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_NUMBER1,",
+						"          GLOBAL_ATTRIBUTE_NUMBER2 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_NUMBER2,",
+						"          GLOBAL_ATTRIBUTE_NUMBER3 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_NUMBER3,",
+						"          GLOBAL_ATTRIBUTE_NUMBER4 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_NUMBER4,",
+						"          GLOBAL_ATTRIBUTE_NUMBER5 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_NUMBER5,",
+						"          HAS_GENERATED_CODE = DATA_DS.G_1.HAS_GENERATED_CODE,",
+						"          JOB_DEFINITION_NAME = DATA_DS.G_1.JOB_DEFINITION_NAME,",
+						"          JOB_DEFINITION_PACKAGE = DATA_DS.G_1.JOB_DEFINITION_PACKAGE,",
+						"          LAST_UPDATED_BY = DATA_DS.G_1.LAST_UPDATED_BY,",
+						"          LAST_UPDATE_DATE = DATA_DS.G_1.LAST_UPDATE_DATE,",
+						"          LAST_UPDATE_LOGIN = DATA_DS.G_1.LAST_UPDATE_LOGIN,",
+						"          OBJECT_VERSION_NUMBER = DATA_DS.G_1.OBJECT_VERSION_NUMBER,",
+						"          REQUEST_ID = DATA_DS.G_1.REQUEST_ID,",
+						"          STANDARD_PACK_FLAG = DATA_DS.G_1.STANDARD_PACK_FLAG,",
+						"          UNIT_OF_MEASURE_ID = DATA_DS.G_1.UNIT_OF_MEASURE_ID,",
+						"          UOM_CLASS = DATA_DS.G_1.UOM_CLASS,",
+						"          UOM_CODE = DATA_DS.G_1.UOM_CODE",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> XmlToCsvflatten",
+						"XmlToCsvflatten derive(source_name = 'SYSTEM',",
+						"          sub_source_name = 'R2P',",
+						"          created_date_time = currentUTC()) ~> addLoadDetails",
+						"addLoadDetails sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     partitionFileNames:['Inv_Units_Of_Measure_B.csv'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SnkCsv"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_inv_units_of_measure_tl_decoding')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/Payment Dashboard/Inv Units Of Measure Tl"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_xml_inv_units_of_measure_tl_source_stage_encoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SrcEncodedXml"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_delimited_xml_inv_units_of_measure_tl_source_stage_decoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SnkDecodedXml"
+						}
+					],
+					"transformations": [
+						{
+							"name": "Decoding"
+						},
+						{
+							"name": "SelectDecodedData"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          {http://www.w3.org/2003/05/soap-envelope,Envelope} as ({http://www.w3.org/2003/05/soap-envelope,Body} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,runReportResponse} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,runReportReturn} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,metaDataList} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean), {http://xmlns.oracle.com/oxp/service/PublicReportService,reportBytes} as string, {http://xmlns.oracle.com/oxp/service/PublicReportService,reportContentType} as string, {http://xmlns.oracle.com/oxp/service/PublicReportService,reportFileID} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean), {http://xmlns.oracle.com/oxp/service/PublicReportService,reportLocale} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean)))), {http://www.w3.org/2003/05/soap-envelope,Header} as string)",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     validationMode: 'none',",
+						"     namespaces: true) ~> SrcEncodedXml",
+						"SrcEncodedXml derive(ReportBytes = fromBase64(toString({http://www.w3.org/2003/05/soap-envelope,Envelope}.{http://www.w3.org/2003/05/soap-envelope,Body}.{http://xmlns.oracle.com/oxp/service/PublicReportService,runReportResponse}.{http://xmlns.oracle.com/oxp/service/PublicReportService,runReportReturn}.{http://xmlns.oracle.com/oxp/service/PublicReportService,reportBytes}))) ~> Decoding",
+						"Decoding select(mapColumn(",
+						"          ReportBytes",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> SelectDecodedData",
+						"SelectDecodedData sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     emptyLinesAsHeader: 1,",
+						"     partitionFileNames:['source_data_decoded.xml'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SnkDecodedXml"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_inv_units_of_measure_tl_flattening')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/Payment Dashboard/Inv Units Of Measure Tl"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_xml_inv_units_of_measure_tl_source_stage_decoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SrcXMl"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_inv_units_of_measure_tl_source_stage_final_csv",
+								"type": "DatasetReference"
+							},
+							"name": "SnkCsv"
+						}
+					],
+					"transformations": [
+						{
+							"name": "XmlToCsvflatten"
+						},
+						{
+							"name": "addLoadDetails"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          DATA_DS as (G_1 as (CREATED_BY as string, CREATION_DATE as string, DESCRIPTION as string, LANGUAGE as string, LAST_UPDATED_BY as string, LAST_UPDATE_DATE as string, LAST_UPDATE_LOGIN as string, OBJECT_VERSION_NUMBER as boolean, SOURCE_LANG as string, UNIT_OF_MEASURE as string, UNIT_OF_MEASURE_ID as long, UOM_PLURAL_DESC as string, UOM_RECIPROCAL_DESC as string)[])",
+						"     ),",
+						"     allowSchemaDrift: false,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     validationMode: 'none',",
+						"     namespaces: true) ~> SrcXMl",
+						"SrcXMl foldDown(unroll(DATA_DS.G_1),",
+						"     mapColumn(",
+						"          CREATED_BY = DATA_DS.G_1.CREATED_BY,",
+						"          CREATION_DATE = DATA_DS.G_1.CREATION_DATE,",
+						"          DESCRIPTION = DATA_DS.G_1.DESCRIPTION,",
+						"          LANGUAGE = DATA_DS.G_1.LANGUAGE,",
+						"          LAST_UPDATED_BY = DATA_DS.G_1.LAST_UPDATED_BY,",
+						"          LAST_UPDATE_DATE = DATA_DS.G_1.LAST_UPDATE_DATE,",
+						"          LAST_UPDATE_LOGIN = DATA_DS.G_1.LAST_UPDATE_LOGIN,",
+						"          OBJECT_VERSION_NUMBER = DATA_DS.G_1.OBJECT_VERSION_NUMBER,",
+						"          SOURCE_LANG = DATA_DS.G_1.SOURCE_LANG,",
+						"          UNIT_OF_MEASURE = DATA_DS.G_1.UNIT_OF_MEASURE,",
+						"          UNIT_OF_MEASURE_ID = DATA_DS.G_1.UNIT_OF_MEASURE_ID,",
+						"          UOM_PLURAL_DESC = DATA_DS.G_1.UOM_PLURAL_DESC,",
+						"          UOM_RECIPROCAL_DESC = DATA_DS.G_1.UOM_RECIPROCAL_DESC",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> XmlToCsvflatten",
+						"XmlToCsvflatten derive(source_name = 'SYSTEM',",
+						"          sub_source_name = 'R2P',",
+						"          created_date_time = currentUTC()) ~> addLoadDetails",
+						"addLoadDetails sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     partitionFileNames:['Inv_Units_Of_Measure_Tl.csv'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SnkCsv"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_invoice_distributions_ap_invoice_distributions_all_stage_data_decoding')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/Payment Dashboard/Invoice Distribution"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_xml_invoice_distributions_ap_invoice_distributions_all_source_stage_encoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SrcEncodedXml"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_delimited_xml_invoice_distributions_ap_invoice_distributions_all_source_stage_decoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SnkDecodedXml"
+						}
+					],
+					"transformations": [
+						{
+							"name": "Decoding"
+						},
+						{
+							"name": "SelectDecodedData"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          {http://www.w3.org/2003/05/soap-envelope,Envelope} as ({http://www.w3.org/2003/05/soap-envelope,Body} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,runReportResponse} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,runReportReturn} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,metaDataList} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean), {http://xmlns.oracle.com/oxp/service/PublicReportService,reportBytes} as string, {http://xmlns.oracle.com/oxp/service/PublicReportService,reportContentType} as string, {http://xmlns.oracle.com/oxp/service/PublicReportService,reportFileID} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean), {http://xmlns.oracle.com/oxp/service/PublicReportService,reportLocale} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean)))), {http://www.w3.org/2003/05/soap-envelope,Header} as string)",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     validationMode: 'none',",
+						"     namespaces: true) ~> SrcEncodedXml",
+						"SrcEncodedXml derive(ReportBytes = fromBase64(toString({http://www.w3.org/2003/05/soap-envelope,Envelope}.{http://www.w3.org/2003/05/soap-envelope,Body}.{http://xmlns.oracle.com/oxp/service/PublicReportService,runReportResponse}.{http://xmlns.oracle.com/oxp/service/PublicReportService,runReportReturn}.{http://xmlns.oracle.com/oxp/service/PublicReportService,reportBytes}))) ~> Decoding",
+						"Decoding select(mapColumn(",
+						"          ReportBytes",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> SelectDecodedData",
+						"SelectDecodedData sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     emptyLinesAsHeader: 1,",
+						"     partitionFileNames:['source_data_decoded.xml'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SnkDecodedXml"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_invoice_distributions_ap_invoice_distributions_all_stage_data_flattening')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/Payment Dashboard/Invoice Distribution"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_xml_invoice_distributions_ap_invoice_distributions_all_source_stage_decoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SrcXMl"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_invoice_distributions_ap_invoice_distributions_all_source_stage_final_csv",
+								"type": "DatasetReference"
+							},
+							"name": "SnkCsv"
+						}
+					],
+					"transformations": [
+						{
+							"name": "XmlToCsvflatten"
+						},
+						{
+							"name": "addLoadDetails"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          DATA_DS as (G_1 as (ACCOUNTING_DATE as string, ACCOUNTING_EVENT_ID as string, ADJUSTMENT_REASON as string, AMOUNT as string, AMOUNT_AT_PREPAY_PAY_XRATE as string, AMOUNT_AT_PREPAY_XRATE as string, AMOUNT_VARIANCE as string, ASSETS_ADDITION_FLAG as string, ASSETS_TRACKING_FLAG as string, ASSET_BOOK_TYPE_CODE as string, ASSET_CATEGORY_ID as string, ATTRIBUTE1 as string, ATTRIBUTE10 as string, ATTRIBUTE11 as string, ATTRIBUTE12 as string, ATTRIBUTE13 as string, ATTRIBUTE14 as string, ATTRIBUTE15 as string, ATTRIBUTE2 as string, ATTRIBUTE3 as string, ATTRIBUTE4 as string, ATTRIBUTE5 as string, ATTRIBUTE6 as string, ATTRIBUTE7 as string, ATTRIBUTE8 as string, ATTRIBUTE9 as string, ATTRIBUTE_CATEGORY as string, ATTRIBUTE_DATE1 as string, ATTRIBUTE_DATE2 as string, ATTRIBUTE_DATE3 as string, ATTRIBUTE_DATE4 as string, ATTRIBUTE_DATE5 as string, ATTRIBUTE_NUMBER1 as string, ATTRIBUTE_NUMBER2 as string, ATTRIBUTE_NUMBER3 as string, ATTRIBUTE_NUMBER4 as string, ATTRIBUTE_NUMBER5 as string, AWARD_ID as string, AWT_FLAG as string, AWT_GROSS_AMOUNT as string, AWT_GROUP_ID as string, AWT_INVOICE_ID as string, AWT_INVOICE_PAYMENT_ID as string, AWT_ORIGIN_GROUP_ID as string, AWT_RELATED_ID as string, AWT_TAX_RATE_ID as string, BASE_AMOUNT as string, BASE_AMOUNT_VARIANCE as string, BASE_QUANTITY_VARIANCE as string, BATCH_ID as string, BC_EVENT_ID as string, BUDGET_DATE as string, CANCELLATION_FLAG as string, CASH_BASIS_FINAL_APP_ROUNDING as string, CC_REVERSAL_FLAG as string, CHARGE_APPLICABLE_TO_DIST_ID as string, COMPANY_PREPAID_INVOICE_ID as string, CONSUMPTION_ADVICE_HEADER_ID as string, CONSUMPTION_ADVICE_LINE_ID as string, CORRECTED_INVOICE_DIST_ID as string, CORRECTED_QUANTITY as string, COUNTRY_OF_SUPPLY as string, CREATED_BY as string, CREATION_DATE as string, CREDIT_CARD_TRX_ID as string, DAILY_AMOUNT as string, DATA_SET_ID as string, DEF_ACCTG_ACCRUAL_CCID as string, DEF_ACCTG_END_DATE as string, DEF_ACCTG_START_DATE as string, DESCRIPTION as string, DETAIL_TAX_DIST_ID as string, DETAIL_TAX_LINE_ID as string, DISTRIBUTION_CLASS as string, DISTRIBUTION_LINE_NUMBER as string, DIST_CODE_COMBINATION_ID as string, DIST_MATCH_TYPE as string, ENCUMBERED_FLAG as string, END_EXPENSE_DATE as string, EXCHANGE_DATE as string, EXCHANGE_RATE as string, EXCHANGE_RATE_TYPE as string, EXPENDITURE_ITEM_DATE as string, EXPENDITURE_ORGANIZATION_ID as string, EXPENDITURE_TYPE as string, EXPENSE_GROUP as string, EXTRA_PO_ERV as string, FINAL_APPLICATION_ROUNDING as string, FINAL_MATCH_FLAG as string, FINAL_PAYMENT_ROUNDING as string, FINAL_RELEASE_ROUNDING as string, FULLY_PAID_ACCTD_FLAG as string, FUNDS_STATUS as string, GLOBAL_ATTRIBUTE1 as string, GLOBAL_ATTRIBUTE10 as string, GLOBAL_ATTRIBUTE11 as string, GLOBAL_ATTRIBUTE12 as string, GLOBAL_ATTRIBUTE13 as string, GLOBAL_ATTRIBUTE14 as string, GLOBAL_ATTRIBUTE15 as string, GLOBAL_ATTRIBUTE16 as string, GLOBAL_ATTRIBUTE17 as string, GLOBAL_ATTRIBUTE18 as string, GLOBAL_ATTRIBUTE19 as string, GLOBAL_ATTRIBUTE2 as string, GLOBAL_ATTRIBUTE20 as string, GLOBAL_ATTRIBUTE3 as string, GLOBAL_ATTRIBUTE4 as string, GLOBAL_ATTRIBUTE5 as string, GLOBAL_ATTRIBUTE6 as string, GLOBAL_ATTRIBUTE7 as string, GLOBAL_ATTRIBUTE8 as string, GLOBAL_ATTRIBUTE9 as string, GLOBAL_ATTRIBUTE_CATEGORY as string, GLOBAL_ATTRIBUTE_DATE1 as string, GLOBAL_ATTRIBUTE_DATE2 as string, GLOBAL_ATTRIBUTE_DATE3 as string, GLOBAL_ATTRIBUTE_DATE4 as string, GLOBAL_ATTRIBUTE_DATE5 as string, GLOBAL_ATTRIBUTE_NUMBER1 as string, GLOBAL_ATTRIBUTE_NUMBER2 as string, GLOBAL_ATTRIBUTE_NUMBER3 as string, GLOBAL_ATTRIBUTE_NUMBER4 as string, GLOBAL_ATTRIBUTE_NUMBER5 as string, GMS_BURDENABLE_RAW_COST as string, HISTORICAL_FLAG as string, INCOME_TAX_REGION as string, INTENDED_USE as string, INTENDED_USE_CLASSIF_ID as string, INVENTORY_TRANSFER_STATUS as string, INVOICE_DISTRIBUTION_ID as string, INVOICE_ID as string, INVOICE_INCLUDES_PREPAY_FLAG as string, INVOICE_LINE_NUMBER as string, JOB_DEFINITION_NAME as string, JOB_DEFINITION_PACKAGE as string, JUSTIFICATION as string, LAST_UPDATED_BY as string, LAST_UPDATE_DATE as string, LAST_UPDATE_LOGIN as string, LINE_TYPE_LOOKUP_CODE as string, MATCHED_UOM_LOOKUP_CODE as string, MATCH_STATUS_FLAG as string, MERCHANT_DOCUMENT_NUMBER as string, MERCHANT_NAME as string, MERCHANT_REFERENCE as string, MERCHANT_TAXPAYER_ID as string, MERCHANT_TAX_REG_NUMBER as string, OBJECT_VERSION_NUMBER as string, OLD_DISTRIBUTION_ID as string, OLD_DIST_LINE_NUMBER as string, ORG_ID as string, PARENT_INVOICE_ID as string, PARENT_REVERSAL_ID as string, PA_ADDITION_FLAG as string, PA_CMT_XFACE_FLAG as string, PA_QUANTITY as string, PERIOD_NAME as string, PJC_BILLABLE_FLAG as string, PJC_CAPITALIZABLE_FLAG as string, PJC_CONTEXT_CATEGORY as string, PJC_CONTRACT_ID as string, PJC_CONTRACT_LINE_ID as string, PJC_EXPENDITURE_ITEM_DATE as string, PJC_EXPENDITURE_TYPE_ID as string, PJC_FUNDING_ALLOCATION_ID as string, PJC_ORGANIZATION_ID as string, PJC_PROJECT_ID as string, PJC_RESERVED_ATTRIBUTE1 as string, PJC_RESERVED_ATTRIBUTE10 as string, PJC_RESERVED_ATTRIBUTE2 as string, PJC_RESERVED_ATTRIBUTE3 as string, PJC_RESERVED_ATTRIBUTE4 as string, PJC_RESERVED_ATTRIBUTE5 as string, PJC_RESERVED_ATTRIBUTE6 as string, PJC_RESERVED_ATTRIBUTE7 as string, PJC_RESERVED_ATTRIBUTE8 as string, PJC_RESERVED_ATTRIBUTE9 as string, PJC_TASK_ID as string, PJC_USER_DEF_ATTRIBUTE1 as string, PJC_USER_DEF_ATTRIBUTE10 as string, PJC_USER_DEF_ATTRIBUTE2 as string, PJC_USER_DEF_ATTRIBUTE3 as string, PJC_USER_DEF_ATTRIBUTE4 as string, PJC_USER_DEF_ATTRIBUTE5 as string, PJC_USER_DEF_ATTRIBUTE6 as string, PJC_USER_DEF_ATTRIBUTE7 as string, PJC_USER_DEF_ATTRIBUTE8 as string, PJC_USER_DEF_ATTRIBUTE9 as string, PJC_WORK_TYPE_ID as string, POSTED_FLAG as string, PO_DISTRIBUTION_ID as string, PREPAY_AMOUNT_REMAINING as string, PREPAY_DISTRIBUTION_ID as string, PREPAY_TAX_DIFF_AMOUNT as string, PRODUCT_TABLE as string, PROGRAM_APPLICATION_ID as string, PROGRAM_ID as string, PROGRAM_UPDATE_DATE as string, PROJECT_ID as string, QUANTITY_INVOICED as string, QUANTITY_VARIANCE as string, RCV_CHARGE_ADDITION_FLAG as string, RCV_TRANSACTION_ID as string, RECEIPT_CONVERSION_RATE as string, RECEIPT_CURRENCY_AMOUNT as string, RECEIPT_CURRENCY_CODE as string, RECEIPT_MISSING_FLAG as string, RECEIPT_REQUIRED_FLAG as string, RECEIPT_VERIFIED_FLAG as string, RECOVERY_RATE_CODE as string, RECOVERY_RATE_ID as string, RECOVERY_RATE_NAME as string, RECOVERY_TYPE_CODE as string, RECURRING_PAYMENT_ID as string, REC_NREC_RATE as string, REFERENCE_1 as string, REFERENCE_2 as string, REFERENCE_KEY1 as string, REFERENCE_KEY2 as string, REFERENCE_KEY3 as string, REFERENCE_KEY4 as string, REFERENCE_KEY5 as string, RELATED_ID as string, RELATED_RETAINAGE_DIST_ID as string, RELEASE_INV_DIST_DERIVED_FROM as string, REQUEST_ID as string, RETAINED_AMOUNT_REMAINING as string, RETAINED_INVOICE_DIST_ID as string, REVERSAL_FLAG as string, ROOT_DISTRIBUTION_ID as string, ROUNDING_AMT as string, SET_OF_BOOKS_ID as string, START_EXPENSE_DATE as string, STAT_AMOUNT as string, SUMMARY_TAX_LINE_ID as string, TASK_ID as string, TAXABLE_AMOUNT as string, TAXABLE_BASE_AMOUNT as string, TAX_ALREADY_DISTRIBUTED_FLAG as string, TAX_CODE_ID as string, TAX_RECOVERABLE_FLAG as string, TOTAL_DIST_AMOUNT as string, TOTAL_DIST_BASE_AMOUNT as string, TYPE_1099 as string, UNIT_PRICE as string, UPGRADE_BASE_POSTED_AMT as string, UPGRADE_POSTED_AMT as string, WEB_PARAMETER_ID as string, WITHHOLDING_TAX_CODE_ID as string, XINV_PARENT_REVERSAL_ID as string)[])",
+						"     ),",
+						"     allowSchemaDrift: false,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     validationMode: 'none',",
+						"     namespaces: true) ~> SrcXMl",
+						"SrcXMl foldDown(unroll(DATA_DS.G_1),",
+						"     mapColumn(",
+						"          ACCOUNTING_DATE = DATA_DS.G_1.ACCOUNTING_DATE,",
+						"          ACCOUNTING_EVENT_ID = DATA_DS.G_1.ACCOUNTING_EVENT_ID,",
+						"          ADJUSTMENT_REASON = DATA_DS.G_1.ADJUSTMENT_REASON,",
+						"          AMOUNT = DATA_DS.G_1.AMOUNT,",
+						"          AMOUNT_AT_PREPAY_PAY_XRATE = DATA_DS.G_1.AMOUNT_AT_PREPAY_PAY_XRATE,",
+						"          AMOUNT_AT_PREPAY_XRATE = DATA_DS.G_1.AMOUNT_AT_PREPAY_XRATE,",
+						"          AMOUNT_VARIANCE = DATA_DS.G_1.AMOUNT_VARIANCE,",
+						"          ASSETS_ADDITION_FLAG = DATA_DS.G_1.ASSETS_ADDITION_FLAG,",
+						"          ASSETS_TRACKING_FLAG = DATA_DS.G_1.ASSETS_TRACKING_FLAG,",
+						"          ASSET_BOOK_TYPE_CODE = DATA_DS.G_1.ASSET_BOOK_TYPE_CODE,",
+						"          ASSET_CATEGORY_ID = DATA_DS.G_1.ASSET_CATEGORY_ID,",
+						"          ATTRIBUTE1 = DATA_DS.G_1.ATTRIBUTE1,",
+						"          ATTRIBUTE10 = DATA_DS.G_1.ATTRIBUTE10,",
+						"          ATTRIBUTE11 = DATA_DS.G_1.ATTRIBUTE11,",
+						"          ATTRIBUTE12 = DATA_DS.G_1.ATTRIBUTE12,",
+						"          ATTRIBUTE13 = DATA_DS.G_1.ATTRIBUTE13,",
+						"          ATTRIBUTE14 = DATA_DS.G_1.ATTRIBUTE14,",
+						"          ATTRIBUTE15 = DATA_DS.G_1.ATTRIBUTE15,",
+						"          ATTRIBUTE2 = DATA_DS.G_1.ATTRIBUTE2,",
+						"          ATTRIBUTE3 = DATA_DS.G_1.ATTRIBUTE3,",
+						"          ATTRIBUTE4 = DATA_DS.G_1.ATTRIBUTE4,",
+						"          ATTRIBUTE5 = DATA_DS.G_1.ATTRIBUTE5,",
+						"          ATTRIBUTE6 = DATA_DS.G_1.ATTRIBUTE6,",
+						"          ATTRIBUTE7 = DATA_DS.G_1.ATTRIBUTE7,",
+						"          ATTRIBUTE8 = DATA_DS.G_1.ATTRIBUTE8,",
+						"          ATTRIBUTE9 = DATA_DS.G_1.ATTRIBUTE9,",
+						"          ATTRIBUTE_CATEGORY = DATA_DS.G_1.ATTRIBUTE_CATEGORY,",
+						"          ATTRIBUTE_DATE1 = DATA_DS.G_1.ATTRIBUTE_DATE1,",
+						"          ATTRIBUTE_DATE2 = DATA_DS.G_1.ATTRIBUTE_DATE2,",
+						"          ATTRIBUTE_DATE3 = DATA_DS.G_1.ATTRIBUTE_DATE3,",
+						"          ATTRIBUTE_DATE4 = DATA_DS.G_1.ATTRIBUTE_DATE4,",
+						"          ATTRIBUTE_DATE5 = DATA_DS.G_1.ATTRIBUTE_DATE5,",
+						"          ATTRIBUTE_NUMBER1 = DATA_DS.G_1.ATTRIBUTE_NUMBER1,",
+						"          ATTRIBUTE_NUMBER2 = DATA_DS.G_1.ATTRIBUTE_NUMBER2,",
+						"          ATTRIBUTE_NUMBER3 = DATA_DS.G_1.ATTRIBUTE_NUMBER3,",
+						"          ATTRIBUTE_NUMBER4 = DATA_DS.G_1.ATTRIBUTE_NUMBER4,",
+						"          ATTRIBUTE_NUMBER5 = DATA_DS.G_1.ATTRIBUTE_NUMBER5,",
+						"          AWARD_ID = DATA_DS.G_1.AWARD_ID,",
+						"          AWT_FLAG = DATA_DS.G_1.AWT_FLAG,",
+						"          AWT_GROSS_AMOUNT = DATA_DS.G_1.AWT_GROSS_AMOUNT,",
+						"          AWT_GROUP_ID = DATA_DS.G_1.AWT_GROUP_ID,",
+						"          AWT_INVOICE_ID = DATA_DS.G_1.AWT_INVOICE_ID,",
+						"          AWT_INVOICE_PAYMENT_ID = DATA_DS.G_1.AWT_INVOICE_PAYMENT_ID,",
+						"          AWT_ORIGIN_GROUP_ID = DATA_DS.G_1.AWT_ORIGIN_GROUP_ID,",
+						"          AWT_RELATED_ID = DATA_DS.G_1.AWT_RELATED_ID,",
+						"          AWT_TAX_RATE_ID = DATA_DS.G_1.AWT_TAX_RATE_ID,",
+						"          BASE_AMOUNT = DATA_DS.G_1.BASE_AMOUNT,",
+						"          BASE_AMOUNT_VARIANCE = DATA_DS.G_1.BASE_AMOUNT_VARIANCE,",
+						"          BASE_QUANTITY_VARIANCE = DATA_DS.G_1.BASE_QUANTITY_VARIANCE,",
+						"          BATCH_ID = DATA_DS.G_1.BATCH_ID,",
+						"          BC_EVENT_ID = DATA_DS.G_1.BC_EVENT_ID,",
+						"          BUDGET_DATE = DATA_DS.G_1.BUDGET_DATE,",
+						"          CANCELLATION_FLAG = DATA_DS.G_1.CANCELLATION_FLAG,",
+						"          CASH_BASIS_FINAL_APP_ROUNDING = DATA_DS.G_1.CASH_BASIS_FINAL_APP_ROUNDING,",
+						"          CC_REVERSAL_FLAG = DATA_DS.G_1.CC_REVERSAL_FLAG,",
+						"          CHARGE_APPLICABLE_TO_DIST_ID = DATA_DS.G_1.CHARGE_APPLICABLE_TO_DIST_ID,",
+						"          COMPANY_PREPAID_INVOICE_ID = DATA_DS.G_1.COMPANY_PREPAID_INVOICE_ID,",
+						"          CONSUMPTION_ADVICE_HEADER_ID = DATA_DS.G_1.CONSUMPTION_ADVICE_HEADER_ID,",
+						"          CONSUMPTION_ADVICE_LINE_ID = DATA_DS.G_1.CONSUMPTION_ADVICE_LINE_ID,",
+						"          CORRECTED_INVOICE_DIST_ID = DATA_DS.G_1.CORRECTED_INVOICE_DIST_ID,",
+						"          CORRECTED_QUANTITY = DATA_DS.G_1.CORRECTED_QUANTITY,",
+						"          COUNTRY_OF_SUPPLY = DATA_DS.G_1.COUNTRY_OF_SUPPLY,",
+						"          CREATED_BY = DATA_DS.G_1.CREATED_BY,",
+						"          CREATION_DATE = DATA_DS.G_1.CREATION_DATE,",
+						"          CREDIT_CARD_TRX_ID = DATA_DS.G_1.CREDIT_CARD_TRX_ID,",
+						"          DAILY_AMOUNT = DATA_DS.G_1.DAILY_AMOUNT,",
+						"          DATA_SET_ID = DATA_DS.G_1.DATA_SET_ID,",
+						"          DEF_ACCTG_ACCRUAL_CCID = DATA_DS.G_1.DEF_ACCTG_ACCRUAL_CCID,",
+						"          DEF_ACCTG_END_DATE = DATA_DS.G_1.DEF_ACCTG_END_DATE,",
+						"          DEF_ACCTG_START_DATE = DATA_DS.G_1.DEF_ACCTG_START_DATE,",
+						"          DESCRIPTION = DATA_DS.G_1.DESCRIPTION,",
+						"          DETAIL_TAX_DIST_ID = DATA_DS.G_1.DETAIL_TAX_DIST_ID,",
+						"          DETAIL_TAX_LINE_ID = DATA_DS.G_1.DETAIL_TAX_LINE_ID,",
+						"          DISTRIBUTION_CLASS = DATA_DS.G_1.DISTRIBUTION_CLASS,",
+						"          DISTRIBUTION_LINE_NUMBER = DATA_DS.G_1.DISTRIBUTION_LINE_NUMBER,",
+						"          DIST_CODE_COMBINATION_ID = DATA_DS.G_1.DIST_CODE_COMBINATION_ID,",
+						"          DIST_MATCH_TYPE = DATA_DS.G_1.DIST_MATCH_TYPE,",
+						"          ENCUMBERED_FLAG = DATA_DS.G_1.ENCUMBERED_FLAG,",
+						"          END_EXPENSE_DATE = DATA_DS.G_1.END_EXPENSE_DATE,",
+						"          EXCHANGE_DATE = DATA_DS.G_1.EXCHANGE_DATE,",
+						"          EXCHANGE_RATE = DATA_DS.G_1.EXCHANGE_RATE,",
+						"          EXCHANGE_RATE_TYPE = DATA_DS.G_1.EXCHANGE_RATE_TYPE,",
+						"          EXPENDITURE_ITEM_DATE = DATA_DS.G_1.EXPENDITURE_ITEM_DATE,",
+						"          EXPENDITURE_ORGANIZATION_ID = DATA_DS.G_1.EXPENDITURE_ORGANIZATION_ID,",
+						"          EXPENDITURE_TYPE = DATA_DS.G_1.EXPENDITURE_TYPE,",
+						"          EXPENSE_GROUP = DATA_DS.G_1.EXPENSE_GROUP,",
+						"          EXTRA_PO_ERV = DATA_DS.G_1.EXTRA_PO_ERV,",
+						"          FINAL_APPLICATION_ROUNDING = DATA_DS.G_1.FINAL_APPLICATION_ROUNDING,",
+						"          FINAL_MATCH_FLAG = DATA_DS.G_1.FINAL_MATCH_FLAG,",
+						"          FINAL_PAYMENT_ROUNDING = DATA_DS.G_1.FINAL_PAYMENT_ROUNDING,",
+						"          FINAL_RELEASE_ROUNDING = DATA_DS.G_1.FINAL_RELEASE_ROUNDING,",
+						"          FULLY_PAID_ACCTD_FLAG = DATA_DS.G_1.FULLY_PAID_ACCTD_FLAG,",
+						"          FUNDS_STATUS = DATA_DS.G_1.FUNDS_STATUS,",
+						"          GLOBAL_ATTRIBUTE1 = DATA_DS.G_1.GLOBAL_ATTRIBUTE1,",
+						"          GLOBAL_ATTRIBUTE10 = DATA_DS.G_1.GLOBAL_ATTRIBUTE10,",
+						"          GLOBAL_ATTRIBUTE11 = DATA_DS.G_1.GLOBAL_ATTRIBUTE11,",
+						"          GLOBAL_ATTRIBUTE12 = DATA_DS.G_1.GLOBAL_ATTRIBUTE12,",
+						"          GLOBAL_ATTRIBUTE13 = DATA_DS.G_1.GLOBAL_ATTRIBUTE13,",
+						"          GLOBAL_ATTRIBUTE14 = DATA_DS.G_1.GLOBAL_ATTRIBUTE14,",
+						"          GLOBAL_ATTRIBUTE15 = DATA_DS.G_1.GLOBAL_ATTRIBUTE15,",
+						"          GLOBAL_ATTRIBUTE16 = DATA_DS.G_1.GLOBAL_ATTRIBUTE16,",
+						"          GLOBAL_ATTRIBUTE17 = DATA_DS.G_1.GLOBAL_ATTRIBUTE17,",
+						"          GLOBAL_ATTRIBUTE18 = DATA_DS.G_1.GLOBAL_ATTRIBUTE18,",
+						"          GLOBAL_ATTRIBUTE19 = DATA_DS.G_1.GLOBAL_ATTRIBUTE19,",
+						"          GLOBAL_ATTRIBUTE2 = DATA_DS.G_1.GLOBAL_ATTRIBUTE2,",
+						"          GLOBAL_ATTRIBUTE20 = DATA_DS.G_1.GLOBAL_ATTRIBUTE20,",
+						"          GLOBAL_ATTRIBUTE3 = DATA_DS.G_1.GLOBAL_ATTRIBUTE3,",
+						"          GLOBAL_ATTRIBUTE4 = DATA_DS.G_1.GLOBAL_ATTRIBUTE4,",
+						"          GLOBAL_ATTRIBUTE5 = DATA_DS.G_1.GLOBAL_ATTRIBUTE5,",
+						"          GLOBAL_ATTRIBUTE6 = DATA_DS.G_1.GLOBAL_ATTRIBUTE6,",
+						"          GLOBAL_ATTRIBUTE7 = DATA_DS.G_1.GLOBAL_ATTRIBUTE7,",
+						"          GLOBAL_ATTRIBUTE8 = DATA_DS.G_1.GLOBAL_ATTRIBUTE8,",
+						"          GLOBAL_ATTRIBUTE9 = DATA_DS.G_1.GLOBAL_ATTRIBUTE9,",
+						"          GLOBAL_ATTRIBUTE_CATEGORY = DATA_DS.G_1.GLOBAL_ATTRIBUTE_CATEGORY,",
+						"          GLOBAL_ATTRIBUTE_DATE1 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_DATE1,",
+						"          GLOBAL_ATTRIBUTE_DATE2 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_DATE2,",
+						"          GLOBAL_ATTRIBUTE_DATE3 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_DATE3,",
+						"          GLOBAL_ATTRIBUTE_DATE4 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_DATE4,",
+						"          GLOBAL_ATTRIBUTE_DATE5 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_DATE5,",
+						"          GLOBAL_ATTRIBUTE_NUMBER1 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_NUMBER1,",
+						"          GLOBAL_ATTRIBUTE_NUMBER2 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_NUMBER2,",
+						"          GLOBAL_ATTRIBUTE_NUMBER3 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_NUMBER3,",
+						"          GLOBAL_ATTRIBUTE_NUMBER4 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_NUMBER4,",
+						"          GLOBAL_ATTRIBUTE_NUMBER5 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_NUMBER5,",
+						"          GMS_BURDENABLE_RAW_COST = DATA_DS.G_1.GMS_BURDENABLE_RAW_COST,",
+						"          HISTORICAL_FLAG = DATA_DS.G_1.HISTORICAL_FLAG,",
+						"          INCOME_TAX_REGION = DATA_DS.G_1.INCOME_TAX_REGION,",
+						"          INTENDED_USE = DATA_DS.G_1.INTENDED_USE,",
+						"          INTENDED_USE_CLASSIF_ID = DATA_DS.G_1.INTENDED_USE_CLASSIF_ID,",
+						"          INVENTORY_TRANSFER_STATUS = DATA_DS.G_1.INVENTORY_TRANSFER_STATUS,",
+						"          INVOICE_DISTRIBUTION_ID = DATA_DS.G_1.INVOICE_DISTRIBUTION_ID,",
+						"          INVOICE_ID = DATA_DS.G_1.INVOICE_ID,",
+						"          INVOICE_INCLUDES_PREPAY_FLAG = DATA_DS.G_1.INVOICE_INCLUDES_PREPAY_FLAG,",
+						"          INVOICE_LINE_NUMBER = DATA_DS.G_1.INVOICE_LINE_NUMBER,",
+						"          JOB_DEFINITION_NAME = DATA_DS.G_1.JOB_DEFINITION_NAME,",
+						"          JOB_DEFINITION_PACKAGE = DATA_DS.G_1.JOB_DEFINITION_PACKAGE,",
+						"          JUSTIFICATION = DATA_DS.G_1.JUSTIFICATION,",
+						"          LAST_UPDATED_BY = DATA_DS.G_1.LAST_UPDATED_BY,",
+						"          LAST_UPDATE_DATE = DATA_DS.G_1.LAST_UPDATE_DATE,",
+						"          LAST_UPDATE_LOGIN = DATA_DS.G_1.LAST_UPDATE_LOGIN,",
+						"          LINE_TYPE_LOOKUP_CODE = DATA_DS.G_1.LINE_TYPE_LOOKUP_CODE,",
+						"          MATCHED_UOM_LOOKUP_CODE = DATA_DS.G_1.MATCHED_UOM_LOOKUP_CODE,",
+						"          MATCH_STATUS_FLAG = DATA_DS.G_1.MATCH_STATUS_FLAG,",
+						"          MERCHANT_DOCUMENT_NUMBER = DATA_DS.G_1.MERCHANT_DOCUMENT_NUMBER,",
+						"          MERCHANT_NAME = DATA_DS.G_1.MERCHANT_NAME,",
+						"          MERCHANT_REFERENCE = DATA_DS.G_1.MERCHANT_REFERENCE,",
+						"          MERCHANT_TAXPAYER_ID = DATA_DS.G_1.MERCHANT_TAXPAYER_ID,",
+						"          MERCHANT_TAX_REG_NUMBER = DATA_DS.G_1.MERCHANT_TAX_REG_NUMBER,",
+						"          OBJECT_VERSION_NUMBER = DATA_DS.G_1.OBJECT_VERSION_NUMBER,",
+						"          OLD_DISTRIBUTION_ID = DATA_DS.G_1.OLD_DISTRIBUTION_ID,",
+						"          OLD_DIST_LINE_NUMBER = DATA_DS.G_1.OLD_DIST_LINE_NUMBER,",
+						"          ORG_ID = DATA_DS.G_1.ORG_ID,",
+						"          PARENT_INVOICE_ID = DATA_DS.G_1.PARENT_INVOICE_ID,",
+						"          PARENT_REVERSAL_ID = DATA_DS.G_1.PARENT_REVERSAL_ID,",
+						"          PA_ADDITION_FLAG = DATA_DS.G_1.PA_ADDITION_FLAG,",
+						"          PA_CMT_XFACE_FLAG = DATA_DS.G_1.PA_CMT_XFACE_FLAG,",
+						"          PA_QUANTITY = DATA_DS.G_1.PA_QUANTITY,",
+						"          PERIOD_NAME = DATA_DS.G_1.PERIOD_NAME,",
+						"          PJC_BILLABLE_FLAG = DATA_DS.G_1.PJC_BILLABLE_FLAG,",
+						"          PJC_CAPITALIZABLE_FLAG = DATA_DS.G_1.PJC_CAPITALIZABLE_FLAG,",
+						"          PJC_CONTEXT_CATEGORY = DATA_DS.G_1.PJC_CONTEXT_CATEGORY,",
+						"          PJC_CONTRACT_ID = DATA_DS.G_1.PJC_CONTRACT_ID,",
+						"          PJC_CONTRACT_LINE_ID = DATA_DS.G_1.PJC_CONTRACT_LINE_ID,",
+						"          PJC_EXPENDITURE_ITEM_DATE = DATA_DS.G_1.PJC_EXPENDITURE_ITEM_DATE,",
+						"          PJC_EXPENDITURE_TYPE_ID = DATA_DS.G_1.PJC_EXPENDITURE_TYPE_ID,",
+						"          PJC_FUNDING_ALLOCATION_ID = DATA_DS.G_1.PJC_FUNDING_ALLOCATION_ID,",
+						"          PJC_ORGANIZATION_ID = DATA_DS.G_1.PJC_ORGANIZATION_ID,",
+						"          PJC_PROJECT_ID = DATA_DS.G_1.PJC_PROJECT_ID,",
+						"          PJC_RESERVED_ATTRIBUTE1 = DATA_DS.G_1.PJC_RESERVED_ATTRIBUTE1,",
+						"          PJC_RESERVED_ATTRIBUTE10 = DATA_DS.G_1.PJC_RESERVED_ATTRIBUTE10,",
+						"          PJC_RESERVED_ATTRIBUTE2 = DATA_DS.G_1.PJC_RESERVED_ATTRIBUTE2,",
+						"          PJC_RESERVED_ATTRIBUTE3 = DATA_DS.G_1.PJC_RESERVED_ATTRIBUTE3,",
+						"          PJC_RESERVED_ATTRIBUTE4 = DATA_DS.G_1.PJC_RESERVED_ATTRIBUTE4,",
+						"          PJC_RESERVED_ATTRIBUTE5 = DATA_DS.G_1.PJC_RESERVED_ATTRIBUTE5,",
+						"          PJC_RESERVED_ATTRIBUTE6 = DATA_DS.G_1.PJC_RESERVED_ATTRIBUTE6,",
+						"          PJC_RESERVED_ATTRIBUTE7 = DATA_DS.G_1.PJC_RESERVED_ATTRIBUTE7,",
+						"          PJC_RESERVED_ATTRIBUTE8 = DATA_DS.G_1.PJC_RESERVED_ATTRIBUTE8,",
+						"          PJC_RESERVED_ATTRIBUTE9 = DATA_DS.G_1.PJC_RESERVED_ATTRIBUTE9,",
+						"          PJC_TASK_ID = DATA_DS.G_1.PJC_TASK_ID,",
+						"          PJC_USER_DEF_ATTRIBUTE1 = DATA_DS.G_1.PJC_USER_DEF_ATTRIBUTE1,",
+						"          PJC_USER_DEF_ATTRIBUTE10 = DATA_DS.G_1.PJC_USER_DEF_ATTRIBUTE10,",
+						"          PJC_USER_DEF_ATTRIBUTE2 = DATA_DS.G_1.PJC_USER_DEF_ATTRIBUTE2,",
+						"          PJC_USER_DEF_ATTRIBUTE3 = DATA_DS.G_1.PJC_USER_DEF_ATTRIBUTE3,",
+						"          PJC_USER_DEF_ATTRIBUTE4 = DATA_DS.G_1.PJC_USER_DEF_ATTRIBUTE4,",
+						"          PJC_USER_DEF_ATTRIBUTE5 = DATA_DS.G_1.PJC_USER_DEF_ATTRIBUTE5,",
+						"          PJC_USER_DEF_ATTRIBUTE6 = DATA_DS.G_1.PJC_USER_DEF_ATTRIBUTE6,",
+						"          PJC_USER_DEF_ATTRIBUTE7 = DATA_DS.G_1.PJC_USER_DEF_ATTRIBUTE7,",
+						"          PJC_USER_DEF_ATTRIBUTE8 = DATA_DS.G_1.PJC_USER_DEF_ATTRIBUTE8,",
+						"          PJC_USER_DEF_ATTRIBUTE9 = DATA_DS.G_1.PJC_USER_DEF_ATTRIBUTE9,",
+						"          PJC_WORK_TYPE_ID = DATA_DS.G_1.PJC_WORK_TYPE_ID,",
+						"          POSTED_FLAG = DATA_DS.G_1.POSTED_FLAG,",
+						"          PO_DISTRIBUTION_ID = DATA_DS.G_1.PO_DISTRIBUTION_ID,",
+						"          PREPAY_AMOUNT_REMAINING = DATA_DS.G_1.PREPAY_AMOUNT_REMAINING,",
+						"          PREPAY_DISTRIBUTION_ID = DATA_DS.G_1.PREPAY_DISTRIBUTION_ID,",
+						"          PREPAY_TAX_DIFF_AMOUNT = DATA_DS.G_1.PREPAY_TAX_DIFF_AMOUNT,",
+						"          PRODUCT_TABLE = DATA_DS.G_1.PRODUCT_TABLE,",
+						"          PROGRAM_APPLICATION_ID = DATA_DS.G_1.PROGRAM_APPLICATION_ID,",
+						"          PROGRAM_ID = DATA_DS.G_1.PROGRAM_ID,",
+						"          PROGRAM_UPDATE_DATE = DATA_DS.G_1.PROGRAM_UPDATE_DATE,",
+						"          PROJECT_ID = DATA_DS.G_1.PROJECT_ID,",
+						"          QUANTITY_INVOICED = DATA_DS.G_1.QUANTITY_INVOICED,",
+						"          QUANTITY_VARIANCE = DATA_DS.G_1.QUANTITY_VARIANCE,",
+						"          RCV_CHARGE_ADDITION_FLAG = DATA_DS.G_1.RCV_CHARGE_ADDITION_FLAG,",
+						"          RCV_TRANSACTION_ID = DATA_DS.G_1.RCV_TRANSACTION_ID,",
+						"          RECEIPT_CONVERSION_RATE = DATA_DS.G_1.RECEIPT_CONVERSION_RATE,",
+						"          RECEIPT_CURRENCY_AMOUNT = DATA_DS.G_1.RECEIPT_CURRENCY_AMOUNT,",
+						"          RECEIPT_CURRENCY_CODE = DATA_DS.G_1.RECEIPT_CURRENCY_CODE,",
+						"          RECEIPT_MISSING_FLAG = DATA_DS.G_1.RECEIPT_MISSING_FLAG,",
+						"          RECEIPT_REQUIRED_FLAG = DATA_DS.G_1.RECEIPT_REQUIRED_FLAG,",
+						"          RECEIPT_VERIFIED_FLAG = DATA_DS.G_1.RECEIPT_VERIFIED_FLAG,",
+						"          RECOVERY_RATE_CODE = DATA_DS.G_1.RECOVERY_RATE_CODE,",
+						"          RECOVERY_RATE_ID = DATA_DS.G_1.RECOVERY_RATE_ID,",
+						"          RECOVERY_RATE_NAME = DATA_DS.G_1.RECOVERY_RATE_NAME,",
+						"          RECOVERY_TYPE_CODE = DATA_DS.G_1.RECOVERY_TYPE_CODE,",
+						"          RECURRING_PAYMENT_ID = DATA_DS.G_1.RECURRING_PAYMENT_ID,",
+						"          REC_NREC_RATE = DATA_DS.G_1.REC_NREC_RATE,",
+						"          REFERENCE_1 = DATA_DS.G_1.REFERENCE_1,",
+						"          REFERENCE_2 = DATA_DS.G_1.REFERENCE_2,",
+						"          REFERENCE_KEY1 = DATA_DS.G_1.REFERENCE_KEY1,",
+						"          REFERENCE_KEY2 = DATA_DS.G_1.REFERENCE_KEY2,",
+						"          REFERENCE_KEY3 = DATA_DS.G_1.REFERENCE_KEY3,",
+						"          REFERENCE_KEY4 = DATA_DS.G_1.REFERENCE_KEY4,",
+						"          REFERENCE_KEY5 = DATA_DS.G_1.REFERENCE_KEY5,",
+						"          RELATED_ID = DATA_DS.G_1.RELATED_ID,",
+						"          RELATED_RETAINAGE_DIST_ID = DATA_DS.G_1.RELATED_RETAINAGE_DIST_ID,",
+						"          RELEASE_INV_DIST_DERIVED_FROM = DATA_DS.G_1.RELEASE_INV_DIST_DERIVED_FROM,",
+						"          REQUEST_ID = DATA_DS.G_1.REQUEST_ID,",
+						"          RETAINED_AMOUNT_REMAINING = DATA_DS.G_1.RETAINED_AMOUNT_REMAINING,",
+						"          RETAINED_INVOICE_DIST_ID = DATA_DS.G_1.RETAINED_INVOICE_DIST_ID,",
+						"          REVERSAL_FLAG = DATA_DS.G_1.REVERSAL_FLAG,",
+						"          ROOT_DISTRIBUTION_ID = DATA_DS.G_1.ROOT_DISTRIBUTION_ID,",
+						"          ROUNDING_AMT = DATA_DS.G_1.ROUNDING_AMT,",
+						"          SET_OF_BOOKS_ID = DATA_DS.G_1.SET_OF_BOOKS_ID,",
+						"          START_EXPENSE_DATE = DATA_DS.G_1.START_EXPENSE_DATE,",
+						"          STAT_AMOUNT = DATA_DS.G_1.STAT_AMOUNT,",
+						"          SUMMARY_TAX_LINE_ID = DATA_DS.G_1.SUMMARY_TAX_LINE_ID,",
+						"          TASK_ID = DATA_DS.G_1.TASK_ID,",
+						"          TAXABLE_AMOUNT = DATA_DS.G_1.TAXABLE_AMOUNT,",
+						"          TAXABLE_BASE_AMOUNT = DATA_DS.G_1.TAXABLE_BASE_AMOUNT,",
+						"          TAX_ALREADY_DISTRIBUTED_FLAG = DATA_DS.G_1.TAX_ALREADY_DISTRIBUTED_FLAG,",
+						"          TAX_CODE_ID = DATA_DS.G_1.TAX_CODE_ID,",
+						"          TAX_RECOVERABLE_FLAG = DATA_DS.G_1.TAX_RECOVERABLE_FLAG,",
+						"          TOTAL_DIST_AMOUNT = DATA_DS.G_1.TOTAL_DIST_AMOUNT,",
+						"          TOTAL_DIST_BASE_AMOUNT = DATA_DS.G_1.TOTAL_DIST_BASE_AMOUNT,",
+						"          TYPE_1099 = DATA_DS.G_1.TYPE_1099,",
+						"          UNIT_PRICE = DATA_DS.G_1.UNIT_PRICE,",
+						"          UPGRADE_BASE_POSTED_AMT = DATA_DS.G_1.UPGRADE_BASE_POSTED_AMT,",
+						"          UPGRADE_POSTED_AMT = DATA_DS.G_1.UPGRADE_POSTED_AMT,",
+						"          WEB_PARAMETER_ID = DATA_DS.G_1.WEB_PARAMETER_ID,",
+						"          WITHHOLDING_TAX_CODE_ID = DATA_DS.G_1.WITHHOLDING_TAX_CODE_ID,",
+						"          XINV_PARENT_REVERSAL_ID = DATA_DS.G_1.XINV_PARENT_REVERSAL_ID",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> XmlToCsvflatten",
+						"XmlToCsvflatten derive(source_name = 'SYSTEM',",
+						"          sub_source_name = 'R2P',",
+						"          created_date_time = currentUTC()) ~> addLoadDetails",
+						"addLoadDetails sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     partitionFileNames:['Invoice_distributions_ap_invoice_distributions_all.csv'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SnkCsv"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_invoice_header_ap_invoices_stage_data_decoding')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/Payment Dashboard/Invoice Header"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_xml_invoice_header_ap_invoices_source_stage_encoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SrcEncodedXml"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_delimited_xml_invoice_header_ap_invoices_source_stage_decoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SnkDecodedXml"
+						}
+					],
+					"transformations": [
+						{
+							"name": "Decoding"
+						},
+						{
+							"name": "SelectDecodedData"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          {http://www.w3.org/2003/05/soap-envelope,Envelope} as ({http://www.w3.org/2003/05/soap-envelope,Body} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,runReportResponse} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,runReportReturn} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,metaDataList} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean), {http://xmlns.oracle.com/oxp/service/PublicReportService,reportBytes} as string, {http://xmlns.oracle.com/oxp/service/PublicReportService,reportContentType} as string, {http://xmlns.oracle.com/oxp/service/PublicReportService,reportFileID} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean), {http://xmlns.oracle.com/oxp/service/PublicReportService,reportLocale} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean)))), {http://www.w3.org/2003/05/soap-envelope,Header} as string)",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     validationMode: 'none',",
+						"     namespaces: true) ~> SrcEncodedXml",
+						"SrcEncodedXml derive(ReportBytes = fromBase64(toString({http://www.w3.org/2003/05/soap-envelope,Envelope}.{http://www.w3.org/2003/05/soap-envelope,Body}.{http://xmlns.oracle.com/oxp/service/PublicReportService,runReportResponse}.{http://xmlns.oracle.com/oxp/service/PublicReportService,runReportReturn}.{http://xmlns.oracle.com/oxp/service/PublicReportService,reportBytes}))) ~> Decoding",
+						"Decoding select(mapColumn(",
+						"          ReportBytes",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> SelectDecodedData",
+						"SelectDecodedData sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     emptyLinesAsHeader: 1,",
+						"     partitionFileNames:['source_data_decoded.xml'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SnkDecodedXml"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_invoice_header_ap_invoices_stage_data_flattening')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/Payment Dashboard/Invoice Header"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_xml_invoice_header_ap_invoices_source_stage_decoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SrcXMl"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_invoice_header_ap_invoices_source_stage_final_csv",
+								"type": "DatasetReference"
+							},
+							"name": "SnkCsv"
+						}
+					],
+					"transformations": [
+						{
+							"name": "XmlToCsvflatten"
+						},
+						{
+							"name": "addLoadDetails"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          DATA_DS as (G_1 as (ACCTS_PAY_CODE_COMBINATION_ID as string, ACC_REFERENCE_VALUE1 as string, ADDITIONAL_NOTE as string, AMOUNT_APPLICABLE_TO_DISCOUNT as string, AMOUNT_PAID as string, AMT_DUE_CCARD_COMPANY as string, AMT_DUE_EMPLOYEE as string, APPLICATION_ID as string, APPROVAL_DESCRIPTION as string, APPROVAL_ITERATION as string, APPROVAL_READY_FLAG as string, APPROVAL_STATUS as string, APPROVED_AMOUNT as string, ATTRIBUTE1 as string, ATTRIBUTE10 as string, ATTRIBUTE11 as string, ATTRIBUTE12 as string, ATTRIBUTE13 as string, ATTRIBUTE14 as string, ATTRIBUTE15 as string, ATTRIBUTE2 as string, ATTRIBUTE3 as string, ATTRIBUTE4 as string, ATTRIBUTE5 as string, ATTRIBUTE6 as string, ATTRIBUTE7 as string, ATTRIBUTE8 as string, ATTRIBUTE9 as string, ATTRIBUTE_CATEGORY as string, ATTRIBUTE_DATE1 as string, ATTRIBUTE_DATE2 as string, ATTRIBUTE_DATE3 as string, ATTRIBUTE_DATE4 as string, ATTRIBUTE_DATE5 as string, ATTRIBUTE_NUMBER1 as string, ATTRIBUTE_NUMBER2 as string, ATTRIBUTE_NUMBER3 as string, ATTRIBUTE_NUMBER4 as string, ATTRIBUTE_NUMBER5 as string, AWARD_ID as string, AWT_FLAG as string, AWT_GROUP_ID as string, BANK_CHARGE_BEARER as string, BASE_AMOUNT as string, BATCH_ID as string, BUDGET_DATE as string, CANCELLED_AMOUNT as string, CANCELLED_BY as string, CANCELLED_DATE as string, CHECK_VAT_AMOUNT_PAID as string, CONTROL_AMOUNT as string, CORRECTION_PERIOD as string, CORRECTION_YEAR as string, CREATED_BY as string, CREATION_DATE as string, CREDITED_INVOICE_ID as string, CUST_REGISTRATION_CODE as string, CUST_REGISTRATION_NUMBER as string, DATA_SET_ID as string, DELIVERY_CHANNEL_CODE as string, DESCRIPTION as string, DISCOUNT_AMOUNT_TAKEN as string, DISC_IS_INV_LESS_TAX_FLAG as string, DISTRIBUTION_SET_ID as string, DOCUMENT_SUB_TYPE as string, DOC_CATEGORY_CODE as string, DOC_SEQUENCE_ID as string, DOC_SEQUENCE_VALUE as string, EARLIEST_SETTLEMENT_DATE as string, EMPLOYEE_ADDRESS_CODE as string, EXCHANGE_DATE as string, EXCHANGE_RATE as string, EXCHANGE_RATE_TYPE as string, EXCLUDE_FREIGHT_FROM_DISCOUNT as string, EXCLUSIVE_PAYMENT_FLAG as string, EXPENDITURE_ITEM_DATE as string, EXPENDITURE_ORGANIZATION_ID as string, EXPENDITURE_TYPE as string, EXTERNAL_BANK_ACCOUNT_ID as string, FINANCING_STATUS_CODE as string, FINANCING_STATUS_DATE as string, FIRST_PARTY_REGISTRATION_ID as string, FISCAL_DOC_ACCESS_KEY as string, FORCE_REVALIDATION_FLAG as string, FREIGHT_AMOUNT as string, FUNDS_STATUS as string, GLOBAL_ATTRIBUTE1 as string, GLOBAL_ATTRIBUTE10 as string, GLOBAL_ATTRIBUTE11 as string, GLOBAL_ATTRIBUTE12 as string, GLOBAL_ATTRIBUTE13 as string, GLOBAL_ATTRIBUTE14 as string, GLOBAL_ATTRIBUTE15 as string, GLOBAL_ATTRIBUTE16 as string, GLOBAL_ATTRIBUTE17 as string, GLOBAL_ATTRIBUTE18 as string, GLOBAL_ATTRIBUTE19 as string, GLOBAL_ATTRIBUTE2 as string, GLOBAL_ATTRIBUTE20 as string, GLOBAL_ATTRIBUTE3 as string, GLOBAL_ATTRIBUTE4 as string, GLOBAL_ATTRIBUTE5 as string, GLOBAL_ATTRIBUTE6 as string, GLOBAL_ATTRIBUTE7 as string, GLOBAL_ATTRIBUTE8 as string, GLOBAL_ATTRIBUTE9 as string, GLOBAL_ATTRIBUTE_CATEGORY as string, GLOBAL_ATTRIBUTE_DATE1 as string, GLOBAL_ATTRIBUTE_DATE2 as string, GLOBAL_ATTRIBUTE_DATE3 as string, GLOBAL_ATTRIBUTE_DATE4 as string, GLOBAL_ATTRIBUTE_DATE5 as string, GLOBAL_ATTRIBUTE_NUMBER1 as string, GLOBAL_ATTRIBUTE_NUMBER2 as string, GLOBAL_ATTRIBUTE_NUMBER3 as string, GLOBAL_ATTRIBUTE_NUMBER4 as string, GLOBAL_ATTRIBUTE_NUMBER5 as string, GL_DATE as string, GOODS_RECEIVED_DATE as string, HISTORICAL_FLAG as string, IMAGE_DOCUMENT_NUM as string, IMPORT_DOCUMENT_DATE as string, IMPORT_DOCUMENT_NUMBER as string, INTERCOMPANY_FLAG as string, INTERNAL_CONTACT_EMAIL as string, INVOICE_AMOUNT as string, INVOICE_CURRENCY_CODE as string, INVOICE_DATE as string, INVOICE_ID as string, INVOICE_NUM as string, INVOICE_RECEIVED_DATE as string, INVOICE_TYPE_LOOKUP_CODE as string, JOB_DEFINITION_NAME as string, JOB_DEFINITION_PACKAGE as string, LAST_UPDATED_BY as string, LAST_UPDATE_DATE as string, LAST_UPDATE_LOGIN as string, LEGAL_ENTITY_ID as string, LOCKED_BY as string, LOCK_TIME as string, MERGE_REQUEST_ID as string, MRC_BASE_AMOUNT as string, MRC_EXCHANGE_DATE as string, MRC_EXCHANGE_RATE as string, MRC_EXCHANGE_RATE_TYPE as string, MRC_POSTING_STATUS as string, NET_OF_RETAINAGE_FLAG as string, OBJECT_VERSION_NUMBER as string, ORG_ID as string, PAID_ON_BEHALF_EMPLOYEE_ID as string, PARTY_ID as string, PARTY_SITE_ID as string, PAYMENT_AMOUNT_TOTAL as string, PAYMENT_CROSS_RATE as string, PAYMENT_CROSS_RATE_DATE as string, PAYMENT_CROSS_RATE_TYPE as string, PAYMENT_CURRENCY_CODE as string, PAYMENT_FUNCTION as string, PAYMENT_METHOD_CODE as string, PAYMENT_METHOD_LOOKUP_CODE as string, PAYMENT_REASON_CODE as string, PAYMENT_REASON_COMMENTS as string, PAYMENT_STATUS_FLAG as string, PAY_CURR_INVOICE_AMOUNT as string, PAY_GROUP_LOOKUP_CODE as string, PAY_PROC_TRXN_TYPE_CODE as string, PA_DEFAULT_DIST_CCID as string, PA_QUANTITY as string, PORT_OF_ENTRY_CODE as string, POSTING_STATUS as string, PO_HEADER_ID as string, PO_MATCHED_FLAG as string, PRE_WITHHOLDING_AMOUNT as string, PRODUCT_TABLE as string, PROJECT_ID as string, QUICK_CREDIT as string, QUICK_PO_HEADER_ID as string, RECURRING_PAYMENT_ID as string, REFERENCE_1 as string, REFERENCE_2 as string, REFERENCE_KEY1 as string, REFERENCE_KEY2 as string, REFERENCE_KEY3 as string, REFERENCE_KEY4 as string, REFERENCE_KEY5 as string, RELATIONSHIP_ID as string, RELEASE_AMOUNT_NET_OF_TAX as string, REMITTANCE_MESSAGE1 as string, REMITTANCE_MESSAGE2 as string, REMITTANCE_MESSAGE3 as string, REMIT_TO_ADDRESS_ID as string, REMIT_TO_ADDRESS_NAME as string, REMIT_TO_SUPPLIER_ID as string, REMIT_TO_SUPPLIER_NAME as string, REQUESTER_ID as string, REQUEST_ID as string, ROUTING_ATTRIBUTE1 as string, ROUTING_ATTRIBUTE2 as string, ROUTING_ATTRIBUTE3 as string, ROUTING_ATTRIBUTE4 as string, ROUTING_ATTRIBUTE5 as string, ROUTING_STATUS_LOOKUP_CODE as string, SELF_ASSESSED_TAX_AMOUNT as string, SETTLEMENT_PRIORITY as string, SET_OF_BOOKS_ID as string, SOURCE as string, SUPPLIER_TAX_EXCHANGE_RATE as string, SUPPLIER_TAX_INVOICE_DATE as string, SUPPLIER_TAX_INVOICE_NUMBER as string, TASK_ID as string, TAXATION_COUNTRY as string, TAX_INVOICE_INTERNAL_SEQ as string, TAX_INVOICE_RECORDING_DATE as string, TAX_RELATED_INVOICE_ID as string, TEMP_CANCELLED_AMOUNT as string, TERMS_DATE as string, TERMS_ID as string, THIRD_PARTY_REGISTRATION_ID as string, TOTAL_TAX_AMOUNT as string, TRANSACTION_DEADLINE as string, TRX_BUSINESS_CATEGORY as string, UNIQUE_REMITTANCE_IDENTIFIER as string, URI_CHECK_DIGIT as string, USER_DEFINED_FISC_CLASS as string, USSGL_TRANSACTION_CODE as string, USSGL_TRX_CODE_CONTEXT as string, VALIDATED_TAX_AMOUNT as string, VALIDATION_REQUEST_ID as string, VALIDATION_WORKER_ID as string, VENDOR_CONTACT_ID as string, VENDOR_ID as string, VENDOR_SITE_ID as string, VOUCHER_NUM as string, WFAPPROVAL_STATUS as string)[])",
+						"     ),",
+						"     allowSchemaDrift: false,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     validationMode: 'none',",
+						"     namespaces: true) ~> SrcXMl",
+						"SrcXMl foldDown(unroll(DATA_DS.G_1),",
+						"     mapColumn(",
+						"          ACCTS_PAY_CODE_COMBINATION_ID = DATA_DS.G_1.ACCTS_PAY_CODE_COMBINATION_ID,",
+						"          ACC_REFERENCE_VALUE1 = DATA_DS.G_1.ACC_REFERENCE_VALUE1,",
+						"          ADDITIONAL_NOTE = DATA_DS.G_1.ADDITIONAL_NOTE,",
+						"          AMOUNT_APPLICABLE_TO_DISCOUNT = DATA_DS.G_1.AMOUNT_APPLICABLE_TO_DISCOUNT,",
+						"          AMOUNT_PAID = DATA_DS.G_1.AMOUNT_PAID,",
+						"          AMT_DUE_CCARD_COMPANY = DATA_DS.G_1.AMT_DUE_CCARD_COMPANY,",
+						"          AMT_DUE_EMPLOYEE = DATA_DS.G_1.AMT_DUE_EMPLOYEE,",
+						"          APPLICATION_ID = DATA_DS.G_1.APPLICATION_ID,",
+						"          APPROVAL_DESCRIPTION = DATA_DS.G_1.APPROVAL_DESCRIPTION,",
+						"          APPROVAL_ITERATION = DATA_DS.G_1.APPROVAL_ITERATION,",
+						"          APPROVAL_READY_FLAG = DATA_DS.G_1.APPROVAL_READY_FLAG,",
+						"          APPROVAL_STATUS = DATA_DS.G_1.APPROVAL_STATUS,",
+						"          APPROVED_AMOUNT = DATA_DS.G_1.APPROVED_AMOUNT,",
+						"          ATTRIBUTE1 = DATA_DS.G_1.ATTRIBUTE1,",
+						"          ATTRIBUTE10 = DATA_DS.G_1.ATTRIBUTE10,",
+						"          ATTRIBUTE11 = DATA_DS.G_1.ATTRIBUTE11,",
+						"          ATTRIBUTE12 = DATA_DS.G_1.ATTRIBUTE12,",
+						"          ATTRIBUTE13 = DATA_DS.G_1.ATTRIBUTE13,",
+						"          ATTRIBUTE14 = DATA_DS.G_1.ATTRIBUTE14,",
+						"          ATTRIBUTE15 = DATA_DS.G_1.ATTRIBUTE15,",
+						"          ATTRIBUTE2 = DATA_DS.G_1.ATTRIBUTE2,",
+						"          ATTRIBUTE3 = DATA_DS.G_1.ATTRIBUTE3,",
+						"          ATTRIBUTE4 = DATA_DS.G_1.ATTRIBUTE4,",
+						"          ATTRIBUTE5 = DATA_DS.G_1.ATTRIBUTE5,",
+						"          ATTRIBUTE6 = DATA_DS.G_1.ATTRIBUTE6,",
+						"          ATTRIBUTE7 = DATA_DS.G_1.ATTRIBUTE7,",
+						"          ATTRIBUTE8 = DATA_DS.G_1.ATTRIBUTE8,",
+						"          ATTRIBUTE9 = DATA_DS.G_1.ATTRIBUTE9,",
+						"          ATTRIBUTE_CATEGORY = DATA_DS.G_1.ATTRIBUTE_CATEGORY,",
+						"          ATTRIBUTE_DATE1 = DATA_DS.G_1.ATTRIBUTE_DATE1,",
+						"          ATTRIBUTE_DATE2 = DATA_DS.G_1.ATTRIBUTE_DATE2,",
+						"          ATTRIBUTE_DATE3 = DATA_DS.G_1.ATTRIBUTE_DATE3,",
+						"          ATTRIBUTE_DATE4 = DATA_DS.G_1.ATTRIBUTE_DATE4,",
+						"          ATTRIBUTE_DATE5 = DATA_DS.G_1.ATTRIBUTE_DATE5,",
+						"          ATTRIBUTE_NUMBER1 = DATA_DS.G_1.ATTRIBUTE_NUMBER1,",
+						"          ATTRIBUTE_NUMBER2 = DATA_DS.G_1.ATTRIBUTE_NUMBER2,",
+						"          ATTRIBUTE_NUMBER3 = DATA_DS.G_1.ATTRIBUTE_NUMBER3,",
+						"          ATTRIBUTE_NUMBER4 = DATA_DS.G_1.ATTRIBUTE_NUMBER4,",
+						"          ATTRIBUTE_NUMBER5 = DATA_DS.G_1.ATTRIBUTE_NUMBER5,",
+						"          AWARD_ID = DATA_DS.G_1.AWARD_ID,",
+						"          AWT_FLAG = DATA_DS.G_1.AWT_FLAG,",
+						"          AWT_GROUP_ID = DATA_DS.G_1.AWT_GROUP_ID,",
+						"          BANK_CHARGE_BEARER = DATA_DS.G_1.BANK_CHARGE_BEARER,",
+						"          BASE_AMOUNT = DATA_DS.G_1.BASE_AMOUNT,",
+						"          BATCH_ID = DATA_DS.G_1.BATCH_ID,",
+						"          BUDGET_DATE = DATA_DS.G_1.BUDGET_DATE,",
+						"          CANCELLED_AMOUNT = DATA_DS.G_1.CANCELLED_AMOUNT,",
+						"          CANCELLED_BY = DATA_DS.G_1.CANCELLED_BY,",
+						"          CANCELLED_DATE = DATA_DS.G_1.CANCELLED_DATE,",
+						"          CHECK_VAT_AMOUNT_PAID = DATA_DS.G_1.CHECK_VAT_AMOUNT_PAID,",
+						"          CONTROL_AMOUNT = DATA_DS.G_1.CONTROL_AMOUNT,",
+						"          CORRECTION_PERIOD = DATA_DS.G_1.CORRECTION_PERIOD,",
+						"          CORRECTION_YEAR = DATA_DS.G_1.CORRECTION_YEAR,",
+						"          CREATED_BY = DATA_DS.G_1.CREATED_BY,",
+						"          CREATION_DATE = DATA_DS.G_1.CREATION_DATE,",
+						"          CREDITED_INVOICE_ID = DATA_DS.G_1.CREDITED_INVOICE_ID,",
+						"          CUST_REGISTRATION_CODE = DATA_DS.G_1.CUST_REGISTRATION_CODE,",
+						"          CUST_REGISTRATION_NUMBER = DATA_DS.G_1.CUST_REGISTRATION_NUMBER,",
+						"          DATA_SET_ID = DATA_DS.G_1.DATA_SET_ID,",
+						"          DELIVERY_CHANNEL_CODE = DATA_DS.G_1.DELIVERY_CHANNEL_CODE,",
+						"          DESCRIPTION = DATA_DS.G_1.DESCRIPTION,",
+						"          DISCOUNT_AMOUNT_TAKEN = DATA_DS.G_1.DISCOUNT_AMOUNT_TAKEN,",
+						"          DISC_IS_INV_LESS_TAX_FLAG = DATA_DS.G_1.DISC_IS_INV_LESS_TAX_FLAG,",
+						"          DISTRIBUTION_SET_ID = DATA_DS.G_1.DISTRIBUTION_SET_ID,",
+						"          DOCUMENT_SUB_TYPE = DATA_DS.G_1.DOCUMENT_SUB_TYPE,",
+						"          DOC_CATEGORY_CODE = DATA_DS.G_1.DOC_CATEGORY_CODE,",
+						"          DOC_SEQUENCE_ID = DATA_DS.G_1.DOC_SEQUENCE_ID,",
+						"          DOC_SEQUENCE_VALUE = DATA_DS.G_1.DOC_SEQUENCE_VALUE,",
+						"          EARLIEST_SETTLEMENT_DATE = DATA_DS.G_1.EARLIEST_SETTLEMENT_DATE,",
+						"          EMPLOYEE_ADDRESS_CODE = DATA_DS.G_1.EMPLOYEE_ADDRESS_CODE,",
+						"          EXCHANGE_DATE = DATA_DS.G_1.EXCHANGE_DATE,",
+						"          EXCHANGE_RATE = DATA_DS.G_1.EXCHANGE_RATE,",
+						"          EXCHANGE_RATE_TYPE = DATA_DS.G_1.EXCHANGE_RATE_TYPE,",
+						"          EXCLUDE_FREIGHT_FROM_DISCOUNT = DATA_DS.G_1.EXCLUDE_FREIGHT_FROM_DISCOUNT,",
+						"          EXCLUSIVE_PAYMENT_FLAG = DATA_DS.G_1.EXCLUSIVE_PAYMENT_FLAG,",
+						"          EXPENDITURE_ITEM_DATE = DATA_DS.G_1.EXPENDITURE_ITEM_DATE,",
+						"          EXPENDITURE_ORGANIZATION_ID = DATA_DS.G_1.EXPENDITURE_ORGANIZATION_ID,",
+						"          EXPENDITURE_TYPE = DATA_DS.G_1.EXPENDITURE_TYPE,",
+						"          EXTERNAL_BANK_ACCOUNT_ID = DATA_DS.G_1.EXTERNAL_BANK_ACCOUNT_ID,",
+						"          FINANCING_STATUS_CODE = DATA_DS.G_1.FINANCING_STATUS_CODE,",
+						"          FINANCING_STATUS_DATE = DATA_DS.G_1.FINANCING_STATUS_DATE,",
+						"          FIRST_PARTY_REGISTRATION_ID = DATA_DS.G_1.FIRST_PARTY_REGISTRATION_ID,",
+						"          FISCAL_DOC_ACCESS_KEY = DATA_DS.G_1.FISCAL_DOC_ACCESS_KEY,",
+						"          FORCE_REVALIDATION_FLAG = DATA_DS.G_1.FORCE_REVALIDATION_FLAG,",
+						"          FREIGHT_AMOUNT = DATA_DS.G_1.FREIGHT_AMOUNT,",
+						"          FUNDS_STATUS = DATA_DS.G_1.FUNDS_STATUS,",
+						"          GLOBAL_ATTRIBUTE1 = DATA_DS.G_1.GLOBAL_ATTRIBUTE1,",
+						"          GLOBAL_ATTRIBUTE10 = DATA_DS.G_1.GLOBAL_ATTRIBUTE10,",
+						"          GLOBAL_ATTRIBUTE11 = DATA_DS.G_1.GLOBAL_ATTRIBUTE11,",
+						"          GLOBAL_ATTRIBUTE12 = DATA_DS.G_1.GLOBAL_ATTRIBUTE12,",
+						"          GLOBAL_ATTRIBUTE13 = DATA_DS.G_1.GLOBAL_ATTRIBUTE13,",
+						"          GLOBAL_ATTRIBUTE14 = DATA_DS.G_1.GLOBAL_ATTRIBUTE14,",
+						"          GLOBAL_ATTRIBUTE15 = DATA_DS.G_1.GLOBAL_ATTRIBUTE15,",
+						"          GLOBAL_ATTRIBUTE16 = DATA_DS.G_1.GLOBAL_ATTRIBUTE16,",
+						"          GLOBAL_ATTRIBUTE17 = DATA_DS.G_1.GLOBAL_ATTRIBUTE17,",
+						"          GLOBAL_ATTRIBUTE18 = DATA_DS.G_1.GLOBAL_ATTRIBUTE18,",
+						"          GLOBAL_ATTRIBUTE19 = DATA_DS.G_1.GLOBAL_ATTRIBUTE19,",
+						"          GLOBAL_ATTRIBUTE2 = DATA_DS.G_1.GLOBAL_ATTRIBUTE2,",
+						"          GLOBAL_ATTRIBUTE20 = DATA_DS.G_1.GLOBAL_ATTRIBUTE20,",
+						"          GLOBAL_ATTRIBUTE3 = DATA_DS.G_1.GLOBAL_ATTRIBUTE3,",
+						"          GLOBAL_ATTRIBUTE4 = DATA_DS.G_1.GLOBAL_ATTRIBUTE4,",
+						"          GLOBAL_ATTRIBUTE5 = DATA_DS.G_1.GLOBAL_ATTRIBUTE5,",
+						"          GLOBAL_ATTRIBUTE6 = DATA_DS.G_1.GLOBAL_ATTRIBUTE6,",
+						"          GLOBAL_ATTRIBUTE7 = DATA_DS.G_1.GLOBAL_ATTRIBUTE7,",
+						"          GLOBAL_ATTRIBUTE8 = DATA_DS.G_1.GLOBAL_ATTRIBUTE8,",
+						"          GLOBAL_ATTRIBUTE9 = DATA_DS.G_1.GLOBAL_ATTRIBUTE9,",
+						"          GLOBAL_ATTRIBUTE_CATEGORY = DATA_DS.G_1.GLOBAL_ATTRIBUTE_CATEGORY,",
+						"          GLOBAL_ATTRIBUTE_DATE1 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_DATE1,",
+						"          GLOBAL_ATTRIBUTE_DATE2 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_DATE2,",
+						"          GLOBAL_ATTRIBUTE_DATE3 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_DATE3,",
+						"          GLOBAL_ATTRIBUTE_DATE4 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_DATE4,",
+						"          GLOBAL_ATTRIBUTE_DATE5 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_DATE5,",
+						"          GLOBAL_ATTRIBUTE_NUMBER1 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_NUMBER1,",
+						"          GLOBAL_ATTRIBUTE_NUMBER2 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_NUMBER2,",
+						"          GLOBAL_ATTRIBUTE_NUMBER3 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_NUMBER3,",
+						"          GLOBAL_ATTRIBUTE_NUMBER4 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_NUMBER4,",
+						"          GLOBAL_ATTRIBUTE_NUMBER5 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_NUMBER5,",
+						"          GL_DATE = DATA_DS.G_1.GL_DATE,",
+						"          GOODS_RECEIVED_DATE = DATA_DS.G_1.GOODS_RECEIVED_DATE,",
+						"          HISTORICAL_FLAG = DATA_DS.G_1.HISTORICAL_FLAG,",
+						"          IMAGE_DOCUMENT_NUM = DATA_DS.G_1.IMAGE_DOCUMENT_NUM,",
+						"          IMPORT_DOCUMENT_DATE = DATA_DS.G_1.IMPORT_DOCUMENT_DATE,",
+						"          IMPORT_DOCUMENT_NUMBER = DATA_DS.G_1.IMPORT_DOCUMENT_NUMBER,",
+						"          INTERCOMPANY_FLAG = DATA_DS.G_1.INTERCOMPANY_FLAG,",
+						"          INTERNAL_CONTACT_EMAIL = DATA_DS.G_1.INTERNAL_CONTACT_EMAIL,",
+						"          INVOICE_AMOUNT = DATA_DS.G_1.INVOICE_AMOUNT,",
+						"          INVOICE_CURRENCY_CODE = DATA_DS.G_1.INVOICE_CURRENCY_CODE,",
+						"          INVOICE_DATE = DATA_DS.G_1.INVOICE_DATE,",
+						"          INVOICE_ID = DATA_DS.G_1.INVOICE_ID,",
+						"          INVOICE_NUM = DATA_DS.G_1.INVOICE_NUM,",
+						"          INVOICE_RECEIVED_DATE = DATA_DS.G_1.INVOICE_RECEIVED_DATE,",
+						"          INVOICE_TYPE_LOOKUP_CODE = DATA_DS.G_1.INVOICE_TYPE_LOOKUP_CODE,",
+						"          JOB_DEFINITION_NAME = DATA_DS.G_1.JOB_DEFINITION_NAME,",
+						"          JOB_DEFINITION_PACKAGE = DATA_DS.G_1.JOB_DEFINITION_PACKAGE,",
+						"          LAST_UPDATED_BY = DATA_DS.G_1.LAST_UPDATED_BY,",
+						"          LAST_UPDATE_DATE = DATA_DS.G_1.LAST_UPDATE_DATE,",
+						"          LAST_UPDATE_LOGIN = DATA_DS.G_1.LAST_UPDATE_LOGIN,",
+						"          LEGAL_ENTITY_ID = DATA_DS.G_1.LEGAL_ENTITY_ID,",
+						"          LOCKED_BY = DATA_DS.G_1.LOCKED_BY,",
+						"          LOCK_TIME = DATA_DS.G_1.LOCK_TIME,",
+						"          MERGE_REQUEST_ID = DATA_DS.G_1.MERGE_REQUEST_ID,",
+						"          MRC_BASE_AMOUNT = DATA_DS.G_1.MRC_BASE_AMOUNT,",
+						"          MRC_EXCHANGE_DATE = DATA_DS.G_1.MRC_EXCHANGE_DATE,",
+						"          MRC_EXCHANGE_RATE = DATA_DS.G_1.MRC_EXCHANGE_RATE,",
+						"          MRC_EXCHANGE_RATE_TYPE = DATA_DS.G_1.MRC_EXCHANGE_RATE_TYPE,",
+						"          MRC_POSTING_STATUS = DATA_DS.G_1.MRC_POSTING_STATUS,",
+						"          NET_OF_RETAINAGE_FLAG = DATA_DS.G_1.NET_OF_RETAINAGE_FLAG,",
+						"          OBJECT_VERSION_NUMBER = DATA_DS.G_1.OBJECT_VERSION_NUMBER,",
+						"          ORG_ID = DATA_DS.G_1.ORG_ID,",
+						"          PAID_ON_BEHALF_EMPLOYEE_ID = DATA_DS.G_1.PAID_ON_BEHALF_EMPLOYEE_ID,",
+						"          PARTY_ID = DATA_DS.G_1.PARTY_ID,",
+						"          PARTY_SITE_ID = DATA_DS.G_1.PARTY_SITE_ID,",
+						"          PAYMENT_AMOUNT_TOTAL = DATA_DS.G_1.PAYMENT_AMOUNT_TOTAL,",
+						"          PAYMENT_CROSS_RATE = DATA_DS.G_1.PAYMENT_CROSS_RATE,",
+						"          PAYMENT_CROSS_RATE_DATE = DATA_DS.G_1.PAYMENT_CROSS_RATE_DATE,",
+						"          PAYMENT_CROSS_RATE_TYPE = DATA_DS.G_1.PAYMENT_CROSS_RATE_TYPE,",
+						"          PAYMENT_CURRENCY_CODE = DATA_DS.G_1.PAYMENT_CURRENCY_CODE,",
+						"          PAYMENT_FUNCTION = DATA_DS.G_1.PAYMENT_FUNCTION,",
+						"          PAYMENT_METHOD_CODE = DATA_DS.G_1.PAYMENT_METHOD_CODE,",
+						"          PAYMENT_METHOD_LOOKUP_CODE = DATA_DS.G_1.PAYMENT_METHOD_LOOKUP_CODE,",
+						"          PAYMENT_REASON_CODE = DATA_DS.G_1.PAYMENT_REASON_CODE,",
+						"          PAYMENT_REASON_COMMENTS = DATA_DS.G_1.PAYMENT_REASON_COMMENTS,",
+						"          PAYMENT_STATUS_FLAG = DATA_DS.G_1.PAYMENT_STATUS_FLAG,",
+						"          PAY_CURR_INVOICE_AMOUNT = DATA_DS.G_1.PAY_CURR_INVOICE_AMOUNT,",
+						"          PAY_GROUP_LOOKUP_CODE = DATA_DS.G_1.PAY_GROUP_LOOKUP_CODE,",
+						"          PAY_PROC_TRXN_TYPE_CODE = DATA_DS.G_1.PAY_PROC_TRXN_TYPE_CODE,",
+						"          PA_DEFAULT_DIST_CCID = DATA_DS.G_1.PA_DEFAULT_DIST_CCID,",
+						"          PA_QUANTITY = DATA_DS.G_1.PA_QUANTITY,",
+						"          PORT_OF_ENTRY_CODE = DATA_DS.G_1.PORT_OF_ENTRY_CODE,",
+						"          POSTING_STATUS = DATA_DS.G_1.POSTING_STATUS,",
+						"          PO_HEADER_ID = DATA_DS.G_1.PO_HEADER_ID,",
+						"          PO_MATCHED_FLAG = DATA_DS.G_1.PO_MATCHED_FLAG,",
+						"          PRE_WITHHOLDING_AMOUNT = DATA_DS.G_1.PRE_WITHHOLDING_AMOUNT,",
+						"          PRODUCT_TABLE = DATA_DS.G_1.PRODUCT_TABLE,",
+						"          PROJECT_ID = DATA_DS.G_1.PROJECT_ID,",
+						"          QUICK_CREDIT = DATA_DS.G_1.QUICK_CREDIT,",
+						"          QUICK_PO_HEADER_ID = DATA_DS.G_1.QUICK_PO_HEADER_ID,",
+						"          RECURRING_PAYMENT_ID = DATA_DS.G_1.RECURRING_PAYMENT_ID,",
+						"          REFERENCE_1 = DATA_DS.G_1.REFERENCE_1,",
+						"          REFERENCE_2 = DATA_DS.G_1.REFERENCE_2,",
+						"          REFERENCE_KEY1 = DATA_DS.G_1.REFERENCE_KEY1,",
+						"          REFERENCE_KEY2 = DATA_DS.G_1.REFERENCE_KEY2,",
+						"          REFERENCE_KEY3 = DATA_DS.G_1.REFERENCE_KEY3,",
+						"          REFERENCE_KEY4 = DATA_DS.G_1.REFERENCE_KEY4,",
+						"          REFERENCE_KEY5 = DATA_DS.G_1.REFERENCE_KEY5,",
+						"          RELATIONSHIP_ID = DATA_DS.G_1.RELATIONSHIP_ID,",
+						"          RELEASE_AMOUNT_NET_OF_TAX = DATA_DS.G_1.RELEASE_AMOUNT_NET_OF_TAX,",
+						"          REMITTANCE_MESSAGE1 = DATA_DS.G_1.REMITTANCE_MESSAGE1,",
+						"          REMITTANCE_MESSAGE2 = DATA_DS.G_1.REMITTANCE_MESSAGE2,",
+						"          REMITTANCE_MESSAGE3 = DATA_DS.G_1.REMITTANCE_MESSAGE3,",
+						"          REMIT_TO_ADDRESS_ID = DATA_DS.G_1.REMIT_TO_ADDRESS_ID,",
+						"          REMIT_TO_ADDRESS_NAME = DATA_DS.G_1.REMIT_TO_ADDRESS_NAME,",
+						"          REMIT_TO_SUPPLIER_ID = DATA_DS.G_1.REMIT_TO_SUPPLIER_ID,",
+						"          REMIT_TO_SUPPLIER_NAME = DATA_DS.G_1.REMIT_TO_SUPPLIER_NAME,",
+						"          REQUESTER_ID = DATA_DS.G_1.REQUESTER_ID,",
+						"          REQUEST_ID = DATA_DS.G_1.REQUEST_ID,",
+						"          ROUTING_ATTRIBUTE1 = DATA_DS.G_1.ROUTING_ATTRIBUTE1,",
+						"          ROUTING_ATTRIBUTE2 = DATA_DS.G_1.ROUTING_ATTRIBUTE2,",
+						"          ROUTING_ATTRIBUTE3 = DATA_DS.G_1.ROUTING_ATTRIBUTE3,",
+						"          ROUTING_ATTRIBUTE4 = DATA_DS.G_1.ROUTING_ATTRIBUTE4,",
+						"          ROUTING_ATTRIBUTE5 = DATA_DS.G_1.ROUTING_ATTRIBUTE5,",
+						"          ROUTING_STATUS_LOOKUP_CODE = DATA_DS.G_1.ROUTING_STATUS_LOOKUP_CODE,",
+						"          SELF_ASSESSED_TAX_AMOUNT = DATA_DS.G_1.SELF_ASSESSED_TAX_AMOUNT,",
+						"          SETTLEMENT_PRIORITY = DATA_DS.G_1.SETTLEMENT_PRIORITY,",
+						"          SET_OF_BOOKS_ID = DATA_DS.G_1.SET_OF_BOOKS_ID,",
+						"          SOURCE = DATA_DS.G_1.SOURCE,",
+						"          SUPPLIER_TAX_EXCHANGE_RATE = DATA_DS.G_1.SUPPLIER_TAX_EXCHANGE_RATE,",
+						"          SUPPLIER_TAX_INVOICE_DATE = DATA_DS.G_1.SUPPLIER_TAX_INVOICE_DATE,",
+						"          SUPPLIER_TAX_INVOICE_NUMBER = DATA_DS.G_1.SUPPLIER_TAX_INVOICE_NUMBER,",
+						"          TASK_ID = DATA_DS.G_1.TASK_ID,",
+						"          TAXATION_COUNTRY = DATA_DS.G_1.TAXATION_COUNTRY,",
+						"          TAX_INVOICE_INTERNAL_SEQ = DATA_DS.G_1.TAX_INVOICE_INTERNAL_SEQ,",
+						"          TAX_INVOICE_RECORDING_DATE = DATA_DS.G_1.TAX_INVOICE_RECORDING_DATE,",
+						"          TAX_RELATED_INVOICE_ID = DATA_DS.G_1.TAX_RELATED_INVOICE_ID,",
+						"          TEMP_CANCELLED_AMOUNT = DATA_DS.G_1.TEMP_CANCELLED_AMOUNT,",
+						"          TERMS_DATE = DATA_DS.G_1.TERMS_DATE,",
+						"          TERMS_ID = DATA_DS.G_1.TERMS_ID,",
+						"          THIRD_PARTY_REGISTRATION_ID = DATA_DS.G_1.THIRD_PARTY_REGISTRATION_ID,",
+						"          TOTAL_TAX_AMOUNT = DATA_DS.G_1.TOTAL_TAX_AMOUNT,",
+						"          TRANSACTION_DEADLINE = DATA_DS.G_1.TRANSACTION_DEADLINE,",
+						"          TRX_BUSINESS_CATEGORY = DATA_DS.G_1.TRX_BUSINESS_CATEGORY,",
+						"          UNIQUE_REMITTANCE_IDENTIFIER = DATA_DS.G_1.UNIQUE_REMITTANCE_IDENTIFIER,",
+						"          URI_CHECK_DIGIT = DATA_DS.G_1.URI_CHECK_DIGIT,",
+						"          USER_DEFINED_FISC_CLASS = DATA_DS.G_1.USER_DEFINED_FISC_CLASS,",
+						"          USSGL_TRANSACTION_CODE = DATA_DS.G_1.USSGL_TRANSACTION_CODE,",
+						"          USSGL_TRX_CODE_CONTEXT = DATA_DS.G_1.USSGL_TRX_CODE_CONTEXT,",
+						"          VALIDATED_TAX_AMOUNT = DATA_DS.G_1.VALIDATED_TAX_AMOUNT,",
+						"          VALIDATION_REQUEST_ID = DATA_DS.G_1.VALIDATION_REQUEST_ID,",
+						"          VALIDATION_WORKER_ID = DATA_DS.G_1.VALIDATION_WORKER_ID,",
+						"          VENDOR_CONTACT_ID = DATA_DS.G_1.VENDOR_CONTACT_ID,",
+						"          VENDOR_ID = DATA_DS.G_1.VENDOR_ID,",
+						"          VENDOR_SITE_ID = DATA_DS.G_1.VENDOR_SITE_ID,",
+						"          VOUCHER_NUM = DATA_DS.G_1.VOUCHER_NUM,",
+						"          WFAPPROVAL_STATUS = DATA_DS.G_1.WFAPPROVAL_STATUS",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> XmlToCsvflatten",
+						"XmlToCsvflatten derive(source_name = 'SYSTEM',",
+						"          sub_source_name = 'R2P',",
+						"          created_date_time = currentUTC()) ~> addLoadDetails",
+						"addLoadDetails sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     partitionFileNames:['Invoice_header_ap_invoices_all.csv'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SnkCsv"
+					]
+				}
+			},
+			"dependsOn": []
+		}
+	]
+}

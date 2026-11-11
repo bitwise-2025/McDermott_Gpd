@@ -1,0 +1,988 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "McD-GPD"
+		},
+		"ls_oracle_payment_dashboard_HttpServer_password": {
+			"type": "secureString",
+			"metadata": "Secure string for 'password' of 'ls_oracle_payment_dashboard_HttpServer'"
+		},
+		"ls_projectsxd_azsql_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'ls_projectsxd_azsql'",
+			"defaultValue": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=mdrdeventerpriseanalyticssql.database.windows.net;Initial Catalog=projectsxd-dev"
+		},
+		"ls_http_oneview_to_synapse_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://mcdermott.allocate-cloud.co.uk/OneView.PreProd.Modules.Core/Username.Queries.CustomDataApi.CustomDataApiQueryService.svc"
+		},
+		"ls_oauth_oracle_payment_dashboard_HttpServer_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://edsv-dev2.fa.us2.oraclecloud.com/xmlpserver/services/ExternalReportWSSService?WSDL"
+		},
+		"ls_oracle_payment_dashboard_HttpServer_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://edsv-dev2.fa.us2.oraclecloud.com/xmlpserver/services/ExternalReportWSSService?WSDL"
+		},
+		"ls_oracle_payment_dashboard_HttpServer_properties_typeProperties_userName": {
+			"type": "string",
+			"defaultValue": "SVC-GLB-AZURADF_DEV"
+		},
+		"ls_oracle_r2p_HttpServer_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://edsv-dev4.fa.us2.oraclecloud.com/xmlpserver/services/ExternalReportWSSService?WSDL"
+		},
+		"ls_src_snk_adgls2_ykpi_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://mdrdevententanalytics01.dfs.core.windows.net/"
+		},
+		"mdrdevshir_properties_typeProperties_linkedInfo_resourceId": {
+			"type": "string",
+			"defaultValue": "/subscriptions/dd387ca2-0af6-49fc-8849-a235d2763be1/resourcegroups/MDR-DEV-EnterpriseAnalytics-DEV-RG01/providers/Microsoft.DataFactory/factories/MDR-DEV-EnterpriseAnalytics-DF01/integrationruntimes/mdrdevshir"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_http_oneview_to_synapse')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "HttpServer",
+				"typeProperties": {
+					"url": "[parameters('ls_http_oneview_to_synapse_properties_typeProperties_url')]",
+					"enableServerCertificateValidation": true,
+					"authenticationType": "Anonymous"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_oauth_oracle_payment_dashboard_HttpServer')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "HttpServer",
+				"typeProperties": {
+					"url": "[parameters('ls_oauth_oracle_payment_dashboard_HttpServer_properties_typeProperties_url')]",
+					"enableServerCertificateValidation": true,
+					"authenticationType": "Anonymous"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_oracle_payment_dashboard_HttpServer')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "HttpServer",
+				"typeProperties": {
+					"url": "[parameters('ls_oracle_payment_dashboard_HttpServer_properties_typeProperties_url')]",
+					"enableServerCertificateValidation": false,
+					"authenticationType": "Basic",
+					"userName": "[parameters('ls_oracle_payment_dashboard_HttpServer_properties_typeProperties_userName')]",
+					"password": {
+						"type": "SecureString",
+						"value": "[parameters('ls_oracle_payment_dashboard_HttpServer_password')]"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_oracle_r2p_HttpServer')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "HttpServer",
+				"typeProperties": {
+					"url": "[parameters('ls_oracle_r2p_HttpServer_properties_typeProperties_url')]",
+					"enableServerCertificateValidation": false,
+					"authenticationType": "Anonymous"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_projectsxd_azsql')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureSqlDatabase",
+				"typeProperties": {
+					"connectionString": "[parameters('ls_projectsxd_azsql_connectionString')]"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_src_snk_adgls2_ykpi')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('ls_src_snk_adgls2_ykpi_properties_typeProperties_url')]"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/Trigger_schedule_Integrated_fabrication_systems_every_one_hour')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Hour",
+						"interval": 1,
+						"startTime": "2023-02-22T03:00:00",
+						"timeZone": "Central Standard Time"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/integrationRuntimeEast2')]",
+			"type": "Microsoft.DataFactory/factories/integrationRuntimes",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "Managed",
+				"typeProperties": {
+					"computeProperties": {
+						"location": "East US 2",
+						"dataFlowProperties": {
+							"computeType": "General",
+							"coreCount": 8,
+							"timeToLive": 10,
+							"cleanup": true
+						}
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/integrationRuntimeEast21')]",
+			"type": "Microsoft.DataFactory/factories/integrationRuntimes",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "Managed",
+				"typeProperties": {
+					"computeProperties": {
+						"location": "East US",
+						"dataFlowProperties": {
+							"computeType": "General",
+							"coreCount": 8,
+							"timeToLive": 10,
+							"cleanup": false
+						}
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/integrationRuntimeEast22')]",
+			"type": "Microsoft.DataFactory/factories/integrationRuntimes",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "Managed",
+				"typeProperties": {
+					"computeProperties": {
+						"location": "East US 2",
+						"dataFlowProperties": {
+							"computeType": "General",
+							"coreCount": 8,
+							"timeToLive": 10,
+							"cleanup": false
+						}
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/mdrdevshir')]",
+			"type": "Microsoft.DataFactory/factories/integrationRuntimes",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "SelfHosted",
+				"description": "Dev link self hosted integration runtime to connect on-premises",
+				"typeProperties": {
+					"linkedInfo": {
+						"resourceId": "[parameters('mdrdevshir_properties_typeProperties_linkedInfo_resourceId')]",
+						"authorizationType": "Rbac"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/default')]",
+			"type": "Microsoft.DataFactory/factories/managedVirtualNetworks",
+			"apiVersion": "2018-06-01",
+			"properties": {},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/AzureSynapseAnalyticsDB')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseAnalytics",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "AzureSqlDWTable",
+				"schema": [],
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/AzureSynapseAnalyticsPool')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseAnalytics",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"schema": {
+						"type": "string"
+					},
+					"TableName": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "AzureSqlDWTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": {
+						"value": "@dataset().schema",
+						"type": "Expression"
+					},
+					"table": {
+						"value": "@dataset().TableName",
+						"type": "Expression"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/DEV_Synapse_TEMP')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "DEV_Synapse_TEMP",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "AzureSqlDWTable",
+				"schema": [
+					{
+						"name": "parameter_value_id",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "parameter_code",
+						"type": "varchar"
+					},
+					{
+						"name": "parameter_value",
+						"type": "varchar"
+					},
+					{
+						"name": "active",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "touched_by",
+						"type": "varchar"
+					},
+					{
+						"name": "touched_dtm",
+						"type": "datetime",
+						"precision": 23,
+						"scale": 3
+					},
+					{
+						"name": "pipeline_code",
+						"type": "varchar"
+					},
+					{
+						"name": "pipeline_sub_code",
+						"type": "varchar"
+					}
+				],
+				"typeProperties": {
+					"schema": "dbo",
+					"table": "plp_parameter_value"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/DelimitedText1')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "McD_adls",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "mcd-emp-test",
+						"fileSystem": "mcd-adls"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/Ndtjson')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ADLSG2 TimeAnalytics DEV",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "Json",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": "data_94620167-09a1-4506-b017-b52232138db8_c10a3b2c-a4b4-4eaf-928b-35ee875acc24.json",
+						"folderPath": "Project_Data/YARDKPI/Dimensional_Control",
+						"fileSystem": "mdr-staging-data"
+					}
+				},
+				"schema": {
+					"type": "object",
+					"properties": {
+						"trans_date": {
+							"type": "string"
+						},
+						"trans_type": {
+							"type": "string"
+						},
+						"fab_code": {
+							"type": "string"
+						},
+						"contract": {
+							"type": "string"
+						},
+						"contract_title": {
+							"type": "string"
+						},
+						"job": {
+							"type": "string"
+						},
+						"job_title": {
+							"type": "string"
+						},
+						"item": {
+							"type": "string"
+						},
+						"item_title": {
+							"type": "string"
+						},
+						"ndt_drawing": {
+							"type": "string"
+						},
+						"ndt_drawing_desc": {
+							"type": "string"
+						},
+						"wctrl": {
+							"type": "string"
+						},
+						"weld_suffix": {
+							"type": "string"
+						},
+						"stress_relief": {
+							"type": "string"
+						},
+						"weld_repair_ref": {
+							"type": "integer"
+						},
+						"ndt_type": {
+							"type": "string"
+						},
+						"weldcount": {
+							"type": "integer"
+						},
+						"spool": {
+							"type": "string"
+						},
+						"report_num": {
+							"type": "number"
+						},
+						"ndt_procedure": {
+							"type": "string"
+						},
+						"ndt_percent": {
+							"type": "null"
+						},
+						"test_percent": {
+							"type": "integer"
+						},
+						"test_date": {
+							"type": "string"
+						},
+						"pass_fail": {
+							"type": "integer"
+						},
+						"narrative": {
+							"type": "string"
+						},
+						"inspector": {
+							"type": "string"
+						},
+						"insp_name": {
+							"type": "string"
+						},
+						"signed": {
+							"type": "integer"
+						},
+						"sign_override": {
+							"type": "integer"
+						},
+						"clt_jrm": {
+							"type": "string"
+						},
+						"signatory": {
+							"type": "string"
+						},
+						"sign_date": {
+							"type": "string"
+						},
+						"remarks": {
+							"type": "null"
+						},
+						"jrm_signed": {
+							"type": "string"
+						},
+						"jrm_sign_date": {
+							"type": "string"
+						},
+						"jrm_technician": {
+							"type": "string"
+						},
+						"jrm_technician_org": {
+							"type": "string"
+						},
+						"ndt_report_format": {
+							"type": "string"
+						},
+						"is_approval_required": {
+							"type": "string"
+						},
+						"jrm_approver": {
+							"type": "null"
+						},
+						"jrm_approver_signed": {
+							"type": "string"
+						},
+						"jrm_approver_sign_date": {
+							"type": "null"
+						},
+						"defect_type": {
+							"type": "null"
+						},
+						"defect_title": {
+							"type": "null"
+						},
+						"defect_length": {
+							"type": "null"
+						}
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_AzureSynapseAnalytics_6WkLAhead_sitepro_stage')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "linkedservice_DEV_entanalytics_synapse",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "AzureSqlDWTable",
+				"schema": [
+					{
+						"name": "project_number",
+						"type": "varchar"
+					},
+					{
+						"name": "UnitNum",
+						"type": "varchar"
+					},
+					{
+						"name": "WorkAreaNum",
+						"type": "varchar"
+					},
+					{
+						"name": "Dataset",
+						"type": "varchar"
+					},
+					{
+						"name": "Unit",
+						"type": "varchar"
+					},
+					{
+						"name": "WorkArea",
+						"type": "varchar"
+					},
+					{
+						"name": "ID",
+						"type": "varchar"
+					},
+					{
+						"name": "Activity",
+						"type": "varchar"
+					},
+					{
+						"name": "L3ID_CWPNum",
+						"type": "varchar"
+					},
+					{
+						"name": "SR_PrimeDisipline",
+						"type": "varchar"
+					},
+					{
+						"name": "Description",
+						"type": "varchar"
+					},
+					{
+						"name": "LastProgressedDate",
+						"type": "varchar"
+					},
+					{
+						"name": "isRequiredFlag",
+						"type": "varchar"
+					},
+					{
+						"name": "FilterCompleteCWPFlag",
+						"type": "varchar"
+					},
+					{
+						"name": "StartDate",
+						"type": "varchar"
+					},
+					{
+						"name": "EndDate",
+						"type": "varchar"
+					},
+					{
+						"name": "RestartDate",
+						"type": "varchar"
+					},
+					{
+						"name": "RemainingDuration",
+						"type": "varchar"
+					},
+					{
+						"name": "Priority",
+						"type": "varchar"
+					},
+					{
+						"name": "PercentAvailable",
+						"type": "varchar"
+					},
+					{
+						"name": "ForecastOnSite",
+						"type": "varchar"
+					},
+					{
+						"name": "CWP_WorkDays",
+						"type": "varchar"
+					},
+					{
+						"name": "SR_DefaultCrewSize",
+						"type": "varchar"
+					},
+					{
+						"name": "CWP_EstManhours",
+						"type": "varchar"
+					},
+					{
+						"name": "CWPID",
+						"type": "varchar"
+					},
+					{
+						"name": "CWP_Current",
+						"type": "varchar"
+					},
+					{
+						"name": "BudgetWhrs",
+						"type": "varchar"
+					},
+					{
+						"name": "ActualMH",
+						"type": "varchar"
+					},
+					{
+						"name": "PrevEarned",
+						"type": "varchar"
+					},
+					{
+						"name": "PrevSpent",
+						"type": "varchar"
+					},
+					{
+						"name": "BudgetQty",
+						"type": "varchar"
+					},
+					{
+						"name": "Duration",
+						"type": "varchar"
+					},
+					{
+						"name": "WeekEdDate",
+						"type": "varchar"
+					},
+					{
+						"name": "WK1",
+						"type": "varchar"
+					},
+					{
+						"name": "WK2",
+						"type": "varchar"
+					},
+					{
+						"name": "WK3",
+						"type": "varchar"
+					},
+					{
+						"name": "WK4",
+						"type": "varchar"
+					},
+					{
+						"name": "WK5",
+						"type": "varchar"
+					},
+					{
+						"name": "WK6",
+						"type": "varchar"
+					},
+					{
+						"name": "NotInRange",
+						"type": "varchar"
+					}
+				],
+				"typeProperties": {
+					"schema": "gpd",
+					"table": "NCSA_Sitepro_6WkLAhead"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_AzureSynapseAnalytics_Engineering_Manpower_Ruya')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseAnalytics",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "AzureSqlDWTable",
+				"schema": [
+					{
+						"name": "Scope",
+						"type": "varchar"
+					},
+					{
+						"name": "Revised_Scope",
+						"type": "varchar"
+					},
+					{
+						"name": "Discipline",
+						"type": "varchar"
+					},
+					{
+						"name": "Category",
+						"type": "varchar"
+					},
+					{
+						"name": "Location",
+						"type": "varchar"
+					},
+					{
+						"name": "Remote_Doha",
+						"type": "varchar"
+					},
+					{
+						"name": "Onboard_Sourcing",
+						"type": "varchar"
+					},
+					{
+						"name": "Badge_WR",
+						"type": "varchar"
+					},
+					{
+						"name": "Grade",
+						"type": "varchar"
+					},
+					{
+						"name": "Name",
+						"type": "varchar"
+					},
+					{
+						"name": "Designation",
+						"type": "varchar"
+					},
+					{
+						"name": "Remarks",
+						"type": "varchar"
+					},
+					{
+						"name": "Ruya_Exp",
+						"type": "varchar"
+					},
+					{
+						"name": "Resp",
+						"type": "varchar"
+					},
+					{
+						"name": "AVEVA_Skills_Level",
+						"type": "varchar"
+					},
+					{
+						"name": "Current_Project",
+						"type": "varchar"
+					},
+					{
+						"name": "Rev_Mob",
+						"type": "varchar"
+					},
+					{
+						"name": "Mobilization",
+						"type": "varchar"
+					},
+					{
+						"name": "For_chart",
+						"type": "varchar"
+					},
+					{
+						"name": "Full_time_part_time_as_per_MPP",
+						"type": "varchar"
+					},
+					{
+						"name": "Start",
+						"type": "varchar"
+					},
+					{
+						"name": "spread_date",
+						"type": "varchar"
+					},
+					{
+						"name": "spread_unit",
+						"type": "varchar"
+					},
+					{
+						"name": "project_number",
+						"type": "varchar"
+					},
+					{
+						"name": "SourceFileName",
+						"type": "varchar"
+					},
+					{
+						"name": "CreatedDateTime",
+						"type": "datetime",
+						"precision": 23,
+						"scale": 3
+					}
+				],
+				"typeProperties": {
+					"schema": "epr",
+					"table": "Engineering_Manpower_Ruya11_D7507"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_AzureSynapseAnalytics_HDMS_Booking_stage')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Synapse Stage table for HDMS Booking data",
+				"linkedServiceName": {
+					"referenceName": "linkedservice_DEV_entanalytics_synapse",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "AzureSqlDWTable",
+				"schema": [
+					{
+						"name": "stage_ncsa_hdms_booking_id",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "ContractNo",
+						"type": "varchar"
+					},
+					{
+						"name": "JobCardMainID",
+						"type": "varchar"
+					},
+					{
+						"name": "Activity Code",
+						"type": "varchar"
+					},
+					{
+						"name": "WorkpackCode",
+						"type": "varchar"
+					},
+					{
+						"name": "WorkPack",
+						"type": "varchar"
+					},
+					{
+						"name": "PlatForm",
+						"type": "varchar"
+					},
+					{
+						"name": "Progress_Grouping",
+						"type": "varchar"
+					},
+					{
+						"name": "Vessel",
+						"type": "varchar"
+					},
+					{
+						"name": "Discipline",
+						"type": "varchar"
+					},
+					{
+						"name": "SystemCode",
+						"type": "varchar"
+					},
+					{
+						"name": "System",
+						"type": "varchar"
+					},
+					{
+						"name": "SubSystemCode",
+						"type": "varchar"
+					},
+					{
+						"name": "SubSystem",
+						"type": "varchar"
+					},
+					{
+						"name": "SubDiscipline",
+						"type": "varchar"
+					},
+					{
+						"name": "TaskSheet_No",
+						"type": "varchar"
+					},
+					{
+						"name": "Task Name",
+						"type": "varchar"
+					},
+					{
+						"name": "IsTTA",
+						"type": "varchar"
+					},
+					{
+						"name": "Scope",
+						"type": "varchar"
+					},
+					{
+						"name": "ScopeCategory",
+						"type": "varchar"
+					},
+					{
+						"name": "CampaignCode",
+						"type": "varchar"
+					},
+					{
+						"name": "Campaign",
+						"type": "varchar"
+					},
+					{
+						"name": "ActualId",
+						"type": "varchar"
+					},
+					{
+						"name": "Estimated Mhrs",
+						"type": "varchar"
+					},
+					{
+						"name": "ProgressDate",
+						"type": "varchar"
+					},
+					{
+						"name": "Cumm_Actual_Booking_Mhrs",
+						"type": "varchar"
+					},
+					{
+						"name": "Daily_Actual_Booking_Mhrs",
+						"type": "varchar"
+					},
+					{
+						"name": "source_code",
+						"type": "varchar"
+					},
+					{
+						"name": "sub_source_code",
+						"type": "varchar"
+					},
+					{
+						"name": "function_code",
+						"type": "varchar"
+					}
+				],
+				"typeProperties": {
+					"schema": "gpd",
+					"table": "NCSA_HDMS_Booking"
+				}
+			},
+			"dependsOn": []
+		}
+	]
+}

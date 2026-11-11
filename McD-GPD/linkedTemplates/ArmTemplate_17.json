@@ -1,0 +1,1071 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "McD-GPD"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_csv_gl_code_combinations_source_stage_final_csv')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_src_snk_adgls2_ykpi",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/Payment Dashboard/Gl Code Combinations"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "Project_Data/NCSA/Payment_Dashboard/Gl_Code_Combinations_Data",
+						"fileSystem": "mdr-staging-data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_csv_gl_code_combinations_source_stage_final_flatten_csv')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_src_snk_adgls2_ykpi",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/Payment Dashboard/Gl Code Combinations"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": "Gl_code_combinations.csv",
+						"folderPath": "Project_Data/NCSA/Payment_Dashboard/Gl_Code_Combinations_Data",
+						"fileSystem": "mdr-staging-data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "CODE_COMBINATION_ID",
+						"type": "String"
+					},
+					{
+						"name": "CONCATENATED_SEGMENTS",
+						"type": "String"
+					},
+					{
+						"name": "CONCAT_DESCRIPTION",
+						"type": "String"
+					},
+					{
+						"name": "LAST_UPDATE_DATE",
+						"type": "String"
+					},
+					{
+						"name": "SEGM1_DESCRIPTION",
+						"type": "String"
+					},
+					{
+						"name": "SEGM2_DESCRIPTION",
+						"type": "String"
+					},
+					{
+						"name": "SEGM3_DESCRIPTION",
+						"type": "String"
+					},
+					{
+						"name": "SEGM4_DESCRIPTION",
+						"type": "String"
+					},
+					{
+						"name": "SEGM5_DESCRIPTION",
+						"type": "String"
+					},
+					{
+						"name": "SEGM6_DESCRIPTION",
+						"type": "String"
+					},
+					{
+						"name": "SEGM7_DESCRIPTION",
+						"type": "String"
+					},
+					{
+						"name": "SEGM8_DESCRIPTION",
+						"type": "String"
+					},
+					{
+						"name": "SEGM9_DESCRIPTION",
+						"type": "String"
+					},
+					{
+						"name": "SEGMENT1",
+						"type": "String"
+					},
+					{
+						"name": "SEGMENT2",
+						"type": "String"
+					},
+					{
+						"name": "SEGMENT3",
+						"type": "String"
+					},
+					{
+						"name": "SEGMENT4",
+						"type": "String"
+					},
+					{
+						"name": "SEGMENT5",
+						"type": "String"
+					},
+					{
+						"name": "SEGMENT6",
+						"type": "String"
+					},
+					{
+						"name": "SEGMENT7",
+						"type": "String"
+					},
+					{
+						"name": "SEGMENT8",
+						"type": "String"
+					},
+					{
+						"name": "SEGMENT9",
+						"type": "String"
+					},
+					{
+						"name": "source_name",
+						"type": "String"
+					},
+					{
+						"name": "sub_source_name",
+						"type": "String"
+					},
+					{
+						"name": "created_date_time",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_csv_hdms_booking_latest_raw')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Dataset for the combined file csv in RAW container before it is loaded into Synapse table.",
+				"linkedServiceName": {
+					"referenceName": "ADLSG2 TimeAnalytics DEV",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": "Latest_HDMS_Booking.csv",
+						"folderPath": "Project_Data/NCSA/HDMS/HDMS_Booking",
+						"fileSystem": "mdr-raw-data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_csv_hdms_booking_raw')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ADLSG2 TimeAnalytics DEV",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "Project_Data/NCSA/HDMS/HDMS_Booking",
+						"fileSystem": "mdr-raw-data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_csv_hdms_booking_stage')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ADLSG2 TimeAnalytics DEV",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "Project_Data/NCSA/HDMS/HDMS_Booking",
+						"fileSystem": "mdr-staging-data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_csv_hdms_progress_latest_raw')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Dataset for the combined file csv in RAW container before it is loaded into Synapse table.",
+				"linkedServiceName": {
+					"referenceName": "ADLSG2 TimeAnalytics DEV",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": "Latest_HDMS_Progress.csv",
+						"folderPath": "Project_Data/NCSA/HDMS/HDMS_Progress",
+						"fileSystem": "mdr-raw-data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_csv_hdms_progress_raw')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ADLSG2 TimeAnalytics DEV",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "Project_Data/NCSA/HDMS/HDMS_Progress",
+						"fileSystem": "mdr-raw-data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_csv_hdms_progress_stage')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ADLSG2 TimeAnalytics DEV",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "Project_Data/NCSA/HDMS/HDMS_Progress",
+						"fileSystem": "mdr-staging-data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_csv_hr_all_organization_units_source_stage_final_csv')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_src_snk_adgls2_ykpi",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/Payment Dashboard/HR All Organization Units"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "Project_Data/NCSA/Payment_Dashboard/HR_ALL_ORGANIZATION_UNITS",
+						"fileSystem": "mdr-staging-data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_csv_hr_all_organization_units_source_stage_final_flatten_csv')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_src_snk_adgls2_ykpi",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/Payment Dashboard/HR All Organization Units"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": "HR_ALL_ORGANIZATION_UNITS.csv",
+						"folderPath": "Project_Data/NCSA/Payment_Dashboard/HR_ALL_ORGANIZATION_UNITS",
+						"fileSystem": "mdr-staging-data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "LAST_UPDATE_DATE",
+						"type": "String"
+					},
+					{
+						"name": "NAME",
+						"type": "String"
+					},
+					{
+						"name": "ORGANIZATION_ID",
+						"type": "String"
+					},
+					{
+						"name": "source_name",
+						"type": "String"
+					},
+					{
+						"name": "sub_source_name",
+						"type": "String"
+					},
+					{
+						"name": "created_date_time",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_csv_idocs_weight_raw')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ADLSG2 TimeAnalytics DEV",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/NCSA/iDocs/Weight Master"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "Project_Data/NCSA/iDocs/Weight_Master",
+						"fileSystem": "mdr-raw-data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_csv_idocs_weight_raw_latest')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Data set for the latest combined RAW .CSV file.",
+				"linkedServiceName": {
+					"referenceName": "ADLSG2 TimeAnalytics DEV",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/NCSA/iDocs/Weight Master"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": "Latest_iDocs_weight.csv",
+						"folderPath": "Project_Data/NCSA/iDocs/Weight_Master",
+						"fileSystem": "mdr-raw-data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_csv_idocs_weight_stg')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ADLSG2 TimeAnalytics DEV",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/NCSA/iDocs/Weight Master"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "Project_Data/NCSA/iDocs/Weight_Master",
+						"fileSystem": "mdr-staging-data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_csv_inboxtask_plm_raw')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ADLSG2 TimeAnalytics DEV",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/NCSA/PLM"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "Project_Data/NCSA/PLM/InboxTask",
+						"fileSystem": "mdr-raw-data"
+					},
+					"columnDelimiter": "\u0001",
+					"escapeChar": "|",
+					"firstRowAsHeader": true,
+					"quoteChar": "^"
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_csv_inboxtask_plm_raw_latest')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Data set for the latest combined RAW files into one .csv file",
+				"linkedServiceName": {
+					"referenceName": "ADLSG2 TimeAnalytics DEV",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/NCSA/PLM"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": "Latest_InboxTask_Plm.csv",
+						"folderPath": "Project_Data/NCSA/PLM/InboxTask",
+						"fileSystem": "mdr-raw-data"
+					},
+					"columnDelimiter": "\u0001",
+					"escapeChar": "|",
+					"firstRowAsHeader": true,
+					"quoteChar": "^"
+				},
+				"schema": [
+					{
+						"name": "PROJECT",
+						"type": "String"
+					},
+					{
+						"name": "ID",
+						"type": "String"
+					},
+					{
+						"name": "PROJECT_NUMBER",
+						"type": "String"
+					},
+					{
+						"name": "MDR_IDOCSDOCID",
+						"type": "String"
+					},
+					{
+						"name": "JSON_ATTRIBUTE",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_csv_inv_units_of_measure_b_source_stage_final_csv')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_src_snk_adgls2_ykpi",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/Payment Dashboard/Inv Units Of Measure B"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "Project_Data/NCSA/Payment_Dashboard/Inv_Units_Of_Measure_B",
+						"fileSystem": "mdr-staging-data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_csv_inv_units_of_measure_b_source_stage_final_flatten_csv')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_src_snk_adgls2_ykpi",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/Payment Dashboard/Inv Units Of Measure B"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": "Inv_Units_Of_Measure_B.csv",
+						"folderPath": "Project_Data/NCSA/Payment_Dashboard/Inv_Units_Of_Measure_B",
+						"fileSystem": "mdr-staging-data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "ATTRIBUTE1",
+						"type": "String"
+					},
+					{
+						"name": "ATTRIBUTE10",
+						"type": "String"
+					},
+					{
+						"name": "ATTRIBUTE11",
+						"type": "String"
+					},
+					{
+						"name": "ATTRIBUTE12",
+						"type": "String"
+					},
+					{
+						"name": "ATTRIBUTE13",
+						"type": "String"
+					},
+					{
+						"name": "ATTRIBUTE14",
+						"type": "String"
+					},
+					{
+						"name": "ATTRIBUTE15",
+						"type": "String"
+					},
+					{
+						"name": "ATTRIBUTE2",
+						"type": "String"
+					},
+					{
+						"name": "ATTRIBUTE3",
+						"type": "String"
+					},
+					{
+						"name": "ATTRIBUTE4",
+						"type": "String"
+					},
+					{
+						"name": "ATTRIBUTE5",
+						"type": "String"
+					},
+					{
+						"name": "ATTRIBUTE6",
+						"type": "String"
+					},
+					{
+						"name": "ATTRIBUTE7",
+						"type": "String"
+					},
+					{
+						"name": "ATTRIBUTE8",
+						"type": "String"
+					},
+					{
+						"name": "ATTRIBUTE9",
+						"type": "String"
+					},
+					{
+						"name": "ATTRIBUTE_CATEGORY",
+						"type": "String"
+					},
+					{
+						"name": "BASE_UOM_FLAG",
+						"type": "String"
+					},
+					{
+						"name": "CREATED_BY",
+						"type": "String"
+					},
+					{
+						"name": "CREATION_DATE",
+						"type": "String"
+					},
+					{
+						"name": "DERIVED_UNIT_PARENT_CODE",
+						"type": "String"
+					},
+					{
+						"name": "DISABLE_DATE",
+						"type": "String"
+					},
+					{
+						"name": "GLOBAL_ATTRIBUTE1",
+						"type": "String"
+					},
+					{
+						"name": "GLOBAL_ATTRIBUTE10",
+						"type": "String"
+					},
+					{
+						"name": "GLOBAL_ATTRIBUTE11",
+						"type": "String"
+					},
+					{
+						"name": "GLOBAL_ATTRIBUTE12",
+						"type": "String"
+					},
+					{
+						"name": "GLOBAL_ATTRIBUTE13",
+						"type": "String"
+					},
+					{
+						"name": "GLOBAL_ATTRIBUTE14",
+						"type": "String"
+					},
+					{
+						"name": "GLOBAL_ATTRIBUTE15",
+						"type": "String"
+					},
+					{
+						"name": "GLOBAL_ATTRIBUTE16",
+						"type": "String"
+					},
+					{
+						"name": "GLOBAL_ATTRIBUTE17",
+						"type": "String"
+					},
+					{
+						"name": "GLOBAL_ATTRIBUTE18",
+						"type": "String"
+					},
+					{
+						"name": "GLOBAL_ATTRIBUTE19",
+						"type": "String"
+					},
+					{
+						"name": "GLOBAL_ATTRIBUTE2",
+						"type": "String"
+					},
+					{
+						"name": "GLOBAL_ATTRIBUTE20",
+						"type": "String"
+					},
+					{
+						"name": "GLOBAL_ATTRIBUTE3",
+						"type": "String"
+					},
+					{
+						"name": "GLOBAL_ATTRIBUTE4",
+						"type": "String"
+					},
+					{
+						"name": "GLOBAL_ATTRIBUTE5",
+						"type": "String"
+					},
+					{
+						"name": "GLOBAL_ATTRIBUTE6",
+						"type": "String"
+					},
+					{
+						"name": "GLOBAL_ATTRIBUTE7",
+						"type": "String"
+					},
+					{
+						"name": "GLOBAL_ATTRIBUTE8",
+						"type": "String"
+					},
+					{
+						"name": "GLOBAL_ATTRIBUTE9",
+						"type": "String"
+					},
+					{
+						"name": "GLOBAL_ATTRIBUTE_CATEGORY",
+						"type": "String"
+					},
+					{
+						"name": "GLOBAL_ATTRIBUTE_DATE1",
+						"type": "String"
+					},
+					{
+						"name": "GLOBAL_ATTRIBUTE_DATE2",
+						"type": "String"
+					},
+					{
+						"name": "GLOBAL_ATTRIBUTE_DATE3",
+						"type": "String"
+					},
+					{
+						"name": "GLOBAL_ATTRIBUTE_DATE4",
+						"type": "String"
+					},
+					{
+						"name": "GLOBAL_ATTRIBUTE_DATE5",
+						"type": "String"
+					},
+					{
+						"name": "GLOBAL_ATTRIBUTE_NUMBER1",
+						"type": "String"
+					},
+					{
+						"name": "GLOBAL_ATTRIBUTE_NUMBER2",
+						"type": "String"
+					},
+					{
+						"name": "GLOBAL_ATTRIBUTE_NUMBER3",
+						"type": "String"
+					},
+					{
+						"name": "GLOBAL_ATTRIBUTE_NUMBER4",
+						"type": "String"
+					},
+					{
+						"name": "GLOBAL_ATTRIBUTE_NUMBER5",
+						"type": "String"
+					},
+					{
+						"name": "HAS_GENERATED_CODE",
+						"type": "String"
+					},
+					{
+						"name": "JOB_DEFINITION_NAME",
+						"type": "String"
+					},
+					{
+						"name": "JOB_DEFINITION_PACKAGE",
+						"type": "String"
+					},
+					{
+						"name": "LAST_UPDATED_BY",
+						"type": "String"
+					},
+					{
+						"name": "LAST_UPDATE_DATE",
+						"type": "String"
+					},
+					{
+						"name": "LAST_UPDATE_LOGIN",
+						"type": "String"
+					},
+					{
+						"name": "OBJECT_VERSION_NUMBER",
+						"type": "String"
+					},
+					{
+						"name": "REQUEST_ID",
+						"type": "String"
+					},
+					{
+						"name": "STANDARD_PACK_FLAG",
+						"type": "String"
+					},
+					{
+						"name": "UNIT_OF_MEASURE_ID",
+						"type": "String"
+					},
+					{
+						"name": "UOM_CLASS",
+						"type": "String"
+					},
+					{
+						"name": "UOM_CODE",
+						"type": "String"
+					},
+					{
+						"name": "source_name",
+						"type": "String"
+					},
+					{
+						"name": "sub_source_name",
+						"type": "String"
+					},
+					{
+						"name": "created_date_time",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_csv_inv_units_of_measure_tl_source_stage_final_csv')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_src_snk_adgls2_ykpi",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/Payment Dashboard/Inv Units Of Measure Tl"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "Project_Data/NCSA/Payment_Dashboard/Inv_Units_Of_Measure_Tl",
+						"fileSystem": "mdr-staging-data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_csv_inv_units_of_measure_tl_source_stage_final_flatten_csv')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_src_snk_adgls2_ykpi",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/Payment Dashboard/Inv Units Of Measure Tl"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": "Inv_Units_Of_Measure_Tl.csv",
+						"folderPath": "Project_Data/NCSA/Payment_Dashboard/Inv_Units_Of_Measure_Tl",
+						"fileSystem": "mdr-staging-data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "CREATED_BY",
+						"type": "String"
+					},
+					{
+						"name": "CREATION_DATE",
+						"type": "String"
+					},
+					{
+						"name": "DESCRIPTION",
+						"type": "String"
+					},
+					{
+						"name": "LANGUAGE",
+						"type": "String"
+					},
+					{
+						"name": "LAST_UPDATED_BY",
+						"type": "String"
+					},
+					{
+						"name": "LAST_UPDATE_DATE",
+						"type": "String"
+					},
+					{
+						"name": "LAST_UPDATE_LOGIN",
+						"type": "String"
+					},
+					{
+						"name": "OBJECT_VERSION_NUMBER",
+						"type": "String"
+					},
+					{
+						"name": "SOURCE_LANG",
+						"type": "String"
+					},
+					{
+						"name": "UNIT_OF_MEASURE",
+						"type": "String"
+					},
+					{
+						"name": "UNIT_OF_MEASURE_ID",
+						"type": "String"
+					},
+					{
+						"name": "UOM_PLURAL_DESC",
+						"type": "String"
+					},
+					{
+						"name": "UOM_RECIPROCAL_DESC",
+						"type": "String"
+					},
+					{
+						"name": "source_name",
+						"type": "String"
+					},
+					{
+						"name": "sub_source_name",
+						"type": "String"
+					},
+					{
+						"name": "created_date_time",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_csv_invoice_distributions_ap_invoice_distributions_all_source_stage_final_csv')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_src_snk_adgls2_ykpi",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/Payment Dashboard/Invoice Distribution"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "Project_Data/NCSA/Payment_Dashboard/Invoice_Distribution",
+						"fileSystem": "mdr-staging-data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		}
+	]
+}

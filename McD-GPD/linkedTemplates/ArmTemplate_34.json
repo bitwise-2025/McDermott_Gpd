@@ -1,0 +1,2358 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "McD-GPD"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_orc_generic_file')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Generic ORC dataset connected  to Azure Datalake",
+				"linkedServiceName": {
+					"referenceName": "ADLSG2 TimeAnalytics DEV",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"p_ds_orc_dir": {
+						"type": "string"
+					},
+					"p_ds_orc_file": {
+						"type": "string"
+					},
+					"p_ds_orc_container": {
+						"type": "string"
+					}
+				},
+				"folder": {
+					"name": "Projects/NCSA"
+				},
+				"annotations": [],
+				"type": "Orc",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": {
+							"value": "@dataset().p_ds_orc_file",
+							"type": "Expression"
+						},
+						"folderPath": {
+							"value": "@dataset().p_ds_orc_dir",
+							"type": "Expression"
+						},
+						"fileSystem": {
+							"value": "@dataset().p_ds_orc_container",
+							"type": "Expression"
+						}
+					},
+					"orcCompressionCodec": "snappy",
+					"enablePhysicalSchema": true
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_p6_labor_raw_latest_file')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ADLSG2 TimeAnalytics DEV",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": "latest_p6_labor_units.csv",
+						"folderPath": "Project_Data/NCSA/P6/Labor_Units",
+						"fileSystem": "mdr-raw-data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "Project ID",
+						"type": "String"
+					},
+					{
+						"name": "ROC ID",
+						"type": "String"
+					},
+					{
+						"name": "ROCS ID",
+						"type": "String"
+					},
+					{
+						"name": "Project Number",
+						"type": "String"
+					},
+					{
+						"name": "Project Description",
+						"type": "String"
+					},
+					{
+						"name": "Code",
+						"type": "String"
+					},
+					{
+						"name": "Name",
+						"type": "String"
+					},
+					{
+						"name": "Sub Prime",
+						"type": "String"
+					},
+					{
+						"name": "ROCS Name",
+						"type": "String"
+					},
+					{
+						"name": "ROCS Step",
+						"type": "String"
+					},
+					{
+						"name": "ROCS Percentage",
+						"type": "String"
+					},
+					{
+						"name": "Driving?",
+						"type": "String"
+					},
+					{
+						"name": "Quantity",
+						"type": "String"
+					},
+					{
+						"name": "Quantity Description",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_paint_details_stg')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ADLSG2 TimeAnalytics DEV",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"p_ds_filename": {
+						"type": "string"
+					},
+					"p_ds_folderpath": {
+						"type": "string"
+					},
+					"p_ds_filesystem": {
+						"type": "string"
+					}
+				},
+				"folder": {
+					"name": "Projects/YARD KPI/PCM"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": {
+							"value": "@dataset().p_ds_filename",
+							"type": "Expression"
+						},
+						"folderPath": {
+							"value": "@dataset().p_ds_folderpath",
+							"type": "Expression"
+						},
+						"fileSystem": {
+							"value": "@dataset().p_ds_filesystem",
+							"type": "Expression"
+						}
+					},
+					"columnDelimiter": "\u0001",
+					"rowDelimiter": {
+						"value": "|",
+						"type": "Expression"
+					},
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": {
+						"value": "~",
+						"type": "Expression"
+					}
+				},
+				"schema": [
+					{
+						"name": "trans_date",
+						"type": "String"
+					},
+					{
+						"name": "trans_type",
+						"type": "String"
+					},
+					{
+						"name": "fab_code",
+						"type": "String"
+					},
+					{
+						"name": "contract",
+						"type": "String"
+					},
+					{
+						"name": "contract_title",
+						"type": "String"
+					},
+					{
+						"name": "job",
+						"type": "String"
+					},
+					{
+						"name": "job_title",
+						"type": "String"
+					},
+					{
+						"name": "pctrl",
+						"type": "String"
+					},
+					{
+						"name": "paint_sys_code",
+						"type": "String"
+					},
+					{
+						"name": "color",
+						"type": "String"
+					},
+					{
+						"name": "surf_cleanliness",
+						"type": "String"
+					},
+					{
+						"name": "qr_no",
+						"type": "String"
+					},
+					{
+						"name": "bpctwd_num",
+						"type": "String"
+					},
+					{
+						"name": "paint_date",
+						"type": "String"
+					},
+					{
+						"name": "insp_date",
+						"type": "String"
+					},
+					{
+						"name": "shift",
+						"type": "String"
+					},
+					{
+						"name": "inspector",
+						"type": "String"
+					},
+					{
+						"name": "report_type",
+						"type": "String"
+					},
+					{
+						"name": "report_num",
+						"type": "String"
+					},
+					{
+						"name": "steel_code",
+						"type": "String"
+					},
+					{
+						"name": "cliam_zone",
+						"type": "String"
+					},
+					{
+						"name": "signed",
+						"type": "String"
+					},
+					{
+						"name": "jrm_signed",
+						"type": "String"
+					},
+					{
+						"name": "jrm_technician",
+						"type": "String"
+					},
+					{
+						"name": "jrm_sign_date",
+						"type": "String"
+					},
+					{
+						"name": "supervisor_id",
+						"type": "String"
+					},
+					{
+						"name": "supervisor_sign_date",
+						"type": "String"
+					},
+					{
+						"name": "signatory",
+						"type": "String"
+					},
+					{
+						"name": "sign_date",
+						"type": "String"
+					},
+					{
+						"name": "pnt_report",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_parquet_generic')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_adgls2_src_generic",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"file_system": {
+						"type": "string"
+					},
+					"directory": {
+						"type": "string"
+					},
+					"file_name": {
+						"type": "string"
+					}
+				},
+				"folder": {
+					"name": "Projects/Central Engineering Database"
+				},
+				"annotations": [],
+				"type": "Parquet",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": {
+							"value": "@dataset().file_name",
+							"type": "Expression"
+						},
+						"folderPath": {
+							"value": "@dataset().directory",
+							"type": "Expression"
+						},
+						"fileSystem": {
+							"value": "@dataset().file_system",
+							"type": "Expression"
+						}
+					},
+					"compressionCodec": "snappy"
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_pcm_ndt_details_stg_generic')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ADLSG2 TimeAnalytics DEV",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"p_ds_filename": {
+						"type": "string"
+					},
+					"p_ds_folderpath": {
+						"type": "string"
+					},
+					"p_ds_filesystem": {
+						"type": "string"
+					}
+				},
+				"folder": {
+					"name": "Projects/YARD KPI/PCM"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": {
+							"value": "@dataset().p_ds_filename",
+							"type": "Expression"
+						},
+						"folderPath": {
+							"value": "@dataset().p_ds_folderpath",
+							"type": "Expression"
+						},
+						"fileSystem": {
+							"value": "@dataset().p_ds_filesystem",
+							"type": "Expression"
+						}
+					},
+					"columnDelimiter": "\u0001",
+					"rowDelimiter": {
+						"value": "|",
+						"type": "Expression"
+					},
+					"escapeChar": {
+						"value": "~",
+						"type": "Expression"
+					},
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "trans_date",
+						"type": "String"
+					},
+					{
+						"name": "trans_type",
+						"type": "String"
+					},
+					{
+						"name": "fab_code",
+						"type": "String"
+					},
+					{
+						"name": "contract",
+						"type": "String"
+					},
+					{
+						"name": "contract_title",
+						"type": "String"
+					},
+					{
+						"name": "job",
+						"type": "String"
+					},
+					{
+						"name": "job_title",
+						"type": "String"
+					},
+					{
+						"name": "item",
+						"type": "String"
+					},
+					{
+						"name": "item_title",
+						"type": "String"
+					},
+					{
+						"name": "ndt_drawing",
+						"type": "String"
+					},
+					{
+						"name": "ndt_drawing_desc",
+						"type": "String"
+					},
+					{
+						"name": "wctrl",
+						"type": "String"
+					},
+					{
+						"name": "weld_suffix",
+						"type": "String"
+					},
+					{
+						"name": "stress_relief",
+						"type": "String"
+					},
+					{
+						"name": "weld_repair_ref",
+						"type": "String"
+					},
+					{
+						"name": "ndt_type",
+						"type": "String"
+					},
+					{
+						"name": "weldcount",
+						"type": "String"
+					},
+					{
+						"name": "spool",
+						"type": "String"
+					},
+					{
+						"name": "report_num",
+						"type": "String"
+					},
+					{
+						"name": "ndt_procedure",
+						"type": "String"
+					},
+					{
+						"name": "ndt_percent",
+						"type": "String"
+					},
+					{
+						"name": "test_percent",
+						"type": "String"
+					},
+					{
+						"name": "test_date",
+						"type": "String"
+					},
+					{
+						"name": "pass_fail",
+						"type": "String"
+					},
+					{
+						"name": "narrative",
+						"type": "String"
+					},
+					{
+						"name": "inspector",
+						"type": "String"
+					},
+					{
+						"name": "insp_name",
+						"type": "String"
+					},
+					{
+						"name": "signed",
+						"type": "String"
+					},
+					{
+						"name": "sign_override",
+						"type": "String"
+					},
+					{
+						"name": "clt_jrm",
+						"type": "String"
+					},
+					{
+						"name": "signatory",
+						"type": "String"
+					},
+					{
+						"name": "sign_date",
+						"type": "String"
+					},
+					{
+						"name": "remarks",
+						"type": "String"
+					},
+					{
+						"name": "jrm_signed",
+						"type": "String"
+					},
+					{
+						"name": "jrm_sign_date",
+						"type": "String"
+					},
+					{
+						"name": "jrm_technician",
+						"type": "String"
+					},
+					{
+						"name": "jrm_technician_org",
+						"type": "String"
+					},
+					{
+						"name": "ndt_report_format",
+						"type": "String"
+					},
+					{
+						"name": "is_approval_required",
+						"type": "String"
+					},
+					{
+						"name": "jrm_approver",
+						"type": "String"
+					},
+					{
+						"name": "jrm_approver_signed",
+						"type": "String"
+					},
+					{
+						"name": "jrm_approver_sign_date",
+						"type": "String"
+					},
+					{
+						"name": "defect_type",
+						"type": "String"
+					},
+					{
+						"name": "defect_title",
+						"type": "String"
+					},
+					{
+						"name": "defect_length",
+						"type": "String"
+					},
+					{
+						"name": "include_in_rr_calc",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_pcm_stg_generic')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ADLSG2 TimeAnalytics DEV",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"p_ds_filename": {
+						"type": "string"
+					},
+					"p_ds_folderpath": {
+						"type": "string"
+					},
+					"p_ds_filesystem": {
+						"type": "string"
+					}
+				},
+				"folder": {
+					"name": "Projects/YARD KPI/PCM"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": {
+							"value": "@dataset().p_ds_folderpath",
+							"type": "Expression"
+						},
+						"fileSystem": {
+							"value": "@dataset().p_ds_filesystem",
+							"type": "Expression"
+						}
+					},
+					"columnDelimiter": "\u0001",
+					"rowDelimiter": {
+						"value": "|",
+						"type": "Expression"
+					},
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": {
+						"value": "~",
+						"type": "Expression"
+					}
+				},
+				"schema": [
+					{
+						"name": "trans_date",
+						"type": "String"
+					},
+					{
+						"name": "trans_type",
+						"type": "String"
+					},
+					{
+						"name": "fab_code",
+						"type": "String"
+					},
+					{
+						"name": "contract",
+						"type": "String"
+					},
+					{
+						"name": "contract_title",
+						"type": "String"
+					},
+					{
+						"name": "job",
+						"type": "String"
+					},
+					{
+						"name": "job_title",
+						"type": "String"
+					},
+					{
+						"name": "item",
+						"type": "String"
+					},
+					{
+						"name": "item_title",
+						"type": "String"
+					},
+					{
+						"name": "ndt_drawing",
+						"type": "String"
+					},
+					{
+						"name": "ndt_drawing_desc",
+						"type": "String"
+					},
+					{
+						"name": "wctrl",
+						"type": "String"
+					},
+					{
+						"name": "weld_suffix",
+						"type": "String"
+					},
+					{
+						"name": "stress_relief",
+						"type": "String"
+					},
+					{
+						"name": "weld_repair_ref",
+						"type": "String"
+					},
+					{
+						"name": "discipline",
+						"type": "String"
+					},
+					{
+						"name": "spool",
+						"type": "String"
+					},
+					{
+						"name": "weld",
+						"type": "String"
+					},
+					{
+						"name": "weld_location",
+						"type": "String"
+					},
+					{
+						"name": "weld_type",
+						"type": "String"
+					},
+					{
+						"name": "joint_type",
+						"type": "String"
+					},
+					{
+						"name": "material_type",
+						"type": "String"
+					},
+					{
+						"name": "material_grade",
+						"type": "String"
+					},
+					{
+						"name": "material_type2",
+						"type": "String"
+					},
+					{
+						"name": "material_grade2",
+						"type": "String"
+					},
+					{
+						"name": "fabrication_area",
+						"type": "String"
+					},
+					{
+						"name": "weld_attachment",
+						"type": "String"
+					},
+					{
+						"name": "weld_category",
+						"type": "String"
+					},
+					{
+						"name": "pipe_bore",
+						"type": "String"
+					},
+					{
+						"name": "pipe_schedule",
+						"type": "String"
+					},
+					{
+						"name": "thickness",
+						"type": "String"
+					},
+					{
+						"name": "diameter",
+						"type": "String"
+					},
+					{
+						"name": "weld_length",
+						"type": "String"
+					},
+					{
+						"name": "weld_date",
+						"type": "String"
+					},
+					{
+						"name": "weld_status",
+						"type": "String"
+					},
+					{
+						"name": "weld_clear_date",
+						"type": "String"
+					},
+					{
+						"name": "cutout",
+						"type": "String"
+					},
+					{
+						"name": "weldcount",
+						"type": "String"
+					},
+					{
+						"name": "weld_updated_on",
+						"type": "String"
+					},
+					{
+						"name": "recap",
+						"type": "String"
+					},
+					{
+						"name": "repair_gen",
+						"type": "String"
+					},
+					{
+						"name": "repair_status_code",
+						"type": "String"
+					},
+					{
+						"name": "weld_repair_date",
+						"type": "String"
+					},
+					{
+						"name": "mcd_inspector",
+						"type": "String"
+					},
+					{
+						"name": "client_inspector",
+						"type": "String"
+					},
+					{
+						"name": "vis_report_num",
+						"type": "String"
+					},
+					{
+						"name": "vis_date",
+						"type": "String"
+					},
+					{
+						"name": "clear_date",
+						"type": "String"
+					},
+					{
+						"name": "weld_machine",
+						"type": "String"
+					},
+					{
+						"name": "fitter1",
+						"type": "String"
+					},
+					{
+						"name": "fitter2",
+						"type": "String"
+					},
+					{
+						"name": "fitter3",
+						"type": "String"
+					},
+					{
+						"name": "Fitup_insp_name",
+						"type": "String"
+					},
+					{
+						"name": "fitup_date",
+						"type": "String"
+					},
+					{
+						"name": "fitup_status",
+						"type": "String"
+					},
+					{
+						"name": "fitup_updated_on",
+						"type": "String"
+					},
+					{
+						"name": "fitup_inspection_date",
+						"type": "String"
+					},
+					{
+						"name": "fitup_inspector",
+						"type": "String"
+					},
+					{
+						"name": "fitup_rep_num",
+						"type": "String"
+					},
+					{
+						"name": "mtn1",
+						"type": "String"
+					},
+					{
+						"name": "mtn2",
+						"type": "String"
+					},
+					{
+						"name": "include_in_rr_calc",
+						"type": "String"
+					},
+					{
+						"name": "fitter_leader_man",
+						"type": "String"
+					},
+					{
+						"name": "leaderman_badgeid",
+						"type": "String"
+					},
+					{
+						"name": "leaderman_name",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_phases_sitepro_raw')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ADLSG2 TimeAnalytics DEV",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "Project_Data/NCSA/SitePro/Phases",
+						"fileSystem": "mdr-raw-data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "project_id",
+						"type": "String"
+					},
+					{
+						"name": "ID",
+						"type": "String"
+					},
+					{
+						"name": "Code",
+						"type": "String"
+					},
+					{
+						"name": "Description",
+						"type": "String"
+					},
+					{
+						"name": "CreatedByID",
+						"type": "String"
+					},
+					{
+						"name": "CreatedDate",
+						"type": "String"
+					},
+					{
+						"name": "ModifiedByID",
+						"type": "String"
+					},
+					{
+						"name": "ModifiedDate",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_pqr_project_master_stg_generic')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ADLSG2 TimeAnalytics DEV",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"p_ds_filename": {
+						"type": "string"
+					},
+					"p_ds_folderpath": {
+						"type": "string"
+					},
+					"p_ds_filesystem": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": {
+							"value": "@dataset().p_ds_filename",
+							"type": "Expression"
+						},
+						"folderPath": {
+							"value": "@dataset().p_ds_folderpath",
+							"type": "Expression"
+						},
+						"fileSystem": {
+							"value": "@dataset().p_ds_filesystem",
+							"type": "Expression"
+						}
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "Id",
+						"type": "String"
+					},
+					{
+						"name": "ContentTypeID",
+						"type": "String"
+					},
+					{
+						"name": "ContentType",
+						"type": "String"
+					},
+					{
+						"name": "Title",
+						"type": "String"
+					},
+					{
+						"name": "Modified",
+						"type": "String"
+					},
+					{
+						"name": "Created",
+						"type": "String"
+					},
+					{
+						"name": "CreatedById",
+						"type": "String"
+					},
+					{
+						"name": "ModifiedById",
+						"type": "String"
+					},
+					{
+						"name": "Owshiddenversion",
+						"type": "String"
+					},
+					{
+						"name": "Version",
+						"type": "String"
+					},
+					{
+						"name": "Path",
+						"type": "String"
+					},
+					{
+						"name": "ComplianceAssetId",
+						"type": "String"
+					},
+					{
+						"name": "ProjectCode",
+						"type": "String"
+					},
+					{
+						"name": "ActiveStatus",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_pqr_stg_generic')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ADLSG2 TimeAnalytics DEV",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"p_ds_filename": {
+						"type": "string"
+					},
+					"p_ds_folderpath": {
+						"type": "string"
+					},
+					"p_ds_filesystem": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": {
+							"value": "@dataset().p_ds_filename",
+							"type": "Expression"
+						},
+						"folderPath": {
+							"value": "@dataset().p_ds_folderpath",
+							"type": "Expression"
+						},
+						"fileSystem": {
+							"value": "@dataset().p_ds_filesystem",
+							"type": "Expression"
+						}
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "Id",
+						"type": "String"
+					},
+					{
+						"name": "ContentTypeID",
+						"type": "String"
+					},
+					{
+						"name": "ContentType",
+						"type": "String"
+					},
+					{
+						"name": "Title",
+						"type": "String"
+					},
+					{
+						"name": "Modified",
+						"type": "String"
+					},
+					{
+						"name": "Created",
+						"type": "String"
+					},
+					{
+						"name": "CreatedById",
+						"type": "String"
+					},
+					{
+						"name": "ModifiedById",
+						"type": "String"
+					},
+					{
+						"name": "Owshiddenversion",
+						"type": "String"
+					},
+					{
+						"name": "Version",
+						"type": "String"
+					},
+					{
+						"name": "Path",
+						"type": "String"
+					},
+					{
+						"name": "ComplianceAssetId",
+						"type": "String"
+					},
+					{
+						"name": "SCOPE",
+						"type": "String"
+					},
+					{
+						"name": "PROJECT",
+						"type": "String"
+					},
+					{
+						"name": "PRIORITY",
+						"type": "String"
+					},
+					{
+						"name": "WELDPOSITION",
+						"type": "String"
+					},
+					{
+						"name": "CONSUMABLETRADENAMEAWSCLASS",
+						"type": "String"
+					},
+					{
+						"name": "TESTMATERIALGRADE",
+						"type": "String"
+					},
+					{
+						"name": "WELDPROCESS",
+						"type": "String"
+					},
+					{
+						"name": "DIATHK",
+						"type": "String"
+					},
+					{
+						"name": "WPSNo",
+						"type": "String"
+					},
+					{
+						"name": "DeliveryOfMaterial",
+						"type": "String"
+					},
+					{
+						"name": "CuttingBeveling",
+						"type": "String"
+					},
+					{
+						"name": "WELDSTART",
+						"type": "String"
+					},
+					{
+						"name": "WELDFINISH",
+						"type": "String"
+					},
+					{
+						"name": "VISUAL",
+						"type": "String"
+					},
+					{
+						"name": "PTMPI",
+						"type": "String"
+					},
+					{
+						"name": "MUTAfterCooling48Hrs",
+						"type": "String"
+					},
+					{
+						"name": "RT",
+						"type": "String"
+					},
+					{
+						"name": "GougingGrindingRepair",
+						"type": "String"
+					},
+					{
+						"name": "DateWeld1stRepair",
+						"type": "String"
+					},
+					{
+						"name": "REMARK",
+						"type": "String"
+					},
+					{
+						"name": "DPTMPI",
+						"type": "String"
+					},
+					{
+						"name": "UT",
+						"type": "String"
+					},
+					{
+						"name": "MUTRT",
+						"type": "String"
+					},
+					{
+						"name": "PAUT",
+						"type": "String"
+					},
+					{
+						"name": "SENDTOLAVORATORY",
+						"type": "String"
+					},
+					{
+						"name": "PASSEDMECHANICALTESTING",
+						"type": "String"
+					},
+					{
+						"name": "PQRPACKAGEAPPROVEDBYCLIENT",
+						"type": "String"
+					},
+					{
+						"name": "CUTOFFDATE",
+						"type": "String"
+					},
+					{
+						"name": "SRNo",
+						"type": "String"
+					},
+					{
+						"name": "PROJECTCODEId",
+						"type": "String"
+					},
+					{
+						"name": "CountApproved",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_progress_raw')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ADLSG2 TimeAnalytics DEV",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "Project_Data/NCSA/SitePro/SiteproProgress",
+						"fileSystem": "mdr-raw-data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_progress_sitepro_raw')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ADLSG2 TimeAnalytics DEV",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "Project_Data/NCSA/SitePro/SiteproProgress",
+						"fileSystem": "mdr-raw-data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "project_number",
+						"type": "String"
+					},
+					{
+						"name": "phase_code",
+						"type": "String"
+					},
+					{
+						"name": "schedule_resource_code",
+						"type": "String"
+					},
+					{
+						"name": "work_unit_code",
+						"type": "String"
+					},
+					{
+						"name": "work_area_code",
+						"type": "String"
+					},
+					{
+						"name": "activity_code",
+						"type": "String"
+					},
+					{
+						"name": "IWP_Code",
+						"type": "String"
+					},
+					{
+						"name": "IWP_Status_Code",
+						"type": "String"
+					},
+					{
+						"name": "IWP_StatusDescription",
+						"type": "String"
+					},
+					{
+						"name": "PMID",
+						"type": "String"
+					},
+					{
+						"name": "PMID_Description",
+						"type": "String"
+					},
+					{
+						"name": "Contract",
+						"type": "String"
+					},
+					{
+						"name": "Cost_Code",
+						"type": "String"
+					},
+					{
+						"name": "Cost_Code_Description",
+						"type": "String"
+					},
+					{
+						"name": "Costing_COA",
+						"type": "String"
+					},
+					{
+						"name": "Drawing_No",
+						"type": "String"
+					},
+					{
+						"name": "Tag_No",
+						"type": "String"
+					},
+					{
+						"name": "spool",
+						"type": "String"
+					},
+					{
+						"name": "line",
+						"type": "String"
+					},
+					{
+						"name": "spec",
+						"type": "String"
+					},
+					{
+						"name": "system",
+						"type": "String"
+					},
+					{
+						"name": "Piece_Mark",
+						"type": "String"
+					},
+					{
+						"name": "Cost_Type",
+						"type": "String"
+					},
+					{
+						"name": "Number_Of_Pieces",
+						"type": "String"
+					},
+					{
+						"name": "Subsystem",
+						"type": "String"
+					},
+					{
+						"name": "Text5",
+						"type": "String"
+					},
+					{
+						"name": "Bom_Node_ID",
+						"type": "String"
+					},
+					{
+						"name": "Doc_ID",
+						"type": "String"
+					},
+					{
+						"name": "Staging_Reference",
+						"type": "String"
+					},
+					{
+						"name": "Level6",
+						"type": "String"
+					},
+					{
+						"name": "planned_Status",
+						"type": "String"
+					},
+					{
+						"name": "progress_Status",
+						"type": "String"
+					},
+					{
+						"name": "workpack_status",
+						"type": "String"
+					},
+					{
+						"name": "IFC",
+						"type": "String"
+					},
+					{
+						"name": "ProgressHistoryID",
+						"type": "String"
+					},
+					{
+						"name": "ROCCode",
+						"type": "String"
+					},
+					{
+						"name": "Step",
+						"type": "String"
+					},
+					{
+						"name": "Is_Driving",
+						"type": "String"
+					},
+					{
+						"name": "Name",
+						"type": "String"
+					},
+					{
+						"name": "Capture_Origin",
+						"type": "String"
+					},
+					{
+						"name": "UserName",
+						"type": "String"
+					},
+					{
+						"name": "Progress_Entry_Date_Time",
+						"type": "String"
+					},
+					{
+						"name": "TimestampShift",
+						"type": "String"
+					},
+					{
+						"name": "ProgressDate",
+						"type": "String"
+					},
+					{
+						"name": "ProgressDelta",
+						"type": "String"
+					},
+					{
+						"name": "ProgressCumulative",
+						"type": "String"
+					},
+					{
+						"name": "Step_Percent",
+						"type": "String"
+					},
+					{
+						"name": "Budget_Hrs",
+						"type": "String"
+					},
+					{
+						"name": "Progressed_Hrs",
+						"type": "String"
+					},
+					{
+						"name": "Budget_Qty",
+						"type": "String"
+					},
+					{
+						"name": "Progressed_Qty",
+						"type": "String"
+					},
+					{
+						"name": "Install_Qty",
+						"type": "String"
+					},
+					{
+						"name": "max_date",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_project_milestones_Stage')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ADLSG2 TimeAnalytics DEV",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "Project_Data/NCSA/P6/Project_Milestones",
+						"fileSystem": "mdr-staging-data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "Project ID ",
+						"type": "String"
+					},
+					{
+						"name": "Activity ID",
+						"type": "String"
+					},
+					{
+						"name": "Activity Status",
+						"type": "String"
+					},
+					{
+						"name": "Activity Name",
+						"type": "String"
+					},
+					{
+						"name": "Original Duration",
+						"type": "String"
+					},
+					{
+						"name": "Start",
+						"type": "String"
+					},
+					{
+						"name": "Finish",
+						"type": "String"
+					},
+					{
+						"name": "Current date",
+						"type": "String"
+					},
+					{
+						"name": "% Complete",
+						"type": "String"
+					},
+					{
+						"name": "Resource",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_project_milestones_Stage_copy')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ADLSG2 TimeAnalytics DEV",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": "project_milestones.csv",
+						"folderPath": "Project_Data/NCSA/P6/Project_Milestones",
+						"fileSystem": "mdr-staging-data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "Project ID ",
+						"type": "String"
+					},
+					{
+						"name": "Activity ID",
+						"type": "String"
+					},
+					{
+						"name": "Activity Status",
+						"type": "String"
+					},
+					{
+						"name": "Activity Name",
+						"type": "String"
+					},
+					{
+						"name": "Original Duration",
+						"type": "String"
+					},
+					{
+						"name": "Start",
+						"type": "String"
+					},
+					{
+						"name": "Finish",
+						"type": "String"
+					},
+					{
+						"name": "Current date",
+						"type": "String"
+					},
+					{
+						"name": "% Complete",
+						"type": "String"
+					},
+					{
+						"name": "Resource",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_project_milestones_raw')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ADLSG2 TimeAnalytics DEV",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "Project_Data/NCSA/P6/Project_Milestones",
+						"fileSystem": "mdr-raw-data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "Project ID ",
+						"type": "String"
+					},
+					{
+						"name": "Activity ID",
+						"type": "String"
+					},
+					{
+						"name": "Activity Status",
+						"type": "String"
+					},
+					{
+						"name": "Activity Name",
+						"type": "String"
+					},
+					{
+						"name": "Original Duration",
+						"type": "String"
+					},
+					{
+						"name": "Start",
+						"type": "String"
+					},
+					{
+						"name": "Finish",
+						"type": "String"
+					},
+					{
+						"name": "Current date",
+						"type": "String"
+					},
+					{
+						"name": "% Complete",
+						"type": "String"
+					},
+					{
+						"name": "Resource",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_project_milestones_raw_combined')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ADLSG2 TimeAnalytics DEV",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": "combined_project_milestones.csv",
+						"folderPath": "Project_Data/NCSA/P6/Project_Milestones",
+						"fileSystem": "mdr-raw-data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "Project ID ",
+						"type": "String"
+					},
+					{
+						"name": "Activity ID",
+						"type": "String"
+					},
+					{
+						"name": "Activity Status",
+						"type": "String"
+					},
+					{
+						"name": "Activity Name",
+						"type": "String"
+					},
+					{
+						"name": "Original Duration",
+						"type": "String"
+					},
+					{
+						"name": "Start",
+						"type": "String"
+					},
+					{
+						"name": "Finish",
+						"type": "String"
+					},
+					{
+						"name": "Current date",
+						"type": "String"
+					},
+					{
+						"name": "% Complete",
+						"type": "String"
+					},
+					{
+						"name": "Resource",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_ruya_Engineering_Manpower_final')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureDataLakeStorageDEV",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "Project_Data/NCSA/Ruya",
+						"fileSystem": "mdr-staging-data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_ruya_Engineering_Manpower_final_unpivoted')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureDataLakeStorageDEV",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": "Unpivoted_Engineering_Manpower.csv",
+						"folderPath": "Project_Data/NCSA/Ruya",
+						"fileSystem": "mdr-staging-data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "Scope",
+						"type": "String"
+					},
+					{
+						"name": "Revised Scope",
+						"type": "String"
+					},
+					{
+						"name": "Discipline",
+						"type": "String"
+					},
+					{
+						"name": "Category",
+						"type": "String"
+					},
+					{
+						"name": "Location",
+						"type": "String"
+					},
+					{
+						"name": "Remote / Doha",
+						"type": "String"
+					},
+					{
+						"name": "Onboard / Sourcing",
+						"type": "String"
+					},
+					{
+						"name": "Badge /  WR #",
+						"type": "String"
+					},
+					{
+						"name": "Grade",
+						"type": "String"
+					},
+					{
+						"name": "Name ",
+						"type": "String"
+					},
+					{
+						"name": "Designation ",
+						"type": "String"
+					},
+					{
+						"name": "Remarks",
+						"type": "String"
+					},
+					{
+						"name": "Ruya Exp",
+						"type": "String"
+					},
+					{
+						"name": "Resp",
+						"type": "String"
+					},
+					{
+						"name": "AVEVA Skills Level",
+						"type": "String"
+					},
+					{
+						"name": "Current Project",
+						"type": "String"
+					},
+					{
+						"name": "Rev Mob",
+						"type": "String"
+					},
+					{
+						"name": "Mobilization",
+						"type": "String"
+					},
+					{
+						"name": "For chart",
+						"type": "String"
+					},
+					{
+						"name": "Full time/  part time as per MPP",
+						"type": "String"
+					},
+					{
+						"name": "Start",
+						"type": "String"
+					},
+					{
+						"name": "SourceFileName",
+						"type": "String"
+					},
+					{
+						"name": "CreatedDateTime",
+						"type": "String"
+					},
+					{
+						"name": "project_number",
+						"type": "String"
+					},
+					{
+						"name": "spread_date",
+						"type": "String"
+					},
+					{
+						"name": "spread_unit",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_ruya_Engineering_Manpower_stage')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureDataLakeStorageDEV",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": "Engineering_Manpower.csv",
+						"folderPath": "Project_Data/NCSA/Ruya",
+						"fileSystem": "mdr-staging-data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "Scope",
+						"type": "String"
+					},
+					{
+						"name": "Revised Scope",
+						"type": "String"
+					},
+					{
+						"name": "Discipline",
+						"type": "String"
+					},
+					{
+						"name": "Category",
+						"type": "String"
+					},
+					{
+						"name": "Location",
+						"type": "String"
+					},
+					{
+						"name": "Remote / Doha",
+						"type": "String"
+					},
+					{
+						"name": "Onboard / Sourcing",
+						"type": "String"
+					},
+					{
+						"name": "Badge /  WR #",
+						"type": "String"
+					},
+					{
+						"name": "Grade",
+						"type": "String"
+					},
+					{
+						"name": "Name ",
+						"type": "String"
+					},
+					{
+						"name": "Designation ",
+						"type": "String"
+					},
+					{
+						"name": "Remarks",
+						"type": "String"
+					},
+					{
+						"name": "Ruya Exp",
+						"type": "String"
+					},
+					{
+						"name": "Resp",
+						"type": "String"
+					},
+					{
+						"name": "AVEVA Skills Level",
+						"type": "String"
+					},
+					{
+						"name": "Current Project",
+						"type": "String"
+					},
+					{
+						"name": "Rev Mob",
+						"type": "String"
+					},
+					{
+						"name": "Mobilization",
+						"type": "String"
+					},
+					{
+						"name": "For chart",
+						"type": "String"
+					},
+					{
+						"name": "Full time/  part time as per MPP",
+						"type": "String"
+					},
+					{
+						"name": "Start",
+						"type": "String"
+					},
+					{
+						"name": "2023-12-01",
+						"type": "String"
+					},
+					{
+						"name": "2024-01-01",
+						"type": "String"
+					},
+					{
+						"name": "2024-02-01",
+						"type": "String"
+					},
+					{
+						"name": "2024-03-01",
+						"type": "String"
+					},
+					{
+						"name": "2024-04-01",
+						"type": "String"
+					},
+					{
+						"name": "2024-05-01",
+						"type": "String"
+					},
+					{
+						"name": "2024-06-01",
+						"type": "String"
+					},
+					{
+						"name": "2024-07-01",
+						"type": "String"
+					},
+					{
+						"name": "2024-08-01",
+						"type": "String"
+					},
+					{
+						"name": "2024-09-01",
+						"type": "String"
+					},
+					{
+						"name": "2024-10-01",
+						"type": "String"
+					},
+					{
+						"name": "2024-11-01",
+						"type": "String"
+					},
+					{
+						"name": "2024-12-01",
+						"type": "String"
+					},
+					{
+						"name": "2025-01-01",
+						"type": "String"
+					},
+					{
+						"name": "2025-02-01",
+						"type": "String"
+					},
+					{
+						"name": "2025-03-01",
+						"type": "String"
+					},
+					{
+						"name": "2025-04-01",
+						"type": "String"
+					},
+					{
+						"name": "2025-05-01",
+						"type": "String"
+					},
+					{
+						"name": "2025-06-01",
+						"type": "String"
+					},
+					{
+						"name": "2025-07-01",
+						"type": "String"
+					},
+					{
+						"name": "2025-08-01",
+						"type": "String"
+					},
+					{
+						"name": "2025-09-01",
+						"type": "String"
+					},
+					{
+						"name": "2025-10-01",
+						"type": "String"
+					},
+					{
+						"name": "2025-11-01",
+						"type": "String"
+					},
+					{
+						"name": "2025-12-01",
+						"type": "String"
+					},
+					{
+						"name": "2026-01-01",
+						"type": "String"
+					},
+					{
+						"name": "2026-02-01",
+						"type": "String"
+					},
+					{
+						"name": "2026-03-01",
+						"type": "String"
+					},
+					{
+						"name": "2026-04-01",
+						"type": "String"
+					},
+					{
+						"name": "2026-05-01",
+						"type": "String"
+					},
+					{
+						"name": "2026-06-01",
+						"type": "String"
+					},
+					{
+						"name": "2026-07-01",
+						"type": "String"
+					},
+					{
+						"name": "2026-08-01",
+						"type": "String"
+					},
+					{
+						"name": "2026-09-01",
+						"type": "String"
+					},
+					{
+						"name": "2026-10-01",
+						"type": "String"
+					},
+					{
+						"name": "2026-11-01",
+						"type": "String"
+					},
+					{
+						"name": "2026-12-01",
+						"type": "String"
+					},
+					{
+						"name": "2027-01-01",
+						"type": "String"
+					},
+					{
+						"name": "2027-02-01",
+						"type": "String"
+					},
+					{
+						"name": "2027-03-01",
+						"type": "String"
+					},
+					{
+						"name": "2027-04-01",
+						"type": "String"
+					},
+					{
+						"name": "2027-05-01",
+						"type": "String"
+					},
+					{
+						"name": "2027-06-01",
+						"type": "String"
+					},
+					{
+						"name": "2027-07-01",
+						"type": "String"
+					},
+					{
+						"name": "SourceFileName",
+						"type": "String"
+					},
+					{
+						"name": "CreatedDateTime",
+						"type": "String"
+					},
+					{
+						"name": "project_number",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_ruya_P6_Files_Data_final')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureDataLakeStorageDEV",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "Project_Data/NCSA/Hookup",
+						"fileSystem": "mdr-staging-data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_ruya_P6_Files_Data_final_Unpivoted')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureDataLakeStorageDEV",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": "Unpivoted_p6_File_Hookup_Final",
+						"folderPath": "Project_Data/NCSA/Hookup",
+						"fileSystem": "mdr-staging-data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		}
+	]
+}

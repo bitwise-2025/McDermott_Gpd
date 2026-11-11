@@ -1,0 +1,2103 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "McD-GPD"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/df_po_line_types_decoding')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/Payment Dashboard/Po Line Types"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_xml_po_line_types_source_stage_encoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SrcEncodedXml"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_delimited_xml_po_line_types_source_stage_decoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SnkDecodedXml"
+						}
+					],
+					"transformations": [
+						{
+							"name": "Decoding"
+						},
+						{
+							"name": "SelectDecodedData"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          {http://www.w3.org/2003/05/soap-envelope,Envelope} as ({http://www.w3.org/2003/05/soap-envelope,Body} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,runReportResponse} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,runReportReturn} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,metaDataList} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean), {http://xmlns.oracle.com/oxp/service/PublicReportService,reportBytes} as string, {http://xmlns.oracle.com/oxp/service/PublicReportService,reportContentType} as string, {http://xmlns.oracle.com/oxp/service/PublicReportService,reportFileID} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean), {http://xmlns.oracle.com/oxp/service/PublicReportService,reportLocale} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean)))), {http://www.w3.org/2003/05/soap-envelope,Header} as string)",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     validationMode: 'none',",
+						"     namespaces: true) ~> SrcEncodedXml",
+						"SrcEncodedXml derive(ReportBytes = fromBase64(toString({http://www.w3.org/2003/05/soap-envelope,Envelope}.{http://www.w3.org/2003/05/soap-envelope,Body}.{http://xmlns.oracle.com/oxp/service/PublicReportService,runReportResponse}.{http://xmlns.oracle.com/oxp/service/PublicReportService,runReportReturn}.{http://xmlns.oracle.com/oxp/service/PublicReportService,reportBytes}))) ~> Decoding",
+						"Decoding select(mapColumn(",
+						"          ReportBytes",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> SelectDecodedData",
+						"SelectDecodedData sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     emptyLinesAsHeader: 1,",
+						"     partitionFileNames:['source_data_decoded.xml'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SnkDecodedXml"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_po_line_types_flattening')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/Payment Dashboard/Po Line Types"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_xml_po_line_types_source_stage_decoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SrcXMl"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_po_line_types_source_stage_final_csv",
+								"type": "DatasetReference"
+							},
+							"name": "SnkCsv"
+						}
+					],
+					"transformations": [
+						{
+							"name": "XmlToCsvflatten"
+						},
+						{
+							"name": "addLoadDetails"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          DATA_DS as (G_1 as (ATTRIBUTE1 as string, ATTRIBUTE10 as string, ATTRIBUTE11 as string, ATTRIBUTE12 as string, ATTRIBUTE13 as string, ATTRIBUTE14 as string, ATTRIBUTE15 as string, ATTRIBUTE16 as string, ATTRIBUTE17 as string, ATTRIBUTE18 as string, ATTRIBUTE19 as string, ATTRIBUTE2 as string, ATTRIBUTE20 as string, ATTRIBUTE3 as string, ATTRIBUTE4 as string, ATTRIBUTE5 as string, ATTRIBUTE6 as string, ATTRIBUTE7 as string, ATTRIBUTE8 as string, ATTRIBUTE9 as string, ATTRIBUTE_CATEGORY as string, ATTRIBUTE_DATE1 as string, ATTRIBUTE_DATE10 as string, ATTRIBUTE_DATE2 as string, ATTRIBUTE_DATE3 as string, ATTRIBUTE_DATE4 as string, ATTRIBUTE_DATE5 as string, ATTRIBUTE_DATE6 as string, ATTRIBUTE_DATE7 as string, ATTRIBUTE_DATE8 as string, ATTRIBUTE_DATE9 as string, ATTRIBUTE_NUMBER1 as string, ATTRIBUTE_NUMBER10 as string, ATTRIBUTE_NUMBER2 as string, ATTRIBUTE_NUMBER3 as string, ATTRIBUTE_NUMBER4 as string, ATTRIBUTE_NUMBER5 as string, ATTRIBUTE_NUMBER6 as string, ATTRIBUTE_NUMBER7 as string, ATTRIBUTE_NUMBER8 as string, ATTRIBUTE_NUMBER9 as string, ATTRIBUTE_TIMESTAMP1 as string, ATTRIBUTE_TIMESTAMP10 as string, ATTRIBUTE_TIMESTAMP2 as string, ATTRIBUTE_TIMESTAMP3 as string, ATTRIBUTE_TIMESTAMP4 as string, ATTRIBUTE_TIMESTAMP5 as string, ATTRIBUTE_TIMESTAMP6 as string, ATTRIBUTE_TIMESTAMP7 as string, ATTRIBUTE_TIMESTAMP8 as string, ATTRIBUTE_TIMESTAMP9 as string, CATEGORY_ID as string, CREATED_BY as string, CREATION_DATE as string, CREDIT_FLAG as boolean, DESCRIPTION as string, INACTIVE_DATE as string, INSPECTION_REQUIRED_FLAG as boolean, LAST_UPDATED_BY as string, LAST_UPDATE_DATE as string, LAST_UPDATE_LOGIN as string, LINE_TYPE as string, LINE_TYPE_CODE as string, LINE_TYPE_ID as long, MATCHING_BASIS as string, MATCH_OPTION as string, ORDER_TYPE_LOOKUP_CODE as string, OUTSIDE_OPERATION_FLAG as string, PRODUCT_TYPE as string, PURCHASE_BASIS as string, RECEIVE_CLOSE_TOLERANCE as short, RECEIVING_FLAG as boolean, ROW_ID as string, UNIT_OF_MEASURE as string, UNIT_PRICE as string, UOM_CODE as string)[])",
+						"     ),",
+						"     allowSchemaDrift: false,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     validationMode: 'none',",
+						"     namespaces: true) ~> SrcXMl",
+						"SrcXMl foldDown(unroll(DATA_DS.G_1),",
+						"     mapColumn(",
+						"          ATTRIBUTE1 = DATA_DS.G_1.ATTRIBUTE1,",
+						"          ATTRIBUTE10 = DATA_DS.G_1.ATTRIBUTE10,",
+						"          ATTRIBUTE11 = DATA_DS.G_1.ATTRIBUTE11,",
+						"          ATTRIBUTE12 = DATA_DS.G_1.ATTRIBUTE12,",
+						"          ATTRIBUTE13 = DATA_DS.G_1.ATTRIBUTE13,",
+						"          ATTRIBUTE14 = DATA_DS.G_1.ATTRIBUTE14,",
+						"          ATTRIBUTE15 = DATA_DS.G_1.ATTRIBUTE15,",
+						"          ATTRIBUTE16 = DATA_DS.G_1.ATTRIBUTE16,",
+						"          ATTRIBUTE17 = DATA_DS.G_1.ATTRIBUTE17,",
+						"          ATTRIBUTE18 = DATA_DS.G_1.ATTRIBUTE18,",
+						"          ATTRIBUTE19 = DATA_DS.G_1.ATTRIBUTE19,",
+						"          ATTRIBUTE2 = DATA_DS.G_1.ATTRIBUTE2,",
+						"          ATTRIBUTE20 = DATA_DS.G_1.ATTRIBUTE20,",
+						"          ATTRIBUTE3 = DATA_DS.G_1.ATTRIBUTE3,",
+						"          ATTRIBUTE4 = DATA_DS.G_1.ATTRIBUTE4,",
+						"          ATTRIBUTE5 = DATA_DS.G_1.ATTRIBUTE5,",
+						"          ATTRIBUTE6 = DATA_DS.G_1.ATTRIBUTE6,",
+						"          ATTRIBUTE7 = DATA_DS.G_1.ATTRIBUTE7,",
+						"          ATTRIBUTE8 = DATA_DS.G_1.ATTRIBUTE8,",
+						"          ATTRIBUTE9 = DATA_DS.G_1.ATTRIBUTE9,",
+						"          ATTRIBUTE_CATEGORY = DATA_DS.G_1.ATTRIBUTE_CATEGORY,",
+						"          ATTRIBUTE_DATE1 = DATA_DS.G_1.ATTRIBUTE_DATE1,",
+						"          ATTRIBUTE_DATE10 = DATA_DS.G_1.ATTRIBUTE_DATE10,",
+						"          ATTRIBUTE_DATE2 = DATA_DS.G_1.ATTRIBUTE_DATE2,",
+						"          ATTRIBUTE_DATE3 = DATA_DS.G_1.ATTRIBUTE_DATE3,",
+						"          ATTRIBUTE_DATE4 = DATA_DS.G_1.ATTRIBUTE_DATE4,",
+						"          ATTRIBUTE_DATE5 = DATA_DS.G_1.ATTRIBUTE_DATE5,",
+						"          ATTRIBUTE_DATE6 = DATA_DS.G_1.ATTRIBUTE_DATE6,",
+						"          ATTRIBUTE_DATE7 = DATA_DS.G_1.ATTRIBUTE_DATE7,",
+						"          ATTRIBUTE_DATE8 = DATA_DS.G_1.ATTRIBUTE_DATE8,",
+						"          ATTRIBUTE_DATE9 = DATA_DS.G_1.ATTRIBUTE_DATE9,",
+						"          ATTRIBUTE_NUMBER1 = DATA_DS.G_1.ATTRIBUTE_NUMBER1,",
+						"          ATTRIBUTE_NUMBER10 = DATA_DS.G_1.ATTRIBUTE_NUMBER10,",
+						"          ATTRIBUTE_NUMBER2 = DATA_DS.G_1.ATTRIBUTE_NUMBER2,",
+						"          ATTRIBUTE_NUMBER3 = DATA_DS.G_1.ATTRIBUTE_NUMBER3,",
+						"          ATTRIBUTE_NUMBER4 = DATA_DS.G_1.ATTRIBUTE_NUMBER4,",
+						"          ATTRIBUTE_NUMBER5 = DATA_DS.G_1.ATTRIBUTE_NUMBER5,",
+						"          ATTRIBUTE_NUMBER6 = DATA_DS.G_1.ATTRIBUTE_NUMBER6,",
+						"          ATTRIBUTE_NUMBER7 = DATA_DS.G_1.ATTRIBUTE_NUMBER7,",
+						"          ATTRIBUTE_NUMBER8 = DATA_DS.G_1.ATTRIBUTE_NUMBER8,",
+						"          ATTRIBUTE_NUMBER9 = DATA_DS.G_1.ATTRIBUTE_NUMBER9,",
+						"          ATTRIBUTE_TIMESTAMP1 = DATA_DS.G_1.ATTRIBUTE_TIMESTAMP1,",
+						"          ATTRIBUTE_TIMESTAMP10 = DATA_DS.G_1.ATTRIBUTE_TIMESTAMP10,",
+						"          ATTRIBUTE_TIMESTAMP2 = DATA_DS.G_1.ATTRIBUTE_TIMESTAMP2,",
+						"          ATTRIBUTE_TIMESTAMP3 = DATA_DS.G_1.ATTRIBUTE_TIMESTAMP3,",
+						"          ATTRIBUTE_TIMESTAMP4 = DATA_DS.G_1.ATTRIBUTE_TIMESTAMP4,",
+						"          ATTRIBUTE_TIMESTAMP5 = DATA_DS.G_1.ATTRIBUTE_TIMESTAMP5,",
+						"          ATTRIBUTE_TIMESTAMP6 = DATA_DS.G_1.ATTRIBUTE_TIMESTAMP6,",
+						"          ATTRIBUTE_TIMESTAMP7 = DATA_DS.G_1.ATTRIBUTE_TIMESTAMP7,",
+						"          ATTRIBUTE_TIMESTAMP8 = DATA_DS.G_1.ATTRIBUTE_TIMESTAMP8,",
+						"          ATTRIBUTE_TIMESTAMP9 = DATA_DS.G_1.ATTRIBUTE_TIMESTAMP9,",
+						"          CATEGORY_ID = DATA_DS.G_1.CATEGORY_ID,",
+						"          CREATED_BY = DATA_DS.G_1.CREATED_BY,",
+						"          CREATION_DATE = DATA_DS.G_1.CREATION_DATE,",
+						"          CREDIT_FLAG = DATA_DS.G_1.CREDIT_FLAG,",
+						"          DESCRIPTION = DATA_DS.G_1.DESCRIPTION,",
+						"          INACTIVE_DATE = DATA_DS.G_1.INACTIVE_DATE,",
+						"          INSPECTION_REQUIRED_FLAG = DATA_DS.G_1.INSPECTION_REQUIRED_FLAG,",
+						"          LAST_UPDATED_BY = DATA_DS.G_1.LAST_UPDATED_BY,",
+						"          LAST_UPDATE_DATE = DATA_DS.G_1.LAST_UPDATE_DATE,",
+						"          LAST_UPDATE_LOGIN = DATA_DS.G_1.LAST_UPDATE_LOGIN,",
+						"          LINE_TYPE = DATA_DS.G_1.LINE_TYPE,",
+						"          LINE_TYPE_CODE = DATA_DS.G_1.LINE_TYPE_CODE,",
+						"          LINE_TYPE_ID = DATA_DS.G_1.LINE_TYPE_ID,",
+						"          MATCHING_BASIS = DATA_DS.G_1.MATCHING_BASIS,",
+						"          MATCH_OPTION = DATA_DS.G_1.MATCH_OPTION,",
+						"          ORDER_TYPE_LOOKUP_CODE = DATA_DS.G_1.ORDER_TYPE_LOOKUP_CODE,",
+						"          OUTSIDE_OPERATION_FLAG = DATA_DS.G_1.OUTSIDE_OPERATION_FLAG,",
+						"          PRODUCT_TYPE = DATA_DS.G_1.PRODUCT_TYPE,",
+						"          PURCHASE_BASIS = DATA_DS.G_1.PURCHASE_BASIS,",
+						"          RECEIVE_CLOSE_TOLERANCE = DATA_DS.G_1.RECEIVE_CLOSE_TOLERANCE,",
+						"          RECEIVING_FLAG = DATA_DS.G_1.RECEIVING_FLAG,",
+						"          ROW_ID = DATA_DS.G_1.ROW_ID,",
+						"          UNIT_OF_MEASURE = DATA_DS.G_1.UNIT_OF_MEASURE,",
+						"          UNIT_PRICE = DATA_DS.G_1.UNIT_PRICE,",
+						"          UOM_CODE = DATA_DS.G_1.UOM_CODE",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> XmlToCsvflatten",
+						"XmlToCsvflatten derive(source_name = 'SYSTEM',",
+						"          sub_source_name = 'R2P',",
+						"          created_date_time = currentUTC()) ~> addLoadDetails",
+						"addLoadDetails sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     partitionFileNames:['Po_Line_Types.csv'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SnkCsv"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_po_lines_all_decoding')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/Payment Dashboard/Po Lines All"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_xml_po_lines_all_source_stage_encoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SrcEncodedXml"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_delimited_xml_po_lines_all_source_stage_decoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SnkDecodedXml"
+						}
+					],
+					"transformations": [
+						{
+							"name": "Decoding"
+						},
+						{
+							"name": "SelectDecodedData"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          {http://www.w3.org/2003/05/soap-envelope,Envelope} as ({http://www.w3.org/2003/05/soap-envelope,Body} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,runReportResponse} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,runReportReturn} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,metaDataList} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean), {http://xmlns.oracle.com/oxp/service/PublicReportService,reportBytes} as string, {http://xmlns.oracle.com/oxp/service/PublicReportService,reportContentType} as string, {http://xmlns.oracle.com/oxp/service/PublicReportService,reportFileID} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean), {http://xmlns.oracle.com/oxp/service/PublicReportService,reportLocale} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean)))), {http://www.w3.org/2003/05/soap-envelope,Header} as string)",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     validationMode: 'none',",
+						"     namespaces: true) ~> SrcEncodedXml",
+						"SrcEncodedXml derive(ReportBytes = fromBase64(toString({http://www.w3.org/2003/05/soap-envelope,Envelope}.{http://www.w3.org/2003/05/soap-envelope,Body}.{http://xmlns.oracle.com/oxp/service/PublicReportService,runReportResponse}.{http://xmlns.oracle.com/oxp/service/PublicReportService,runReportReturn}.{http://xmlns.oracle.com/oxp/service/PublicReportService,reportBytes}))) ~> Decoding",
+						"Decoding select(mapColumn(",
+						"          ReportBytes",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> SelectDecodedData",
+						"SelectDecodedData sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     emptyLinesAsHeader: 1,",
+						"     partitionFileNames:['source_data_decoded.xml'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SnkDecodedXml"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_po_lines_all_flattening')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/Payment Dashboard/Po Lines All"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_xml_po_lines_all_source_stage_decoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SrcXMl"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_po_lines_all_source_stage_final_csv",
+								"type": "DatasetReference"
+							},
+							"name": "SnkCsv"
+						}
+					],
+					"transformations": [
+						{
+							"name": "XmlToCsvflatten"
+						},
+						{
+							"name": "addLoadDetails"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          DATA_DS as (G_1 as (AGING_PERIOD_DAYS as string, ALLOW_DESCRIPTION_UPDATE_FLAG as boolean, ALLOW_PRICE_OVERRIDE_FLAG as boolean, AMOUNT as double, AMOUNT_RELEASED as double, ATTRIBUTE1 as short, ATTRIBUTE10 as string, ATTRIBUTE11 as string, ATTRIBUTE12 as string, ATTRIBUTE13 as string, ATTRIBUTE14 as string, ATTRIBUTE15 as string, ATTRIBUTE16 as string, ATTRIBUTE17 as short, ATTRIBUTE18 as string, ATTRIBUTE19 as integer, ATTRIBUTE2 as string, ATTRIBUTE20 as short, ATTRIBUTE3 as string, ATTRIBUTE4 as string, ATTRIBUTE5 as string, ATTRIBUTE6 as short, ATTRIBUTE7 as string, ATTRIBUTE8 as string, ATTRIBUTE9 as string, ATTRIBUTE_CATEGORY as string, ATTRIBUTE_DATE1 as string, ATTRIBUTE_DATE10 as string, ATTRIBUTE_DATE2 as string, ATTRIBUTE_DATE3 as string, ATTRIBUTE_DATE4 as string, ATTRIBUTE_DATE5 as string, ATTRIBUTE_DATE6 as string, ATTRIBUTE_DATE7 as string, ATTRIBUTE_DATE8 as string, ATTRIBUTE_DATE9 as string, ATTRIBUTE_NUMBER1 as string, ATTRIBUTE_NUMBER10 as string, ATTRIBUTE_NUMBER2 as string, ATTRIBUTE_NUMBER3 as string, ATTRIBUTE_NUMBER4 as string, ATTRIBUTE_NUMBER5 as string, ATTRIBUTE_NUMBER6 as string, ATTRIBUTE_NUMBER7 as string, ATTRIBUTE_NUMBER8 as string, ATTRIBUTE_NUMBER9 as string, ATTRIBUTE_TIMESTAMP1 as string, ATTRIBUTE_TIMESTAMP10 as string, ATTRIBUTE_TIMESTAMP2 as string, ATTRIBUTE_TIMESTAMP3 as string, ATTRIBUTE_TIMESTAMP4 as string, ATTRIBUTE_TIMESTAMP5 as string, ATTRIBUTE_TIMESTAMP6 as string, ATTRIBUTE_TIMESTAMP7 as string, ATTRIBUTE_TIMESTAMP8 as string, ATTRIBUTE_TIMESTAMP9 as string, AUCTION_DISPLAY_NUMBER as string, AUCTION_HEADER_ID as long, AUCTION_LINE_NUMBER as short, BASE_MODEL_ID as string, BASE_MODEL_PRICE as string, BASE_QTY as string, BASE_UNIT_PRICE as double, BASE_UOM as string, BID_LINE_NUMBER as short, BID_NUMBER as integer, CANCELLED_BY as long, CANCEL_DATE as string, CANCEL_FLAG as string, CANCEL_REASON as string, CAPITAL_EXPENSE_FLAG as boolean, CATALOG_NAME as string, CATEGORY_ID as long, CLOSED_BY as long, CLOSED_DATE as string, CLOSED_REASON as string, COMMITTED_AMOUNT as string, COMPONENT_AMOUNT_RELEASED as string, CONFIGURED_ITEM_FLAG as boolean, CONSIGNMENT_LINE_FLAG as boolean, CONTRACTOR_FIRST_NAME as string, CONTRACTOR_LAST_NAME as string, CONTRACT_ID as long, CREATED_BY as string, CREATION_DATE as string, CREDIT_FLAG as boolean, DISCOUNT as string, DISCOUNT_REASON as string, DISCOUNT_TYPE as string, EXPIRATION_DATE as string, FIRM_DATE as string, FIRM_STATUS_LOOKUP_CODE as boolean, FROM_HEADER_ID as long, FROM_LINE_ID as long, FROM_LINE_LOCATION_ID as string, FUNDS_STATUS as string, GLOBAL_ATTRIBUTE1 as string, GLOBAL_ATTRIBUTE10 as string, GLOBAL_ATTRIBUTE11 as string, GLOBAL_ATTRIBUTE12 as string, GLOBAL_ATTRIBUTE13 as string, GLOBAL_ATTRIBUTE14 as string, GLOBAL_ATTRIBUTE15 as string, GLOBAL_ATTRIBUTE16 as string, GLOBAL_ATTRIBUTE17 as string, GLOBAL_ATTRIBUTE18 as string, GLOBAL_ATTRIBUTE19 as string, GLOBAL_ATTRIBUTE2 as string, GLOBAL_ATTRIBUTE20 as string, GLOBAL_ATTRIBUTE3 as string, GLOBAL_ATTRIBUTE4 as string, GLOBAL_ATTRIBUTE5 as string, GLOBAL_ATTRIBUTE6 as string, GLOBAL_ATTRIBUTE7 as string, GLOBAL_ATTRIBUTE8 as string, GLOBAL_ATTRIBUTE9 as string, GLOBAL_ATTRIBUTE_CATEGORY as string, GLOBAL_ATTRIBUTE_DATE1 as string, GLOBAL_ATTRIBUTE_DATE2 as string, GLOBAL_ATTRIBUTE_DATE3 as string, GLOBAL_ATTRIBUTE_DATE4 as string, GLOBAL_ATTRIBUTE_DATE5 as string, GLOBAL_ATTRIBUTE_NUMBER1 as string, GLOBAL_ATTRIBUTE_NUMBER2 as string, GLOBAL_ATTRIBUTE_NUMBER3 as string, GLOBAL_ATTRIBUTE_NUMBER4 as string, GLOBAL_ATTRIBUTE_NUMBER5 as string, GOVERNMENT_CONTEXT as string, HAZARD_CLASS_ID as string, ITEM_DESCRIPTION as string, ITEM_ID as long, ITEM_REVISION as boolean, JOB_DEFINITION_NAME as string, JOB_DEFINITION_PACKAGE as string, JOB_ID as string, LAST_UPDATED_BY as string, LAST_UPDATED_PROGRAM as string, LAST_UPDATE_DATE as string, LAST_UPDATE_LOGIN as string, LINE_NUM as short, LINE_REFERENCE_NUM as string, LINE_START_DATE as string, LINE_STATUS as string, LINE_TYPE_ID as long, LIST_PRICE as double, LIST_PRICE_PER_UNIT as double, MANUAL_PRICE_CHANGE_FLAG as boolean, MANUFACTURER as string, MANUFACTURER_PART_NUM as string, MARKET_PRICE as double, MATCHING_BASIS as string, MAX_RETAINAGE_AMOUNT as string, MIN_RELEASE_AMOUNT as string, NEGOTIATED_BY_PREPARER_FLAG as boolean, NEXT_CONSUMPTION_ADV_GEN_DATE as string, NOTE_TO_VENDOR as string, NOT_TO_EXCEED_PRICE as string, OBJECT_VERSION_NUMBER as short, OKE_CONTRACT_HEADER_ID as string, OKE_CONTRACT_VERSION_ID as string, OPTIONS_PRICE as string, ORDER_TYPE_LOOKUP_CODE as string, OVER_TOLERANCE_ERROR_FLAG as string, PARENT_ITEM_ID as string, PJC_CONTEXT_CATEGORY as string, PO_HEADER_ID as long, PO_LINE_ID as long, PRC_BU_ID as long, PREFERRED_GRADE as string, PRICE_BREAK_LOOKUP_CODE as string, PRICE_TYPE_LOOKUP_CODE as string, PROGRAM_APP_NAME as string, PROGRAM_NAME as string, PROGRESS_PAYMENT_RATE as string, PURCHASE_BASIS as string, QC_GRADE as string, QTY_RCV_TOLERANCE as string, QUANTITY as double, QUANTITY_COMMITTED as string, RECOUPMENT_RATE as string, REFERENCE_NUM as string, REQUEST_ID as integer, REQ_BU_ID as long, RETAINAGE_RATE as string, RETROACTIVE_DATE as string, SECONDARY_QUANTITY as string, SECONDARY_UOM_CODE as string, SHIPPING_UOM_CODE as string, SHIPPING_UOM_QUANTITY as double, SH_ATTRIBUTE1 as string, SH_ATTRIBUTE10 as string, SH_ATTRIBUTE11 as string, SH_ATTRIBUTE12 as string, SH_ATTRIBUTE13 as string, SH_ATTRIBUTE14 as string, SH_ATTRIBUTE15 as string, SH_ATTRIBUTE16 as string, SH_ATTRIBUTE17 as string, SH_ATTRIBUTE18 as string, SH_ATTRIBUTE19 as string, SH_ATTRIBUTE2 as string, SH_ATTRIBUTE20 as string, SH_ATTRIBUTE3 as string, SH_ATTRIBUTE4 as string, SH_ATTRIBUTE5 as string, SH_ATTRIBUTE6 as string, SH_ATTRIBUTE7 as string, SH_ATTRIBUTE8 as string, SH_ATTRIBUTE9 as string, SH_ATTRIBUTE_CATEGORY as string, SH_ATTRIBUTE_DATE1 as string, SH_ATTRIBUTE_DATE10 as string, SH_ATTRIBUTE_DATE2 as string, SH_ATTRIBUTE_DATE3 as string, SH_ATTRIBUTE_DATE4 as string, SH_ATTRIBUTE_DATE5 as string, SH_ATTRIBUTE_DATE6 as string, SH_ATTRIBUTE_DATE7 as string, SH_ATTRIBUTE_DATE8 as string, SH_ATTRIBUTE_DATE9 as string, SH_ATTRIBUTE_NUMBER1 as string, SH_ATTRIBUTE_NUMBER10 as string, SH_ATTRIBUTE_NUMBER2 as string, SH_ATTRIBUTE_NUMBER3 as string, SH_ATTRIBUTE_NUMBER4 as string, SH_ATTRIBUTE_NUMBER5 as string, SH_ATTRIBUTE_NUMBER6 as string, SH_ATTRIBUTE_NUMBER7 as string, SH_ATTRIBUTE_NUMBER8 as string, SH_ATTRIBUTE_NUMBER9 as string, SH_ATTRIBUTE_TIMESTAMP1 as string, SH_ATTRIBUTE_TIMESTAMP10 as string, SH_ATTRIBUTE_TIMESTAMP2 as string, SH_ATTRIBUTE_TIMESTAMP3 as string, SH_ATTRIBUTE_TIMESTAMP4 as string, SH_ATTRIBUTE_TIMESTAMP5 as string, SH_ATTRIBUTE_TIMESTAMP6 as string, SH_ATTRIBUTE_TIMESTAMP7 as string, SH_ATTRIBUTE_TIMESTAMP8 as string, SH_ATTRIBUTE_TIMESTAMP9 as string, SOLDTO_BU_ID as string, SOURCE_DOC_REV_NUM as short, START_DATE as string, SUPPLIER_PARENT_ITEM as string, SUPPLIER_PART_AUXID as string, SUPPLIER_REF_NUMBER as string, SUPPLIER_TOP_MODEL as string, SVC_AMOUNT_NOTIF_SENT as string, SVC_COMPLETION_NOTIF_SENT as string, TAXABLE_FLAG as boolean, TAX_ATTRIBUTE_UPDATE_CODE as string, TAX_CODE_ID as string, TAX_EXCLUSIVE_PRICE as string, TAX_NAME as string, TOP_MODEL_ID as string, TYPE_1099 as string, UNIT_PRICE as double, UNORDERED_FLAG as boolean, UN_NUMBER_ID as string, UOM_CODE as string, VENDOR_PRODUCT_NUM as string, WORK_ORDER_PRODUCT as string)[])",
+						"     ),",
+						"     allowSchemaDrift: false,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     validationMode: 'none',",
+						"     namespaces: true) ~> SrcXMl",
+						"SrcXMl foldDown(unroll(DATA_DS.G_1),",
+						"     mapColumn(",
+						"          AGING_PERIOD_DAYS = DATA_DS.G_1.AGING_PERIOD_DAYS,",
+						"          ALLOW_DESCRIPTION_UPDATE_FLAG = DATA_DS.G_1.ALLOW_DESCRIPTION_UPDATE_FLAG,",
+						"          ALLOW_PRICE_OVERRIDE_FLAG = DATA_DS.G_1.ALLOW_PRICE_OVERRIDE_FLAG,",
+						"          AMOUNT = DATA_DS.G_1.AMOUNT,",
+						"          AMOUNT_RELEASED = DATA_DS.G_1.AMOUNT_RELEASED,",
+						"          ATTRIBUTE1 = DATA_DS.G_1.ATTRIBUTE1,",
+						"          ATTRIBUTE10 = DATA_DS.G_1.ATTRIBUTE10,",
+						"          ATTRIBUTE11 = DATA_DS.G_1.ATTRIBUTE11,",
+						"          ATTRIBUTE12 = DATA_DS.G_1.ATTRIBUTE12,",
+						"          ATTRIBUTE13 = DATA_DS.G_1.ATTRIBUTE13,",
+						"          ATTRIBUTE14 = DATA_DS.G_1.ATTRIBUTE14,",
+						"          ATTRIBUTE15 = DATA_DS.G_1.ATTRIBUTE15,",
+						"          ATTRIBUTE16 = DATA_DS.G_1.ATTRIBUTE16,",
+						"          ATTRIBUTE17 = DATA_DS.G_1.ATTRIBUTE17,",
+						"          ATTRIBUTE18 = DATA_DS.G_1.ATTRIBUTE18,",
+						"          ATTRIBUTE19 = DATA_DS.G_1.ATTRIBUTE19,",
+						"          ATTRIBUTE2 = DATA_DS.G_1.ATTRIBUTE2,",
+						"          ATTRIBUTE20 = DATA_DS.G_1.ATTRIBUTE20,",
+						"          ATTRIBUTE3 = DATA_DS.G_1.ATTRIBUTE3,",
+						"          ATTRIBUTE4 = DATA_DS.G_1.ATTRIBUTE4,",
+						"          ATTRIBUTE5 = DATA_DS.G_1.ATTRIBUTE5,",
+						"          ATTRIBUTE6 = DATA_DS.G_1.ATTRIBUTE6,",
+						"          ATTRIBUTE7 = DATA_DS.G_1.ATTRIBUTE7,",
+						"          ATTRIBUTE8 = DATA_DS.G_1.ATTRIBUTE8,",
+						"          ATTRIBUTE9 = DATA_DS.G_1.ATTRIBUTE9,",
+						"          ATTRIBUTE_CATEGORY = DATA_DS.G_1.ATTRIBUTE_CATEGORY,",
+						"          ATTRIBUTE_DATE1 = DATA_DS.G_1.ATTRIBUTE_DATE1,",
+						"          ATTRIBUTE_DATE10 = DATA_DS.G_1.ATTRIBUTE_DATE10,",
+						"          ATTRIBUTE_DATE2 = DATA_DS.G_1.ATTRIBUTE_DATE2,",
+						"          ATTRIBUTE_DATE3 = DATA_DS.G_1.ATTRIBUTE_DATE3,",
+						"          ATTRIBUTE_DATE4 = DATA_DS.G_1.ATTRIBUTE_DATE4,",
+						"          ATTRIBUTE_DATE5 = DATA_DS.G_1.ATTRIBUTE_DATE5,",
+						"          ATTRIBUTE_DATE6 = DATA_DS.G_1.ATTRIBUTE_DATE6,",
+						"          ATTRIBUTE_DATE7 = DATA_DS.G_1.ATTRIBUTE_DATE7,",
+						"          ATTRIBUTE_DATE8 = DATA_DS.G_1.ATTRIBUTE_DATE8,",
+						"          ATTRIBUTE_DATE9 = DATA_DS.G_1.ATTRIBUTE_DATE9,",
+						"          ATTRIBUTE_NUMBER1 = DATA_DS.G_1.ATTRIBUTE_NUMBER1,",
+						"          ATTRIBUTE_NUMBER10 = DATA_DS.G_1.ATTRIBUTE_NUMBER10,",
+						"          ATTRIBUTE_NUMBER2 = DATA_DS.G_1.ATTRIBUTE_NUMBER2,",
+						"          ATTRIBUTE_NUMBER3 = DATA_DS.G_1.ATTRIBUTE_NUMBER3,",
+						"          ATTRIBUTE_NUMBER4 = DATA_DS.G_1.ATTRIBUTE_NUMBER4,",
+						"          ATTRIBUTE_NUMBER5 = DATA_DS.G_1.ATTRIBUTE_NUMBER5,",
+						"          ATTRIBUTE_NUMBER6 = DATA_DS.G_1.ATTRIBUTE_NUMBER6,",
+						"          ATTRIBUTE_NUMBER7 = DATA_DS.G_1.ATTRIBUTE_NUMBER7,",
+						"          ATTRIBUTE_NUMBER8 = DATA_DS.G_1.ATTRIBUTE_NUMBER8,",
+						"          ATTRIBUTE_NUMBER9 = DATA_DS.G_1.ATTRIBUTE_NUMBER9,",
+						"          ATTRIBUTE_TIMESTAMP1 = DATA_DS.G_1.ATTRIBUTE_TIMESTAMP1,",
+						"          ATTRIBUTE_TIMESTAMP10 = DATA_DS.G_1.ATTRIBUTE_TIMESTAMP10,",
+						"          ATTRIBUTE_TIMESTAMP2 = DATA_DS.G_1.ATTRIBUTE_TIMESTAMP2,",
+						"          ATTRIBUTE_TIMESTAMP3 = DATA_DS.G_1.ATTRIBUTE_TIMESTAMP3,",
+						"          ATTRIBUTE_TIMESTAMP4 = DATA_DS.G_1.ATTRIBUTE_TIMESTAMP4,",
+						"          ATTRIBUTE_TIMESTAMP5 = DATA_DS.G_1.ATTRIBUTE_TIMESTAMP5,",
+						"          ATTRIBUTE_TIMESTAMP6 = DATA_DS.G_1.ATTRIBUTE_TIMESTAMP6,",
+						"          ATTRIBUTE_TIMESTAMP7 = DATA_DS.G_1.ATTRIBUTE_TIMESTAMP7,",
+						"          ATTRIBUTE_TIMESTAMP8 = DATA_DS.G_1.ATTRIBUTE_TIMESTAMP8,",
+						"          ATTRIBUTE_TIMESTAMP9 = DATA_DS.G_1.ATTRIBUTE_TIMESTAMP9,",
+						"          AUCTION_DISPLAY_NUMBER = DATA_DS.G_1.AUCTION_DISPLAY_NUMBER,",
+						"          AUCTION_HEADER_ID = DATA_DS.G_1.AUCTION_HEADER_ID,",
+						"          AUCTION_LINE_NUMBER = DATA_DS.G_1.AUCTION_LINE_NUMBER,",
+						"          BASE_MODEL_ID = DATA_DS.G_1.BASE_MODEL_ID,",
+						"          BASE_MODEL_PRICE = DATA_DS.G_1.BASE_MODEL_PRICE,",
+						"          BASE_QTY = DATA_DS.G_1.BASE_QTY,",
+						"          BASE_UNIT_PRICE = DATA_DS.G_1.BASE_UNIT_PRICE,",
+						"          BASE_UOM = DATA_DS.G_1.BASE_UOM,",
+						"          BID_LINE_NUMBER = DATA_DS.G_1.BID_LINE_NUMBER,",
+						"          BID_NUMBER = DATA_DS.G_1.BID_NUMBER,",
+						"          CANCELLED_BY = DATA_DS.G_1.CANCELLED_BY,",
+						"          CANCEL_DATE = DATA_DS.G_1.CANCEL_DATE,",
+						"          CANCEL_FLAG = DATA_DS.G_1.CANCEL_FLAG,",
+						"          CANCEL_REASON = DATA_DS.G_1.CANCEL_REASON,",
+						"          CAPITAL_EXPENSE_FLAG = DATA_DS.G_1.CAPITAL_EXPENSE_FLAG,",
+						"          CATALOG_NAME = DATA_DS.G_1.CATALOG_NAME,",
+						"          CATEGORY_ID = DATA_DS.G_1.CATEGORY_ID,",
+						"          CLOSED_BY = DATA_DS.G_1.CLOSED_BY,",
+						"          CLOSED_DATE = DATA_DS.G_1.CLOSED_DATE,",
+						"          CLOSED_REASON = DATA_DS.G_1.CLOSED_REASON,",
+						"          COMMITTED_AMOUNT = DATA_DS.G_1.COMMITTED_AMOUNT,",
+						"          COMPONENT_AMOUNT_RELEASED = DATA_DS.G_1.COMPONENT_AMOUNT_RELEASED,",
+						"          CONFIGURED_ITEM_FLAG = DATA_DS.G_1.CONFIGURED_ITEM_FLAG,",
+						"          CONSIGNMENT_LINE_FLAG = DATA_DS.G_1.CONSIGNMENT_LINE_FLAG,",
+						"          CONTRACTOR_FIRST_NAME = DATA_DS.G_1.CONTRACTOR_FIRST_NAME,",
+						"          CONTRACTOR_LAST_NAME = DATA_DS.G_1.CONTRACTOR_LAST_NAME,",
+						"          CONTRACT_ID = DATA_DS.G_1.CONTRACT_ID,",
+						"          CREATED_BY = DATA_DS.G_1.CREATED_BY,",
+						"          CREATION_DATE = DATA_DS.G_1.CREATION_DATE,",
+						"          CREDIT_FLAG = DATA_DS.G_1.CREDIT_FLAG,",
+						"          DISCOUNT = DATA_DS.G_1.DISCOUNT,",
+						"          DISCOUNT_REASON = DATA_DS.G_1.DISCOUNT_REASON,",
+						"          DISCOUNT_TYPE = DATA_DS.G_1.DISCOUNT_TYPE,",
+						"          EXPIRATION_DATE = DATA_DS.G_1.EXPIRATION_DATE,",
+						"          FIRM_DATE = DATA_DS.G_1.FIRM_DATE,",
+						"          FIRM_STATUS_LOOKUP_CODE = DATA_DS.G_1.FIRM_STATUS_LOOKUP_CODE,",
+						"          FROM_HEADER_ID = DATA_DS.G_1.FROM_HEADER_ID,",
+						"          FROM_LINE_ID = DATA_DS.G_1.FROM_LINE_ID,",
+						"          FROM_LINE_LOCATION_ID = DATA_DS.G_1.FROM_LINE_LOCATION_ID,",
+						"          FUNDS_STATUS = DATA_DS.G_1.FUNDS_STATUS,",
+						"          GLOBAL_ATTRIBUTE1 = DATA_DS.G_1.GLOBAL_ATTRIBUTE1,",
+						"          GLOBAL_ATTRIBUTE10 = DATA_DS.G_1.GLOBAL_ATTRIBUTE10,",
+						"          GLOBAL_ATTRIBUTE11 = DATA_DS.G_1.GLOBAL_ATTRIBUTE11,",
+						"          GLOBAL_ATTRIBUTE12 = DATA_DS.G_1.GLOBAL_ATTRIBUTE12,",
+						"          GLOBAL_ATTRIBUTE13 = DATA_DS.G_1.GLOBAL_ATTRIBUTE13,",
+						"          GLOBAL_ATTRIBUTE14 = DATA_DS.G_1.GLOBAL_ATTRIBUTE14,",
+						"          GLOBAL_ATTRIBUTE15 = DATA_DS.G_1.GLOBAL_ATTRIBUTE15,",
+						"          GLOBAL_ATTRIBUTE16 = DATA_DS.G_1.GLOBAL_ATTRIBUTE16,",
+						"          GLOBAL_ATTRIBUTE17 = DATA_DS.G_1.GLOBAL_ATTRIBUTE17,",
+						"          GLOBAL_ATTRIBUTE18 = DATA_DS.G_1.GLOBAL_ATTRIBUTE18,",
+						"          GLOBAL_ATTRIBUTE19 = DATA_DS.G_1.GLOBAL_ATTRIBUTE19,",
+						"          GLOBAL_ATTRIBUTE2 = DATA_DS.G_1.GLOBAL_ATTRIBUTE2,",
+						"          GLOBAL_ATTRIBUTE20 = DATA_DS.G_1.GLOBAL_ATTRIBUTE20,",
+						"          GLOBAL_ATTRIBUTE3 = DATA_DS.G_1.GLOBAL_ATTRIBUTE3,",
+						"          GLOBAL_ATTRIBUTE4 = DATA_DS.G_1.GLOBAL_ATTRIBUTE4,",
+						"          GLOBAL_ATTRIBUTE5 = DATA_DS.G_1.GLOBAL_ATTRIBUTE5,",
+						"          GLOBAL_ATTRIBUTE6 = DATA_DS.G_1.GLOBAL_ATTRIBUTE6,",
+						"          GLOBAL_ATTRIBUTE7 = DATA_DS.G_1.GLOBAL_ATTRIBUTE7,",
+						"          GLOBAL_ATTRIBUTE8 = DATA_DS.G_1.GLOBAL_ATTRIBUTE8,",
+						"          GLOBAL_ATTRIBUTE9 = DATA_DS.G_1.GLOBAL_ATTRIBUTE9,",
+						"          GLOBAL_ATTRIBUTE_CATEGORY = DATA_DS.G_1.GLOBAL_ATTRIBUTE_CATEGORY,",
+						"          GLOBAL_ATTRIBUTE_DATE1 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_DATE1,",
+						"          GLOBAL_ATTRIBUTE_DATE2 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_DATE2,",
+						"          GLOBAL_ATTRIBUTE_DATE3 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_DATE3,",
+						"          GLOBAL_ATTRIBUTE_DATE4 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_DATE4,",
+						"          GLOBAL_ATTRIBUTE_DATE5 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_DATE5,",
+						"          GLOBAL_ATTRIBUTE_NUMBER1 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_NUMBER1,",
+						"          GLOBAL_ATTRIBUTE_NUMBER2 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_NUMBER2,",
+						"          GLOBAL_ATTRIBUTE_NUMBER3 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_NUMBER3,",
+						"          GLOBAL_ATTRIBUTE_NUMBER4 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_NUMBER4,",
+						"          GLOBAL_ATTRIBUTE_NUMBER5 = DATA_DS.G_1.GLOBAL_ATTRIBUTE_NUMBER5,",
+						"          GOVERNMENT_CONTEXT = DATA_DS.G_1.GOVERNMENT_CONTEXT,",
+						"          HAZARD_CLASS_ID = DATA_DS.G_1.HAZARD_CLASS_ID,",
+						"          ITEM_DESCRIPTION = DATA_DS.G_1.ITEM_DESCRIPTION,",
+						"          ITEM_ID = DATA_DS.G_1.ITEM_ID,",
+						"          ITEM_REVISION = DATA_DS.G_1.ITEM_REVISION,",
+						"          JOB_DEFINITION_NAME = DATA_DS.G_1.JOB_DEFINITION_NAME,",
+						"          JOB_DEFINITION_PACKAGE = DATA_DS.G_1.JOB_DEFINITION_PACKAGE,",
+						"          JOB_ID = DATA_DS.G_1.JOB_ID,",
+						"          LAST_UPDATED_BY = DATA_DS.G_1.LAST_UPDATED_BY,",
+						"          LAST_UPDATED_PROGRAM = DATA_DS.G_1.LAST_UPDATED_PROGRAM,",
+						"          LAST_UPDATE_DATE = DATA_DS.G_1.LAST_UPDATE_DATE,",
+						"          LAST_UPDATE_LOGIN = DATA_DS.G_1.LAST_UPDATE_LOGIN,",
+						"          LINE_NUM = DATA_DS.G_1.LINE_NUM,",
+						"          LINE_REFERENCE_NUM = DATA_DS.G_1.LINE_REFERENCE_NUM,",
+						"          LINE_START_DATE = DATA_DS.G_1.LINE_START_DATE,",
+						"          LINE_STATUS = DATA_DS.G_1.LINE_STATUS,",
+						"          LINE_TYPE_ID = DATA_DS.G_1.LINE_TYPE_ID,",
+						"          LIST_PRICE = DATA_DS.G_1.LIST_PRICE,",
+						"          LIST_PRICE_PER_UNIT = DATA_DS.G_1.LIST_PRICE_PER_UNIT,",
+						"          MANUAL_PRICE_CHANGE_FLAG = DATA_DS.G_1.MANUAL_PRICE_CHANGE_FLAG,",
+						"          MANUFACTURER = DATA_DS.G_1.MANUFACTURER,",
+						"          MANUFACTURER_PART_NUM = DATA_DS.G_1.MANUFACTURER_PART_NUM,",
+						"          MARKET_PRICE = DATA_DS.G_1.MARKET_PRICE,",
+						"          MATCHING_BASIS = DATA_DS.G_1.MATCHING_BASIS,",
+						"          MAX_RETAINAGE_AMOUNT = DATA_DS.G_1.MAX_RETAINAGE_AMOUNT,",
+						"          MIN_RELEASE_AMOUNT = DATA_DS.G_1.MIN_RELEASE_AMOUNT,",
+						"          NEGOTIATED_BY_PREPARER_FLAG = DATA_DS.G_1.NEGOTIATED_BY_PREPARER_FLAG,",
+						"          NEXT_CONSUMPTION_ADV_GEN_DATE = DATA_DS.G_1.NEXT_CONSUMPTION_ADV_GEN_DATE,",
+						"          NOTE_TO_VENDOR = DATA_DS.G_1.NOTE_TO_VENDOR,",
+						"          NOT_TO_EXCEED_PRICE = DATA_DS.G_1.NOT_TO_EXCEED_PRICE,",
+						"          OBJECT_VERSION_NUMBER = DATA_DS.G_1.OBJECT_VERSION_NUMBER,",
+						"          OKE_CONTRACT_HEADER_ID = DATA_DS.G_1.OKE_CONTRACT_HEADER_ID,",
+						"          OKE_CONTRACT_VERSION_ID = DATA_DS.G_1.OKE_CONTRACT_VERSION_ID,",
+						"          OPTIONS_PRICE = DATA_DS.G_1.OPTIONS_PRICE,",
+						"          ORDER_TYPE_LOOKUP_CODE = DATA_DS.G_1.ORDER_TYPE_LOOKUP_CODE,",
+						"          OVER_TOLERANCE_ERROR_FLAG = DATA_DS.G_1.OVER_TOLERANCE_ERROR_FLAG,",
+						"          PARENT_ITEM_ID = DATA_DS.G_1.PARENT_ITEM_ID,",
+						"          PJC_CONTEXT_CATEGORY = DATA_DS.G_1.PJC_CONTEXT_CATEGORY,",
+						"          PO_HEADER_ID = DATA_DS.G_1.PO_HEADER_ID,",
+						"          PO_LINE_ID = DATA_DS.G_1.PO_LINE_ID,",
+						"          PRC_BU_ID = DATA_DS.G_1.PRC_BU_ID,",
+						"          PREFERRED_GRADE = DATA_DS.G_1.PREFERRED_GRADE,",
+						"          PRICE_BREAK_LOOKUP_CODE = DATA_DS.G_1.PRICE_BREAK_LOOKUP_CODE,",
+						"          PRICE_TYPE_LOOKUP_CODE = DATA_DS.G_1.PRICE_TYPE_LOOKUP_CODE,",
+						"          PROGRAM_APP_NAME = DATA_DS.G_1.PROGRAM_APP_NAME,",
+						"          PROGRAM_NAME = DATA_DS.G_1.PROGRAM_NAME,",
+						"          PROGRESS_PAYMENT_RATE = DATA_DS.G_1.PROGRESS_PAYMENT_RATE,",
+						"          PURCHASE_BASIS = DATA_DS.G_1.PURCHASE_BASIS,",
+						"          QC_GRADE = DATA_DS.G_1.QC_GRADE,",
+						"          QTY_RCV_TOLERANCE = DATA_DS.G_1.QTY_RCV_TOLERANCE,",
+						"          QUANTITY = DATA_DS.G_1.QUANTITY,",
+						"          QUANTITY_COMMITTED = DATA_DS.G_1.QUANTITY_COMMITTED,",
+						"          RECOUPMENT_RATE = DATA_DS.G_1.RECOUPMENT_RATE,",
+						"          REFERENCE_NUM = DATA_DS.G_1.REFERENCE_NUM,",
+						"          REQUEST_ID = DATA_DS.G_1.REQUEST_ID,",
+						"          REQ_BU_ID = DATA_DS.G_1.REQ_BU_ID,",
+						"          RETAINAGE_RATE = DATA_DS.G_1.RETAINAGE_RATE,",
+						"          RETROACTIVE_DATE = DATA_DS.G_1.RETROACTIVE_DATE,",
+						"          SECONDARY_QUANTITY = DATA_DS.G_1.SECONDARY_QUANTITY,",
+						"          SECONDARY_UOM_CODE = DATA_DS.G_1.SECONDARY_UOM_CODE,",
+						"          SHIPPING_UOM_CODE = DATA_DS.G_1.SHIPPING_UOM_CODE,",
+						"          SHIPPING_UOM_QUANTITY = DATA_DS.G_1.SHIPPING_UOM_QUANTITY,",
+						"          SH_ATTRIBUTE1 = DATA_DS.G_1.SH_ATTRIBUTE1,",
+						"          SH_ATTRIBUTE10 = DATA_DS.G_1.SH_ATTRIBUTE10,",
+						"          SH_ATTRIBUTE11 = DATA_DS.G_1.SH_ATTRIBUTE11,",
+						"          SH_ATTRIBUTE12 = DATA_DS.G_1.SH_ATTRIBUTE12,",
+						"          SH_ATTRIBUTE13 = DATA_DS.G_1.SH_ATTRIBUTE13,",
+						"          SH_ATTRIBUTE14 = DATA_DS.G_1.SH_ATTRIBUTE14,",
+						"          SH_ATTRIBUTE15 = DATA_DS.G_1.SH_ATTRIBUTE15,",
+						"          SH_ATTRIBUTE16 = DATA_DS.G_1.SH_ATTRIBUTE16,",
+						"          SH_ATTRIBUTE17 = DATA_DS.G_1.SH_ATTRIBUTE17,",
+						"          SH_ATTRIBUTE18 = DATA_DS.G_1.SH_ATTRIBUTE18,",
+						"          SH_ATTRIBUTE19 = DATA_DS.G_1.SH_ATTRIBUTE19,",
+						"          SH_ATTRIBUTE2 = DATA_DS.G_1.SH_ATTRIBUTE2,",
+						"          SH_ATTRIBUTE20 = DATA_DS.G_1.SH_ATTRIBUTE20,",
+						"          SH_ATTRIBUTE3 = DATA_DS.G_1.SH_ATTRIBUTE3,",
+						"          SH_ATTRIBUTE4 = DATA_DS.G_1.SH_ATTRIBUTE4,",
+						"          SH_ATTRIBUTE5 = DATA_DS.G_1.SH_ATTRIBUTE5,",
+						"          SH_ATTRIBUTE6 = DATA_DS.G_1.SH_ATTRIBUTE6,",
+						"          SH_ATTRIBUTE7 = DATA_DS.G_1.SH_ATTRIBUTE7,",
+						"          SH_ATTRIBUTE8 = DATA_DS.G_1.SH_ATTRIBUTE8,",
+						"          SH_ATTRIBUTE9 = DATA_DS.G_1.SH_ATTRIBUTE9,",
+						"          SH_ATTRIBUTE_CATEGORY = DATA_DS.G_1.SH_ATTRIBUTE_CATEGORY,",
+						"          SH_ATTRIBUTE_DATE1 = DATA_DS.G_1.SH_ATTRIBUTE_DATE1,",
+						"          SH_ATTRIBUTE_DATE10 = DATA_DS.G_1.SH_ATTRIBUTE_DATE10,",
+						"          SH_ATTRIBUTE_DATE2 = DATA_DS.G_1.SH_ATTRIBUTE_DATE2,",
+						"          SH_ATTRIBUTE_DATE3 = DATA_DS.G_1.SH_ATTRIBUTE_DATE3,",
+						"          SH_ATTRIBUTE_DATE4 = DATA_DS.G_1.SH_ATTRIBUTE_DATE4,",
+						"          SH_ATTRIBUTE_DATE5 = DATA_DS.G_1.SH_ATTRIBUTE_DATE5,",
+						"          SH_ATTRIBUTE_DATE6 = DATA_DS.G_1.SH_ATTRIBUTE_DATE6,",
+						"          SH_ATTRIBUTE_DATE7 = DATA_DS.G_1.SH_ATTRIBUTE_DATE7,",
+						"          SH_ATTRIBUTE_DATE8 = DATA_DS.G_1.SH_ATTRIBUTE_DATE8,",
+						"          SH_ATTRIBUTE_DATE9 = DATA_DS.G_1.SH_ATTRIBUTE_DATE9,",
+						"          SH_ATTRIBUTE_NUMBER1 = DATA_DS.G_1.SH_ATTRIBUTE_NUMBER1,",
+						"          SH_ATTRIBUTE_NUMBER10 = DATA_DS.G_1.SH_ATTRIBUTE_NUMBER10,",
+						"          SH_ATTRIBUTE_NUMBER2 = DATA_DS.G_1.SH_ATTRIBUTE_NUMBER2,",
+						"          SH_ATTRIBUTE_NUMBER3 = DATA_DS.G_1.SH_ATTRIBUTE_NUMBER3,",
+						"          SH_ATTRIBUTE_NUMBER4 = DATA_DS.G_1.SH_ATTRIBUTE_NUMBER4,",
+						"          SH_ATTRIBUTE_NUMBER5 = DATA_DS.G_1.SH_ATTRIBUTE_NUMBER5,",
+						"          SH_ATTRIBUTE_NUMBER6 = DATA_DS.G_1.SH_ATTRIBUTE_NUMBER6,",
+						"          SH_ATTRIBUTE_NUMBER7 = DATA_DS.G_1.SH_ATTRIBUTE_NUMBER7,",
+						"          SH_ATTRIBUTE_NUMBER8 = DATA_DS.G_1.SH_ATTRIBUTE_NUMBER8,",
+						"          SH_ATTRIBUTE_NUMBER9 = DATA_DS.G_1.SH_ATTRIBUTE_NUMBER9,",
+						"          SH_ATTRIBUTE_TIMESTAMP1 = DATA_DS.G_1.SH_ATTRIBUTE_TIMESTAMP1,",
+						"          SH_ATTRIBUTE_TIMESTAMP10 = DATA_DS.G_1.SH_ATTRIBUTE_TIMESTAMP10,",
+						"          SH_ATTRIBUTE_TIMESTAMP2 = DATA_DS.G_1.SH_ATTRIBUTE_TIMESTAMP2,",
+						"          SH_ATTRIBUTE_TIMESTAMP3 = DATA_DS.G_1.SH_ATTRIBUTE_TIMESTAMP3,",
+						"          SH_ATTRIBUTE_TIMESTAMP4 = DATA_DS.G_1.SH_ATTRIBUTE_TIMESTAMP4,",
+						"          SH_ATTRIBUTE_TIMESTAMP5 = DATA_DS.G_1.SH_ATTRIBUTE_TIMESTAMP5,",
+						"          SH_ATTRIBUTE_TIMESTAMP6 = DATA_DS.G_1.SH_ATTRIBUTE_TIMESTAMP6,",
+						"          SH_ATTRIBUTE_TIMESTAMP7 = DATA_DS.G_1.SH_ATTRIBUTE_TIMESTAMP7,",
+						"          SH_ATTRIBUTE_TIMESTAMP8 = DATA_DS.G_1.SH_ATTRIBUTE_TIMESTAMP8,",
+						"          SH_ATTRIBUTE_TIMESTAMP9 = DATA_DS.G_1.SH_ATTRIBUTE_TIMESTAMP9,",
+						"          SOLDTO_BU_ID = DATA_DS.G_1.SOLDTO_BU_ID,",
+						"          SOURCE_DOC_REV_NUM = DATA_DS.G_1.SOURCE_DOC_REV_NUM,",
+						"          START_DATE = DATA_DS.G_1.START_DATE,",
+						"          SUPPLIER_PARENT_ITEM = DATA_DS.G_1.SUPPLIER_PARENT_ITEM,",
+						"          SUPPLIER_PART_AUXID = DATA_DS.G_1.SUPPLIER_PART_AUXID,",
+						"          SUPPLIER_REF_NUMBER = DATA_DS.G_1.SUPPLIER_REF_NUMBER,",
+						"          SUPPLIER_TOP_MODEL = DATA_DS.G_1.SUPPLIER_TOP_MODEL,",
+						"          SVC_AMOUNT_NOTIF_SENT = DATA_DS.G_1.SVC_AMOUNT_NOTIF_SENT,",
+						"          SVC_COMPLETION_NOTIF_SENT = DATA_DS.G_1.SVC_COMPLETION_NOTIF_SENT,",
+						"          TAXABLE_FLAG = DATA_DS.G_1.TAXABLE_FLAG,",
+						"          TAX_ATTRIBUTE_UPDATE_CODE = DATA_DS.G_1.TAX_ATTRIBUTE_UPDATE_CODE,",
+						"          TAX_CODE_ID = DATA_DS.G_1.TAX_CODE_ID,",
+						"          TAX_EXCLUSIVE_PRICE = DATA_DS.G_1.TAX_EXCLUSIVE_PRICE,",
+						"          TAX_NAME = DATA_DS.G_1.TAX_NAME,",
+						"          TOP_MODEL_ID = DATA_DS.G_1.TOP_MODEL_ID,",
+						"          TYPE_1099 = DATA_DS.G_1.TYPE_1099,",
+						"          UNIT_PRICE = DATA_DS.G_1.UNIT_PRICE,",
+						"          UNORDERED_FLAG = DATA_DS.G_1.UNORDERED_FLAG,",
+						"          UN_NUMBER_ID = DATA_DS.G_1.UN_NUMBER_ID,",
+						"          UOM_CODE = DATA_DS.G_1.UOM_CODE,",
+						"          VENDOR_PRODUCT_NUM = DATA_DS.G_1.VENDOR_PRODUCT_NUM,",
+						"          WORK_ORDER_PRODUCT = DATA_DS.G_1.WORK_ORDER_PRODUCT",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> XmlToCsvflatten",
+						"XmlToCsvflatten derive(source_name = 'SYSTEM',",
+						"          sub_source_name = 'R2P',",
+						"          created_date_time = currentUTC()) ~> addLoadDetails",
+						"addLoadDetails sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     partitionFileNames:['Po_Lines_All.csv'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SnkCsv"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_po_versions_decoding')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/Payment Dashboard/Po Versions"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_xml_po_versions_source_stage_encoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SrcEncodedXml"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_delimited_xml_po_versions_source_stage_decoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SnkDecodedXml"
+						}
+					],
+					"transformations": [
+						{
+							"name": "Decoding"
+						},
+						{
+							"name": "SelectDecodedData"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          {http://www.w3.org/2003/05/soap-envelope,Envelope} as ({http://www.w3.org/2003/05/soap-envelope,Body} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,runReportResponse} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,runReportReturn} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,metaDataList} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean), {http://xmlns.oracle.com/oxp/service/PublicReportService,reportBytes} as string, {http://xmlns.oracle.com/oxp/service/PublicReportService,reportContentType} as string, {http://xmlns.oracle.com/oxp/service/PublicReportService,reportFileID} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean), {http://xmlns.oracle.com/oxp/service/PublicReportService,reportLocale} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean)))), {http://www.w3.org/2003/05/soap-envelope,Header} as string)",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     validationMode: 'none',",
+						"     namespaces: true) ~> SrcEncodedXml",
+						"SrcEncodedXml derive(ReportBytes = fromBase64(toString({http://www.w3.org/2003/05/soap-envelope,Envelope}.{http://www.w3.org/2003/05/soap-envelope,Body}.{http://xmlns.oracle.com/oxp/service/PublicReportService,runReportResponse}.{http://xmlns.oracle.com/oxp/service/PublicReportService,runReportReturn}.{http://xmlns.oracle.com/oxp/service/PublicReportService,reportBytes}))) ~> Decoding",
+						"Decoding select(mapColumn(",
+						"          ReportBytes",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> SelectDecodedData",
+						"SelectDecodedData sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     emptyLinesAsHeader: 1,",
+						"     partitionFileNames:['source_data_decoded.xml'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SnkDecodedXml"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_po_versions_flattening')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/Payment Dashboard/Po Versions"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_xml_po_versions_source_stage_decoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SrcXMl"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_po_versions_source_stage_final_csv",
+								"type": "DatasetReference"
+							},
+							"name": "SnkCsv"
+						}
+					],
+					"transformations": [
+						{
+							"name": "XmlToCsvflatten"
+						},
+						{
+							"name": "addLoadDetails"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          DATA_DS as (G_1 as (ACCEPTED_DATE as string, APPROVAL_INSTANCE_ID as long, APPROVED_DATE as string, B2B_MESSAGE_ID as string, BASE_VERSION_ID as long, CANCEL_BACKING_REQ_FLAG as string, CANCEL_DOC_FLAG as boolean, CHANGE_ORDER_DESC as string, CHANGE_ORDER_STATUS as string, CHANGE_ORDER_TYPE as string, CHECKLIST_ID as string, COMMUNICATED_DATE as string, COMMUNICATED_TO_SUPPLIER as boolean, COUNTERPROPOSAL_FLAG as boolean, CO_CANCELED_BY_ROLE as string, CO_CANCELED_BY_USER_ID as long, CO_CANCELED_FLAG as boolean, CO_NUM as string, CO_SEQUENCE as integer, CREATED_BY as string, CREATED_BY_PROGRAM_NAME as string, CREATION_DATE as string, DOCUMENT_DATE as string, ESIGN_ENVELOPE_ID as string, ESIGN_ENVELOPE_OWNER as string, ESIGN_ENVELOPE_STATUS as string, ESIGN_ENV_OWNER_EMAIL_ID as string, EXTERNAL_SYSTEM_FLAG as boolean, FUNDS_STATUS as string, JOB_DEFINITION_NAME as string, JOB_DEFINITION_PACKAGE as string, LAST_SUBMITTER_ID as long, LAST_UPDATED_BY as string, LAST_UPDATE_DATE as string, LAST_UPDATE_LOGIN as string, MODIFIED_FLAG as boolean, OBJECT_VERSION_NUMBER as short, ONLINE_REPORT_ID as long, ORIGINATOR_ID as long, ORIGINATOR_ROLE as string, OVERRIDE_USER_ID as string, PENDING_RESPONSE_ROLE as string, PO_HEADER_ID as long, PROCESSED_DATE as string, PROGRAM_APP_NAME as string, PROGRAM_NAME as string, REJECTED_FLAG as boolean, RELATED_RCO_VERSION_ID as string, REQUESTER_PROPOSAL_FLAG as boolean, REQUEST_DATE as string, REQUEST_ID as string, REVISION_NUM as short, SUBMITTED_DATE as string, VERSION_ID as long, WITHDRAWN_FLAG as boolean)[])",
+						"     ),",
+						"     allowSchemaDrift: false,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     validationMode: 'none',",
+						"     namespaces: true) ~> SrcXMl",
+						"SrcXMl foldDown(unroll(DATA_DS.G_1),",
+						"     mapColumn(",
+						"          ACCEPTED_DATE = DATA_DS.G_1.ACCEPTED_DATE,",
+						"          APPROVAL_INSTANCE_ID = DATA_DS.G_1.APPROVAL_INSTANCE_ID,",
+						"          APPROVED_DATE = DATA_DS.G_1.APPROVED_DATE,",
+						"          B2B_MESSAGE_ID = DATA_DS.G_1.B2B_MESSAGE_ID,",
+						"          BASE_VERSION_ID = DATA_DS.G_1.BASE_VERSION_ID,",
+						"          CANCEL_BACKING_REQ_FLAG = DATA_DS.G_1.CANCEL_BACKING_REQ_FLAG,",
+						"          CANCEL_DOC_FLAG = DATA_DS.G_1.CANCEL_DOC_FLAG,",
+						"          CHANGE_ORDER_DESC = DATA_DS.G_1.CHANGE_ORDER_DESC,",
+						"          CHANGE_ORDER_STATUS = DATA_DS.G_1.CHANGE_ORDER_STATUS,",
+						"          CHANGE_ORDER_TYPE = DATA_DS.G_1.CHANGE_ORDER_TYPE,",
+						"          CHECKLIST_ID = DATA_DS.G_1.CHECKLIST_ID,",
+						"          COMMUNICATED_DATE = DATA_DS.G_1.COMMUNICATED_DATE,",
+						"          COMMUNICATED_TO_SUPPLIER = DATA_DS.G_1.COMMUNICATED_TO_SUPPLIER,",
+						"          COUNTERPROPOSAL_FLAG = DATA_DS.G_1.COUNTERPROPOSAL_FLAG,",
+						"          CO_CANCELED_BY_ROLE = DATA_DS.G_1.CO_CANCELED_BY_ROLE,",
+						"          CO_CANCELED_BY_USER_ID = DATA_DS.G_1.CO_CANCELED_BY_USER_ID,",
+						"          CO_CANCELED_FLAG = DATA_DS.G_1.CO_CANCELED_FLAG,",
+						"          CO_NUM = DATA_DS.G_1.CO_NUM,",
+						"          CO_SEQUENCE = DATA_DS.G_1.CO_SEQUENCE,",
+						"          CREATED_BY = DATA_DS.G_1.CREATED_BY,",
+						"          CREATED_BY_PROGRAM_NAME = DATA_DS.G_1.CREATED_BY_PROGRAM_NAME,",
+						"          CREATION_DATE = DATA_DS.G_1.CREATION_DATE,",
+						"          DOCUMENT_DATE = DATA_DS.G_1.DOCUMENT_DATE,",
+						"          ESIGN_ENVELOPE_ID = DATA_DS.G_1.ESIGN_ENVELOPE_ID,",
+						"          ESIGN_ENVELOPE_OWNER = DATA_DS.G_1.ESIGN_ENVELOPE_OWNER,",
+						"          ESIGN_ENVELOPE_STATUS = DATA_DS.G_1.ESIGN_ENVELOPE_STATUS,",
+						"          ESIGN_ENV_OWNER_EMAIL_ID = DATA_DS.G_1.ESIGN_ENV_OWNER_EMAIL_ID,",
+						"          EXTERNAL_SYSTEM_FLAG = DATA_DS.G_1.EXTERNAL_SYSTEM_FLAG,",
+						"          FUNDS_STATUS = DATA_DS.G_1.FUNDS_STATUS,",
+						"          JOB_DEFINITION_NAME = DATA_DS.G_1.JOB_DEFINITION_NAME,",
+						"          JOB_DEFINITION_PACKAGE = DATA_DS.G_1.JOB_DEFINITION_PACKAGE,",
+						"          LAST_SUBMITTER_ID = DATA_DS.G_1.LAST_SUBMITTER_ID,",
+						"          LAST_UPDATED_BY = DATA_DS.G_1.LAST_UPDATED_BY,",
+						"          LAST_UPDATE_DATE = DATA_DS.G_1.LAST_UPDATE_DATE,",
+						"          LAST_UPDATE_LOGIN = DATA_DS.G_1.LAST_UPDATE_LOGIN,",
+						"          MODIFIED_FLAG = DATA_DS.G_1.MODIFIED_FLAG,",
+						"          OBJECT_VERSION_NUMBER = DATA_DS.G_1.OBJECT_VERSION_NUMBER,",
+						"          ONLINE_REPORT_ID = DATA_DS.G_1.ONLINE_REPORT_ID,",
+						"          ORIGINATOR_ID = DATA_DS.G_1.ORIGINATOR_ID,",
+						"          ORIGINATOR_ROLE = DATA_DS.G_1.ORIGINATOR_ROLE,",
+						"          OVERRIDE_USER_ID = DATA_DS.G_1.OVERRIDE_USER_ID,",
+						"          PENDING_RESPONSE_ROLE = DATA_DS.G_1.PENDING_RESPONSE_ROLE,",
+						"          PO_HEADER_ID = DATA_DS.G_1.PO_HEADER_ID,",
+						"          PROCESSED_DATE = DATA_DS.G_1.PROCESSED_DATE,",
+						"          PROGRAM_APP_NAME = DATA_DS.G_1.PROGRAM_APP_NAME,",
+						"          PROGRAM_NAME = DATA_DS.G_1.PROGRAM_NAME,",
+						"          REJECTED_FLAG = DATA_DS.G_1.REJECTED_FLAG,",
+						"          RELATED_RCO_VERSION_ID = DATA_DS.G_1.RELATED_RCO_VERSION_ID,",
+						"          REQUESTER_PROPOSAL_FLAG = DATA_DS.G_1.REQUESTER_PROPOSAL_FLAG,",
+						"          REQUEST_DATE = DATA_DS.G_1.REQUEST_DATE,",
+						"          REQUEST_ID = DATA_DS.G_1.REQUEST_ID,",
+						"          REVISION_NUM = DATA_DS.G_1.REVISION_NUM,",
+						"          SUBMITTED_DATE = DATA_DS.G_1.SUBMITTED_DATE,",
+						"          VERSION_ID = DATA_DS.G_1.VERSION_ID,",
+						"          WITHDRAWN_FLAG = DATA_DS.G_1.WITHDRAWN_FLAG",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> XmlToCsvflatten",
+						"XmlToCsvflatten derive(source_name = 'SYSTEM',",
+						"          sub_source_name = 'R2P',",
+						"          created_date_time = currentUTC()) ~> addLoadDetails",
+						"addLoadDetails sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     partitionFileNames:['Po_Versions.csv'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SnkCsv"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_pqr_project_master_stage_to_raw')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/YARD KPI/PQR"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_pqr_project_master_stg_generic",
+								"type": "DatasetReference"
+							},
+							"name": "PQRProjectMasterStage"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_gen2_pqr_project_master_raw_tgt",
+								"type": "DatasetReference"
+							},
+							"name": "PCMRaw"
+						}
+					],
+					"transformations": [
+						{
+							"name": "SetFileName"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          Id as string,",
+						"          ContentTypeID as string,",
+						"          ContentType as string,",
+						"          Title as string,",
+						"          Modified as string,",
+						"          Created as string,",
+						"          CreatedById as string,",
+						"          ModifiedById as string,",
+						"          Owshiddenversion as string,",
+						"          Version as string,",
+						"          Path as string,",
+						"          ComplianceAssetId as string,",
+						"          ProjectCode as string,",
+						"          ActiveStatus as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false) ~> PQRProjectMasterStage",
+						"PQRProjectMasterStage derive(FileName = concat('Project_Data/YARDKPI/PQR/',substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/','PQR_PROJECT_MASTER_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv'),",
+						"          source_code = 'SYSTEM',",
+						"          sub_source_code = 'Sharepoint',",
+						"          create_date_time = currentUTC()) ~> SetFileName",
+						"SetFileName sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     rowUrlColumn:'FileName',",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     mapColumn(",
+						"          each(match(true()))",
+						"     )) ~> PCMRaw"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_pqr_stage_to_raw')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/YARD KPI/PQR"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_pqr_stg_generic",
+								"type": "DatasetReference"
+							},
+							"name": "PQRStage"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_gen2_pqr_raw_tgt",
+								"type": "DatasetReference"
+							},
+							"name": "PCMRaw"
+						}
+					],
+					"transformations": [
+						{
+							"name": "SetFileName"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          Id as string,",
+						"          ContentTypeID as string,",
+						"          ContentType as string,",
+						"          Title as string,",
+						"          Modified as string,",
+						"          Created as string,",
+						"          CreatedById as string,",
+						"          ModifiedById as string,",
+						"          Owshiddenversion as string,",
+						"          Version as string,",
+						"          Path as string,",
+						"          ComplianceAssetId as string,",
+						"          SCOPE as string,",
+						"          PROJECT as string,",
+						"          PRIORITY as string,",
+						"          WELDPOSITION as string,",
+						"          CONSUMABLETRADENAMEAWSCLASS as string,",
+						"          TESTMATERIALGRADE as string,",
+						"          WELDPROCESS as string,",
+						"          DIATHK as string,",
+						"          WPSNo as string,",
+						"          DeliveryOfMaterial as string,",
+						"          CuttingBeveling as string,",
+						"          WELDSTART as string,",
+						"          WELDFINISH as string,",
+						"          VISUAL as string,",
+						"          PTMPI as string,",
+						"          MUTAfterCooling48Hrs as string,",
+						"          RT as string,",
+						"          GougingGrindingRepair as string,",
+						"          DateWeld1stRepair as string,",
+						"          REMARK as string,",
+						"          DPTMPI as string,",
+						"          UT as string,",
+						"          MUTRT as string,",
+						"          PAUT as string,",
+						"          SENDTOLAVORATORY as string,",
+						"          PASSEDMECHANICALTESTING as string,",
+						"          PQRPACKAGEAPPROVEDBYCLIENT as string,",
+						"          CUTOFFDATE as string,",
+						"          SRNo as string,",
+						"          PROJECTCODEId as string,",
+						"          CountApproved as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     multiLineRow: true) ~> PQRStage",
+						"PQRStage derive(FileName = concat('Project_Data/YARDKPI/PQR/',substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/','STATUSWPSPQRQUALIFICATION_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv'),",
+						"          source_code = 'SYSTEM',",
+						"          sub_source_code = 'Sharepoint',",
+						"          create_date_time = currentUTC()) ~> SetFileName",
+						"SetFileName sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     input(",
+						"          Id as string,",
+						"          ContentTypeID as string,",
+						"          ContentType as string,",
+						"          Title as string,",
+						"          Modified as string,",
+						"          Created as string,",
+						"          CreatedById as string,",
+						"          ModifiedById as string,",
+						"          Owshiddenversion as string,",
+						"          Version as string,",
+						"          Path as string,",
+						"          ComplianceAssetId as string,",
+						"          SCOPE as string,",
+						"          PROJECT as string,",
+						"          PRIORITY as string,",
+						"          WELDPOSITION as string,",
+						"          CONSUMABLETRADENAMEAWSCLASS as string,",
+						"          TESTMATERIALGRADE as string,",
+						"          WELDPROCESS as string,",
+						"          DIATHK as string,",
+						"          WPSNo as string,",
+						"          DeliveryOfMaterial as string,",
+						"          CuttingBeveling as string,",
+						"          WELDSTART as string,",
+						"          WELDFINISH as string,",
+						"          VISUAL as string,",
+						"          PTMPI as string,",
+						"          MUTAfterCooling48Hrs as string,",
+						"          RT as string,",
+						"          GougingGrindingRepair as string,",
+						"          DateWeld1stRepair as string,",
+						"          REMARK as string,",
+						"          DPTMPI as string,",
+						"          UT as string,",
+						"          MUTRT as string,",
+						"          PAUT as string,",
+						"          SENDTOLAVORATORY as string,",
+						"          PASSEDMECHANICALTESTING as string,",
+						"          PQRPACKAGEAPPROVEDBYCLIENT as string,",
+						"          CUTOFFDATE as string,",
+						"          SRNo as string,",
+						"          PROJECTCODEId as string,",
+						"          CountApproved as string,",
+						"          source_code as string,",
+						"          sub_source_code as string,",
+						"          create_date_time as string",
+						"     ),",
+						"     rowUrlColumn:'FileName',",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     mapColumn(",
+						"          each(match(true()))",
+						"     )) ~> PCMRaw"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_prepayment_application_distribution_decoding')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/Payment Dashboard/Prepayment Application Distribution"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_xml_prepayment_application_distribution_source_stage_encoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SrcEncodedXml"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_delimited_xml_prepayment_application_distribution_source_stage_decoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SnkDecodedXml"
+						}
+					],
+					"transformations": [
+						{
+							"name": "Decoding"
+						},
+						{
+							"name": "SelectDecodedData"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          {http://www.w3.org/2003/05/soap-envelope,Envelope} as ({http://www.w3.org/2003/05/soap-envelope,Body} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,runReportResponse} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,runReportReturn} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,metaDataList} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean), {http://xmlns.oracle.com/oxp/service/PublicReportService,reportBytes} as string, {http://xmlns.oracle.com/oxp/service/PublicReportService,reportContentType} as string, {http://xmlns.oracle.com/oxp/service/PublicReportService,reportFileID} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean), {http://xmlns.oracle.com/oxp/service/PublicReportService,reportLocale} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean)))), {http://www.w3.org/2003/05/soap-envelope,Header} as string)",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     validationMode: 'none',",
+						"     namespaces: true) ~> SrcEncodedXml",
+						"SrcEncodedXml derive(ReportBytes = fromBase64(toString({http://www.w3.org/2003/05/soap-envelope,Envelope}.{http://www.w3.org/2003/05/soap-envelope,Body}.{http://xmlns.oracle.com/oxp/service/PublicReportService,runReportResponse}.{http://xmlns.oracle.com/oxp/service/PublicReportService,runReportReturn}.{http://xmlns.oracle.com/oxp/service/PublicReportService,reportBytes}))) ~> Decoding",
+						"Decoding select(mapColumn(",
+						"          ReportBytes",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> SelectDecodedData",
+						"SelectDecodedData sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     emptyLinesAsHeader: 1,",
+						"     partitionFileNames:['source_data_decoded.xml'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SnkDecodedXml"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_prepayment_application_distribution_flattening')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/Payment Dashboard/Prepayment Application Distribution"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_xml_prepayment_application_distribution_source_stage_decoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SrcXMl"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_prepayment_application_distribution_source_stage_final_csv",
+								"type": "DatasetReference"
+							},
+							"name": "SnkCsv"
+						}
+					],
+					"transformations": [
+						{
+							"name": "XmlToCsvflatten"
+						},
+						{
+							"name": "addLoadDetails"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          DATA_DS as (G_1 as (ACCOUNTING_EVENT_ID as string, AMOUNT as string, AMOUNT_VARIANCE as string, AWT_RELATED_ID as string, BASE_AMOUNT as string, BASE_AMT_AT_PREPAY_CLR_XRATE as string, BASE_AMT_AT_PREPAY_PAY_XRATE as string, BASE_AMT_AT_PREPAY_XRATE as string, BC_EVENT_ID as string, CREATED_BY as string, CREATION_DATE as string, INVOICE_BASE_AMT_VARIANCE as string, INVOICE_BASE_QTY_VARIANCE as string, INVOICE_DISTRIBUTION_ID as string, JOB_DEFINITION_NAME as string, JOB_DEFINITION_PACKAGE as string, LAST_UPDATED_BY as string, LAST_UPDATE_DATE as string, LAST_UPDATE_LOGIN as string, OBJECT_VERSION_NUMBER as string, PA_ADDITION_FLAG as string, PREPAY_APP_DISTRIBUTION_ID as string, PREPAY_APP_DIST_ID as string, PREPAY_CLR_EXCHANGE_DATE as string, PREPAY_CLR_EXCHANGE_RATE as string, PREPAY_CLR_EXCHANGE_RATE_TYPE as string, PREPAY_DIST_LOOKUP_CODE as string, PREPAY_EXCHANGE_DATE as string, PREPAY_EXCHANGE_RATE as string, PREPAY_EXCHANGE_RATE_TYPE as string, PREPAY_HISTORY_ID as string, PREPAY_PAY_EXCHANGE_DATE as string, PREPAY_PAY_EXCHANGE_RATE as string, PREPAY_PAY_EXCHANGE_RATE_TYPE as string, PROGRAM_APPLICATION_ID as string, PROGRAM_ID as string, PROGRAM_UPDATE_DATE as string, QUANTITY_VARIANCE as string, RELEASE_INV_DIST_DERIVED_FROM as string, REQUEST_ID as string, REVERSED_PREPAY_APP_DIST_ID as string, ROUNDING_AMT as string, ROUND_AMT_AT_PREPAY_CLR_XRATE as string, ROUND_AMT_AT_PREPAY_PAY_XRATE as string, ROUND_AMT_AT_PREPAY_XRATE as string)[])",
+						"     ),",
+						"     allowSchemaDrift: false,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     validationMode: 'none',",
+						"     namespaces: true) ~> SrcXMl",
+						"SrcXMl foldDown(unroll(DATA_DS.G_1),",
+						"     mapColumn(",
+						"          ACCOUNTING_EVENT_ID = DATA_DS.G_1.ACCOUNTING_EVENT_ID,",
+						"          AMOUNT = DATA_DS.G_1.AMOUNT,",
+						"          AMOUNT_VARIANCE = DATA_DS.G_1.AMOUNT_VARIANCE,",
+						"          AWT_RELATED_ID = DATA_DS.G_1.AWT_RELATED_ID,",
+						"          BASE_AMOUNT = DATA_DS.G_1.BASE_AMOUNT,",
+						"          BASE_AMT_AT_PREPAY_CLR_XRATE = DATA_DS.G_1.BASE_AMT_AT_PREPAY_CLR_XRATE,",
+						"          BASE_AMT_AT_PREPAY_PAY_XRATE = DATA_DS.G_1.BASE_AMT_AT_PREPAY_PAY_XRATE,",
+						"          BASE_AMT_AT_PREPAY_XRATE = DATA_DS.G_1.BASE_AMT_AT_PREPAY_XRATE,",
+						"          BC_EVENT_ID = DATA_DS.G_1.BC_EVENT_ID,",
+						"          CREATED_BY = DATA_DS.G_1.CREATED_BY,",
+						"          CREATION_DATE = DATA_DS.G_1.CREATION_DATE,",
+						"          INVOICE_BASE_AMT_VARIANCE = DATA_DS.G_1.INVOICE_BASE_AMT_VARIANCE,",
+						"          INVOICE_BASE_QTY_VARIANCE = DATA_DS.G_1.INVOICE_BASE_QTY_VARIANCE,",
+						"          INVOICE_DISTRIBUTION_ID = DATA_DS.G_1.INVOICE_DISTRIBUTION_ID,",
+						"          JOB_DEFINITION_NAME = DATA_DS.G_1.JOB_DEFINITION_NAME,",
+						"          JOB_DEFINITION_PACKAGE = DATA_DS.G_1.JOB_DEFINITION_PACKAGE,",
+						"          LAST_UPDATED_BY = DATA_DS.G_1.LAST_UPDATED_BY,",
+						"          LAST_UPDATE_DATE = DATA_DS.G_1.LAST_UPDATE_DATE,",
+						"          LAST_UPDATE_LOGIN = DATA_DS.G_1.LAST_UPDATE_LOGIN,",
+						"          OBJECT_VERSION_NUMBER = DATA_DS.G_1.OBJECT_VERSION_NUMBER,",
+						"          PA_ADDITION_FLAG = DATA_DS.G_1.PA_ADDITION_FLAG,",
+						"          PREPAY_APP_DISTRIBUTION_ID = DATA_DS.G_1.PREPAY_APP_DISTRIBUTION_ID,",
+						"          PREPAY_APP_DIST_ID = DATA_DS.G_1.PREPAY_APP_DIST_ID,",
+						"          PREPAY_CLR_EXCHANGE_DATE = DATA_DS.G_1.PREPAY_CLR_EXCHANGE_DATE,",
+						"          PREPAY_CLR_EXCHANGE_RATE = DATA_DS.G_1.PREPAY_CLR_EXCHANGE_RATE,",
+						"          PREPAY_CLR_EXCHANGE_RATE_TYPE = DATA_DS.G_1.PREPAY_CLR_EXCHANGE_RATE_TYPE,",
+						"          PREPAY_DIST_LOOKUP_CODE = DATA_DS.G_1.PREPAY_DIST_LOOKUP_CODE,",
+						"          PREPAY_EXCHANGE_DATE = DATA_DS.G_1.PREPAY_EXCHANGE_DATE,",
+						"          PREPAY_EXCHANGE_RATE = DATA_DS.G_1.PREPAY_EXCHANGE_RATE,",
+						"          PREPAY_EXCHANGE_RATE_TYPE = DATA_DS.G_1.PREPAY_EXCHANGE_RATE_TYPE,",
+						"          PREPAY_HISTORY_ID = DATA_DS.G_1.PREPAY_HISTORY_ID,",
+						"          PREPAY_PAY_EXCHANGE_DATE = DATA_DS.G_1.PREPAY_PAY_EXCHANGE_DATE,",
+						"          PREPAY_PAY_EXCHANGE_RATE = DATA_DS.G_1.PREPAY_PAY_EXCHANGE_RATE,",
+						"          PREPAY_PAY_EXCHANGE_RATE_TYPE = DATA_DS.G_1.PREPAY_PAY_EXCHANGE_RATE_TYPE,",
+						"          PROGRAM_APPLICATION_ID = DATA_DS.G_1.PROGRAM_APPLICATION_ID,",
+						"          PROGRAM_ID = DATA_DS.G_1.PROGRAM_ID,",
+						"          PROGRAM_UPDATE_DATE = DATA_DS.G_1.PROGRAM_UPDATE_DATE,",
+						"          QUANTITY_VARIANCE = DATA_DS.G_1.QUANTITY_VARIANCE,",
+						"          RELEASE_INV_DIST_DERIVED_FROM = DATA_DS.G_1.RELEASE_INV_DIST_DERIVED_FROM,",
+						"          REQUEST_ID = DATA_DS.G_1.REQUEST_ID,",
+						"          REVERSED_PREPAY_APP_DIST_ID = DATA_DS.G_1.REVERSED_PREPAY_APP_DIST_ID,",
+						"          ROUNDING_AMT = DATA_DS.G_1.ROUNDING_AMT,",
+						"          ROUND_AMT_AT_PREPAY_CLR_XRATE = DATA_DS.G_1.ROUND_AMT_AT_PREPAY_CLR_XRATE,",
+						"          ROUND_AMT_AT_PREPAY_PAY_XRATE = DATA_DS.G_1.ROUND_AMT_AT_PREPAY_PAY_XRATE,",
+						"          ROUND_AMT_AT_PREPAY_XRATE = DATA_DS.G_1.ROUND_AMT_AT_PREPAY_XRATE",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> XmlToCsvflatten",
+						"XmlToCsvflatten derive(source_name = 'SYSTEM',",
+						"          sub_source_name = 'R2P',",
+						"          created_date_time = currentUTC()) ~> addLoadDetails",
+						"addLoadDetails sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     partitionFileNames:['Prepayment_Application_Distribution.csv'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SnkCsv"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_prepayment_history_decoding')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/Payment Dashboard/Prepayment History"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_xml_prepayment_history_source_stage_encoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SrcEncodedXml"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_delimited_xml_prepayment_history_source_stage_decoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SnkDecodedXml"
+						}
+					],
+					"transformations": [
+						{
+							"name": "Decoding"
+						},
+						{
+							"name": "SelectDecodedData"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          {http://www.w3.org/2003/05/soap-envelope,Envelope} as ({http://www.w3.org/2003/05/soap-envelope,Body} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,runReportResponse} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,runReportReturn} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,metaDataList} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean), {http://xmlns.oracle.com/oxp/service/PublicReportService,reportBytes} as string, {http://xmlns.oracle.com/oxp/service/PublicReportService,reportContentType} as string, {http://xmlns.oracle.com/oxp/service/PublicReportService,reportFileID} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean), {http://xmlns.oracle.com/oxp/service/PublicReportService,reportLocale} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean)))), {http://www.w3.org/2003/05/soap-envelope,Header} as string)",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     validationMode: 'none',",
+						"     namespaces: true) ~> SrcEncodedXml",
+						"SrcEncodedXml derive(ReportBytes = fromBase64(toString({http://www.w3.org/2003/05/soap-envelope,Envelope}.{http://www.w3.org/2003/05/soap-envelope,Body}.{http://xmlns.oracle.com/oxp/service/PublicReportService,runReportResponse}.{http://xmlns.oracle.com/oxp/service/PublicReportService,runReportReturn}.{http://xmlns.oracle.com/oxp/service/PublicReportService,reportBytes}))) ~> Decoding",
+						"Decoding select(mapColumn(",
+						"          ReportBytes",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> SelectDecodedData",
+						"SelectDecodedData sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     emptyLinesAsHeader: 1,",
+						"     partitionFileNames:['source_data_decoded.xml'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SnkDecodedXml"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_prepayment_history_flattening')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/Payment Dashboard/Prepayment History"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_xml_prepayment_history_source_stage_decoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SrcXMl"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_prepayment_history_source_stage_final_csv",
+								"type": "DatasetReference"
+							},
+							"name": "SnkCsv"
+						}
+					],
+					"transformations": [
+						{
+							"name": "XmlToCsvflatten"
+						},
+						{
+							"name": "addLoadDetails"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          DATA_DS as (G_1 as (ACCOUNTING_DATE as string, ACCOUNTING_EVENT_ID as string, BC_EVENT_ID as string, CREATED_BY as string, CREATION_DATE as string, GAIN_LOSS_INDICATOR as string, HISTORICAL_FLAG as string, INVOICE_ADJUSTMENT_EVENT_ID as string, INVOICE_ID as string, INVOICE_LINE_NUMBER as string, JOB_DEFINITION_NAME as string, JOB_DEFINITION_PACKAGE as string, LAST_UPDATED_BY as string, LAST_UPDATE_DATE as string, LAST_UPDATE_LOGIN as string, OBJECT_VERSION_NUMBER as string, ORG_ID as string, POSTED_FLAG as string, PREPAY_HISTORY_ID as string, PREPAY_INVOICE_ID as string, PREPAY_LINE_NUM as string, PROGRAM_APPLICATION_ID as string, PROGRAM_ID as string, PROGRAM_UPDATE_DATE as string, RELATED_PREPAY_APP_EVENT_ID as string, REQUEST_ID as string, TRANSACTION_TYPE as string)[])",
+						"     ),",
+						"     allowSchemaDrift: false,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     validationMode: 'none',",
+						"     namespaces: true) ~> SrcXMl",
+						"SrcXMl foldDown(unroll(DATA_DS.G_1),",
+						"     mapColumn(",
+						"          ACCOUNTING_DATE = DATA_DS.G_1.ACCOUNTING_DATE,",
+						"          ACCOUNTING_EVENT_ID = DATA_DS.G_1.ACCOUNTING_EVENT_ID,",
+						"          BC_EVENT_ID = DATA_DS.G_1.BC_EVENT_ID,",
+						"          CREATED_BY = DATA_DS.G_1.CREATED_BY,",
+						"          CREATION_DATE = DATA_DS.G_1.CREATION_DATE,",
+						"          GAIN_LOSS_INDICATOR = DATA_DS.G_1.GAIN_LOSS_INDICATOR,",
+						"          HISTORICAL_FLAG = DATA_DS.G_1.HISTORICAL_FLAG,",
+						"          INVOICE_ADJUSTMENT_EVENT_ID = DATA_DS.G_1.INVOICE_ADJUSTMENT_EVENT_ID,",
+						"          INVOICE_ID = DATA_DS.G_1.INVOICE_ID,",
+						"          INVOICE_LINE_NUMBER = DATA_DS.G_1.INVOICE_LINE_NUMBER,",
+						"          JOB_DEFINITION_NAME = DATA_DS.G_1.JOB_DEFINITION_NAME,",
+						"          JOB_DEFINITION_PACKAGE = DATA_DS.G_1.JOB_DEFINITION_PACKAGE,",
+						"          LAST_UPDATED_BY = DATA_DS.G_1.LAST_UPDATED_BY,",
+						"          LAST_UPDATE_DATE = DATA_DS.G_1.LAST_UPDATE_DATE,",
+						"          LAST_UPDATE_LOGIN = DATA_DS.G_1.LAST_UPDATE_LOGIN,",
+						"          OBJECT_VERSION_NUMBER = DATA_DS.G_1.OBJECT_VERSION_NUMBER,",
+						"          ORG_ID = DATA_DS.G_1.ORG_ID,",
+						"          POSTED_FLAG = DATA_DS.G_1.POSTED_FLAG,",
+						"          PREPAY_HISTORY_ID = DATA_DS.G_1.PREPAY_HISTORY_ID,",
+						"          PREPAY_INVOICE_ID = DATA_DS.G_1.PREPAY_INVOICE_ID,",
+						"          PREPAY_LINE_NUM = DATA_DS.G_1.PREPAY_LINE_NUM,",
+						"          PROGRAM_APPLICATION_ID = DATA_DS.G_1.PROGRAM_APPLICATION_ID,",
+						"          PROGRAM_ID = DATA_DS.G_1.PROGRAM_ID,",
+						"          PROGRAM_UPDATE_DATE = DATA_DS.G_1.PROGRAM_UPDATE_DATE,",
+						"          RELATED_PREPAY_APP_EVENT_ID = DATA_DS.G_1.RELATED_PREPAY_APP_EVENT_ID,",
+						"          REQUEST_ID = DATA_DS.G_1.REQUEST_ID,",
+						"          TRANSACTION_TYPE = DATA_DS.G_1.TRANSACTION_TYPE",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> XmlToCsvflatten",
+						"XmlToCsvflatten derive(source_name = 'SYSTEM',",
+						"          sub_source_name = 'R2P',",
+						"          created_date_time = currentUTC()) ~> addLoadDetails",
+						"addLoadDetails sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     partitionFileNames:['Prepayment_History.csv'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SnkCsv"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_prime_mcpm_stage_to_raw')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_MCPM_Prime_Stage",
+								"type": "DatasetReference"
+							},
+							"name": "srcStage"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_prime_mcpm_raw",
+								"type": "DatasetReference"
+							},
+							"name": "snkRaw"
+						}
+					],
+					"transformations": [
+						{
+							"name": "setFileName"
+						}
+					],
+					"script": "source(output(\n\t\tDOmain as string,\n\t\tPrime as string,\n\t\tTitle as string,\n\t\tKeyUoMImperial as string,\n\t\tKeyUoMMetric as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\trowUrlColumn: 'FileName',\n\twildcardPaths:['Project_Data/NCSA/MCPM/Prime/Prime.csv']) ~> srcStage\nsrcStage derive(FileName = concat('Project_Data/NCSA/MCPM/Prime/',substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/','Prime_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv')) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\trowUrlColumn:'FileName',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> snkRaw"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_project_elements_data_decoding')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/Payment Dashboard/Project Elements Data"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_xml_project_elements_data_source_stage_encoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SrcEncodedXml"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_delimited_xml_project_elements_data_source_stage_decoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SnkDecodedXml"
+						}
+					],
+					"transformations": [
+						{
+							"name": "Decoding"
+						},
+						{
+							"name": "SelectDecodedData"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          {http://www.w3.org/2003/05/soap-envelope,Envelope} as ({http://www.w3.org/2003/05/soap-envelope,Body} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,runReportResponse} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,runReportReturn} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,metaDataList} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean), {http://xmlns.oracle.com/oxp/service/PublicReportService,reportBytes} as string, {http://xmlns.oracle.com/oxp/service/PublicReportService,reportContentType} as string, {http://xmlns.oracle.com/oxp/service/PublicReportService,reportFileID} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean), {http://xmlns.oracle.com/oxp/service/PublicReportService,reportLocale} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean)))), {http://www.w3.org/2003/05/soap-envelope,Header} as string)",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     validationMode: 'none',",
+						"     namespaces: true) ~> SrcEncodedXml",
+						"SrcEncodedXml derive(ReportBytes = fromBase64(toString({http://www.w3.org/2003/05/soap-envelope,Envelope}.{http://www.w3.org/2003/05/soap-envelope,Body}.{http://xmlns.oracle.com/oxp/service/PublicReportService,runReportResponse}.{http://xmlns.oracle.com/oxp/service/PublicReportService,runReportReturn}.{http://xmlns.oracle.com/oxp/service/PublicReportService,reportBytes}))) ~> Decoding",
+						"Decoding select(mapColumn(",
+						"          ReportBytes",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> SelectDecodedData",
+						"SelectDecodedData sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     emptyLinesAsHeader: 1,",
+						"     partitionFileNames:['source_data_decoded.xml'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SnkDecodedXml"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_project_elements_data_flattening')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/Payment Dashboard/Project Elements Data"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_xml_project_elements_data_source_stage_decoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SrcXMl"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_project_elements_data_source_stage_final_csv",
+								"type": "DatasetReference"
+							},
+							"name": "SnkCsv"
+						}
+					],
+					"transformations": [
+						{
+							"name": "XmlToCsvflatten"
+						},
+						{
+							"name": "addLoadDetails"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          DATA_DS as (G_1 as (ATTRIBUTE1 as string, ATTRIBUTE10 as string, ATTRIBUTE11 as string, ATTRIBUTE12 as string, ATTRIBUTE13 as string, ATTRIBUTE14 as string, ATTRIBUTE15 as string, ATTRIBUTE2 as string, ATTRIBUTE3 as string, ATTRIBUTE4 as string, ATTRIBUTE5 as string, ATTRIBUTE6 as string, ATTRIBUTE7 as string, ATTRIBUTE8 as string, ATTRIBUTE9 as string, BILLABLE_FLAG as string, CARRYING_OUT_ORGANIZATION_ID as string, CHARGEABLE_FLAG as string, COMPLETION_DATE as string, DESCRIPTION as string, ELEMENT_NUMBER as string, LAST_UPDATE_DATE as string, NAME as string, PROJECT_ID as string, PROJ_ELEMENT_ID as string, START_DATE as string)[])",
+						"     ),",
+						"     allowSchemaDrift: false,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     validationMode: 'none',",
+						"     namespaces: true) ~> SrcXMl",
+						"SrcXMl foldDown(unroll(DATA_DS.G_1),",
+						"     mapColumn(",
+						"          ATTRIBUTE1 = DATA_DS.G_1.ATTRIBUTE1,",
+						"          ATTRIBUTE10 = DATA_DS.G_1.ATTRIBUTE10,",
+						"          ATTRIBUTE11 = DATA_DS.G_1.ATTRIBUTE11,",
+						"          ATTRIBUTE12 = DATA_DS.G_1.ATTRIBUTE12,",
+						"          ATTRIBUTE13 = DATA_DS.G_1.ATTRIBUTE13,",
+						"          ATTRIBUTE14 = DATA_DS.G_1.ATTRIBUTE14,",
+						"          ATTRIBUTE15 = DATA_DS.G_1.ATTRIBUTE15,",
+						"          ATTRIBUTE2 = DATA_DS.G_1.ATTRIBUTE2,",
+						"          ATTRIBUTE3 = DATA_DS.G_1.ATTRIBUTE3,",
+						"          ATTRIBUTE4 = DATA_DS.G_1.ATTRIBUTE4,",
+						"          ATTRIBUTE5 = DATA_DS.G_1.ATTRIBUTE5,",
+						"          ATTRIBUTE6 = DATA_DS.G_1.ATTRIBUTE6,",
+						"          ATTRIBUTE7 = DATA_DS.G_1.ATTRIBUTE7,",
+						"          ATTRIBUTE8 = DATA_DS.G_1.ATTRIBUTE8,",
+						"          ATTRIBUTE9 = DATA_DS.G_1.ATTRIBUTE9,",
+						"          BILLABLE_FLAG = DATA_DS.G_1.BILLABLE_FLAG,",
+						"          CARRYING_OUT_ORGANIZATION_ID = DATA_DS.G_1.CARRYING_OUT_ORGANIZATION_ID,",
+						"          CHARGEABLE_FLAG = DATA_DS.G_1.CHARGEABLE_FLAG,",
+						"          COMPLETION_DATE = DATA_DS.G_1.COMPLETION_DATE,",
+						"          DESCRIPTION = DATA_DS.G_1.DESCRIPTION,",
+						"          ELEMENT_NUMBER = DATA_DS.G_1.ELEMENT_NUMBER,",
+						"          LAST_UPDATE_DATE = DATA_DS.G_1.LAST_UPDATE_DATE,",
+						"          NAME = DATA_DS.G_1.NAME,",
+						"          PROJECT_ID = DATA_DS.G_1.PROJECT_ID,",
+						"          PROJ_ELEMENT_ID = DATA_DS.G_1.PROJ_ELEMENT_ID,",
+						"          START_DATE = DATA_DS.G_1.START_DATE",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> XmlToCsvflatten",
+						"XmlToCsvflatten derive(source_name = 'SYSTEM',",
+						"          sub_source_name = 'R2P',",
+						"          created_date_time = currentUTC()) ~> addLoadDetails",
+						"addLoadDetails sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     partitionFileNames:['Project_Elements_Data.csv'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SnkCsv"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_project_milestones_stage_to_raw')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "df_project_milestones_stage_to_raw",
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_project_milestones_Stage",
+								"type": "DatasetReference"
+							},
+							"name": "srcdfProjectMilestonesStage"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_project_milestones_raw",
+								"type": "DatasetReference"
+							},
+							"name": "snkProjectMilestonesRaw"
+						}
+					],
+					"transformations": [
+						{
+							"name": "setFileName"
+						}
+					],
+					"script": "source(output(\n\t\t{Activity ID} as string,\n\t\t{Activity Status} as string,\n\t\t{Activity Name} as string,\n\t\tStart as string,\n\t\tFinish as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\trowUrlColumn: 'FileName',\n\twildcardPaths:['Project_Data/NCSA/P6/Project_Milestones/project_milestones*.csv']) ~> srcdfProjectMilestonesStage\nsrcdfProjectMilestonesStage derive(FileName = concat('Project_Data/NCSA/P6/Project_Milestones/',substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/','project_milestones_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv')) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tinput(\n\t\t{Project ID } as string,\n\t\t{Activity ID} as string,\n\t\t{Activity Status} as string,\n\t\t{Activity Name} as string,\n\t\t{Original Duration} as string,\n\t\tStart as string,\n\t\tFinish as string,\n\t\t{Current date} as string,\n\t\t{% Complete} as string,\n\t\tResource as string\n\t),\n\trowUrlColumn:'FileName',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> snkProjectMilestonesRaw"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_projects_data_decoding')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/Payment Dashboard/Projects Data"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_xml_projects_data_source_stage_encoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SrcEncodedXml"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_delimited_xml_projects_data_source_stage_decoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SnkDecodedXml"
+						}
+					],
+					"transformations": [
+						{
+							"name": "Decoding"
+						},
+						{
+							"name": "SelectDecodedData"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          {http://www.w3.org/2003/05/soap-envelope,Envelope} as ({http://www.w3.org/2003/05/soap-envelope,Body} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,runReportResponse} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,runReportReturn} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,metaDataList} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean), {http://xmlns.oracle.com/oxp/service/PublicReportService,reportBytes} as string, {http://xmlns.oracle.com/oxp/service/PublicReportService,reportContentType} as string, {http://xmlns.oracle.com/oxp/service/PublicReportService,reportFileID} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean), {http://xmlns.oracle.com/oxp/service/PublicReportService,reportLocale} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean)))), {http://www.w3.org/2003/05/soap-envelope,Header} as string)",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     validationMode: 'none',",
+						"     namespaces: true) ~> SrcEncodedXml",
+						"SrcEncodedXml derive(ReportBytes = fromBase64(toString({http://www.w3.org/2003/05/soap-envelope,Envelope}.{http://www.w3.org/2003/05/soap-envelope,Body}.{http://xmlns.oracle.com/oxp/service/PublicReportService,runReportResponse}.{http://xmlns.oracle.com/oxp/service/PublicReportService,runReportReturn}.{http://xmlns.oracle.com/oxp/service/PublicReportService,reportBytes}))) ~> Decoding",
+						"Decoding select(mapColumn(",
+						"          ReportBytes",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> SelectDecodedData",
+						"SelectDecodedData sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     emptyLinesAsHeader: 1,",
+						"     partitionFileNames:['source_data_decoded.xml'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SnkDecodedXml"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_projects_data_flattening')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/Payment Dashboard/Projects Data"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_xml_projects_data_source_stage_decoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SrcXMl"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_projects_data_source_stage_final_csv",
+								"type": "DatasetReference"
+							},
+							"name": "SnkCsv"
+						}
+					],
+					"transformations": [
+						{
+							"name": "XmlToCsvflatten"
+						},
+						{
+							"name": "addLoadDetails"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          DATA_DS as (G_1 as (ATTRIBUTE1 as string, ATTRIBUTE10 as string, ATTRIBUTE10_DATE as string, ATTRIBUTE10_NUMBER as string, ATTRIBUTE11 as string, ATTRIBUTE11_DATE as string, ATTRIBUTE11_NUMBER as string, ATTRIBUTE12 as string, ATTRIBUTE12_DATE as string, ATTRIBUTE12_NUMBER as string, ATTRIBUTE13 as string, ATTRIBUTE13_DATE as string, ATTRIBUTE13_NUMBER as string, ATTRIBUTE14 as string, ATTRIBUTE14_DATE as string, ATTRIBUTE14_NUMBER as string, ATTRIBUTE15 as string, ATTRIBUTE15_DATE as string, ATTRIBUTE15_NUMBER as string, ATTRIBUTE16 as string, ATTRIBUTE17 as string, ATTRIBUTE18 as string, ATTRIBUTE19 as string, ATTRIBUTE1_DATE as string, ATTRIBUTE1_NUMBER as string, ATTRIBUTE2 as string, ATTRIBUTE20 as string, ATTRIBUTE21 as string, ATTRIBUTE22 as string, ATTRIBUTE23 as string, ATTRIBUTE24 as string, ATTRIBUTE25 as string, ATTRIBUTE26 as string, ATTRIBUTE27 as string, ATTRIBUTE28 as string, ATTRIBUTE29 as string, ATTRIBUTE2_DATE as string, ATTRIBUTE2_NUMBER as string, ATTRIBUTE3 as string, ATTRIBUTE30 as string, ATTRIBUTE31 as string, ATTRIBUTE32 as string, ATTRIBUTE33 as string, ATTRIBUTE34 as string, ATTRIBUTE35 as string, ATTRIBUTE36 as string, ATTRIBUTE37 as string, ATTRIBUTE38 as string, ATTRIBUTE39 as string, ATTRIBUTE3_DATE as string, ATTRIBUTE3_NUMBER as string, ATTRIBUTE4 as string, ATTRIBUTE40 as string, ATTRIBUTE41 as string, ATTRIBUTE42 as string, ATTRIBUTE43 as string, ATTRIBUTE44 as string, ATTRIBUTE45 as string, ATTRIBUTE46 as string, ATTRIBUTE47 as string, ATTRIBUTE48 as string, ATTRIBUTE49 as string, ATTRIBUTE4_DATE as string, ATTRIBUTE4_NUMBER as string, ATTRIBUTE5 as string, ATTRIBUTE50 as string, ATTRIBUTE5_DATE as string, ATTRIBUTE5_NUMBER as string, ATTRIBUTE6 as string, ATTRIBUTE6_DATE as string, ATTRIBUTE6_NUMBER as string, ATTRIBUTE7 as string, ATTRIBUTE7_DATE as string, ATTRIBUTE7_NUMBER as string, ATTRIBUTE8 as string, ATTRIBUTE8_DATE as string, ATTRIBUTE8_NUMBER as string, ATTRIBUTE9 as string, ATTRIBUTE9_DATE as string, ATTRIBUTE9_NUMBER as string, ATTRIBUTE_CATEGORY as string, CARRYING_OUT_ORGANIZATION_ID as string, CLOSED_DATE as string, COMPLETION_DATE as string, CREATED_BY as string, CREATED_FROM_PROJECT_ID as string, CREATION_DATE as string, DESCRIPTION as string, LANGUAGE as string, LAST_UPDATED_BY as string, LAST_UPDATE_DATE as string, LAST_UPDATE_LOGIN as string, LEGAL_ENTITY_ID as string, NAME as string, ORG_ID as string, PROJECT_CURRENCY_CODE as string, PROJECT_ID as string, PROJECT_STATUS_CODE as string, PROJECT_TYPE as string, PROJECT_TYPE_ID as string, PROJECT_UNIT_ID as string, SEGMENT1 as string, START_DATE as string, TEMPLATE_END_DATE_ACTIVE as string, TEMPLATE_FLAG as string, TEMPLATE_START_DATE_ACTIVE as string)[])",
+						"     ),",
+						"     allowSchemaDrift: false,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     validationMode: 'none',",
+						"     namespaces: true) ~> SrcXMl",
+						"SrcXMl foldDown(unroll(DATA_DS.G_1),",
+						"     mapColumn(",
+						"          ATTRIBUTE1 = DATA_DS.G_1.ATTRIBUTE1,",
+						"          ATTRIBUTE10 = DATA_DS.G_1.ATTRIBUTE10,",
+						"          ATTRIBUTE10_DATE = DATA_DS.G_1.ATTRIBUTE10_DATE,",
+						"          ATTRIBUTE10_NUMBER = DATA_DS.G_1.ATTRIBUTE10_NUMBER,",
+						"          ATTRIBUTE11 = DATA_DS.G_1.ATTRIBUTE11,",
+						"          ATTRIBUTE11_DATE = DATA_DS.G_1.ATTRIBUTE11_DATE,",
+						"          ATTRIBUTE11_NUMBER = DATA_DS.G_1.ATTRIBUTE11_NUMBER,",
+						"          ATTRIBUTE12 = DATA_DS.G_1.ATTRIBUTE12,",
+						"          ATTRIBUTE12_DATE = DATA_DS.G_1.ATTRIBUTE12_DATE,",
+						"          ATTRIBUTE12_NUMBER = DATA_DS.G_1.ATTRIBUTE12_NUMBER,",
+						"          ATTRIBUTE13 = DATA_DS.G_1.ATTRIBUTE13,",
+						"          ATTRIBUTE13_DATE = DATA_DS.G_1.ATTRIBUTE13_DATE,",
+						"          ATTRIBUTE13_NUMBER = DATA_DS.G_1.ATTRIBUTE13_NUMBER,",
+						"          ATTRIBUTE14 = DATA_DS.G_1.ATTRIBUTE14,",
+						"          ATTRIBUTE14_DATE = DATA_DS.G_1.ATTRIBUTE14_DATE,",
+						"          ATTRIBUTE14_NUMBER = DATA_DS.G_1.ATTRIBUTE14_NUMBER,",
+						"          ATTRIBUTE15 = DATA_DS.G_1.ATTRIBUTE15,",
+						"          ATTRIBUTE15_DATE = DATA_DS.G_1.ATTRIBUTE15_DATE,",
+						"          ATTRIBUTE15_NUMBER = DATA_DS.G_1.ATTRIBUTE15_NUMBER,",
+						"          ATTRIBUTE16 = DATA_DS.G_1.ATTRIBUTE16,",
+						"          ATTRIBUTE17 = DATA_DS.G_1.ATTRIBUTE17,",
+						"          ATTRIBUTE18 = DATA_DS.G_1.ATTRIBUTE18,",
+						"          ATTRIBUTE19 = DATA_DS.G_1.ATTRIBUTE19,",
+						"          ATTRIBUTE1_DATE = DATA_DS.G_1.ATTRIBUTE1_DATE,",
+						"          ATTRIBUTE1_NUMBER = DATA_DS.G_1.ATTRIBUTE1_NUMBER,",
+						"          ATTRIBUTE2 = DATA_DS.G_1.ATTRIBUTE2,",
+						"          ATTRIBUTE20 = DATA_DS.G_1.ATTRIBUTE20,",
+						"          ATTRIBUTE21 = DATA_DS.G_1.ATTRIBUTE21,",
+						"          ATTRIBUTE22 = DATA_DS.G_1.ATTRIBUTE22,",
+						"          ATTRIBUTE23 = DATA_DS.G_1.ATTRIBUTE23,",
+						"          ATTRIBUTE24 = DATA_DS.G_1.ATTRIBUTE24,",
+						"          ATTRIBUTE25 = DATA_DS.G_1.ATTRIBUTE25,",
+						"          ATTRIBUTE26 = DATA_DS.G_1.ATTRIBUTE26,",
+						"          ATTRIBUTE27 = DATA_DS.G_1.ATTRIBUTE27,",
+						"          ATTRIBUTE28 = DATA_DS.G_1.ATTRIBUTE28,",
+						"          ATTRIBUTE29 = DATA_DS.G_1.ATTRIBUTE29,",
+						"          ATTRIBUTE2_DATE = DATA_DS.G_1.ATTRIBUTE2_DATE,",
+						"          ATTRIBUTE2_NUMBER = DATA_DS.G_1.ATTRIBUTE2_NUMBER,",
+						"          ATTRIBUTE3 = DATA_DS.G_1.ATTRIBUTE3,",
+						"          ATTRIBUTE30 = DATA_DS.G_1.ATTRIBUTE30,",
+						"          ATTRIBUTE31 = DATA_DS.G_1.ATTRIBUTE31,",
+						"          ATTRIBUTE32 = DATA_DS.G_1.ATTRIBUTE32,",
+						"          ATTRIBUTE33 = DATA_DS.G_1.ATTRIBUTE33,",
+						"          ATTRIBUTE34 = DATA_DS.G_1.ATTRIBUTE34,",
+						"          ATTRIBUTE35 = DATA_DS.G_1.ATTRIBUTE35,",
+						"          ATTRIBUTE36 = DATA_DS.G_1.ATTRIBUTE36,",
+						"          ATTRIBUTE37 = DATA_DS.G_1.ATTRIBUTE37,",
+						"          ATTRIBUTE38 = DATA_DS.G_1.ATTRIBUTE38,",
+						"          ATTRIBUTE39 = DATA_DS.G_1.ATTRIBUTE39,",
+						"          ATTRIBUTE3_DATE = DATA_DS.G_1.ATTRIBUTE3_DATE,",
+						"          ATTRIBUTE3_NUMBER = DATA_DS.G_1.ATTRIBUTE3_NUMBER,",
+						"          ATTRIBUTE4 = DATA_DS.G_1.ATTRIBUTE4,",
+						"          ATTRIBUTE40 = DATA_DS.G_1.ATTRIBUTE40,",
+						"          ATTRIBUTE41 = DATA_DS.G_1.ATTRIBUTE41,",
+						"          ATTRIBUTE42 = DATA_DS.G_1.ATTRIBUTE42,",
+						"          ATTRIBUTE43 = DATA_DS.G_1.ATTRIBUTE43,",
+						"          ATTRIBUTE44 = DATA_DS.G_1.ATTRIBUTE44,",
+						"          ATTRIBUTE45 = DATA_DS.G_1.ATTRIBUTE45,",
+						"          ATTRIBUTE46 = DATA_DS.G_1.ATTRIBUTE46,",
+						"          ATTRIBUTE47 = DATA_DS.G_1.ATTRIBUTE47,",
+						"          ATTRIBUTE48 = DATA_DS.G_1.ATTRIBUTE48,",
+						"          ATTRIBUTE49 = DATA_DS.G_1.ATTRIBUTE49,",
+						"          ATTRIBUTE4_DATE = DATA_DS.G_1.ATTRIBUTE4_DATE,",
+						"          ATTRIBUTE4_NUMBER = DATA_DS.G_1.ATTRIBUTE4_NUMBER,",
+						"          ATTRIBUTE5 = DATA_DS.G_1.ATTRIBUTE5,",
+						"          ATTRIBUTE50 = DATA_DS.G_1.ATTRIBUTE50,",
+						"          ATTRIBUTE5_DATE = DATA_DS.G_1.ATTRIBUTE5_DATE,",
+						"          ATTRIBUTE5_NUMBER = DATA_DS.G_1.ATTRIBUTE5_NUMBER,",
+						"          ATTRIBUTE6 = DATA_DS.G_1.ATTRIBUTE6,",
+						"          ATTRIBUTE6_DATE = DATA_DS.G_1.ATTRIBUTE6_DATE,",
+						"          ATTRIBUTE6_NUMBER = DATA_DS.G_1.ATTRIBUTE6_NUMBER,",
+						"          ATTRIBUTE7 = DATA_DS.G_1.ATTRIBUTE7,",
+						"          ATTRIBUTE7_DATE = DATA_DS.G_1.ATTRIBUTE7_DATE,",
+						"          ATTRIBUTE7_NUMBER = DATA_DS.G_1.ATTRIBUTE7_NUMBER,",
+						"          ATTRIBUTE8 = DATA_DS.G_1.ATTRIBUTE8,",
+						"          ATTRIBUTE8_DATE = DATA_DS.G_1.ATTRIBUTE8_DATE,",
+						"          ATTRIBUTE8_NUMBER = DATA_DS.G_1.ATTRIBUTE8_NUMBER,",
+						"          ATTRIBUTE9 = DATA_DS.G_1.ATTRIBUTE9,",
+						"          ATTRIBUTE9_DATE = DATA_DS.G_1.ATTRIBUTE9_DATE,",
+						"          ATTRIBUTE9_NUMBER = DATA_DS.G_1.ATTRIBUTE9_NUMBER,",
+						"          ATTRIBUTE_CATEGORY = DATA_DS.G_1.ATTRIBUTE_CATEGORY,",
+						"          CARRYING_OUT_ORGANIZATION_ID = DATA_DS.G_1.CARRYING_OUT_ORGANIZATION_ID,",
+						"          CLOSED_DATE = DATA_DS.G_1.CLOSED_DATE,",
+						"          COMPLETION_DATE = DATA_DS.G_1.COMPLETION_DATE,",
+						"          CREATED_BY = DATA_DS.G_1.CREATED_BY,",
+						"          CREATED_FROM_PROJECT_ID = DATA_DS.G_1.CREATED_FROM_PROJECT_ID,",
+						"          CREATION_DATE = DATA_DS.G_1.CREATION_DATE,",
+						"          DESCRIPTION = DATA_DS.G_1.DESCRIPTION,",
+						"          LANGUAGE = DATA_DS.G_1.LANGUAGE,",
+						"          LAST_UPDATED_BY = DATA_DS.G_1.LAST_UPDATED_BY,",
+						"          LAST_UPDATE_DATE = DATA_DS.G_1.LAST_UPDATE_DATE,",
+						"          LAST_UPDATE_LOGIN = DATA_DS.G_1.LAST_UPDATE_LOGIN,",
+						"          LEGAL_ENTITY_ID = DATA_DS.G_1.LEGAL_ENTITY_ID,",
+						"          NAME = DATA_DS.G_1.NAME,",
+						"          ORG_ID = DATA_DS.G_1.ORG_ID,",
+						"          PROJECT_CURRENCY_CODE = DATA_DS.G_1.PROJECT_CURRENCY_CODE,",
+						"          PROJECT_ID = DATA_DS.G_1.PROJECT_ID,",
+						"          PROJECT_STATUS_CODE = DATA_DS.G_1.PROJECT_STATUS_CODE,",
+						"          PROJECT_TYPE = DATA_DS.G_1.PROJECT_TYPE,",
+						"          PROJECT_TYPE_ID = DATA_DS.G_1.PROJECT_TYPE_ID,",
+						"          PROJECT_UNIT_ID = DATA_DS.G_1.PROJECT_UNIT_ID,",
+						"          SEGMENT1 = DATA_DS.G_1.SEGMENT1,",
+						"          START_DATE = DATA_DS.G_1.START_DATE,",
+						"          TEMPLATE_END_DATE_ACTIVE = DATA_DS.G_1.TEMPLATE_END_DATE_ACTIVE,",
+						"          TEMPLATE_FLAG = DATA_DS.G_1.TEMPLATE_FLAG,",
+						"          TEMPLATE_START_DATE_ACTIVE = DATA_DS.G_1.TEMPLATE_START_DATE_ACTIVE",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> XmlToCsvflatten",
+						"XmlToCsvflatten derive(source_name = 'SYSTEM',",
+						"          sub_source_name = 'R2P',",
+						"          created_date_time = currentUTC()) ~> addLoadDetails",
+						"addLoadDetails sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     partitionFileNames:['Projects_Data.csv'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SnkCsv"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_rcv_shipment_headers_decoding')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/Payment Dashboard/Rcv Shipment Headers"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_xml_rcv_shipment_headers_source_stage_encoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SrcEncodedXml"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_delimited_xml_rcv_shipment_headers_source_stage_decoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SnkDecodedXml"
+						}
+					],
+					"transformations": [
+						{
+							"name": "Decoding"
+						},
+						{
+							"name": "SelectDecodedData"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          {http://www.w3.org/2003/05/soap-envelope,Envelope} as ({http://www.w3.org/2003/05/soap-envelope,Body} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,runReportResponse} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,runReportReturn} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,metaDataList} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean), {http://xmlns.oracle.com/oxp/service/PublicReportService,reportBytes} as string, {http://xmlns.oracle.com/oxp/service/PublicReportService,reportContentType} as string, {http://xmlns.oracle.com/oxp/service/PublicReportService,reportFileID} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean), {http://xmlns.oracle.com/oxp/service/PublicReportService,reportLocale} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean)))), {http://www.w3.org/2003/05/soap-envelope,Header} as string)",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     validationMode: 'none',",
+						"     namespaces: true) ~> SrcEncodedXml",
+						"SrcEncodedXml derive(ReportBytes = fromBase64(toString({http://www.w3.org/2003/05/soap-envelope,Envelope}.{http://www.w3.org/2003/05/soap-envelope,Body}.{http://xmlns.oracle.com/oxp/service/PublicReportService,runReportResponse}.{http://xmlns.oracle.com/oxp/service/PublicReportService,runReportReturn}.{http://xmlns.oracle.com/oxp/service/PublicReportService,reportBytes}))) ~> Decoding",
+						"Decoding select(mapColumn(",
+						"          ReportBytes",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> SelectDecodedData",
+						"SelectDecodedData sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     emptyLinesAsHeader: 1,",
+						"     partitionFileNames:['source_data_decoded.xml'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SnkDecodedXml"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_rcv_shipment_headers_flattening')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/Payment Dashboard/Rcv Shipment Headers"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_xml_rcv_shipment_headers_source_stage_decoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SrcXMl"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_rcv_shipment_headers_source_stage_final_csv",
+								"type": "DatasetReference"
+							},
+							"name": "SnkCsv"
+						}
+					],
+					"transformations": [
+						{
+							"name": "XmlToCsvflatten"
+						},
+						{
+							"name": "addLoadDetails"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          DATA_DS as (G_1 as (APPROVAL_STATUS as string, ASN_STATUS as string, ASN_TYPE as string, ATTRIBUTE1 as string, ATTRIBUTE10 as string, ATTRIBUTE11 as string, ATTRIBUTE12 as string, ATTRIBUTE13 as string, ATTRIBUTE14 as string, ATTRIBUTE15 as string, ATTRIBUTE16 as string, ATTRIBUTE17 as string, ATTRIBUTE18 as string, ATTRIBUTE19 as string, ATTRIBUTE2 as string, ATTRIBUTE20 as string, ATTRIBUTE3 as string, ATTRIBUTE4 as string, ATTRIBUTE5 as string, ATTRIBUTE6 as string, ATTRIBUTE7 as string, ATTRIBUTE8 as string, ATTRIBUTE9 as string, ATTRIBUTE_CATEGORY as string, ATTRIBUTE_DATE1 as string, ATTRIBUTE_DATE2 as string, ATTRIBUTE_DATE3 as string, ATTRIBUTE_DATE4 as string, ATTRIBUTE_DATE5 as string, ATTRIBUTE_NUMBER1 as string, ATTRIBUTE_NUMBER10 as string, ATTRIBUTE_NUMBER2 as string, ATTRIBUTE_NUMBER3 as string, ATTRIBUTE_NUMBER4 as string, ATTRIBUTE_NUMBER5 as string, ATTRIBUTE_NUMBER6 as string, ATTRIBUTE_NUMBER7 as string, ATTRIBUTE_NUMBER8 as string, ATTRIBUTE_NUMBER9 as string, ATTRIBUTE_TIMESTAMP1 as string, ATTRIBUTE_TIMESTAMP2 as string, ATTRIBUTE_TIMESTAMP3 as string, ATTRIBUTE_TIMESTAMP4 as string, ATTRIBUTE_TIMESTAMP5 as string, BILL_OF_LADING as string, CARRIER_EQUIPMENT as string, CARRIER_METHOD as string, COMMENTS as string, CONTAINER_NUMBER as string, CONVERSION_DATE as string, CONVERSION_RATE as string, CONVERSION_RATE_TYPE as string, CREATED_BY as string, CREATION_DATE as string, CURRENCY_CODE as string, CUSTOMER_ID as string, CUSTOMER_SITE_ID as string, EDI_CONTROL_NUM as string, EMPLOYEE_ID as long, EXPECTED_RECEIPT_DATE as string, EXTERNAL_SYS_TXN_REFERENCE as string, FREIGHT_AMOUNT as string, FREIGHT_BILL_NUMBER as string, FREIGHT_CARRIER_ID as string, FREIGHT_TERMS as string, GL_DATE as string, GOVERNMENT_CONTEXT as string, GROSS_WEIGHT as string, GROSS_WEIGHT_UOM_CODE as string, HAZARD_CLASS as string, HAZARD_CODE as string, HAZARD_DESCRIPTION as string, HEADER_INTERFACE_ID as long, INTERFACE_SOURCE_CODE as string, INVOICE_AMOUNT as string, INVOICE_DATE as string, INVOICE_NUM as string, INVOICE_STATUS_CODE as string, JOB_DEFINITION_NAME as string, JOB_DEFINITION_PACKAGE as string, LAST_UPDATED_BY as string, LAST_UPDATE_DATE as string, LAST_UPDATE_LOGIN as string, LSP_FLAG as string, MODE_OF_TRANSPORT as string, NET_WEIGHT as string, NET_WEIGHT_UOM_CODE as string, NOTICE_CREATION_DATE as string, NUM_OF_CONTAINERS as string, OBJECT_VERSION_NUMBER as boolean, ORGANIZATION_ID as string, PACKAGING_CODE as string, PACKING_SLIP as string, PAYMENT_TERMS_ID as string, PERFORMANCE_PERIOD_FROM as string, PERFORMANCE_PERIOD_TO as string, RA_DOCUMENT_CODE as string, RA_DOCUMENT_NUMBER as string, RA_DOC_CREATION_DATE as string, RA_DOC_LAST_UPDATE_DATE as string, RA_DOC_REVISION_DATE as string, RA_DOC_REVISION_NUMBER as string, RA_DOO_SOURCE_SYSTEM_ID as string, RA_NOTE_TO_RECEIVER as string, RA_ORIG_SYSTEM_REF as string, RA_OUTSOURCER_CONTACT_ID as string, RA_OUTSOURCER_PARTY_ID as string, RECEIPT_ADVICE_NUMBER as string, RECEIPT_NUM as short, RECEIPT_SOURCE_CODE as string, REMIT_TO_SITE_ID as string, REQUEST_DATE as string, REQUEST_ID as integer, RMA_BU_ID as string, SERVICE_LEVEL as string, SHIPMENT_HEADER_ID as integer, SHIPMENT_NUM as string, SHIPPED_DATE as string, SHIP_FROM_LOCATION_ID as string, SHIP_METHOD_CODE as string, SHIP_TO_LOCATION_ID as string, SHIP_TO_ORG_ID as long, SPECIAL_HANDLING_CODE as string, SUPPLIER_SHIPMENT_NUMBER as string, TAR_WEIGHT as string, TAR_WEIGHT_UOM_CODE as string, TAX_AMOUNT as string, TAX_NAME as string, VENDOR_ID as long, VENDOR_SITE_ID as long, WAYBILL_AIRBILL_NUM as string)[])",
+						"     ),",
+						"     allowSchemaDrift: false,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     validationMode: 'none',",
+						"     namespaces: true) ~> SrcXMl",
+						"SrcXMl foldDown(unroll(DATA_DS.G_1),",
+						"     mapColumn(",
+						"          APPROVAL_STATUS = DATA_DS.G_1.APPROVAL_STATUS,",
+						"          ASN_STATUS = DATA_DS.G_1.ASN_STATUS,",
+						"          ASN_TYPE = DATA_DS.G_1.ASN_TYPE,",
+						"          ATTRIBUTE1 = DATA_DS.G_1.ATTRIBUTE1,",
+						"          ATTRIBUTE10 = DATA_DS.G_1.ATTRIBUTE10,",
+						"          ATTRIBUTE11 = DATA_DS.G_1.ATTRIBUTE11,",
+						"          ATTRIBUTE12 = DATA_DS.G_1.ATTRIBUTE12,",
+						"          ATTRIBUTE13 = DATA_DS.G_1.ATTRIBUTE13,",
+						"          ATTRIBUTE14 = DATA_DS.G_1.ATTRIBUTE14,",
+						"          ATTRIBUTE15 = DATA_DS.G_1.ATTRIBUTE15,",
+						"          ATTRIBUTE16 = DATA_DS.G_1.ATTRIBUTE16,",
+						"          ATTRIBUTE17 = DATA_DS.G_1.ATTRIBUTE17,",
+						"          ATTRIBUTE18 = DATA_DS.G_1.ATTRIBUTE18,",
+						"          ATTRIBUTE19 = DATA_DS.G_1.ATTRIBUTE19,",
+						"          ATTRIBUTE2 = DATA_DS.G_1.ATTRIBUTE2,",
+						"          ATTRIBUTE20 = DATA_DS.G_1.ATTRIBUTE20,",
+						"          ATTRIBUTE3 = DATA_DS.G_1.ATTRIBUTE3,",
+						"          ATTRIBUTE4 = DATA_DS.G_1.ATTRIBUTE4,",
+						"          ATTRIBUTE5 = DATA_DS.G_1.ATTRIBUTE5,",
+						"          ATTRIBUTE6 = DATA_DS.G_1.ATTRIBUTE6,",
+						"          ATTRIBUTE7 = DATA_DS.G_1.ATTRIBUTE7,",
+						"          ATTRIBUTE8 = DATA_DS.G_1.ATTRIBUTE8,",
+						"          ATTRIBUTE9 = DATA_DS.G_1.ATTRIBUTE9,",
+						"          ATTRIBUTE_CATEGORY = DATA_DS.G_1.ATTRIBUTE_CATEGORY,",
+						"          ATTRIBUTE_DATE1 = DATA_DS.G_1.ATTRIBUTE_DATE1,",
+						"          ATTRIBUTE_DATE2 = DATA_DS.G_1.ATTRIBUTE_DATE2,",
+						"          ATTRIBUTE_DATE3 = DATA_DS.G_1.ATTRIBUTE_DATE3,",
+						"          ATTRIBUTE_DATE4 = DATA_DS.G_1.ATTRIBUTE_DATE4,",
+						"          ATTRIBUTE_DATE5 = DATA_DS.G_1.ATTRIBUTE_DATE5,",
+						"          ATTRIBUTE_NUMBER1 = DATA_DS.G_1.ATTRIBUTE_NUMBER1,",
+						"          ATTRIBUTE_NUMBER10 = DATA_DS.G_1.ATTRIBUTE_NUMBER10,",
+						"          ATTRIBUTE_NUMBER2 = DATA_DS.G_1.ATTRIBUTE_NUMBER2,",
+						"          ATTRIBUTE_NUMBER3 = DATA_DS.G_1.ATTRIBUTE_NUMBER3,",
+						"          ATTRIBUTE_NUMBER4 = DATA_DS.G_1.ATTRIBUTE_NUMBER4,",
+						"          ATTRIBUTE_NUMBER5 = DATA_DS.G_1.ATTRIBUTE_NUMBER5,",
+						"          ATTRIBUTE_NUMBER6 = DATA_DS.G_1.ATTRIBUTE_NUMBER6,",
+						"          ATTRIBUTE_NUMBER7 = DATA_DS.G_1.ATTRIBUTE_NUMBER7,",
+						"          ATTRIBUTE_NUMBER8 = DATA_DS.G_1.ATTRIBUTE_NUMBER8,",
+						"          ATTRIBUTE_NUMBER9 = DATA_DS.G_1.ATTRIBUTE_NUMBER9,",
+						"          ATTRIBUTE_TIMESTAMP1 = DATA_DS.G_1.ATTRIBUTE_TIMESTAMP1,",
+						"          ATTRIBUTE_TIMESTAMP2 = DATA_DS.G_1.ATTRIBUTE_TIMESTAMP2,",
+						"          ATTRIBUTE_TIMESTAMP3 = DATA_DS.G_1.ATTRIBUTE_TIMESTAMP3,",
+						"          ATTRIBUTE_TIMESTAMP4 = DATA_DS.G_1.ATTRIBUTE_TIMESTAMP4,",
+						"          ATTRIBUTE_TIMESTAMP5 = DATA_DS.G_1.ATTRIBUTE_TIMESTAMP5,",
+						"          BILL_OF_LADING = DATA_DS.G_1.BILL_OF_LADING,",
+						"          CARRIER_EQUIPMENT = DATA_DS.G_1.CARRIER_EQUIPMENT,",
+						"          CARRIER_METHOD = DATA_DS.G_1.CARRIER_METHOD,",
+						"          COMMENTS = DATA_DS.G_1.COMMENTS,",
+						"          CONTAINER_NUMBER = DATA_DS.G_1.CONTAINER_NUMBER,",
+						"          CONVERSION_DATE = DATA_DS.G_1.CONVERSION_DATE,",
+						"          CONVERSION_RATE = DATA_DS.G_1.CONVERSION_RATE,",
+						"          CONVERSION_RATE_TYPE = DATA_DS.G_1.CONVERSION_RATE_TYPE,",
+						"          CREATED_BY = DATA_DS.G_1.CREATED_BY,",
+						"          CREATION_DATE = DATA_DS.G_1.CREATION_DATE,",
+						"          CURRENCY_CODE = DATA_DS.G_1.CURRENCY_CODE,",
+						"          CUSTOMER_ID = DATA_DS.G_1.CUSTOMER_ID,",
+						"          CUSTOMER_SITE_ID = DATA_DS.G_1.CUSTOMER_SITE_ID,",
+						"          EDI_CONTROL_NUM = DATA_DS.G_1.EDI_CONTROL_NUM,",
+						"          EMPLOYEE_ID = DATA_DS.G_1.EMPLOYEE_ID,",
+						"          EXPECTED_RECEIPT_DATE = DATA_DS.G_1.EXPECTED_RECEIPT_DATE,",
+						"          EXTERNAL_SYS_TXN_REFERENCE = DATA_DS.G_1.EXTERNAL_SYS_TXN_REFERENCE,",
+						"          FREIGHT_AMOUNT = DATA_DS.G_1.FREIGHT_AMOUNT,",
+						"          FREIGHT_BILL_NUMBER = DATA_DS.G_1.FREIGHT_BILL_NUMBER,",
+						"          FREIGHT_CARRIER_ID = DATA_DS.G_1.FREIGHT_CARRIER_ID,",
+						"          FREIGHT_TERMS = DATA_DS.G_1.FREIGHT_TERMS,",
+						"          GL_DATE = DATA_DS.G_1.GL_DATE,",
+						"          GOVERNMENT_CONTEXT = DATA_DS.G_1.GOVERNMENT_CONTEXT,",
+						"          GROSS_WEIGHT = DATA_DS.G_1.GROSS_WEIGHT,",
+						"          GROSS_WEIGHT_UOM_CODE = DATA_DS.G_1.GROSS_WEIGHT_UOM_CODE,",
+						"          HAZARD_CLASS = DATA_DS.G_1.HAZARD_CLASS,",
+						"          HAZARD_CODE = DATA_DS.G_1.HAZARD_CODE,",
+						"          HAZARD_DESCRIPTION = DATA_DS.G_1.HAZARD_DESCRIPTION,",
+						"          HEADER_INTERFACE_ID = DATA_DS.G_1.HEADER_INTERFACE_ID,",
+						"          INTERFACE_SOURCE_CODE = DATA_DS.G_1.INTERFACE_SOURCE_CODE,",
+						"          INVOICE_AMOUNT = DATA_DS.G_1.INVOICE_AMOUNT,",
+						"          INVOICE_DATE = DATA_DS.G_1.INVOICE_DATE,",
+						"          INVOICE_NUM = DATA_DS.G_1.INVOICE_NUM,",
+						"          INVOICE_STATUS_CODE = DATA_DS.G_1.INVOICE_STATUS_CODE,",
+						"          JOB_DEFINITION_NAME = DATA_DS.G_1.JOB_DEFINITION_NAME,",
+						"          JOB_DEFINITION_PACKAGE = DATA_DS.G_1.JOB_DEFINITION_PACKAGE,",
+						"          LAST_UPDATED_BY = DATA_DS.G_1.LAST_UPDATED_BY,",
+						"          LAST_UPDATE_DATE = DATA_DS.G_1.LAST_UPDATE_DATE,",
+						"          LAST_UPDATE_LOGIN = DATA_DS.G_1.LAST_UPDATE_LOGIN,",
+						"          LSP_FLAG = DATA_DS.G_1.LSP_FLAG,",
+						"          MODE_OF_TRANSPORT = DATA_DS.G_1.MODE_OF_TRANSPORT,",
+						"          NET_WEIGHT = DATA_DS.G_1.NET_WEIGHT,",
+						"          NET_WEIGHT_UOM_CODE = DATA_DS.G_1.NET_WEIGHT_UOM_CODE,",
+						"          NOTICE_CREATION_DATE = DATA_DS.G_1.NOTICE_CREATION_DATE,",
+						"          NUM_OF_CONTAINERS = DATA_DS.G_1.NUM_OF_CONTAINERS,",
+						"          OBJECT_VERSION_NUMBER = DATA_DS.G_1.OBJECT_VERSION_NUMBER,",
+						"          ORGANIZATION_ID = DATA_DS.G_1.ORGANIZATION_ID,",
+						"          PACKAGING_CODE = DATA_DS.G_1.PACKAGING_CODE,",
+						"          PACKING_SLIP = DATA_DS.G_1.PACKING_SLIP,",
+						"          PAYMENT_TERMS_ID = DATA_DS.G_1.PAYMENT_TERMS_ID,",
+						"          PERFORMANCE_PERIOD_FROM = DATA_DS.G_1.PERFORMANCE_PERIOD_FROM,",
+						"          PERFORMANCE_PERIOD_TO = DATA_DS.G_1.PERFORMANCE_PERIOD_TO,",
+						"          RA_DOCUMENT_CODE = DATA_DS.G_1.RA_DOCUMENT_CODE,",
+						"          RA_DOCUMENT_NUMBER = DATA_DS.G_1.RA_DOCUMENT_NUMBER,",
+						"          RA_DOC_CREATION_DATE = DATA_DS.G_1.RA_DOC_CREATION_DATE,",
+						"          RA_DOC_LAST_UPDATE_DATE = DATA_DS.G_1.RA_DOC_LAST_UPDATE_DATE,",
+						"          RA_DOC_REVISION_DATE = DATA_DS.G_1.RA_DOC_REVISION_DATE,",
+						"          RA_DOC_REVISION_NUMBER = DATA_DS.G_1.RA_DOC_REVISION_NUMBER,",
+						"          RA_DOO_SOURCE_SYSTEM_ID = DATA_DS.G_1.RA_DOO_SOURCE_SYSTEM_ID,",
+						"          RA_NOTE_TO_RECEIVER = DATA_DS.G_1.RA_NOTE_TO_RECEIVER,",
+						"          RA_ORIG_SYSTEM_REF = DATA_DS.G_1.RA_ORIG_SYSTEM_REF,",
+						"          RA_OUTSOURCER_CONTACT_ID = DATA_DS.G_1.RA_OUTSOURCER_CONTACT_ID,",
+						"          RA_OUTSOURCER_PARTY_ID = DATA_DS.G_1.RA_OUTSOURCER_PARTY_ID,",
+						"          RECEIPT_ADVICE_NUMBER = DATA_DS.G_1.RECEIPT_ADVICE_NUMBER,",
+						"          RECEIPT_NUM = DATA_DS.G_1.RECEIPT_NUM,",
+						"          RECEIPT_SOURCE_CODE = DATA_DS.G_1.RECEIPT_SOURCE_CODE,",
+						"          REMIT_TO_SITE_ID = DATA_DS.G_1.REMIT_TO_SITE_ID,",
+						"          REQUEST_DATE = DATA_DS.G_1.REQUEST_DATE,",
+						"          REQUEST_ID = DATA_DS.G_1.REQUEST_ID,",
+						"          RMA_BU_ID = DATA_DS.G_1.RMA_BU_ID,",
+						"          SERVICE_LEVEL = DATA_DS.G_1.SERVICE_LEVEL,",
+						"          SHIPMENT_HEADER_ID = DATA_DS.G_1.SHIPMENT_HEADER_ID,",
+						"          SHIPMENT_NUM = DATA_DS.G_1.SHIPMENT_NUM,",
+						"          SHIPPED_DATE = DATA_DS.G_1.SHIPPED_DATE,",
+						"          SHIP_FROM_LOCATION_ID = DATA_DS.G_1.SHIP_FROM_LOCATION_ID,",
+						"          SHIP_METHOD_CODE = DATA_DS.G_1.SHIP_METHOD_CODE,",
+						"          SHIP_TO_LOCATION_ID = DATA_DS.G_1.SHIP_TO_LOCATION_ID,",
+						"          SHIP_TO_ORG_ID = DATA_DS.G_1.SHIP_TO_ORG_ID,",
+						"          SPECIAL_HANDLING_CODE = DATA_DS.G_1.SPECIAL_HANDLING_CODE,",
+						"          SUPPLIER_SHIPMENT_NUMBER = DATA_DS.G_1.SUPPLIER_SHIPMENT_NUMBER,",
+						"          TAR_WEIGHT = DATA_DS.G_1.TAR_WEIGHT,",
+						"          TAR_WEIGHT_UOM_CODE = DATA_DS.G_1.TAR_WEIGHT_UOM_CODE,",
+						"          TAX_AMOUNT = DATA_DS.G_1.TAX_AMOUNT,",
+						"          TAX_NAME = DATA_DS.G_1.TAX_NAME,",
+						"          VENDOR_ID = DATA_DS.G_1.VENDOR_ID,",
+						"          VENDOR_SITE_ID = DATA_DS.G_1.VENDOR_SITE_ID,",
+						"          WAYBILL_AIRBILL_NUM = DATA_DS.G_1.WAYBILL_AIRBILL_NUM",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> XmlToCsvflatten",
+						"XmlToCsvflatten derive(source_name = 'SYSTEM',",
+						"          sub_source_name = 'R2P',",
+						"          created_date_time = currentUTC()) ~> addLoadDetails",
+						"addLoadDetails sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     partitionFileNames:['Rcv_Shipment_Headers.csv'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SnkCsv"
+					]
+				}
+			},
+			"dependsOn": []
+		}
+	]
+}

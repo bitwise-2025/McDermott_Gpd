@@ -1,0 +1,6633 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "McD-GPD"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/pl_yardkpi_mcr_stage_to_raw')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "lk_get_pipeline_parameters",
+						"description": "Get the parameters to be used in this pipeline",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlDWSource",
+								"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+								"storedProcedureParameters": {
+									"pPipelineCode": {
+										"type": "String",
+										"value": {
+											"value": "@pipeline().Pipeline",
+											"type": "Expression"
+										}
+									},
+									"pPipeLineSubCode": {
+										"type": "String",
+										"value": {
+											"value": "MCR",
+											"type": "Expression"
+										}
+									}
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "ds_azure_synapse_parameter",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						}
+					},
+					{
+						"name": "Check File Exists",
+						"description": "Checking if the Stage file is available before progressing to the next activity.",
+						"type": "GetMetadata",
+						"dependsOn": [
+							{
+								"activity": "lk_get_pipeline_parameters",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataset": {
+								"referenceName": "ds_adlsg2_mcr_stg_generic",
+								"type": "DatasetReference",
+								"parameters": {
+									"p_ds_filename": {
+										"value": "@coalesce(null)",
+										"type": "Expression"
+									},
+									"p_ds_folderpath": {
+										"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+										"type": "Expression"
+									},
+									"p_ds_filesystem": {
+										"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+										"type": "Expression"
+									}
+								}
+							},
+							"fieldList": [
+								"childItems"
+							],
+							"storeSettings": {
+								"type": "AzureBlobFSReadSettings",
+								"recursive": true,
+								"enablePartitionDiscovery": false
+							},
+							"formatSettings": {
+								"type": "DelimitedTextReadSettings"
+							}
+						}
+					},
+					{
+						"name": "Set_File_Exists_status",
+						"description": "Compare the results of the GetMetadata against the file present in the Stage location",
+						"type": "SetVariable",
+						"dependsOn": [
+							{
+								"activity": "Check File Exists",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "p_pl_fileexists",
+							"value": {
+								"value": "@greaterOrEquals(indexof(string(activity('Check File Exists').output.childItems),'QC_MCR'),0)",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "Run copy if File Exists",
+						"description": "Execute if a valid stage file is present",
+						"type": "IfCondition",
+						"dependsOn": [
+							{
+								"activity": "Set_File_Exists_status",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"expression": {
+								"value": "@variables('p_pl_fileexists')",
+								"type": "Expression"
+							},
+							"ifTrueActivities": [
+								{
+									"name": "df_mcr_stage_to_raw",
+									"type": "ExecuteDataFlow",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataflow": {
+											"referenceName": "df_mcr_stage_to_raw",
+											"type": "DataFlowReference",
+											"parameters": {},
+											"datasetParameters": {
+												"MCRStage": {
+													"p_ds_filename": {
+														"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_name_stg",
+														"type": "Expression"
+													},
+													"p_ds_folderpath": {
+														"value": "@activity('lk_get_pipeline_parameters').output.firstRow.Directory",
+														"type": "Expression"
+													},
+													"p_ds_filesystem": {
+														"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+														"type": "Expression"
+													}
+												},
+												"MCRRaw": {}
+											}
+										},
+										"staging": {},
+										"compute": {
+											"coreCount": 8,
+											"computeType": "General"
+										},
+										"traceLevel": "Fine"
+									}
+								}
+							]
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"variables": {
+					"v_filename": {
+						"type": "String"
+					},
+					"v_folderpath": {
+						"type": "String"
+					},
+					"p_pl_fileexists": {
+						"type": "Boolean"
+					}
+				},
+				"folder": {
+					"name": "Projects/YARD KPI/MCR"
+				},
+				"annotations": [],
+				"lastPublishTime": "2024-01-12T10:37:08Z"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pl_yardkpi_mwin_source_to_stage')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "lk_get_pipeline_parameters",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlDWSource",
+								"sqlReaderStoredProcedureName": "[[dbo].[getPipelineParametersValues]",
+								"storedProcedureParameters": {
+									"pPipelineCode": {
+										"type": "String",
+										"value": {
+											"value": "@pipeline().Pipeline",
+											"type": "Expression"
+										}
+									},
+									"pPipeLineSubCode": {
+										"type": "String",
+										"value": {
+											"value": "@pipeline().parameters.p_pipeline_sub_code",
+											"type": "Expression"
+										}
+									}
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "AzureSynapseAnalyticsDB",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						}
+					},
+					{
+						"name": "sp_Update_Parameter",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "cp_get_mwin_to_stage",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[dbo].[updateIncrementPipelineParameterValue]",
+							"storedProcedureParameters": {
+								"pParameterCode": {
+									"value": {
+										"value": "start_date",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"pParameterValue": {
+									"value": {
+										"value": "@formatDateTime(activity('lk_get_pipeline_parameters').output.firstRow.run_start_datetime,'yyyy-MM-dd HH:mm:ss.fff')",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"pPipelineCode": {
+									"value": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"pPipelineSubCode": {
+									"value": {
+										"value": "@pipeline().parameters.p_pipeline_sub_code",
+										"type": "Expression"
+									},
+									"type": "String"
+								}
+							}
+						},
+						"linkedServiceName": {
+							"referenceName": "AzureSynapseAnalytics",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "cp_get_mwin_to_stage",
+						"type": "Copy",
+						"dependsOn": [
+							{
+								"activity": "lk_get_pipeline_parameters",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 3,
+							"retryIntervalInSeconds": 60,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlServerSource",
+								"additionalColumns": [
+									{
+										"name": "source_name",
+										"value": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.source_name",
+											"type": "Expression"
+										}
+									},
+									{
+										"name": "sub_source_name",
+										"value": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.sub_source_name",
+											"type": "Expression"
+										}
+									}
+								],
+								"sqlReaderQuery": {
+									"value": "EXEC [usp_rbt_rfi_summarylist_report_New] NULL,NULL,NULL,NULL,NULL,NULL,'@{activity('lk_get_pipeline_parameters').output.firstRow.start_date}','@{if(equals(activity('lk_get_pipeline_parameters').output.firstRow.end_date,'currdate'),formatDateTime(utcNow(),'yyyy-MM-dd HH:mm:ss.fff'),formatDateTime(activity('lk_get_pipeline_parameters').output.firstRow.end_date,'yyyy-MM-dd HH:mm:ss.fff'))}',NULL\n",
+									"type": "Expression"
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"sink": {
+								"type": "DelimitedTextSink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings"
+								},
+								"formatSettings": {
+									"type": "DelimitedTextWriteSettings",
+									"quoteAllText": true,
+									"fileExtension": ".txt"
+								}
+							},
+							"enableStaging": false,
+							"translator": {
+								"type": "TabularTranslator",
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": true,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "ds_yardkpi_mwin_filesource",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "ds_adlsg2_csv_yardkpi_mwin_source",
+								"type": "DatasetReference",
+								"parameters": {
+									"Directory": {
+										"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+										"type": "Expression"
+									},
+									"FileSystem": {
+										"value": "@activity('lk_get_pipeline_parameters').output.firstRow.output_file_system",
+										"type": "Expression"
+									},
+									"FileName": {
+										"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'_',formatDateTime(utcNow(),'yyyyMMddHHmmssff'),'.csv')",
+										"type": "Expression"
+									}
+								}
+							}
+						]
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"parameters": {
+					"p_pipeline_sub_code": {
+						"type": "string",
+						"defaultValue": "MWIN"
+					}
+				},
+				"variables": {
+					"v_current_date_time": {
+						"type": "String"
+					}
+				},
+				"folder": {
+					"name": "Projects/YARD KPI/MWIN"
+				},
+				"annotations": [],
+				"lastPublishTime": "2024-06-05T20:56:58Z"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pl_yardkpi_mwin_stage_to_raw')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "df_yardkpi_mwin_stage_to_raw",
+						"type": "ExecuteDataFlow",
+						"dependsOn": [
+							{
+								"activity": "lk_get_pipeline_parameters",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "1.00:00:00",
+							"retry": 3,
+							"retryIntervalInSeconds": 60,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataflow": {
+								"referenceName": "df_yardkpi_mwin_stage_to_raw",
+								"type": "DataFlowReference",
+								"parameters": {
+									"p_directory": {
+										"value": "'@{activity('lk_get_pipeline_parameters').output.firstRow.Directory}'",
+										"type": "Expression"
+									},
+									"p_filename": {
+										"value": "'@{activity('lk_get_pipeline_parameters').output.firstRow.file_name}'",
+										"type": "Expression"
+									}
+								},
+								"datasetParameters": {
+									"stageMwin": {
+										"Directory": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+											"type": "Expression"
+										},
+										"FileSystem": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+											"type": "Expression"
+										},
+										"FileName": {
+											"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+											"type": "Expression"
+										}
+									},
+									"rawMwin": {
+										"Directory": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+											"type": "Expression"
+										},
+										"FileSystem": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.output_file_system",
+											"type": "Expression"
+										},
+										"FileName": {
+											"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+											"type": "Expression"
+										}
+									}
+								}
+							},
+							"staging": {},
+							"compute": {
+								"coreCount": 8,
+								"computeType": "General"
+							},
+							"traceLevel": "Fine"
+						}
+					},
+					{
+						"name": "lk_get_pipeline_parameters",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlDWSource",
+								"sqlReaderStoredProcedureName": "[[dbo].[getPipelineParametersValues]",
+								"storedProcedureParameters": {
+									"pPipelineCode": {
+										"type": "String",
+										"value": {
+											"value": "@pipeline().Pipeline",
+											"type": "Expression"
+										}
+									},
+									"pPipeLineSubCode": {
+										"type": "String",
+										"value": {
+											"value": "@pipeline().parameters.p_pipeline_sub_code",
+											"type": "Expression"
+										}
+									}
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "AzureSynapseAnalyticsDB",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"parameters": {
+					"p_pipeline_sub_code": {
+						"type": "string",
+						"defaultValue": "MWIN"
+					}
+				},
+				"folder": {
+					"name": "Projects/YARD KPI/MWIN"
+				},
+				"annotations": [],
+				"lastPublishTime": "2024-06-05T20:56:59Z"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pl_yardkpi_pcm_certification_package_del_full_load')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "lk_get_pipeline_parameters",
+						"description": "Get the parameters to be used in this pipeline",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlDWSource",
+								"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+								"storedProcedureParameters": {
+									"pPipelineCode": {
+										"type": "String",
+										"value": {
+											"value": "pl_yardkpi_pcm_certification_package_source_to_stage_del",
+											"type": "Expression"
+										}
+									},
+									"pPipeLineSubCode": {
+										"type": "String",
+										"value": {
+											"value": "PCM",
+											"type": "Expression"
+										}
+									}
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "ds_azure_synapse_parameter",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						}
+					},
+					{
+						"name": "ForEach_PCM_Contract",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "lk_get_pipeline_parameters",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@split(pipeline().parameters.p_src_pipeline_pcm_contract,',')",
+								"type": "Expression"
+							},
+							"isSequential": false,
+							"activities": [
+								{
+									"name": "Copy PCM to Stage",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "SqlServerSource",
+											"additionalColumns": [
+												{
+													"name": "source_code",
+													"value": {
+														"value": "SYSTEM",
+														"type": "Expression"
+													}
+												},
+												{
+													"name": "sub_source_code",
+													"value": {
+														"value": "PCM",
+														"type": "Expression"
+													}
+												}
+											],
+											"sqlReaderStoredProcedureName": "[[dbo].[pcm_dl_data]",
+											"storedProcedureParameters": {
+												"fab_code": {
+													"type": "String",
+													"value": {
+														"value": "@pipeline().parameters.p_src_pipeline_pcm_fab_code",
+														"type": "Expression"
+													}
+												},
+												"sp_dataset": {
+													"type": "String",
+													"value": {
+														"value": "@activity('lk_get_pipeline_parameters').output.firstRow.sp_dataset_certification_package",
+														"type": "Expression"
+													}
+												},
+												"from_date": {
+													"type": "String",
+													"value": {
+														"value": "1900-01-01 00:00:00.000",
+														"type": "Expression"
+													}
+												},
+												"to_date": {
+													"type": "String",
+													"value": null
+												},
+												"trans_type": {
+													"type": "String",
+													"value": {
+														"value": "@activity('lk_get_pipeline_parameters').output.firstRow.trans_type",
+														"type": "Expression"
+													}
+												},
+												"contract": {
+													"type": "String",
+													"value": {
+														"value": "@trim(item())",
+														"type": "Expression"
+													}
+												},
+												"job": {
+													"type": "String",
+													"value": {
+														"value": "@activity('lk_get_pipeline_parameters').output.firstRow.job",
+														"type": "Expression"
+													}
+												},
+												"item": {
+													"type": "String",
+													"value": {
+														"value": "@activity('lk_get_pipeline_parameters').output.firstRow.item",
+														"type": "Expression"
+													}
+												}
+											},
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "DelimitedTextSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "DelimitedTextWriteSettings",
+												"quoteAllText": true,
+												"fileExtension": ".txt"
+											}
+										},
+										"enableStaging": false,
+										"translator": {
+											"type": "TabularTranslator",
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_pcm_source_sql_server",
+											"type": "DatasetReference",
+											"parameters": {}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_adlsg2_certificate_package_stg",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_ds_filename": {
+													"value": "@concat('pcm_certification_package_del_',item(),'_',formatDateTime(utcNow(),'yyyy-MM-dd HH:mm:ss'),'.csv')",
+													"type": "Expression"
+												},
+												"p_ds_folderpath": {
+													"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+													"type": "Expression"
+												},
+												"p_ds_filesystem": {
+													"value": "@activity('lk_get_pipeline_parameters').output.firstRow.output_file_system",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								}
+							]
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"parameters": {
+					"p_src_pipeline_pcm_contract": {
+						"type": "string"
+					},
+					"p_src_pipeline_pcm_fab_code": {
+						"type": "string"
+					}
+				},
+				"folder": {
+					"name": "Projects/YARD KPI/PCM/certification_package_del"
+				},
+				"annotations": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pl_yardkpi_pcm_certification_package_full_load')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "lk_get_pipeline_parameters",
+						"description": "Get the parameters to be used in this pipeline",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlDWSource",
+								"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+								"storedProcedureParameters": {
+									"pPipelineCode": {
+										"type": "String",
+										"value": {
+											"value": "pl_yardkpi_pcm_certification_package_source_to_stage",
+											"type": "Expression"
+										}
+									},
+									"pPipeLineSubCode": {
+										"type": "String",
+										"value": {
+											"value": "PCM",
+											"type": "Expression"
+										}
+									}
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "ds_azure_synapse_parameter",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						}
+					},
+					{
+						"name": "ForEach_PCM_Contract",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "lk_get_pipeline_parameters",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@split(pipeline().parameters.p_src_pipeline_pcm_contract,',')",
+								"type": "Expression"
+							},
+							"isSequential": false,
+							"activities": [
+								{
+									"name": "Copy PCM to Stage",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "SqlServerSource",
+											"additionalColumns": [
+												{
+													"name": "source_code",
+													"value": {
+														"value": "SYSTEM",
+														"type": "Expression"
+													}
+												},
+												{
+													"name": "sub_source_code",
+													"value": {
+														"value": "PCM",
+														"type": "Expression"
+													}
+												}
+											],
+											"sqlReaderStoredProcedureName": "[[dbo].[pcm_dl_data]",
+											"storedProcedureParameters": {
+												"fab_code": {
+													"type": "String",
+													"value": {
+														"value": "@pipeline().parameters.p_src_pipeline_pcm_fab_code",
+														"type": "Expression"
+													}
+												},
+												"sp_dataset": {
+													"type": "String",
+													"value": {
+														"value": "@activity('lk_get_pipeline_parameters').output.firstRow.sp_dataset_certification_package",
+														"type": "Expression"
+													}
+												},
+												"from_date": {
+													"type": "String",
+													"value": {
+														"value": "1900-01-01 00:00:00.000",
+														"type": "Expression"
+													}
+												},
+												"to_date": {
+													"type": "String",
+													"value": null
+												},
+												"trans_type": {
+													"type": "String",
+													"value": {
+														"value": "@activity('lk_get_pipeline_parameters').output.firstRow.trans_type",
+														"type": "Expression"
+													}
+												},
+												"contract": {
+													"type": "String",
+													"value": {
+														"value": "@trim(item())",
+														"type": "Expression"
+													}
+												},
+												"job": {
+													"type": "String",
+													"value": {
+														"value": "@activity('lk_get_pipeline_parameters').output.firstRow.job",
+														"type": "Expression"
+													}
+												},
+												"item": {
+													"type": "String",
+													"value": {
+														"value": "@activity('lk_get_pipeline_parameters').output.firstRow.item",
+														"type": "Expression"
+													}
+												}
+											},
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "DelimitedTextSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "DelimitedTextWriteSettings",
+												"quoteAllText": true,
+												"fileExtension": ".txt"
+											}
+										},
+										"enableStaging": false,
+										"translator": {
+											"type": "TabularTranslator",
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_pcm_source_sql_server",
+											"type": "DatasetReference",
+											"parameters": {}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_adlsg2_certificate_package_stg",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_ds_filename": {
+													"value": "@concat('pcm_certification_package_',item(),'_',formatDateTime(utcNow(),'yyyy-MM-dd HH:mm:ss'),'.csv')",
+													"type": "Expression"
+												},
+												"p_ds_folderpath": {
+													"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+													"type": "Expression"
+												},
+												"p_ds_filesystem": {
+													"value": "@activity('lk_get_pipeline_parameters').output.firstRow.output_file_system",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								}
+							]
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"parameters": {
+					"p_src_pipeline_pcm_contract": {
+						"type": "string"
+					},
+					"p_src_pipeline_pcm_fab_code": {
+						"type": "string"
+					}
+				},
+				"folder": {
+					"name": "Projects/YARD KPI/PCM/certification_package"
+				},
+				"annotations": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pl_yardkpi_pcm_certification_package_raw_to_synapse')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Set_current_date_time",
+						"type": "SetVariable",
+						"dependsOn": [
+							{
+								"activity": "lkup_Get_Pipeline_parameters",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "v_current_date_time",
+							"value": {
+								"value": "@string(utcnow())",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "lkup_Get_Pipeline_parameters",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlDWSource",
+								"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+								"storedProcedureParameters": {
+									"pPipelineCode": {
+										"type": "String",
+										"value": {
+											"value": "@pipeline().Pipeline",
+											"type": "Expression"
+										}
+									},
+									"pPipeLineSubCode": {
+										"type": "String",
+										"value": "PCM"
+									}
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "ds_azure_synapse_parameter",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						}
+					},
+					{
+						"name": "cp_Merge_Latest_Files",
+						"type": "Copy",
+						"dependsOn": [
+							{
+								"activity": "Set_current_date_time",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 3,
+							"retryIntervalInSeconds": 60,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "DelimitedTextSource",
+								"storeSettings": {
+									"type": "AzureBlobFSReadSettings",
+									"recursive": true,
+									"modifiedDatetimeStart": {
+										"value": "@activity('lkup_Get_Pipeline_parameters').output.firstRow.last_run_start_date",
+										"type": "Expression"
+									},
+									"wildcardFolderPath": {
+										"value": "@concat(activity('lkup_Get_Pipeline_parameters').output.firstRow.Directory,'/*/*/*')",
+										"type": "Expression"
+									},
+									"wildcardFileName": {
+										"value": "@concat(activity('lkup_Get_Pipeline_parameters').output.firstRow.file_name,'_*.csv')",
+										"type": "Expression"
+									},
+									"enablePartitionDiscovery": false
+								},
+								"formatSettings": {
+									"type": "DelimitedTextReadSettings"
+								}
+							},
+							"sink": {
+								"type": "DelimitedTextSink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings",
+									"copyBehavior": "MergeFiles"
+								},
+								"formatSettings": {
+									"type": "DelimitedTextWriteSettings",
+									"quoteAllText": true,
+									"fileExtension": ".txt"
+								}
+							},
+							"enableStaging": false,
+							"translator": {
+								"type": "TabularTranslator",
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": true,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "ds_adlsg2_csv_yardkpi_pcm_default",
+								"type": "DatasetReference",
+								"parameters": {
+									"p_ds_filesystem": {
+										"value": "@activity('lkup_Get_Pipeline_parameters').output.firstRow.input_file_system",
+										"type": "Expression"
+									},
+									"p_ds_folderpath": {
+										"value": "@activity('lkup_Get_Pipeline_parameters').output.firstRow.Directory",
+										"type": "Expression"
+									},
+									"p_ds_filename": {
+										"value": "@activity('lkup_Get_Pipeline_parameters').output.firstRow.file_name",
+										"type": "Expression"
+									}
+								}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "ds_adlsg2_csv_yardkpi_pcm_default",
+								"type": "DatasetReference",
+								"parameters": {
+									"p_ds_filesystem": {
+										"value": "@activity('lkup_Get_Pipeline_parameters').output.firstRow.input_file_system",
+										"type": "Expression"
+									},
+									"p_ds_folderpath": {
+										"value": "@activity('lkup_Get_Pipeline_parameters').output.firstRow.Directory",
+										"type": "Expression"
+									},
+									"p_ds_filename": {
+										"value": "@concat('Combined_',activity('lkup_Get_Pipeline_parameters').output.firstRow.file_name,'_temp.csv')",
+										"type": "Expression"
+									}
+								}
+							}
+						]
+					},
+					{
+						"name": "Check Combined File non zero Bytes",
+						"description": "Check if the combined file has any data to be loaded.",
+						"type": "GetMetadata",
+						"dependsOn": [
+							{
+								"activity": "cp_Merge_Latest_Files",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_yardkpi_pcm_default",
+								"type": "DatasetReference",
+								"parameters": {
+									"p_ds_filesystem": {
+										"value": "@activity('lkup_Get_Pipeline_parameters').output.firstRow.input_file_system",
+										"type": "Expression"
+									},
+									"p_ds_folderpath": {
+										"value": "@activity('lkup_Get_Pipeline_parameters').output.firstRow.Directory",
+										"type": "Expression"
+									},
+									"p_ds_filename": {
+										"value": "@concat('Combined_',activity('lkup_Get_Pipeline_parameters').output.firstRow.file_name,'_temp.csv')",
+										"type": "Expression"
+									}
+								}
+							},
+							"fieldList": [
+								"size",
+								"exists"
+							],
+							"storeSettings": {
+								"type": "AzureBlobFSReadSettings",
+								"recursive": true
+							},
+							"formatSettings": {
+								"type": "DelimitedTextReadSettings"
+							}
+						}
+					},
+					{
+						"name": "sp_Update_Parameter",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "if_File_Exists_Copy_to_Synapse",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[dbo].[updateIncrementPipelineParameterValue]",
+							"storedProcedureParameters": {
+								"pParameterCode": {
+									"value": {
+										"value": "last_run_start_date",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"pParameterValue": {
+									"value": {
+										"value": "@formatDateTime(variables('v_current_date_time'),'yyyy-MM-dd HH:mm:ss')",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"pPipelineCode": {
+									"value": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"pPipelineSubCode": {
+									"value": {
+										"value": "PCM",
+										"type": "Expression"
+									},
+									"type": "String"
+								}
+							}
+						},
+						"linkedServiceName": {
+							"referenceName": "AzureSynapseDB_DEV",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "if_File_Exists_Copy_to_Synapse",
+						"type": "IfCondition",
+						"dependsOn": [
+							{
+								"activity": "Check Combined File non zero Bytes",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"expression": {
+								"value": "@and(activity('Check Combined File non zero Bytes').output.exists, greater(activity('Check Combined File non zero Bytes').output.size, 2))",
+								"type": "Expression"
+							},
+							"ifTrueActivities": [
+								{
+									"name": "Copy_data_Raw_to_synapse_stage",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "DelimitedTextSource",
+											"storeSettings": {
+												"type": "AzureBlobFSReadSettings",
+												"recursive": true,
+												"enablePartitionDiscovery": false
+											},
+											"formatSettings": {
+												"type": "DelimitedTextReadSettings"
+											}
+										},
+										"sink": {
+											"type": "SqlDWSink",
+											"preCopyScript": {
+												"value": "truncate table yardkpi.stage_entp_pcm_certification_package",
+												"type": "Expression"
+											},
+											"allowPolyBase": true,
+											"polyBaseSettings": {
+												"rejectValue": 0,
+												"rejectType": "value",
+												"useTypeDefault": true
+											},
+											"disableMetricsCollection": false
+										},
+										"enableStaging": true,
+										"stagingSettings": {
+											"linkedServiceName": {
+												"referenceName": "ADLSG2 TimeAnalytics DEV",
+												"type": "LinkedServiceReference"
+											},
+											"path": {
+												"value": "mdr-raw-data/Polybase_Staging_Space",
+												"type": "Expression"
+											}
+										},
+										"translator": {
+											"type": "TabularTranslator",
+											"mappings": [
+												{
+													"source": {
+														"name": "source_code",
+														"type": "String"
+													},
+													"sink": {
+														"name": "source_code",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "sub_source_code",
+														"type": "String"
+													},
+													"sink": {
+														"name": "sub_source_code",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "trans_date",
+														"type": "String"
+													},
+													"sink": {
+														"name": "trans_date",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "trans_type",
+														"type": "String"
+													},
+													"sink": {
+														"name": "trans_type",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "fab_code",
+														"type": "String"
+													},
+													"sink": {
+														"name": "fab_code",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "contract",
+														"type": "String"
+													},
+													"sink": {
+														"name": "contract",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "contract_title",
+														"type": "String"
+													},
+													"sink": {
+														"name": "contract_title",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "job",
+														"type": "String"
+													},
+													"sink": {
+														"name": "job",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "job_title",
+														"type": "String"
+													},
+													"sink": {
+														"name": "job_title",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "item",
+														"type": "String"
+													},
+													"sink": {
+														"name": "item",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "item_title",
+														"type": "String"
+													},
+													"sink": {
+														"name": "item_title",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ndt_drawing",
+														"type": "String"
+													},
+													"sink": {
+														"name": "ndt_drawing",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ndt_drawing_desc",
+														"type": "String"
+													},
+													"sink": {
+														"name": "ndt_drawing_desc",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ndt_drawing_rev",
+														"type": "String"
+													},
+													"sink": {
+														"name": "ndt_drawing_rev",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ndt_drawing_date",
+														"type": "String"
+													},
+													"sink": {
+														"name": "ndt_drawing_date",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "line",
+														"type": "String"
+													},
+													"sink": {
+														"name": "line",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "line_desc",
+														"type": "String"
+													},
+													"sink": {
+														"name": "line_desc",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "discipline",
+														"type": "String"
+													},
+													"sink": {
+														"name": "discipline",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "recap",
+														"type": "String"
+													},
+													"sink": {
+														"name": "recap",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "weldcount",
+														"type": "String"
+													},
+													"sink": {
+														"name": "weldcount",
+														"type": "Int32"
+													}
+												},
+												{
+													"source": {
+														"name": "clear_date",
+														"type": "String"
+													},
+													"sink": {
+														"name": "clear_date",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "clear_run",
+														"type": "String"
+													},
+													"sink": {
+														"name": "clear_run",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "submit_date",
+														"type": "String"
+													},
+													"sink": {
+														"name": "submit_date",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "accept_date",
+														"type": "String"
+													},
+													"sink": {
+														"name": "accept_date",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "cert_pack_complete",
+														"type": "String"
+													},
+													"sink": {
+														"name": "cert_pack_complete",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "package_recall_date",
+														"type": "String"
+													},
+													"sink": {
+														"name": "package_recall_date",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "package_date",
+														"type": "String"
+													},
+													"sink": {
+														"name": "package_date",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "ndt_percent",
+														"type": "String"
+													},
+													"sink": {
+														"name": "ndt_percent",
+														"type": "Int16"
+													}
+												},
+												{
+													"source": {
+														"name": "mtn_completed",
+														"type": "String"
+													},
+													"sink": {
+														"name": "mtn_completed",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "markup_received",
+														"type": "String"
+													},
+													"sink": {
+														"name": "markup_received",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "inspector",
+														"type": "String"
+													},
+													"sink": {
+														"name": "inspector",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "insp_name",
+														"type": "String"
+													},
+													"sink": {
+														"name": "insp_name",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "wh_report_num",
+														"type": "String"
+													},
+													"sink": {
+														"name": "wh_report_num",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "cl_name1",
+														"type": "String"
+													},
+													"sink": {
+														"name": "cl_name1",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "cl_date1",
+														"type": "String"
+													},
+													"sink": {
+														"name": "cl_date1",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "cl_name2",
+														"type": "String"
+													},
+													"sink": {
+														"name": "cl_name2",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "cl_date2",
+														"type": "String"
+													},
+													"sink": {
+														"name": "cl_date2",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "cl_name3",
+														"type": "String"
+													},
+													"sink": {
+														"name": "cl_name3",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "cl_date3",
+														"type": "String"
+													},
+													"sink": {
+														"name": "cl_date3",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "create_date_time",
+														"type": "String"
+													},
+													"sink": {
+														"name": "created_date_time",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "include_in_rr_calc",
+														"type": "String"
+													},
+													"sink": {
+														"name": "include_in_rr_calc",
+														"type": "String"
+													}
+												}
+											]
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_adlsg2_csv_yardkpi_pcm_default",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_ds_filesystem": {
+													"value": "@activity('lkup_Get_Pipeline_parameters').output.firstRow.input_file_system",
+													"type": "Expression"
+												},
+												"p_ds_folderpath": {
+													"value": "@activity('lkup_Get_Pipeline_parameters').output.firstRow.Directory",
+													"type": "Expression"
+												},
+												"p_ds_filename": {
+													"value": "@concat('Combined_',activity('lkup_Get_Pipeline_parameters').output.firstRow.file_name,'_temp.csv')",
+													"type": "Expression"
+												}
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_AzureSynapseAnalytics_yardkpi",
+											"type": "DatasetReference",
+											"parameters": {
+												"schema": {
+													"value": "yardkpi",
+													"type": "Expression"
+												},
+												"db_name": {
+													"value": "stage_entp_pcm_certification_package",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								},
+								{
+									"name": "dim_ent_contract_load",
+									"type": "SqlServerStoredProcedure",
+									"dependsOn": [
+										{
+											"activity": "dim_ent_project_load",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"storedProcedureName": {
+											"value": "[[dbo].[generic_load_dim_v2]",
+											"type": "Expression"
+										},
+										"storedProcedureParameters": {
+											"debug_flag": {
+												"value": "N"
+											},
+											"execute_flag": {
+												"value": "Y"
+											},
+											"load_name": {
+												"value": "Dim_ent_contract_pcm_load"
+											},
+											"rkValidationRequired": {
+												"value": "Y"
+											}
+										}
+									},
+									"linkedServiceName": {
+										"referenceName": "linkedservice_DEV_entanalytics_synapse",
+										"type": "LinkedServiceReference"
+									}
+								},
+								{
+									"name": "dim_entp_pcm_job_item_Load",
+									"type": "SqlServerStoredProcedure",
+									"dependsOn": [
+										{
+											"activity": "dim_ent_contract_load",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"storedProcedureName": {
+											"value": "[[dbo].[generic_load_dim_v2]",
+											"type": "Expression"
+										},
+										"storedProcedureParameters": {
+											"debug_flag": {
+												"value": "N"
+											},
+											"execute_flag": {
+												"value": "Y"
+											},
+											"load_name": {
+												"value": "Dim_entp_pcm_job_item_load"
+											},
+											"rkValidationRequired": {
+												"value": "Y"
+											}
+										}
+									},
+									"linkedServiceName": {
+										"referenceName": "linkedservice_DEV_entanalytics_synapse",
+										"type": "LinkedServiceReference"
+									}
+								},
+								{
+									"name": "Dim_entp_pcm_certification_load",
+									"type": "SqlServerStoredProcedure",
+									"dependsOn": [
+										{
+											"activity": "dim_entp_pcm_job_item_Load",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"storedProcedureName": {
+											"value": "[[dbo].[generic_load_dim_v2]",
+											"type": "Expression"
+										},
+										"storedProcedureParameters": {
+											"debug_flag": {
+												"value": "N"
+											},
+											"execute_flag": {
+												"value": "Y"
+											},
+											"load_name": {
+												"value": "Dim_entp_pcm_certification_package_load"
+											},
+											"rkValidationRequired": {
+												"value": "Y"
+											}
+										}
+									},
+									"linkedServiceName": {
+										"referenceName": "linkedservice_DEV_entanalytics_synapse",
+										"type": "LinkedServiceReference"
+									}
+								},
+								{
+									"name": "dim_ent_project_load",
+									"type": "SqlServerStoredProcedure",
+									"dependsOn": [
+										{
+											"activity": "Copy_data_Raw_to_synapse_stage",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"storedProcedureName": {
+											"value": "[[dbo].[generic_load_dim_v2]",
+											"type": "Expression"
+										},
+										"storedProcedureParameters": {
+											"debug_flag": {
+												"value": "N"
+											},
+											"execute_flag": {
+												"value": "Y"
+											},
+											"load_name": {
+												"value": "Dim_ent_project_pcm_load"
+											},
+											"rkValidationRequired": {
+												"value": "Y"
+											}
+										}
+									},
+									"linkedServiceName": {
+										"referenceName": "linkedservice_DEV_entanalytics_synapse",
+										"type": "LinkedServiceReference"
+									}
+								}
+							]
+						}
+					},
+					{
+						"name": "Delete Temp File",
+						"description": "After the data has been loaded, clear the combined file from the ADLSV2 ",
+						"type": "Delete",
+						"dependsOn": [
+							{
+								"activity": "if_File_Exists_Copy_to_Synapse",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_yardkpi_pcm_default",
+								"type": "DatasetReference",
+								"parameters": {
+									"p_ds_filesystem": {
+										"value": "@activity('lkup_Get_Pipeline_parameters').output.firstRow.input_file_system",
+										"type": "Expression"
+									},
+									"p_ds_folderpath": {
+										"value": "@activity('lkup_Get_Pipeline_parameters').output.firstRow.Directory",
+										"type": "Expression"
+									},
+									"p_ds_filename": {
+										"value": "@concat('Combined_',activity('lkup_Get_Pipeline_parameters').output.firstRow.file_name,'_temp.csv')",
+										"type": "Expression"
+									}
+								}
+							},
+							"enableLogging": false,
+							"storeSettings": {
+								"type": "AzureBlobFSReadSettings",
+								"recursive": true
+							}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"variables": {
+					"v_current_date_time": {
+						"type": "String"
+					}
+				},
+				"folder": {
+					"name": "Projects/YARD KPI/PCM/certification_package"
+				},
+				"annotations": [],
+				"lastPublishTime": "2023-03-09T05:53:34Z"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pl_yardkpi_pcm_certification_package_raw_to_synapse_del')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Set_current_date_time",
+						"type": "SetVariable",
+						"dependsOn": [
+							{
+								"activity": "lkup_Get_Pipeline_parameters",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "v_current_date_time",
+							"value": {
+								"value": "@string(utcnow())",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "lkup_Get_Pipeline_parameters",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlDWSource",
+								"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+								"storedProcedureParameters": {
+									"pPipelineCode": {
+										"type": "String",
+										"value": {
+											"value": "@pipeline().Pipeline",
+											"type": "Expression"
+										}
+									},
+									"pPipeLineSubCode": {
+										"type": "String",
+										"value": "PCM"
+									}
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "ds_azure_synapse_parameter",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						}
+					},
+					{
+						"name": "cp_Merge_Latest_Files",
+						"type": "Copy",
+						"dependsOn": [
+							{
+								"activity": "Set_current_date_time",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.00:03:00",
+							"retry": 3,
+							"retryIntervalInSeconds": 60,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "DelimitedTextSource",
+								"storeSettings": {
+									"type": "AzureBlobFSReadSettings",
+									"recursive": true,
+									"modifiedDatetimeStart": {
+										"value": "@activity('lkup_Get_Pipeline_parameters').output.firstRow.last_run_start_date",
+										"type": "Expression"
+									},
+									"wildcardFolderPath": {
+										"value": "@concat(activity('lkup_Get_Pipeline_parameters').output.firstRow.Directory,'/*/*/*')",
+										"type": "Expression"
+									},
+									"wildcardFileName": {
+										"value": "@concat(activity('lkup_Get_Pipeline_parameters').output.firstRow.file_name,'_*.csv')",
+										"type": "Expression"
+									},
+									"enablePartitionDiscovery": false
+								},
+								"formatSettings": {
+									"type": "DelimitedTextReadSettings"
+								}
+							},
+							"sink": {
+								"type": "DelimitedTextSink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings",
+									"copyBehavior": "MergeFiles"
+								},
+								"formatSettings": {
+									"type": "DelimitedTextWriteSettings",
+									"quoteAllText": true,
+									"fileExtension": ".txt"
+								}
+							},
+							"enableStaging": false,
+							"translator": {
+								"type": "TabularTranslator",
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": true,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "ds_adlsg2_csv_yardkpi_pcm_default",
+								"type": "DatasetReference",
+								"parameters": {
+									"p_ds_filesystem": {
+										"value": "@activity('lkup_Get_Pipeline_parameters').output.firstRow.input_file_system",
+										"type": "Expression"
+									},
+									"p_ds_folderpath": {
+										"value": "@activity('lkup_Get_Pipeline_parameters').output.firstRow.Directory",
+										"type": "Expression"
+									},
+									"p_ds_filename": {
+										"value": "@activity('lkup_Get_Pipeline_parameters').output.firstRow.file_name",
+										"type": "Expression"
+									}
+								}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "ds_adlsg2_csv_yardkpi_pcm_default",
+								"type": "DatasetReference",
+								"parameters": {
+									"p_ds_filesystem": {
+										"value": "@activity('lkup_Get_Pipeline_parameters').output.firstRow.input_file_system",
+										"type": "Expression"
+									},
+									"p_ds_folderpath": {
+										"value": "@activity('lkup_Get_Pipeline_parameters').output.firstRow.Directory",
+										"type": "Expression"
+									},
+									"p_ds_filename": {
+										"value": "@concat('Combined_',activity('lkup_Get_Pipeline_parameters').output.firstRow.file_name,'_temp.csv')",
+										"type": "Expression"
+									}
+								}
+							}
+						]
+					},
+					{
+						"name": "Check Combined File non zero Bytes",
+						"description": "Check if the combined file has any data to be loaded.",
+						"type": "GetMetadata",
+						"dependsOn": [
+							{
+								"activity": "cp_Merge_Latest_Files",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_yardkpi_pcm_default",
+								"type": "DatasetReference",
+								"parameters": {
+									"p_ds_filesystem": {
+										"value": "@activity('lkup_Get_Pipeline_parameters').output.firstRow.input_file_system",
+										"type": "Expression"
+									},
+									"p_ds_folderpath": {
+										"value": "@activity('lkup_Get_Pipeline_parameters').output.firstRow.Directory",
+										"type": "Expression"
+									},
+									"p_ds_filename": {
+										"value": "@concat('Combined_',activity('lkup_Get_Pipeline_parameters').output.firstRow.file_name,'_temp.csv')",
+										"type": "Expression"
+									}
+								}
+							},
+							"fieldList": [
+								"size",
+								"exists"
+							],
+							"storeSettings": {
+								"type": "AzureBlobFSReadSettings",
+								"recursive": true
+							},
+							"formatSettings": {
+								"type": "DelimitedTextReadSettings"
+							}
+						}
+					},
+					{
+						"name": "sp_Update_Parameter",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "if_File_Exists_Copy_to_Synapse",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[dbo].[updateIncrementPipelineParameterValue]",
+							"storedProcedureParameters": {
+								"pParameterCode": {
+									"value": {
+										"value": "last_run_start_date",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"pParameterValue": {
+									"value": {
+										"value": "@formatDateTime(variables('v_current_date_time'),'yyyy-MM-dd HH:mm:ss')",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"pPipelineCode": {
+									"value": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"pPipelineSubCode": {
+									"value": {
+										"value": "PCM",
+										"type": "Expression"
+									},
+									"type": "String"
+								}
+							}
+						},
+						"linkedServiceName": {
+							"referenceName": "AzureSynapseDB_DEV",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "if_File_Exists_Copy_to_Synapse",
+						"type": "IfCondition",
+						"dependsOn": [
+							{
+								"activity": "Check Combined File non zero Bytes",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"expression": {
+								"value": "@and(activity('Check Combined File non zero Bytes').output.exists, greater(activity('Check Combined File non zero Bytes').output.size, 2))",
+								"type": "Expression"
+							},
+							"ifTrueActivities": [
+								{
+									"name": "Copy_data_Raw_to_synapse_stage",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "DelimitedTextSource",
+											"storeSettings": {
+												"type": "AzureBlobFSReadSettings",
+												"recursive": false,
+												"enablePartitionDiscovery": false
+											},
+											"formatSettings": {
+												"type": "DelimitedTextReadSettings"
+											}
+										},
+										"sink": {
+											"type": "SqlDWSink",
+											"preCopyScript": {
+												"value": "truncate table yardkpi.stage_entp_pcm_certification_package",
+												"type": "Expression"
+											},
+											"allowPolyBase": true,
+											"polyBaseSettings": {
+												"rejectValue": 0,
+												"rejectType": "value",
+												"useTypeDefault": true
+											},
+											"disableMetricsCollection": false
+										},
+										"enableStaging": true,
+										"stagingSettings": {
+											"linkedServiceName": {
+												"referenceName": "ADLSG2 TimeAnalytics DEV",
+												"type": "LinkedServiceReference"
+											},
+											"path": {
+												"value": "mdr-raw-data/Polybase_Staging_Space",
+												"type": "Expression"
+											}
+										},
+										"translator": {
+											"type": "TabularTranslator",
+											"mappings": [
+												{
+													"source": {
+														"name": "source_code",
+														"type": "String"
+													},
+													"sink": {
+														"name": "source_code",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "sub_source_code",
+														"type": "String"
+													},
+													"sink": {
+														"name": "sub_source_code",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "trans_date",
+														"type": "String"
+													},
+													"sink": {
+														"name": "trans_date",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "trans_type",
+														"type": "String"
+													},
+													"sink": {
+														"name": "trans_type",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "fab_code",
+														"type": "String"
+													},
+													"sink": {
+														"name": "fab_code",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "contract",
+														"type": "String"
+													},
+													"sink": {
+														"name": "contract",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "contract_title",
+														"type": "String"
+													},
+													"sink": {
+														"name": "contract_title",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "job",
+														"type": "String"
+													},
+													"sink": {
+														"name": "job",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "job_title",
+														"type": "String"
+													},
+													"sink": {
+														"name": "job_title",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "item",
+														"type": "String"
+													},
+													"sink": {
+														"name": "item",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "item_title",
+														"type": "String"
+													},
+													"sink": {
+														"name": "item_title",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ndt_drawing",
+														"type": "String"
+													},
+													"sink": {
+														"name": "ndt_drawing",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ndt_drawing_desc",
+														"type": "String"
+													},
+													"sink": {
+														"name": "ndt_drawing_desc",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ndt_drawing_rev",
+														"type": "String"
+													},
+													"sink": {
+														"name": "ndt_drawing_rev",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ndt_drawing_date",
+														"type": "String"
+													},
+													"sink": {
+														"name": "ndt_drawing_date",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "line",
+														"type": "String"
+													},
+													"sink": {
+														"name": "line",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "line_desc",
+														"type": "String"
+													},
+													"sink": {
+														"name": "line_desc",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "discipline",
+														"type": "String"
+													},
+													"sink": {
+														"name": "discipline",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "recap",
+														"type": "String"
+													},
+													"sink": {
+														"name": "recap",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "weldcount",
+														"type": "String"
+													},
+													"sink": {
+														"name": "weldcount",
+														"type": "Int32"
+													}
+												},
+												{
+													"source": {
+														"name": "clear_date",
+														"type": "String"
+													},
+													"sink": {
+														"name": "clear_date",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "clear_run",
+														"type": "String"
+													},
+													"sink": {
+														"name": "clear_run",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "submit_date",
+														"type": "String"
+													},
+													"sink": {
+														"name": "submit_date",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "accept_date",
+														"type": "String"
+													},
+													"sink": {
+														"name": "accept_date",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "cert_pack_complete",
+														"type": "String"
+													},
+													"sink": {
+														"name": "cert_pack_complete",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "package_recall_date",
+														"type": "String"
+													},
+													"sink": {
+														"name": "package_recall_date",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "package_date",
+														"type": "String"
+													},
+													"sink": {
+														"name": "package_date",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "ndt_percent",
+														"type": "String"
+													},
+													"sink": {
+														"name": "ndt_percent",
+														"type": "Int16"
+													}
+												},
+												{
+													"source": {
+														"name": "mtn_completed",
+														"type": "String"
+													},
+													"sink": {
+														"name": "mtn_completed",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "markup_received",
+														"type": "String"
+													},
+													"sink": {
+														"name": "markup_received",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "inspector",
+														"type": "String"
+													},
+													"sink": {
+														"name": "inspector",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "insp_name",
+														"type": "String"
+													},
+													"sink": {
+														"name": "insp_name",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "wh_report_num",
+														"type": "String"
+													},
+													"sink": {
+														"name": "wh_report_num",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "cl_name1",
+														"type": "String"
+													},
+													"sink": {
+														"name": "cl_name1",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "cl_date1",
+														"type": "String"
+													},
+													"sink": {
+														"name": "cl_date1",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "cl_name2",
+														"type": "String"
+													},
+													"sink": {
+														"name": "cl_name2",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "cl_date2",
+														"type": "String"
+													},
+													"sink": {
+														"name": "cl_date2",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "cl_name3",
+														"type": "String"
+													},
+													"sink": {
+														"name": "cl_name3",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "cl_date3",
+														"type": "String"
+													},
+													"sink": {
+														"name": "cl_date3",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "create_date_time",
+														"type": "String"
+													},
+													"sink": {
+														"name": "created_date_time",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "include_in_rr_calc",
+														"type": "String"
+													},
+													"sink": {
+														"name": "include_in_rr_calc",
+														"type": "String"
+													}
+												}
+											]
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_adlsg2_csv_yardkpi_pcm_default",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_ds_filesystem": {
+													"value": "@activity('lkup_Get_Pipeline_parameters').output.firstRow.input_file_system",
+													"type": "Expression"
+												},
+												"p_ds_folderpath": {
+													"value": "@activity('lkup_Get_Pipeline_parameters').output.firstRow.Directory",
+													"type": "Expression"
+												},
+												"p_ds_filename": {
+													"value": "@concat('Combined_',activity('lkup_Get_Pipeline_parameters').output.firstRow.file_name,'_temp.csv')",
+													"type": "Expression"
+												}
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_AzureSynapseAnalytics_yardkpi",
+											"type": "DatasetReference",
+											"parameters": {
+												"schema": {
+													"value": "yardkpi",
+													"type": "Expression"
+												},
+												"db_name": {
+													"value": "stage_entp_pcm_certification_package",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								},
+								{
+									"name": "Update_dim_Dim_load",
+									"type": "SqlServerStoredProcedure",
+									"dependsOn": [
+										{
+											"activity": "Copy_data_Raw_to_synapse_stage",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"storedProcedureName": {
+											"value": "[[dbo].[sp_pcm_del]",
+											"type": "Expression"
+										},
+										"storedProcedureParameters": {
+											"Parameter1": {
+												"value": {
+													"value": "@activity('lkup_Get_Pipeline_parameters').output.firstRow.sp_dataset_certification_package",
+													"type": "Expression"
+												},
+												"type": "String"
+											}
+										}
+									},
+									"linkedServiceName": {
+										"referenceName": "linkedservice_DEV_entanalytics_synapse",
+										"type": "LinkedServiceReference"
+									}
+								}
+							]
+						}
+					},
+					{
+						"name": "Delete Temp File",
+						"description": "After the data has been loaded, clear the combined file from the ADLSV2 ",
+						"type": "Delete",
+						"dependsOn": [
+							{
+								"activity": "if_File_Exists_Copy_to_Synapse",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_yardkpi_pcm_default",
+								"type": "DatasetReference",
+								"parameters": {
+									"p_ds_filesystem": {
+										"value": "@activity('lkup_Get_Pipeline_parameters').output.firstRow.input_file_system",
+										"type": "Expression"
+									},
+									"p_ds_folderpath": {
+										"value": "@activity('lkup_Get_Pipeline_parameters').output.firstRow.Directory",
+										"type": "Expression"
+									},
+									"p_ds_filename": {
+										"value": "@concat('Combined_',activity('lkup_Get_Pipeline_parameters').output.firstRow.file_name,'_temp.csv')",
+										"type": "Expression"
+									}
+								}
+							},
+							"enableLogging": false,
+							"storeSettings": {
+								"type": "AzureBlobFSReadSettings",
+								"recursive": true
+							}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"variables": {
+					"v_current_date_time": {
+						"type": "String"
+					}
+				},
+				"folder": {
+					"name": "Projects/YARD KPI/PCM/certification_package_del"
+				},
+				"annotations": [],
+				"lastPublishTime": "2023-11-17T05:35:47Z"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pl_yardkpi_pcm_certification_package_source_to_stage')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "lk_get_pipeline_parameters",
+						"description": "Get the parameters to be used in this pipeline",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlDWSource",
+								"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+								"storedProcedureParameters": {
+									"pPipelineCode": {
+										"type": "String",
+										"value": {
+											"value": "@pipeline().Pipeline",
+											"type": "Expression"
+										}
+									},
+									"pPipeLineSubCode": {
+										"type": "String",
+										"value": {
+											"value": "PCM",
+											"type": "Expression"
+										}
+									}
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "ds_azure_synapse_parameter",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						}
+					},
+					{
+						"name": "ForEach_PCM_Fab_Code",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "lk_get_pipeline_parameters",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@split(pipeline().parameters.p_src_pipeline_pcm_fab_code,',' )",
+								"type": "Expression"
+							},
+							"isSequential": false,
+							"activities": [
+								{
+									"name": "lk_get_pipeline_pcm_yard_parameters",
+									"description": "Get the parameters to be used in this pipeline",
+									"type": "Lookup",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "SqlDWSource",
+											"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+											"storedProcedureParameters": {
+												"pPipelineCode": {
+													"type": "String",
+													"value": {
+														"value": "@pipeline().Pipeline",
+														"type": "Expression"
+													}
+												},
+												"pPipeLineSubCode": {
+													"type": "String",
+													"value": {
+														"value": "@concat('PCM_',trim(item()))",
+														"type": "Expression"
+													}
+												}
+											},
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"dataset": {
+											"referenceName": "ds_azure_synapse_parameter",
+											"type": "DatasetReference",
+											"parameters": {}
+										}
+									}
+								},
+								{
+									"name": "Set_current_date_time",
+									"type": "SetVariable",
+									"dependsOn": [
+										{
+											"activity": "lk_get_pipeline_pcm_yard_parameters",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"variableName": "v_current_date_time",
+										"value": {
+											"value": "@if(equals(activity('lk_get_pipeline_pcm_yard_parameters').output.firstRow.to_date,'currdate'),formatDateTime(utcNow(),'yyyy-MM-dd HH:mm:ss.fff'),formatDateTime(activity('lk_get_pipeline_pcm_yard_parameters').output.firstRow.to_date,'yyyy-MM-dd HH:mm:ss.fff'))",
+											"type": "Expression"
+										}
+									}
+								},
+								{
+									"name": "Copy PCM to Stage",
+									"type": "Copy",
+									"dependsOn": [
+										{
+											"activity": "Set_current_date_time",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "SqlServerSource",
+											"additionalColumns": [
+												{
+													"name": "source_code",
+													"value": {
+														"value": "SYSTEM",
+														"type": "Expression"
+													}
+												},
+												{
+													"name": "sub_source_code",
+													"value": {
+														"value": "PCM",
+														"type": "Expression"
+													}
+												}
+											],
+											"sqlReaderStoredProcedureName": "[[dbo].[pcm_dl_data]",
+											"storedProcedureParameters": {
+												"fab_code": {
+													"type": "String",
+													"value": {
+														"value": "@activity('lk_get_pipeline_pcm_yard_parameters').output.firstRow.fab_code",
+														"type": "Expression"
+													}
+												},
+												"sp_dataset": {
+													"type": "String",
+													"value": {
+														"value": "@activity('lk_get_pipeline_parameters').output.firstRow.sp_dataset_certification_package",
+														"type": "Expression"
+													}
+												},
+												"from_date": {
+													"type": "String",
+													"value": {
+														"value": "@activity('lk_get_pipeline_pcm_yard_parameters').output.firstRow.from_date",
+														"type": "Expression"
+													}
+												},
+												"to_date": {
+													"type": "String",
+													"value": {
+														"value": "@variables('v_current_date_time')",
+														"type": "Expression"
+													}
+												},
+												"trans_type": {
+													"type": "String",
+													"value": {
+														"value": "@activity('lk_get_pipeline_parameters').output.firstRow.trans_type",
+														"type": "Expression"
+													}
+												},
+												"contract": {
+													"type": "String",
+													"value": {
+														"value": "@activity('lk_get_pipeline_parameters').output.firstRow.contract",
+														"type": "Expression"
+													}
+												},
+												"job": {
+													"type": "String",
+													"value": {
+														"value": "@activity('lk_get_pipeline_parameters').output.firstRow.job",
+														"type": "Expression"
+													}
+												},
+												"item": {
+													"type": "String",
+													"value": {
+														"value": "@activity('lk_get_pipeline_parameters').output.firstRow.item",
+														"type": "Expression"
+													}
+												}
+											},
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "DelimitedTextSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "DelimitedTextWriteSettings",
+												"quoteAllText": true,
+												"fileExtension": ".txt"
+											}
+										},
+										"enableStaging": false,
+										"translator": {
+											"type": "TabularTranslator",
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_pcm_source_sql_server",
+											"type": "DatasetReference",
+											"parameters": {}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_adlsg2_certificate_package_stg",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_ds_filename": {
+													"value": "@concat('pcm_certification_package_',item(),'_',formatDateTime(variables('v_current_date_time'),'yyyy-MM-dd HH:mm:ss'),'.csv')",
+													"type": "Expression"
+												},
+												"p_ds_folderpath": {
+													"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+													"type": "Expression"
+												},
+												"p_ds_filesystem": {
+													"value": "@activity('lk_get_pipeline_parameters').output.firstRow.output_file_system",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								},
+								{
+									"name": "sp_Update_Parameter",
+									"type": "SqlServerStoredProcedure",
+									"dependsOn": [
+										{
+											"activity": "Copy PCM to Stage",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"storedProcedureName": "[[dbo].[updateIncrementPipelineParameterValue]",
+										"storedProcedureParameters": {
+											"pParameterCode": {
+												"value": {
+													"value": "from_date",
+													"type": "Expression"
+												},
+												"type": "String"
+											},
+											"pParameterValue": {
+												"value": {
+													"value": "@variables('v_current_date_time')",
+													"type": "Expression"
+												},
+												"type": "String"
+											},
+											"pPipelineCode": {
+												"value": {
+													"value": "@pipeline().Pipeline",
+													"type": "Expression"
+												},
+												"type": "String"
+											},
+											"pPipelineSubCode": {
+												"value": {
+													"value": "@concat('PCM_',trim(item()))",
+													"type": "Expression"
+												},
+												"type": "String"
+											}
+										}
+									},
+									"linkedServiceName": {
+										"referenceName": "AzureSynapseDB_DEV",
+										"type": "LinkedServiceReference"
+									}
+								}
+							]
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"parameters": {
+					"p_src_pipeline_pcm_fab_code": {
+						"type": "string"
+					}
+				},
+				"variables": {
+					"v_current_date_time": {
+						"type": "String"
+					}
+				},
+				"folder": {
+					"name": "Projects/YARD KPI/PCM/certification_package"
+				},
+				"annotations": [],
+				"lastPublishTime": "2024-04-09T06:13:35Z"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pl_yardkpi_pcm_certification_package_source_to_stage_del')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "lk_get_pipeline_parameters",
+						"description": "Get the parameters to be used in this pipeline",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlDWSource",
+								"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+								"storedProcedureParameters": {
+									"pPipelineCode": {
+										"type": "String",
+										"value": {
+											"value": "@pipeline().Pipeline",
+											"type": "Expression"
+										}
+									},
+									"pPipeLineSubCode": {
+										"type": "String",
+										"value": {
+											"value": "PCM",
+											"type": "Expression"
+										}
+									}
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "ds_azure_synapse_parameter",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						}
+					},
+					{
+						"name": "ForEach_PCM_Fab_Code",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "lk_get_pipeline_parameters",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@split(pipeline().parameters.p_src_pipeline_pcm_fab_code,',' )",
+								"type": "Expression"
+							},
+							"isSequential": false,
+							"activities": [
+								{
+									"name": "lk_get_pipeline_pcm_yard_parameters",
+									"description": "Get the parameters to be used in this pipeline",
+									"type": "Lookup",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "SqlDWSource",
+											"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+											"storedProcedureParameters": {
+												"pPipelineCode": {
+													"type": "String",
+													"value": {
+														"value": "@pipeline().Pipeline",
+														"type": "Expression"
+													}
+												},
+												"pPipeLineSubCode": {
+													"type": "String",
+													"value": {
+														"value": "@concat('PCM_',trim(item()))",
+														"type": "Expression"
+													}
+												}
+											},
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"dataset": {
+											"referenceName": "ds_azure_synapse_parameter",
+											"type": "DatasetReference",
+											"parameters": {}
+										}
+									}
+								},
+								{
+									"name": "Set_current_date_time",
+									"type": "SetVariable",
+									"dependsOn": [
+										{
+											"activity": "lk_get_pipeline_pcm_yard_parameters",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"variableName": "v_current_date_time",
+										"value": {
+											"value": "@if(equals(activity('lk_get_pipeline_pcm_yard_parameters').output.firstRow.to_date,'currdate'),formatDateTime(utcNow(),'yyyy-MM-dd HH:mm:ss.fff'),formatDateTime(activity('lk_get_pipeline_pcm_yard_parameters').output.firstRow.to_date,'yyyy-MM-dd HH:mm:ss.fff'))",
+											"type": "Expression"
+										}
+									}
+								},
+								{
+									"name": "Copy PCM to Stage",
+									"type": "Copy",
+									"dependsOn": [
+										{
+											"activity": "Set_current_date_time",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "SqlServerSource",
+											"additionalColumns": [
+												{
+													"name": "source_code",
+													"value": {
+														"value": "SYSTEM",
+														"type": "Expression"
+													}
+												},
+												{
+													"name": "sub_source_code",
+													"value": {
+														"value": "PCM",
+														"type": "Expression"
+													}
+												}
+											],
+											"sqlReaderStoredProcedureName": "[[dbo].[pcm_dl_data]",
+											"storedProcedureParameters": {
+												"fab_code": {
+													"type": "String",
+													"value": {
+														"value": "@activity('lk_get_pipeline_pcm_yard_parameters').output.firstRow.fab_code",
+														"type": "Expression"
+													}
+												},
+												"sp_dataset": {
+													"type": "String",
+													"value": {
+														"value": "@activity('lk_get_pipeline_parameters').output.firstRow.sp_dataset_certification_package",
+														"type": "Expression"
+													}
+												},
+												"from_date": {
+													"type": "String",
+													"value": {
+														"value": "@activity('lk_get_pipeline_pcm_yard_parameters').output.firstRow.from_date",
+														"type": "Expression"
+													}
+												},
+												"to_date": {
+													"type": "String",
+													"value": {
+														"value": "@variables('v_current_date_time')",
+														"type": "Expression"
+													}
+												},
+												"trans_type": {
+													"type": "String",
+													"value": {
+														"value": "@activity('lk_get_pipeline_parameters').output.firstRow.trans_type",
+														"type": "Expression"
+													}
+												},
+												"contract": {
+													"type": "String",
+													"value": {
+														"value": "@activity('lk_get_pipeline_parameters').output.firstRow.contract",
+														"type": "Expression"
+													}
+												},
+												"job": {
+													"type": "String",
+													"value": {
+														"value": "@activity('lk_get_pipeline_parameters').output.firstRow.job",
+														"type": "Expression"
+													}
+												},
+												"item": {
+													"type": "String",
+													"value": {
+														"value": "@activity('lk_get_pipeline_parameters').output.firstRow.item",
+														"type": "Expression"
+													}
+												}
+											},
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "DelimitedTextSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "DelimitedTextWriteSettings",
+												"quoteAllText": true,
+												"fileExtension": ".txt"
+											}
+										},
+										"enableStaging": false,
+										"translator": {
+											"type": "TabularTranslator",
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_pcm_source_sql_server",
+											"type": "DatasetReference",
+											"parameters": {}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_adlsg2_certificate_package_stg",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_ds_filename": {
+													"value": "@concat('pcm_certification_package_del_',item(),'_',formatDateTime(variables('v_current_date_time'),'yyyy-MM-dd HH:mm:ss'),'.csv')",
+													"type": "Expression"
+												},
+												"p_ds_folderpath": {
+													"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+													"type": "Expression"
+												},
+												"p_ds_filesystem": {
+													"value": "@activity('lk_get_pipeline_parameters').output.firstRow.output_file_system",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								},
+								{
+									"name": "sp_Update_Parameter",
+									"type": "SqlServerStoredProcedure",
+									"dependsOn": [
+										{
+											"activity": "Copy PCM to Stage",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"storedProcedureName": "[[dbo].[updateIncrementPipelineParameterValue]",
+										"storedProcedureParameters": {
+											"pParameterCode": {
+												"value": {
+													"value": "from_date",
+													"type": "Expression"
+												},
+												"type": "String"
+											},
+											"pParameterValue": {
+												"value": {
+													"value": "@variables('v_current_date_time')",
+													"type": "Expression"
+												},
+												"type": "String"
+											},
+											"pPipelineCode": {
+												"value": {
+													"value": "@pipeline().Pipeline",
+													"type": "Expression"
+												},
+												"type": "String"
+											},
+											"pPipelineSubCode": {
+												"value": {
+													"value": "@concat('PCM_',trim(item()))",
+													"type": "Expression"
+												},
+												"type": "String"
+											}
+										}
+									},
+									"linkedServiceName": {
+										"referenceName": "AzureSynapseDB_DEV",
+										"type": "LinkedServiceReference"
+									}
+								}
+							]
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"parameters": {
+					"p_src_pipeline_pcm_fab_code": {
+						"type": "string"
+					}
+				},
+				"variables": {
+					"v_current_date_time": {
+						"type": "String"
+					}
+				},
+				"folder": {
+					"name": "Projects/YARD KPI/PCM/certification_package_del"
+				},
+				"annotations": [],
+				"lastPublishTime": "2024-04-09T06:13:35Z"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pl_yardkpi_pcm_certification_package_stage_to_raw')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "lk_get_pipeline_parameters",
+						"description": "Get the parameters to be used in this pipeline",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlDWSource",
+								"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+								"storedProcedureParameters": {
+									"pPipelineCode": {
+										"type": "String",
+										"value": {
+											"value": "@pipeline().Pipeline",
+											"type": "Expression"
+										}
+									},
+									"pPipeLineSubCode": {
+										"type": "String",
+										"value": {
+											"value": "PCM",
+											"type": "Expression"
+										}
+									}
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "ds_azure_synapse_parameter",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						}
+					},
+					{
+						"name": "df_pcm_certificate_package_stage_to_raw",
+						"type": "ExecuteDataFlow",
+						"dependsOn": [
+							{
+								"activity": "lk_get_pipeline_parameters",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataflow": {
+								"referenceName": "df_pcm_certificate_package_stage_to_raw",
+								"type": "DataFlowReference",
+								"parameters": {},
+								"datasetParameters": {
+									"PCMWelderActivityStage": {
+										"p_ds_filename": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_name_stg",
+											"type": "Expression"
+										},
+										"p_ds_folderpath": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.Directory",
+											"type": "Expression"
+										},
+										"p_ds_filesystem": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+											"type": "Expression"
+										}
+									},
+									"PCMRaw": {
+										"p_ds_filesystem": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.output_file_system_raw",
+											"type": "Expression"
+										},
+										"p_ds_folderpath": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.Directory",
+											"type": "Expression"
+										},
+										"p_ds_filename": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_name_stg",
+											"type": "Expression"
+										}
+									}
+								}
+							},
+							"staging": {},
+							"compute": {
+								"coreCount": 8,
+								"computeType": "General"
+							},
+							"traceLevel": "Fine",
+							"runConcurrently": true
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"variables": {
+					"v_filename": {
+						"type": "String"
+					},
+					"v_folderpath": {
+						"type": "String"
+					},
+					"p_pl_fileexists": {
+						"type": "Boolean"
+					}
+				},
+				"folder": {
+					"name": "Projects/YARD KPI/PCM/certification_package"
+				},
+				"annotations": [],
+				"lastPublishTime": "2022-11-09T10:15:44Z"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pl_yardkpi_pcm_certification_package_stage_to_raw_del')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "lk_get_pipeline_parameters",
+						"description": "Get the parameters to be used in this pipeline",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlDWSource",
+								"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+								"storedProcedureParameters": {
+									"pPipelineCode": {
+										"type": "String",
+										"value": {
+											"value": "@pipeline().Pipeline",
+											"type": "Expression"
+										}
+									},
+									"pPipeLineSubCode": {
+										"type": "String",
+										"value": {
+											"value": "PCM",
+											"type": "Expression"
+										}
+									}
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "ds_azure_synapse_parameter",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						}
+					},
+					{
+						"name": "df_pcm_certificate_package_stage_to_raw_del",
+						"type": "ExecuteDataFlow",
+						"dependsOn": [
+							{
+								"activity": "lk_get_pipeline_parameters",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataflow": {
+								"referenceName": "df_pcm_certificate_package_stage_to_raw_del",
+								"type": "DataFlowReference",
+								"parameters": {},
+								"datasetParameters": {
+									"PCMWelderActivityStage": {
+										"p_ds_filename": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_name_stg",
+											"type": "Expression"
+										},
+										"p_ds_folderpath": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.Directory",
+											"type": "Expression"
+										},
+										"p_ds_filesystem": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+											"type": "Expression"
+										}
+									},
+									"PCMRaw": {
+										"p_ds_filesystem": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.output_file_system_raw",
+											"type": "Expression"
+										},
+										"p_ds_folderpath": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.Directory",
+											"type": "Expression"
+										},
+										"p_ds_filename": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_name_stg",
+											"type": "Expression"
+										}
+									}
+								}
+							},
+							"staging": {},
+							"compute": {
+								"coreCount": 8,
+								"computeType": "General"
+							},
+							"traceLevel": "Fine",
+							"runConcurrently": true
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"variables": {
+					"v_filename": {
+						"type": "String"
+					},
+					"v_folderpath": {
+						"type": "String"
+					},
+					"p_pl_fileexists": {
+						"type": "Boolean"
+					}
+				},
+				"folder": {
+					"name": "Projects/YARD KPI/PCM/certification_package_del"
+				},
+				"annotations": [],
+				"lastPublishTime": "2022-12-27T06:02:03Z"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pl_yardkpi_pcm_dl_master_defect_raw_to_synapse')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "cp_Get_Latest_Combined_File",
+						"description": "Copy all the files created since the last start date and combine them into one file to be processed into Synapse.",
+						"type": "Copy",
+						"dependsOn": [
+							{
+								"activity": "Set last_run_start_date",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 3,
+							"retryIntervalInSeconds": 60,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "DelimitedTextSource",
+								"storeSettings": {
+									"type": "AzureBlobFSReadSettings",
+									"recursive": true,
+									"modifiedDatetimeStart": {
+										"value": "@activity('lk_get_pipeline_parameters').output.firstRow.last_run_start_date",
+										"type": "Expression"
+									},
+									"wildcardFolderPath": {
+										"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.directory,'/*/*/*')",
+										"type": "Expression"
+									},
+									"wildcardFileName": {
+										"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.input_file_name,'_*.csv')",
+										"type": "Expression"
+									},
+									"enablePartitionDiscovery": false
+								},
+								"formatSettings": {
+									"type": "DelimitedTextReadSettings"
+								}
+							},
+							"sink": {
+								"type": "DelimitedTextSink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings",
+									"copyBehavior": "MergeFiles"
+								},
+								"formatSettings": {
+									"type": "DelimitedTextWriteSettings",
+									"quoteAllText": true,
+									"fileExtension": "ts_itime_combined.csv"
+								}
+							},
+							"enableStaging": false,
+							"translator": {
+								"type": "TabularTranslator",
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": true,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "ds_adlsg2_csv_yardkpi_pcm_master_generic",
+								"type": "DatasetReference",
+								"parameters": {
+									"p_ds_filename": {
+										"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.input_file_name,'.csv')",
+										"type": "Expression"
+									},
+									"p_ds_folderpath": {
+										"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+										"type": "Expression"
+									},
+									"p_ds_filesystem": {
+										"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+										"type": "Expression"
+									}
+								}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "ds_adlsg2_csv_yardkpi_pcm_master_generic",
+								"type": "DatasetReference",
+								"parameters": {
+									"p_ds_filename": {
+										"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.input_file_name,'Temp.csv')",
+										"type": "Expression"
+									},
+									"p_ds_folderpath": {
+										"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory\n",
+										"type": "Expression"
+									},
+									"p_ds_filesystem": {
+										"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+										"type": "Expression"
+									}
+								}
+							}
+						]
+					},
+					{
+						"name": "Check Combined File non zero Bytes",
+						"description": "Check if the combined file has any data to be loaded.",
+						"type": "GetMetadata",
+						"dependsOn": [
+							{
+								"activity": "cp_Get_Latest_Combined_File",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_yardkpi_pcm_master_generic",
+								"type": "DatasetReference",
+								"parameters": {
+									"p_ds_filename": {
+										"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.input_file_name,'Temp.csv')",
+										"type": "Expression"
+									},
+									"p_ds_folderpath": {
+										"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+										"type": "Expression"
+									},
+									"p_ds_filesystem": {
+										"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+										"type": "Expression"
+									}
+								}
+							},
+							"fieldList": [
+								"size",
+								"exists"
+							],
+							"storeSettings": {
+								"type": "AzureBlobFSReadSettings",
+								"recursive": true
+							},
+							"formatSettings": {
+								"type": "DelimitedTextReadSettings"
+							}
+						}
+					},
+					{
+						"name": "if_File_Exists_Copy_to_Synapse",
+						"type": "IfCondition",
+						"dependsOn": [
+							{
+								"activity": "Check Combined File non zero Bytes",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"expression": {
+								"value": "@greater(activity('Check Combined File non zero Bytes').output.size, 2)",
+								"type": "Expression"
+							},
+							"ifTrueActivities": [
+								{
+									"name": "Copy_raw_to_synapse_stage",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "DelimitedTextSource",
+											"storeSettings": {
+												"type": "AzureBlobFSReadSettings",
+												"recursive": true,
+												"enablePartitionDiscovery": false
+											},
+											"formatSettings": {
+												"type": "DelimitedTextReadSettings"
+											}
+										},
+										"sink": {
+											"type": "SqlDWSink",
+											"preCopyScript": {
+												"value": "truncate table [yardkpi].[stage_entp_pcm_defect_master]",
+												"type": "Expression"
+											},
+											"allowPolyBase": true,
+											"polyBaseSettings": {
+												"rejectValue": 0,
+												"rejectType": "value",
+												"useTypeDefault": true
+											},
+											"disableMetricsCollection": false
+										},
+										"enableStaging": true,
+										"stagingSettings": {
+											"linkedServiceName": {
+												"referenceName": "ADLSG2 TimeAnalytics DEV",
+												"type": "LinkedServiceReference"
+											},
+											"path": "mdr-raw-data/Polybase_Staging_Space"
+										},
+										"translator": {
+											"type": "TabularTranslator",
+											"mappings": [
+												{
+													"source": {
+														"name": "fab_code",
+														"type": "String"
+													},
+													"sink": {
+														"name": "fab_code",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "defect_type",
+														"type": "String"
+													},
+													"sink": {
+														"name": "defect_type",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "defect_type_title",
+														"type": "String"
+													},
+													"sink": {
+														"name": "defect_type_title",
+														"type": "String"
+													}
+												}
+											]
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_adlsg2_csv_yardkpi_pcm_master_generic",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_ds_filename": {
+													"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.input_file_name,'Temp.csv')",
+													"type": "Expression"
+												},
+												"p_ds_folderpath": {
+													"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+													"type": "Expression"
+												},
+												"p_ds_filesystem": {
+													"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+													"type": "Expression"
+												}
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_AzureSynapseAnalytics_yardkpi",
+											"type": "DatasetReference",
+											"parameters": {
+												"schema": {
+													"value": "yardkpi",
+													"type": "Expression"
+												},
+												"db_name": {
+													"value": "stage_entp_pcm_defect_master",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								},
+								{
+									"name": "SP load to DIM table",
+									"description": "Use the SPU generic_load_dim_v2 to populate the dim_entp_eng_ven_milestone  dimension table.",
+									"type": "SqlServerStoredProcedure",
+									"dependsOn": [
+										{
+											"activity": "Copy_raw_to_synapse_stage",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"storedProcedureName": {
+											"value": "[[dbo].[generic_load_dim_v2]",
+											"type": "Expression"
+										},
+										"storedProcedureParameters": {
+											"debug_flag": {
+												"value": {
+													"value": "N",
+													"type": "Expression"
+												},
+												"type": "String"
+											},
+											"execute_flag": {
+												"value": {
+													"value": "Y",
+													"type": "Expression"
+												},
+												"type": "String"
+											},
+											"load_name": {
+												"value": {
+													"value": "dim_entp_yardkpi_pcm_defect_master",
+													"type": "Expression"
+												},
+												"type": "String"
+											},
+											"rkValidationRequired": {
+												"value": {
+													"value": "Y",
+													"type": "Expression"
+												},
+												"type": "String"
+											}
+										}
+									},
+									"linkedServiceName": {
+										"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+										"type": "LinkedServiceReference"
+									}
+								}
+							]
+						}
+					},
+					{
+						"name": "Set last_run_start_date",
+						"type": "SetVariable",
+						"dependsOn": [
+							{
+								"activity": "lk_get_pipeline_parameters",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "v_raw_start_time",
+							"value": {
+								"value": "@formatDateTime(utcNow(),'yyyy-MM-dd HH:mm:ss')",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "lk_get_pipeline_parameters",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlDWSource",
+								"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+								"storedProcedureParameters": {
+									"pPipelineCode": {
+										"type": "String",
+										"value": {
+											"value": "@pipeline().Pipeline",
+											"type": "Expression"
+										}
+									},
+									"pPipeLineSubCode": {
+										"type": "String",
+										"value": {
+											"value": "PCM",
+											"type": "Expression"
+										}
+									}
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "ds_azure_synapse_parameter",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						}
+					},
+					{
+						"name": "Delete Temp combined File",
+						"description": "After the data has been loaded, clear the combined file from the ADLSV2 ",
+						"type": "Delete",
+						"dependsOn": [
+							{
+								"activity": "if_File_Exists_Copy_to_Synapse",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_yardkpi_pcm_master_generic",
+								"type": "DatasetReference",
+								"parameters": {
+									"p_ds_filename": {
+										"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.input_file_name,'Temp.csv')",
+										"type": "Expression"
+									},
+									"p_ds_folderpath": {
+										"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+										"type": "Expression"
+									},
+									"p_ds_filesystem": {
+										"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+										"type": "Expression"
+									}
+								}
+							},
+							"enableLogging": false,
+							"storeSettings": {
+								"type": "AzureBlobFSReadSettings",
+								"recursive": true
+							}
+						}
+					},
+					{
+						"name": "SP Update Last Run Date",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "if_File_Exists_Copy_to_Synapse",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[dbo].[updateIncrementPipelineParameterValue]",
+							"storedProcedureParameters": {
+								"pParameterCode": {
+									"value": "last_run_start_date",
+									"type": "String"
+								},
+								"pParameterValue": {
+									"value": {
+										"value": "@variables('v_raw_start_time')",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"pPipelineCode": {
+									"value": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"pPipelineSubCode": {
+									"value": {
+										"value": "PCM",
+										"type": "Expression"
+									},
+									"type": "String"
+								}
+							}
+						},
+						"linkedServiceName": {
+							"referenceName": "linkedservice_DEV_entanalytics_synapse",
+							"type": "LinkedServiceReference"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"variables": {
+					"v_raw_start_time": {
+						"type": "String"
+					}
+				},
+				"folder": {
+					"name": "Projects/YARD KPI/PCM/dl_master_data/defect_master"
+				},
+				"annotations": [],
+				"lastPublishTime": "2023-11-17T05:35:50Z"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pl_yardkpi_pcm_dl_master_defect_source_to_stage')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "lk_get_pipeline_parameters",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlDWSource",
+								"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+								"storedProcedureParameters": {
+									"pPipelineCode": {
+										"type": "String",
+										"value": {
+											"value": "@pipeline().Pipeline",
+											"type": "Expression"
+										}
+									},
+									"pPipeLineSubCode": {
+										"type": "String",
+										"value": {
+											"value": "PCM",
+											"type": "Expression"
+										}
+									}
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "ds_azure_synapse_parameter",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						}
+					},
+					{
+						"name": "ForEach_PCM_Fab_Code",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "lk_get_pipeline_parameters",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@split(pipeline().parameters.p_src_pipeline_pcm_fab_code,',' )",
+								"type": "Expression"
+							},
+							"isSequential": false,
+							"activities": [
+								{
+									"name": "Copy PCM to Stage",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "SqlServerSource",
+											"sqlReaderStoredProcedureName": "dbo.pcm_dl_master_data",
+											"storedProcedureParameters": {
+												"fab_code": {
+													"type": "String",
+													"value": {
+														"value": "@item()",
+														"type": "Expression"
+													}
+												},
+												"sp_dataset": {
+													"type": "String",
+													"value": {
+														"value": "@activity('lk_get_pipeline_parameters').output.firstRow.sp_dataset",
+														"type": "Expression"
+													}
+												}
+											},
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "DelimitedTextSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "DelimitedTextWriteSettings",
+												"quoteAllText": true,
+												"fileExtension": ".txt"
+											}
+										},
+										"enableStaging": false,
+										"translator": {
+											"type": "TabularTranslator",
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_pcm_source_sql_server",
+											"type": "DatasetReference",
+											"parameters": {}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_adlsg2_csv_yardkpi_pcm_master_generic",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_ds_filename": {
+													"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'_',item(),'.csv')",
+													"type": "Expression"
+												},
+												"p_ds_folderpath": {
+													"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+													"type": "Expression"
+												},
+												"p_ds_filesystem": {
+													"value": "@activity('lk_get_pipeline_parameters').output.firstRow.file_system",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								}
+							]
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"parameters": {
+					"p_src_pipeline_pcm_fab_code": {
+						"type": "string"
+					}
+				},
+				"folder": {
+					"name": "Projects/YARD KPI/PCM/dl_master_data/defect_master"
+				},
+				"annotations": [],
+				"lastPublishTime": "2023-03-09T05:53:35Z"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pl_yardkpi_pcm_dl_master_defect_stage_to_raw')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "lk_get_pipeline_parameters",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlDWSource",
+								"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+								"storedProcedureParameters": {
+									"pPipelineCode": {
+										"type": "String",
+										"value": {
+											"value": "@pipeline().Pipeline",
+											"type": "Expression"
+										}
+									},
+									"pPipeLineSubCode": {
+										"type": "String",
+										"value": {
+											"value": "PCM",
+											"type": "Expression"
+										}
+									}
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "ds_azure_synapse_parameter",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						}
+					},
+					{
+						"name": "df_stage_to_raw",
+						"type": "ExecuteDataFlow",
+						"dependsOn": [
+							{
+								"activity": "lk_get_pipeline_parameters",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataflow": {
+								"referenceName": "df_yardkpi_pcm_dl_master_defect_stage_to_raw",
+								"type": "DataFlowReference",
+								"parameters": {
+									"p_df_folderpath": {
+										"value": "'@{activity('lk_get_pipeline_parameters').output.firstRow.folder_path}'",
+										"type": "Expression"
+									},
+									"p_df_filename": {
+										"value": "'@{activity('lk_get_pipeline_parameters').output.firstRow.file_name}'",
+										"type": "Expression"
+									}
+								},
+								"datasetParameters": {
+									"Source": {
+										"p_ds_filename": {
+											"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+											"type": "Expression"
+										},
+										"p_ds_folderpath": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+											"type": "Expression"
+										},
+										"p_ds_filesystem": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+											"type": "Expression"
+										}
+									},
+									"Sink": {
+										"p_ds_filename": {
+											"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+											"type": "Expression"
+										},
+										"p_ds_folderpath": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+											"type": "Expression"
+										},
+										"p_ds_filesystem": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.output_file_system",
+											"type": "Expression"
+										}
+									}
+								}
+							},
+							"staging": {},
+							"compute": {
+								"coreCount": 8,
+								"computeType": "General"
+							},
+							"traceLevel": "Fine"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"folder": {
+					"name": "Projects/YARD KPI/PCM/dl_master_data/defect_master"
+				},
+				"annotations": [],
+				"lastPublishTime": "2023-03-09T05:53:36Z"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pl_yardkpi_pcm_dl_master_job_item_raw_to_synapse')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "cp_Get_Latest_Combined_File",
+						"description": "Copy all the files created since the last start date and combine them into one file to be processed into Synapse.",
+						"type": "Copy",
+						"dependsOn": [
+							{
+								"activity": "Set last_run_start_date",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 3,
+							"retryIntervalInSeconds": 60,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "DelimitedTextSource",
+								"storeSettings": {
+									"type": "AzureBlobFSReadSettings",
+									"recursive": true,
+									"modifiedDatetimeStart": {
+										"value": "@activity('lk_get_pipeline_parameters').output.firstRow.last_run_start_date",
+										"type": "Expression"
+									},
+									"wildcardFolderPath": {
+										"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.directory,'/*/*/*')",
+										"type": "Expression"
+									},
+									"wildcardFileName": {
+										"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.input_file_name,'_*.csv')",
+										"type": "Expression"
+									},
+									"enablePartitionDiscovery": false
+								},
+								"formatSettings": {
+									"type": "DelimitedTextReadSettings"
+								}
+							},
+							"sink": {
+								"type": "DelimitedTextSink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings",
+									"copyBehavior": "MergeFiles"
+								},
+								"formatSettings": {
+									"type": "DelimitedTextWriteSettings",
+									"quoteAllText": true,
+									"fileExtension": "ts_itime_combined.csv"
+								}
+							},
+							"enableStaging": false,
+							"translator": {
+								"type": "TabularTranslator",
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": true,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "ds_adlsg2_csv_yardkpi_pcm_master_generic",
+								"type": "DatasetReference",
+								"parameters": {
+									"p_ds_filename": {
+										"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.input_file_name,'.csv')",
+										"type": "Expression"
+									},
+									"p_ds_folderpath": {
+										"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+										"type": "Expression"
+									},
+									"p_ds_filesystem": {
+										"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+										"type": "Expression"
+									}
+								}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "ds_adlsg2_csv_yardkpi_pcm_master_generic",
+								"type": "DatasetReference",
+								"parameters": {
+									"p_ds_filename": {
+										"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.input_file_name,'Temp.csv')\n",
+										"type": "Expression"
+									},
+									"p_ds_folderpath": {
+										"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+										"type": "Expression"
+									},
+									"p_ds_filesystem": {
+										"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+										"type": "Expression"
+									}
+								}
+							}
+						]
+					},
+					{
+						"name": "Check Combined File non zero Bytes",
+						"description": "Check if the combined file has any data to be loaded.",
+						"type": "GetMetadata",
+						"dependsOn": [
+							{
+								"activity": "cp_Get_Latest_Combined_File",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_yardkpi_pcm_master_generic",
+								"type": "DatasetReference",
+								"parameters": {
+									"p_ds_filename": {
+										"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.input_file_name,'Temp.csv')",
+										"type": "Expression"
+									},
+									"p_ds_folderpath": {
+										"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory\n",
+										"type": "Expression"
+									},
+									"p_ds_filesystem": {
+										"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+										"type": "Expression"
+									}
+								}
+							},
+							"fieldList": [
+								"size",
+								"exists"
+							],
+							"storeSettings": {
+								"type": "AzureBlobFSReadSettings",
+								"recursive": true
+							},
+							"formatSettings": {
+								"type": "DelimitedTextReadSettings"
+							}
+						}
+					},
+					{
+						"name": "if_File_Exists_Copy_to_Synapse",
+						"type": "IfCondition",
+						"dependsOn": [
+							{
+								"activity": "Check Combined File non zero Bytes",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"expression": {
+								"value": "@greater(activity('Check Combined File non zero Bytes').output.size, 2)",
+								"type": "Expression"
+							},
+							"ifTrueActivities": [
+								{
+									"name": "Copy_raw_to_synapse_stage",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "DelimitedTextSource",
+											"storeSettings": {
+												"type": "AzureBlobFSReadSettings",
+												"recursive": true,
+												"enablePartitionDiscovery": false
+											},
+											"formatSettings": {
+												"type": "DelimitedTextReadSettings"
+											}
+										},
+										"sink": {
+											"type": "SqlDWSink",
+											"preCopyScript": {
+												"value": "truncate table [yardkpi].[stage_entp_pcm_job_item]",
+												"type": "Expression"
+											},
+											"allowPolyBase": true,
+											"polyBaseSettings": {
+												"rejectValue": 0,
+												"rejectType": "value",
+												"useTypeDefault": true
+											},
+											"disableMetricsCollection": false
+										},
+										"enableStaging": true,
+										"stagingSettings": {
+											"linkedServiceName": {
+												"referenceName": "ADLSG2 TimeAnalytics DEV",
+												"type": "LinkedServiceReference"
+											},
+											"path": "mdr-raw-data/Polybase_Staging_Space"
+										},
+										"translator": {
+											"type": "TabularTranslator",
+											"mappings": [
+												{
+													"source": {
+														"name": "fab_code",
+														"type": "String"
+													},
+													"sink": {
+														"name": "fab_code",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "client",
+														"type": "String"
+													},
+													"sink": {
+														"name": "contract",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "client_title",
+														"type": "String"
+													},
+													"sink": {
+														"name": "contract_title",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "client_type",
+														"type": "String"
+													},
+													"sink": {
+														"name": "contract_type",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "job",
+														"type": "String"
+													},
+													"sink": {
+														"name": "job",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "job_title",
+														"type": "String"
+													},
+													"sink": {
+														"name": "job_title",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "project",
+														"type": "String"
+													},
+													"sink": {
+														"name": "item",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "project_title",
+														"type": "String"
+													},
+													"sink": {
+														"name": "item_title",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "include_in_rr_calc",
+														"type": "String"
+													},
+													"sink": {
+														"name": "include_in_rr_calc",
+														"type": "String"
+													}
+												}
+											]
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_adlsg2_csv_yardkpi_pcm_master_generic",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_ds_filename": {
+													"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.input_file_name,'Temp.csv')",
+													"type": "Expression"
+												},
+												"p_ds_folderpath": {
+													"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+													"type": "Expression"
+												},
+												"p_ds_filesystem": {
+													"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+													"type": "Expression"
+												}
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_AzureSynapseAnalytics_yardkpi",
+											"type": "DatasetReference",
+											"parameters": {
+												"schema": {
+													"value": "yardkpi",
+													"type": "Expression"
+												},
+												"db_name": {
+													"value": "stage_entp_pcm_job_item",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								},
+								{
+									"name": "SP load to DIM table",
+									"description": "Use the SPU generic_load_dim_v2 to populate the dim_entp_eng_ven_milestone  dimension table.",
+									"type": "SqlServerStoredProcedure",
+									"dependsOn": [
+										{
+											"activity": "Copy_raw_to_synapse_stage",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"storedProcedureName": {
+											"value": "[[dbo].[generic_load_dim_v2]",
+											"type": "Expression"
+										},
+										"storedProcedureParameters": {
+											"debug_flag": {
+												"value": {
+													"value": "N",
+													"type": "Expression"
+												},
+												"type": "String"
+											},
+											"execute_flag": {
+												"value": {
+													"value": "Y",
+													"type": "Expression"
+												},
+												"type": "String"
+											},
+											"load_name": {
+												"value": {
+													"value": "dim_entp_yardkpi_pcm_job_item",
+													"type": "Expression"
+												},
+												"type": "String"
+											},
+											"rkValidationRequired": {
+												"value": {
+													"value": "Y",
+													"type": "Expression"
+												},
+												"type": "String"
+											}
+										}
+									},
+									"linkedServiceName": {
+										"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+										"type": "LinkedServiceReference"
+									}
+								}
+							]
+						}
+					},
+					{
+						"name": "Set last_run_start_date",
+						"type": "SetVariable",
+						"dependsOn": [
+							{
+								"activity": "lk_get_pipeline_parameters",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "v_raw_start_time",
+							"value": {
+								"value": "@formatDateTime(utcNow(),'yyyy-MM-dd HH:mm:ss')",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "lk_get_pipeline_parameters",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlDWSource",
+								"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+								"storedProcedureParameters": {
+									"pPipelineCode": {
+										"type": "String",
+										"value": {
+											"value": "@pipeline().Pipeline",
+											"type": "Expression"
+										}
+									},
+									"pPipeLineSubCode": {
+										"type": "String",
+										"value": {
+											"value": "PCM",
+											"type": "Expression"
+										}
+									}
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "ds_azure_synapse_parameter",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						}
+					},
+					{
+						"name": "Delete Temp combined File",
+						"description": "After the data has been loaded, clear the combined file from the ADLSV2 ",
+						"type": "Delete",
+						"dependsOn": [
+							{
+								"activity": "if_File_Exists_Copy_to_Synapse",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_yardkpi_pcm_master_generic",
+								"type": "DatasetReference",
+								"parameters": {
+									"p_ds_filename": {
+										"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.input_file_name,'Temp.csv')",
+										"type": "Expression"
+									},
+									"p_ds_folderpath": {
+										"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+										"type": "Expression"
+									},
+									"p_ds_filesystem": {
+										"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+										"type": "Expression"
+									}
+								}
+							},
+							"enableLogging": false,
+							"storeSettings": {
+								"type": "AzureBlobFSReadSettings",
+								"recursive": true
+							}
+						}
+					},
+					{
+						"name": "SP Update Last Run Date",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "if_File_Exists_Copy_to_Synapse",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[dbo].[updateIncrementPipelineParameterValue]",
+							"storedProcedureParameters": {
+								"pParameterCode": {
+									"value": "last_run_start_date",
+									"type": "String"
+								},
+								"pParameterValue": {
+									"value": {
+										"value": "@variables('v_raw_start_time')",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"pPipelineCode": {
+									"value": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"pPipelineSubCode": {
+									"value": {
+										"value": "PCM",
+										"type": "Expression"
+									},
+									"type": "String"
+								}
+							}
+						},
+						"linkedServiceName": {
+							"referenceName": "linkedservice_DEV_entanalytics_synapse",
+							"type": "LinkedServiceReference"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"variables": {
+					"v_raw_start_time": {
+						"type": "String"
+					}
+				},
+				"folder": {
+					"name": "Projects/YARD KPI/PCM/dl_master_data/job_item_master"
+				},
+				"annotations": [],
+				"lastPublishTime": "2023-11-17T05:35:49Z"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pl_yardkpi_pcm_dl_master_job_item_source_to_stage')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "lk_get_pipeline_parameters",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlDWSource",
+								"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+								"storedProcedureParameters": {
+									"pPipelineCode": {
+										"type": "String",
+										"value": {
+											"value": "@pipeline().Pipeline",
+											"type": "Expression"
+										}
+									},
+									"pPipeLineSubCode": {
+										"type": "String",
+										"value": {
+											"value": "PCM",
+											"type": "Expression"
+										}
+									}
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "ds_azure_synapse_parameter",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						}
+					},
+					{
+						"name": "ForEach_PCM_Fab_Code",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "lk_get_pipeline_parameters",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@split(pipeline().parameters.p_src_pipeline_pcm_fab_code,',' )",
+								"type": "Expression"
+							},
+							"isSequential": false,
+							"activities": [
+								{
+									"name": "Copy PCM to Stage",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "SqlServerSource",
+											"sqlReaderStoredProcedureName": "dbo.pcm_dl_master_data",
+											"storedProcedureParameters": {
+												"fab_code": {
+													"type": "String",
+													"value": {
+														"value": "@item()",
+														"type": "Expression"
+													}
+												},
+												"sp_dataset": {
+													"type": "String",
+													"value": {
+														"value": "@activity('lk_get_pipeline_parameters').output.firstRow.sp_dataset",
+														"type": "Expression"
+													}
+												}
+											},
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "DelimitedTextSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "DelimitedTextWriteSettings",
+												"quoteAllText": true,
+												"fileExtension": ".txt"
+											}
+										},
+										"enableStaging": false,
+										"translator": {
+											"type": "TabularTranslator",
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_pcm_source_sql_server",
+											"type": "DatasetReference",
+											"parameters": {}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_adlsg2_csv_yardkpi_pcm_master_generic",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_ds_filename": {
+													"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'_',item(),'.csv')",
+													"type": "Expression"
+												},
+												"p_ds_folderpath": {
+													"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+													"type": "Expression"
+												},
+												"p_ds_filesystem": {
+													"value": "@activity('lk_get_pipeline_parameters').output.firstRow.file_system",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								}
+							]
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"parameters": {
+					"p_src_pipeline_pcm_fab_code": {
+						"type": "string"
+					}
+				},
+				"folder": {
+					"name": "Projects/YARD KPI/PCM/dl_master_data/job_item_master"
+				},
+				"annotations": [],
+				"lastPublishTime": "2023-03-09T05:53:35Z"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pl_yardkpi_pcm_dl_master_job_item_stage_to_raw')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "lk_get_pipeline_parameters",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlDWSource",
+								"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+								"storedProcedureParameters": {
+									"pPipelineCode": {
+										"type": "String",
+										"value": {
+											"value": "@pipeline().Pipeline",
+											"type": "Expression"
+										}
+									},
+									"pPipeLineSubCode": {
+										"type": "String",
+										"value": {
+											"value": "PCM",
+											"type": "Expression"
+										}
+									}
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "ds_azure_synapse_parameter",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						}
+					},
+					{
+						"name": "df_stage_to_raw",
+						"type": "ExecuteDataFlow",
+						"dependsOn": [
+							{
+								"activity": "lk_get_pipeline_parameters",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataflow": {
+								"referenceName": "df_yardkpi_pcm_dl_master_job_item_stage_to_raw",
+								"type": "DataFlowReference",
+								"parameters": {
+									"p_df_folderpath": {
+										"value": "'@{activity('lk_get_pipeline_parameters').output.firstRow.folder_path}'",
+										"type": "Expression"
+									},
+									"p_df_filename": {
+										"value": "'@{activity('lk_get_pipeline_parameters').output.firstRow.file_name}'",
+										"type": "Expression"
+									}
+								},
+								"datasetParameters": {
+									"Source": {
+										"p_ds_filename": {
+											"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+											"type": "Expression"
+										},
+										"p_ds_folderpath": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+											"type": "Expression"
+										},
+										"p_ds_filesystem": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+											"type": "Expression"
+										}
+									},
+									"Sink": {
+										"p_ds_filename": {
+											"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+											"type": "Expression"
+										},
+										"p_ds_folderpath": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+											"type": "Expression"
+										},
+										"p_ds_filesystem": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.output_file_system",
+											"type": "Expression"
+										}
+									}
+								}
+							},
+							"staging": {},
+							"compute": {
+								"coreCount": 8,
+								"computeType": "General"
+							},
+							"traceLevel": "Fine"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"folder": {
+					"name": "Projects/YARD KPI/PCM/dl_master_data/job_item_master"
+				},
+				"annotations": [],
+				"lastPublishTime": "2023-03-09T05:53:36Z"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pl_yardkpi_pcm_dl_master_weld_process_raw_to_synapse')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "cp_Get_Latest_Combined_File",
+						"description": "Copy all the files created since the last start date and combine them into one file to be processed into Synapse.",
+						"type": "Copy",
+						"dependsOn": [
+							{
+								"activity": "Set last_run_start_date",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 3,
+							"retryIntervalInSeconds": 60,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "DelimitedTextSource",
+								"storeSettings": {
+									"type": "AzureBlobFSReadSettings",
+									"recursive": true,
+									"modifiedDatetimeStart": {
+										"value": "@activity('lk_get_pipeline_parameters').output.firstRow.last_run_start_date",
+										"type": "Expression"
+									},
+									"wildcardFolderPath": {
+										"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.directory,'/*/*/*')",
+										"type": "Expression"
+									},
+									"wildcardFileName": {
+										"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.input_file_name,'_*.csv')",
+										"type": "Expression"
+									},
+									"enablePartitionDiscovery": false
+								},
+								"formatSettings": {
+									"type": "DelimitedTextReadSettings"
+								}
+							},
+							"sink": {
+								"type": "DelimitedTextSink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings",
+									"copyBehavior": "MergeFiles"
+								},
+								"formatSettings": {
+									"type": "DelimitedTextWriteSettings",
+									"quoteAllText": true,
+									"fileExtension": "ts_itime_combined.csv"
+								}
+							},
+							"enableStaging": false,
+							"translator": {
+								"type": "TabularTranslator",
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": true,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "ds_adlsg2_csv_yardkpi_pcm_master_generic",
+								"type": "DatasetReference",
+								"parameters": {
+									"p_ds_filename": {
+										"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.input_file_name,'.csv')",
+										"type": "Expression"
+									},
+									"p_ds_folderpath": {
+										"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+										"type": "Expression"
+									},
+									"p_ds_filesystem": {
+										"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+										"type": "Expression"
+									}
+								}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "ds_adlsg2_csv_yardkpi_pcm_master_generic",
+								"type": "DatasetReference",
+								"parameters": {
+									"p_ds_filename": {
+										"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.input_file_name,'Temp.csv')",
+										"type": "Expression"
+									},
+									"p_ds_folderpath": {
+										"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+										"type": "Expression"
+									},
+									"p_ds_filesystem": {
+										"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+										"type": "Expression"
+									}
+								}
+							}
+						]
+					},
+					{
+						"name": "Check Combined File non zero Bytes",
+						"description": "Check if the combined file has any data to be loaded.",
+						"type": "GetMetadata",
+						"dependsOn": [
+							{
+								"activity": "cp_Get_Latest_Combined_File",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_yardkpi_pcm_master_generic",
+								"type": "DatasetReference",
+								"parameters": {
+									"p_ds_filename": {
+										"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.input_file_name,'Temp.csv')",
+										"type": "Expression"
+									},
+									"p_ds_folderpath": {
+										"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+										"type": "Expression"
+									},
+									"p_ds_filesystem": {
+										"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+										"type": "Expression"
+									}
+								}
+							},
+							"fieldList": [
+								"size",
+								"exists"
+							],
+							"storeSettings": {
+								"type": "AzureBlobFSReadSettings",
+								"recursive": true
+							},
+							"formatSettings": {
+								"type": "DelimitedTextReadSettings"
+							}
+						}
+					},
+					{
+						"name": "if_File_Exists_Copy_to_Synapse",
+						"type": "IfCondition",
+						"dependsOn": [
+							{
+								"activity": "Check Combined File non zero Bytes",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"expression": {
+								"value": "@greater(activity('Check Combined File non zero Bytes').output.size, 2)",
+								"type": "Expression"
+							},
+							"ifTrueActivities": [
+								{
+									"name": "Copy_raw_to_synapse_stage",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "DelimitedTextSource",
+											"storeSettings": {
+												"type": "AzureBlobFSReadSettings",
+												"recursive": true,
+												"enablePartitionDiscovery": false
+											},
+											"formatSettings": {
+												"type": "DelimitedTextReadSettings"
+											}
+										},
+										"sink": {
+											"type": "SqlDWSink",
+											"preCopyScript": {
+												"value": "truncate table [yardkpi].[stage_entp_pcm_weld_process_master]",
+												"type": "Expression"
+											},
+											"allowPolyBase": true,
+											"polyBaseSettings": {
+												"rejectValue": 0,
+												"rejectType": "value",
+												"useTypeDefault": true
+											},
+											"disableMetricsCollection": false
+										},
+										"enableStaging": true,
+										"stagingSettings": {
+											"linkedServiceName": {
+												"referenceName": "ADLSG2 TimeAnalytics DEV",
+												"type": "LinkedServiceReference"
+											},
+											"path": "mdr-raw-data/Polybase_Staging_Space"
+										},
+										"translator": {
+											"type": "TabularTranslator",
+											"mappings": [
+												{
+													"source": {
+														"name": "fab_code",
+														"type": "String"
+													},
+													"sink": {
+														"name": "fab_code",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "process",
+														"type": "String"
+													},
+													"sink": {
+														"name": "process",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "process_title",
+														"type": "String"
+													},
+													"sink": {
+														"name": "process_title",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "discipline",
+														"type": "String"
+													},
+													"sink": {
+														"name": "discipline",
+														"type": "String"
+													}
+												}
+											]
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_adlsg2_csv_yardkpi_pcm_master_generic",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_ds_filename": {
+													"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.input_file_name,'Temp.csv')",
+													"type": "Expression"
+												},
+												"p_ds_folderpath": {
+													"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+													"type": "Expression"
+												},
+												"p_ds_filesystem": {
+													"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+													"type": "Expression"
+												}
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_AzureSynapseAnalytics_yardkpi",
+											"type": "DatasetReference",
+											"parameters": {
+												"schema": {
+													"value": "yardkpi",
+													"type": "Expression"
+												},
+												"db_name": {
+													"value": "stage_entp_pcm_weld_process_master",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								},
+								{
+									"name": "SP load to DIM table",
+									"description": "Use the SPU generic_load_dim_v2 to populate the dim_entp_eng_ven_milestone  dimension table.",
+									"type": "SqlServerStoredProcedure",
+									"dependsOn": [
+										{
+											"activity": "Copy_raw_to_synapse_stage",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"storedProcedureName": {
+											"value": "[[dbo].[generic_load_dim_v2]",
+											"type": "Expression"
+										},
+										"storedProcedureParameters": {
+											"debug_flag": {
+												"value": {
+													"value": "N",
+													"type": "Expression"
+												},
+												"type": "String"
+											},
+											"execute_flag": {
+												"value": {
+													"value": "Y",
+													"type": "Expression"
+												},
+												"type": "String"
+											},
+											"load_name": {
+												"value": {
+													"value": "dim_entp_yardkpi_pcm_weld_process_master",
+													"type": "Expression"
+												},
+												"type": "String"
+											},
+											"rkValidationRequired": {
+												"value": {
+													"value": "Y",
+													"type": "Expression"
+												},
+												"type": "String"
+											}
+										}
+									},
+									"linkedServiceName": {
+										"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+										"type": "LinkedServiceReference"
+									}
+								}
+							]
+						}
+					},
+					{
+						"name": "Set last_run_start_date",
+						"type": "SetVariable",
+						"dependsOn": [
+							{
+								"activity": "lk_get_pipeline_parameters",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "v_raw_start_time",
+							"value": {
+								"value": "@formatDateTime(utcNow(),'yyyy-MM-dd HH:mm:ss')",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "lk_get_pipeline_parameters",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlDWSource",
+								"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+								"storedProcedureParameters": {
+									"pPipelineCode": {
+										"type": "String",
+										"value": {
+											"value": "@pipeline().Pipeline",
+											"type": "Expression"
+										}
+									},
+									"pPipeLineSubCode": {
+										"type": "String",
+										"value": {
+											"value": "PCM",
+											"type": "Expression"
+										}
+									}
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "ds_azure_synapse_parameter",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						}
+					},
+					{
+						"name": "Delete Temp combined File",
+						"description": "After the data has been loaded, clear the combined file from the ADLSV2 ",
+						"type": "Delete",
+						"dependsOn": [
+							{
+								"activity": "if_File_Exists_Copy_to_Synapse",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_yardkpi_pcm_master_generic",
+								"type": "DatasetReference",
+								"parameters": {
+									"p_ds_filename": {
+										"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.input_file_name,'Temp.csv')",
+										"type": "Expression"
+									},
+									"p_ds_folderpath": {
+										"value": "@activity('lk_get_pipeline_parameters').output.firstRow.directory",
+										"type": "Expression"
+									},
+									"p_ds_filesystem": {
+										"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+										"type": "Expression"
+									}
+								}
+							},
+							"enableLogging": false,
+							"storeSettings": {
+								"type": "AzureBlobFSReadSettings",
+								"recursive": true
+							}
+						}
+					},
+					{
+						"name": "SP Update Last Run Date",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "if_File_Exists_Copy_to_Synapse",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[dbo].[updateIncrementPipelineParameterValue]",
+							"storedProcedureParameters": {
+								"pParameterCode": {
+									"value": "last_run_start_date",
+									"type": "String"
+								},
+								"pParameterValue": {
+									"value": {
+										"value": "@variables('v_raw_start_time')",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"pPipelineCode": {
+									"value": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"pPipelineSubCode": {
+									"value": {
+										"value": "PCM",
+										"type": "Expression"
+									},
+									"type": "String"
+								}
+							}
+						},
+						"linkedServiceName": {
+							"referenceName": "linkedservice_DEV_entanalytics_synapse",
+							"type": "LinkedServiceReference"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"variables": {
+					"v_raw_start_time": {
+						"type": "String"
+					}
+				},
+				"folder": {
+					"name": "Projects/YARD KPI/PCM/dl_master_data/weld_process_master"
+				},
+				"annotations": [],
+				"lastPublishTime": "2023-11-17T05:35:49Z"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pl_yardkpi_pcm_dl_master_weld_process_source_to_stage')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "lk_get_pipeline_parameters",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlDWSource",
+								"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+								"storedProcedureParameters": {
+									"pPipelineCode": {
+										"type": "String",
+										"value": {
+											"value": "@pipeline().Pipeline",
+											"type": "Expression"
+										}
+									},
+									"pPipeLineSubCode": {
+										"type": "String",
+										"value": {
+											"value": "PCM",
+											"type": "Expression"
+										}
+									}
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "ds_azure_synapse_parameter",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						}
+					},
+					{
+						"name": "ForEach_PCM_Fab_Code",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "lk_get_pipeline_parameters",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@split(pipeline().parameters.p_src_pipeline_pcm_fab_code,',' )",
+								"type": "Expression"
+							},
+							"isSequential": false,
+							"activities": [
+								{
+									"name": "Copy PCM to Stage",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "SqlServerSource",
+											"sqlReaderStoredProcedureName": "dbo.pcm_dl_master_data",
+											"storedProcedureParameters": {
+												"fab_code": {
+													"type": "String",
+													"value": {
+														"value": "@item()",
+														"type": "Expression"
+													}
+												},
+												"sp_dataset": {
+													"type": "String",
+													"value": {
+														"value": "@activity('lk_get_pipeline_parameters').output.firstRow.sp_dataset",
+														"type": "Expression"
+													}
+												}
+											},
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "DelimitedTextSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "DelimitedTextWriteSettings",
+												"quoteAllText": true,
+												"fileExtension": ".txt"
+											}
+										},
+										"enableStaging": false,
+										"translator": {
+											"type": "TabularTranslator",
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_pcm_source_sql_server",
+											"type": "DatasetReference",
+											"parameters": {}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_adlsg2_csv_yardkpi_pcm_master_generic",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_ds_filename": {
+													"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'_',item(),'.csv')",
+													"type": "Expression"
+												},
+												"p_ds_folderpath": {
+													"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+													"type": "Expression"
+												},
+												"p_ds_filesystem": {
+													"value": "@activity('lk_get_pipeline_parameters').output.firstRow.file_system",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								}
+							]
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"parameters": {
+					"p_src_pipeline_pcm_fab_code": {
+						"type": "string"
+					}
+				},
+				"folder": {
+					"name": "Projects/YARD KPI/PCM/dl_master_data/weld_process_master"
+				},
+				"annotations": [],
+				"lastPublishTime": "2023-03-09T05:53:35Z"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pl_yardkpi_pcm_dl_master_weld_process_stage_to_raw')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "lk_get_pipeline_parameters",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlDWSource",
+								"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+								"storedProcedureParameters": {
+									"pPipelineCode": {
+										"type": "String",
+										"value": {
+											"value": "@pipeline().Pipeline",
+											"type": "Expression"
+										}
+									},
+									"pPipeLineSubCode": {
+										"type": "String",
+										"value": {
+											"value": "PCM",
+											"type": "Expression"
+										}
+									}
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "ds_azure_synapse_parameter",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						}
+					},
+					{
+						"name": "df_stage_to_raw",
+						"type": "ExecuteDataFlow",
+						"dependsOn": [
+							{
+								"activity": "lk_get_pipeline_parameters",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataflow": {
+								"referenceName": "df_yardkpi_pcm_dl_master_weld_process_stage_to_raw",
+								"type": "DataFlowReference",
+								"parameters": {
+									"p_df_folderpath": {
+										"value": "'@{activity('lk_get_pipeline_parameters').output.firstRow.folder_path}'",
+										"type": "Expression"
+									},
+									"p_df_filename": {
+										"value": "'@{activity('lk_get_pipeline_parameters').output.firstRow.file_name}'",
+										"type": "Expression"
+									}
+								},
+								"datasetParameters": {
+									"Source": {
+										"p_ds_filename": {
+											"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+											"type": "Expression"
+										},
+										"p_ds_folderpath": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+											"type": "Expression"
+										},
+										"p_ds_filesystem": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_system",
+											"type": "Expression"
+										}
+									},
+									"Sink": {
+										"p_ds_filename": {
+											"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+											"type": "Expression"
+										},
+										"p_ds_folderpath": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+											"type": "Expression"
+										},
+										"p_ds_filesystem": {
+											"value": "@activity('lk_get_pipeline_parameters').output.firstRow.output_file_system",
+											"type": "Expression"
+										}
+									}
+								}
+							},
+							"staging": {},
+							"compute": {
+								"coreCount": 8,
+								"computeType": "General"
+							},
+							"traceLevel": "Fine"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"folder": {
+					"name": "Projects/YARD KPI/PCM/dl_master_data/weld_process_master"
+				},
+				"annotations": [],
+				"lastPublishTime": "2023-03-09T05:53:36Z"
+			},
+			"dependsOn": []
+		}
+	]
+}

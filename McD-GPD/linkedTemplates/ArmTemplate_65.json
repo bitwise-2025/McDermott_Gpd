@@ -1,0 +1,2086 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "McD-GPD"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/df_yardkpi_idocs_all_rev_mas_fab_stage_to_raw')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/YARD KPI/iDocs/All Revision Master Fab"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_yardkpi_idocs_wildcard_generic",
+								"type": "DatasetReference"
+							},
+							"name": "srcAllRevMasFabStage"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_yardkpi_idocs_wildcard_generic",
+								"type": "DatasetReference"
+							},
+							"name": "snkAllRevMasFabRaw"
+						}
+					],
+					"transformations": [
+						{
+							"name": "setFileName"
+						}
+					],
+					"script": "parameters{\n\tfolder_path as string,\n\tinput_file_name as string,\n\tfile_name as string\n}\nsource(output(\n\t\t{PROJECT NO.} as string,\n\t\t{PROJECT ID} as string,\n\t\t{PROJECT NAME} as string,\n\t\tDELIVERABLE as string,\n\t\t{DL IMPORT} as string,\n\t\t{DOC ID} as string,\n\t\t{DOCUMENT NUMBER} as string,\n\t\t{TYPE CLASS} as string,\n\t\t{VERSION NO.} as string,\n\t\t{REVISION NO.} as string,\n\t\t{REVISION DATE} as string,\n\t\t{ISSUE STATE} as string,\n\t\tContract_No as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: true,\n\tpurgeFiles: true,\n\trowUrlColumn: 'File_Path',\n\twildcardPaths:[($folder_path+'/'+'*'+$input_file_name+'*.CSV')]) ~> srcAllRevMasFabStage\nsrcAllRevMasFabStage derive(File_Path = concat(concat(trim(substringIndex(File_Path,'/',5),'/'),'/'),substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',$file_name,'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv'),\n\t\tContract_No = split(Contract_No,'_')[2]) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\trowUrlColumn:'File_Path',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> snkAllRevMasFabRaw"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_yardkpi_idocs_doc_mas_fab_stage_to_raw')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/YARD KPI/iDocs/Doc Master Fab"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_yardkpi_idocs_docmas_wildcard",
+								"type": "DatasetReference"
+							},
+							"name": "srcDocMasFabStage"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_yardkpi_idocs_docmas_wildcard",
+								"type": "DatasetReference"
+							},
+							"name": "snkDocMasFabRaw"
+						}
+					],
+					"transformations": [
+						{
+							"name": "setFileName"
+						}
+					],
+					"script": "parameters{\n\tfolder_path as string,\n\tinput_file_name as string,\n\tfile_name as string\n}\nsource(output(\n\t\t{PROJECT NO.} as string,\n\t\t{PROJECT ID} as string,\n\t\t{PROJECT NAME} as string,\n\t\t{CLIENT NAME} as string,\n\t\tDELIVERABLE as string,\n\t\t{DL IMPORT} as string,\n\t\t{DOC ID} as string,\n\t\t{TYPE CLASS} as string,\n\t\t{DELIVERABLE TYPE} as string,\n\t\t{DOC TYPE} as string,\n\t\t{DOCUMENT NUMBER} as string,\n\t\t{ALTERNATE DOCUMENT NUMBER} as string,\n\t\tTITLE as string,\n\t\t{REVISION NO.} as string,\n\t\t{REVISION DATE} as string,\n\t\t{ISSUE STATE} as string,\n\t\t{CLIENT REV NO} as string,\n\t\tFACILITY_PLANT_UNIT as string,\n\t\t{OVERDUE REASON} as string,\n\t\t{OFFICE LOCATION} as string,\n\t\tDISCIPLINE as string,\n\t\t{PCM LAST WELD} as string,\n\t\t{REF. NO.} as string,\n\t\t{SHOP DWG TYPE OF ERROR} as string,\n\t\t{SUPERSEDED BY} as string,\n\t\t{IDOCS URL} as string,\n\t\t{IDOCS FOLDER} as string,\n\t\tContract_No as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: true,\n\tpurgeFiles: true,\n\trowUrlColumn: 'File_Path',\n\twildcardPaths:[($folder_path+'/'+'*'+$input_file_name+'*.CSV')]) ~> srcDocMasFabStage\nsrcDocMasFabStage derive(File_Path = concat(concat(trim(substringIndex(File_Path,'/',5),'/'),'/'),substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',$file_name,'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv'),\n\t\tContract_No = split(Contract_No,'_')[2]) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\trowUrlColumn:'File_Path',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> snkDocMasFabRaw"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_yardkpi_idocs_ms_mas_fab_stage_to_raw')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/YARD KPI/iDocs/Milestone Master Fab"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_yardkpi_idocs_wildcard_generic",
+								"type": "DatasetReference"
+							},
+							"name": "srcMSMasFabStage"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_yardkpi_idocs_wildcard_generic",
+								"type": "DatasetReference"
+							},
+							"name": "snkMSMasFabRaw"
+						}
+					],
+					"transformations": [
+						{
+							"name": "setFileName"
+						}
+					],
+					"script": "parameters{\n\tfolder_path as string,\n\tfile_name as string,\n\tinput_file_name as string\n}\nsource(output(\n\t\t{PROJECT NO.} as string,\n\t\t{PROJECT ID} as string,\n\t\t{PROJECT NAME} as string,\n\t\tDELIVERABLE as string,\n\t\t{DL IMPORT} as string,\n\t\t{DOC ID} as string,\n\t\t{DOCUMENT NUMBER} as string,\n\t\t{TYPE CLASS} as string,\n\t\tMS_ORDER as string,\n\t\tMS_ID as string,\n\t\tMS_GATE_NAME as string,\n\t\tMS_WEIGHT as string,\n\t\tSCHEDULED_DATE_ORIGINAL as string,\n\t\tSCHEDULED_DATE as string,\n\t\tFORECAST_DATE_ORIGINAL as string,\n\t\tFORECAST_DATE as string,\n\t\tACTUAL_DATE_ORIGINAL as string,\n\t\tACTUAL_DATE as string,\n\t\tContract_No as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: true,\n\tpurgeFiles: true,\n\trowUrlColumn: 'File_Path',\n\twildcardPaths:[($folder_path+'/'+'*'+$input_file_name+'*.CSV')]) ~> srcMSMasFabStage\nsrcMSMasFabStage derive(File_Path = concat(concat(trim(substringIndex(File_Path,'/',5),'/'),'/'),substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',$file_name,'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv'),\n\t\tContract_No = split(Contract_No,'_')[2]) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\trowUrlColumn:'File_Path',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> snkMSMasFabRaw"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_yardkpi_intelex_Injury_Illness_stage_to_raw')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/YARD KPI/Intelex"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_yardkpi_intelex_generic",
+								"type": "DatasetReference"
+							},
+							"name": "Source"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_yardkpi_intelex_generic",
+								"type": "DatasetReference"
+							},
+							"name": "Sink"
+						}
+					],
+					"transformations": [
+						{
+							"name": "setFileName"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          RowNum as string,",
+						"          Employee_x0020_ID as string,",
+						"          Record_x0020_No as string,",
+						"          Category as string,",
+						"          Date as string,",
+						"          HIPO_x0020_Change_x0020_Counter as string,",
+						"          Location as string,",
+						"          Was_x0020_Treatment_x0020_Received_x003F_ as string,",
+						"          HIPO_x003F_ as string,",
+						"          Related_x0020_MOVs as string,",
+						"          Profile_x0020_Type as string,",
+						"          Profile_x0020_No as string,",
+						"          Profile as string,",
+						"          Vessel_x002F_Barge as string,",
+						"          Business_x0020_Line as string,",
+						"          Area as string,",
+						"          Project_x0020_Name as string,",
+						"          Project_x0020_Number as string,",
+						"          Incident_x0020_Title as string,",
+						"          Hospitalization_x0020_Type as string,",
+						"          Description as string,",
+						"          Injury_x0020_or_x0020_Illness as string,",
+						"          Number_x0020_of_x0020_People_x0020_Impacted as string,",
+						"          Immediate_x0020_Action as string,",
+						"          External_x0020_Agency_x0020_Notification_x0020_Required_x003F_ as string,",
+						"          Specify_x0020_Agency as string,",
+						"          Specify_x0020_Other as string,",
+						"          Worker_x0020_Type as string,",
+						"          Does_x0020_employee_x0020_exist_x0020_in_x0020_the_x0020_system_x003F_ as string,",
+						"          Employee_x0020_ID2 as string,",
+						"          First_x0020_Name as string,",
+						"          Last_x0020_Name as string,",
+						"          Did_x0020_the_x0020_incident_x0020_occur_x0020_during_x0020_rework_x003F_ as string,",
+						"          Potential_x0020_Risk_x0020_Reporting_x0020_Level as string,",
+						"          Potential_x0020_Severity_x0020_Level as string,",
+						"          Actual_x0020_Severity_x0020_Level as string,",
+						"          Reported_x0020_By as string,",
+						"          Stop_x0020_Work_x0020_Authority_x0020_applied_x003F_ as string,",
+						"          Work_x0020_Related_x0020_Injury_x002F_Illness_x003F_ as string,",
+						"          Was_x0020_impacted_x0020_person_x0020_sent_x0020_offsite_x0020_for_x0020_medical_x0020_evaluation_x0020_or_x0020_treatment_x003F_ as string,",
+						"          Drug_x0020_and_x002F_or_x0020_Alcohol_x0020_Test_x0020_Required_x003F_ as string,",
+						"          {Local-News_x0020_Media_x0020_Involvement_x003F_} as string,",
+						"          Incident_x0020_Reported_x0020_By as string,",
+						"          Created_x0020_By as string,",
+						"          Date_x0020_Created as string,",
+						"          Assign_x0020_Investigator as string,",
+						"          Comments as string,",
+						"          Workers_x0027__x0020_Comp_x003F_ as string,",
+						"          Workers_x0027__x0020_Comp_x0020_Comments as string,",
+						"          Shift_x0020_Details as string,",
+						"          Hours_x0020_Into_x0020_Shift as string,",
+						"          Shift_x0020_Duration as string,",
+						"          Privacy_x0020_Case_x003F_ as string,",
+						"          Events_x002F_Exposures as string,",
+						"          Source_x0020_of_x0020_Injury_x002F_Illness as string,",
+						"          Source_x0020_Details as string,",
+						"          Body_x0020_Part as string,",
+						"          Injury_x002F_Illness as string,",
+						"          Initial_x0020_Treatment as string,",
+						"          Who_x0020_provided_x0020_treatment_x003F_ as string,",
+						"          Hospitalized as string,",
+						"          Recordable as string,",
+						"          Recordable_x0020_Classification as string,",
+						"          Start_x0020_Date_x0020_and_x0020_Time_x0020_of_x0020_Investigation as string,",
+						"          End_x0020_Date_x0020_and_x0020_Time_x0020_of_x0020_Investigation as string,",
+						"          Investigator as string,",
+						"          Additional_x0020_Investigators as string,",
+						"          HIPO_x003F_2 as string,",
+						"          Incident_x0020_Owner as string,",
+						"          Total_x0020_Number_x0020_of_x0020_Days_x0020_Away as string,",
+						"          Total_x0020_Number_x0020_of_x0020_Job_x0020_Transfer as string,",
+						"          Total_x0020_Number_x0020_of_x0020_Restricted_x0020_Days as string,",
+						"          Total_x0020_Number_x0020_of_x0020_Restricted_x0020_or_x0020_Job_x0020_Transfer_x0020_Days as string,",
+						"          Date_x0020_Approved as string,",
+						"          Approver_x0027_s_x0020_Comment as string,",
+						"          Approved_x0020_By as string,",
+						"          WorkflowCurrent_x0020_Stage as string,",
+						"          WorkflowWorkflow_x0020_Status as string,",
+						"          WorkflowStatus as string,",
+						"          WorkflowCurrent_x0020_Person_x0020_Responsible as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: true,",
+						"     rowUrlColumn: 'File_Path') ~> Source",
+						"Source derive(RowNum = trim(replace(RowNum, '\\n', ' ')),",
+						"          Employee_x0020_ID = trim(replace(Employee_x0020_ID, '\\n', ' ')),",
+						"          Record_x0020_No = trim(replace(Record_x0020_No, '\\n', ' ')),",
+						"          Category = trim(replace(Category, '\\n', ' ')),",
+						"          Date = trim(replace(Date, '\\n', ' ')),",
+						"          HIPO_x0020_Change_x0020_Counter = trim(replace(HIPO_x0020_Change_x0020_Counter, '\\n', ' ')),",
+						"          Location = trim(replace(Location, '\\n', ' ')),",
+						"          Was_x0020_Treatment_x0020_Received_x003F_ = trim(replace(Was_x0020_Treatment_x0020_Received_x003F_, '\\n', ' ')),",
+						"          HIPO_x003F_ = trim(replace(HIPO_x003F_, '\\n', ' ')),",
+						"          Related_x0020_MOVs = trim(replace(Related_x0020_MOVs, '\\n', ' ')),",
+						"          Profile_x0020_Type = trim(replace(Profile_x0020_Type, '\\n', ' ')),",
+						"          Profile_x0020_No = trim(replace(Profile_x0020_No, '\\n', ' ')),",
+						"          Profile = trim(replace(Profile, '\\n', ' ')),",
+						"          Vessel_x002F_Barge = trim(replace(Vessel_x002F_Barge, '\\n', ' ')),",
+						"          Business_x0020_Line = trim(replace(Business_x0020_Line, '\\n', ' ')),",
+						"          Area = trim(replace(Area, '\\n', ' ')),",
+						"          Project_x0020_Name = trim(replace(Project_x0020_Name, '\\n', ' ')),",
+						"          Project_x0020_Number = trim(replace(Project_x0020_Number, '\\n', ' ')),",
+						"          Incident_x0020_Title = trim(replace(Incident_x0020_Title, '\\n', ' ')),",
+						"          Hospitalization_x0020_Type = trim(replace(Hospitalization_x0020_Type, '\\n', ' ')),",
+						"          Description = trim(replace(Description, '\\n', ' ')),",
+						"          Injury_x0020_or_x0020_Illness = trim(replace(Injury_x0020_or_x0020_Illness, '\\n', ' ')),",
+						"          Number_x0020_of_x0020_People_x0020_Impacted = trim(replace(Number_x0020_of_x0020_People_x0020_Impacted, '\\n', ' ')),",
+						"          Immediate_x0020_Action = trim(replace(Immediate_x0020_Action, '\\n', ' ')),",
+						"          External_x0020_Agency_x0020_Notification_x0020_Required_x003F_ = trim(replace(External_x0020_Agency_x0020_Notification_x0020_Required_x003F_, '\\n', ' ')),",
+						"          Specify_x0020_Agency = trim(replace(Specify_x0020_Agency, '\\n', ' ')),",
+						"          Specify_x0020_Other = trim(replace(Specify_x0020_Other, '\\n', ' ')),",
+						"          Worker_x0020_Type = trim(replace(Worker_x0020_Type, '\\n', ' ')),",
+						"          Does_x0020_employee_x0020_exist_x0020_in_x0020_the_x0020_system_x003F_ = trim(replace(Does_x0020_employee_x0020_exist_x0020_in_x0020_the_x0020_system_x003F_, '\\n', ' ')),",
+						"          Employee_x0020_ID2 = trim(replace(Employee_x0020_ID2, '\\n', ' ')),",
+						"          First_x0020_Name = trim(replace(First_x0020_Name, '\\n', ' ')),",
+						"          Last_x0020_Name = trim(replace(Last_x0020_Name, '\\n', ' ')),",
+						"          Did_x0020_the_x0020_incident_x0020_occur_x0020_during_x0020_rework_x003F_ = trim(replace(Did_x0020_the_x0020_incident_x0020_occur_x0020_during_x0020_rework_x003F_, '\\n', ' ')),",
+						"          Potential_x0020_Risk_x0020_Reporting_x0020_Level = trim(replace(Potential_x0020_Risk_x0020_Reporting_x0020_Level, '\\n', ' ')),",
+						"          Potential_x0020_Severity_x0020_Level = trim(replace(Potential_x0020_Severity_x0020_Level, '\\n', ' ')),",
+						"          Actual_x0020_Severity_x0020_Level = trim(replace(Actual_x0020_Severity_x0020_Level, '\\n', ' ')),",
+						"          Reported_x0020_By = trim(replace(Reported_x0020_By, '\\n', ' ')),",
+						"          Stop_x0020_Work_x0020_Authority_x0020_applied_x003F_ = trim(replace(Stop_x0020_Work_x0020_Authority_x0020_applied_x003F_, '\\n', ' ')),",
+						"          Work_x0020_Related_x0020_Injury_x002F_Illness_x003F_ = trim(replace(Work_x0020_Related_x0020_Injury_x002F_Illness_x003F_, '\\n', ' ')),",
+						"          Was_x0020_impacted_x0020_person_x0020_sent_x0020_offsite_x0020_for_x0020_medical_x0020_evaluation_x0020_or_x0020_treatment_x003F_ = trim(replace(Was_x0020_impacted_x0020_person_x0020_sent_x0020_offsite_x0020_for_x0020_medical_x0020_evaluation_x0020_or_x0020_treatment_x003F_, '\\n', ' ')),",
+						"          Drug_x0020_and_x002F_or_x0020_Alcohol_x0020_Test_x0020_Required_x003F_ = trim(replace(Drug_x0020_and_x002F_or_x0020_Alcohol_x0020_Test_x0020_Required_x003F_, '\\n', ' ')),",
+						"          {Local-News_x0020_Media_x0020_Involvement_x003F_} = trim(replace({Local-News_x0020_Media_x0020_Involvement_x003F_}, '\\n', ' ')),",
+						"          Incident_x0020_Reported_x0020_By = trim(replace(Incident_x0020_Reported_x0020_By, '\\n', ' ')),",
+						"          Created_x0020_By = trim(replace(Created_x0020_By, '\\n', ' ')),",
+						"          Date_x0020_Created = trim(replace(Date_x0020_Created, '\\n', ' ')),",
+						"          Assign_x0020_Investigator = trim(replace(Assign_x0020_Investigator, '\\n', ' ')),",
+						"          Comments = trim(replace(Comments, '\\n', ' ')),",
+						"          Workers_x0027__x0020_Comp_x003F_ = trim(replace(Workers_x0027__x0020_Comp_x003F_, '\\n', ' ')),",
+						"          Workers_x0027__x0020_Comp_x0020_Comments = trim(replace(Workers_x0027__x0020_Comp_x0020_Comments, '\\n', ' ')),",
+						"          Shift_x0020_Details = trim(replace(Shift_x0020_Details, '\\n', ' ')),",
+						"          Hours_x0020_Into_x0020_Shift = trim(replace(Hours_x0020_Into_x0020_Shift, '\\n', ' ')),",
+						"          Shift_x0020_Duration = trim(replace(Shift_x0020_Duration, '\\n', ' ')),",
+						"          Privacy_x0020_Case_x003F_ = trim(replace(Privacy_x0020_Case_x003F_, '\\n', ' ')),",
+						"          Events_x002F_Exposures = trim(replace(Events_x002F_Exposures, '\\n', ' ')),",
+						"          Source_x0020_of_x0020_Injury_x002F_Illness = trim(replace(Source_x0020_of_x0020_Injury_x002F_Illness, '\\n', ' ')),",
+						"          Source_x0020_Details = trim(replace(Source_x0020_Details, '\\n', ' ')),",
+						"          Body_x0020_Part = trim(replace(Body_x0020_Part, '\\n', ' ')),",
+						"          Injury_x002F_Illness = trim(replace(Injury_x002F_Illness, '\\n', ' ')),",
+						"          Initial_x0020_Treatment = trim(replace(Initial_x0020_Treatment, '\\n', ' ')),",
+						"          Who_x0020_provided_x0020_treatment_x003F_ = trim(replace(Who_x0020_provided_x0020_treatment_x003F_, '\\n', ' ')),",
+						"          Hospitalized = trim(replace(Hospitalized, '\\n', ' ')),",
+						"          Recordable = trim(replace(Recordable, '\\n', ' ')),",
+						"          Recordable_x0020_Classification = trim(replace(Recordable_x0020_Classification, '\\n', ' ')),",
+						"          Start_x0020_Date_x0020_and_x0020_Time_x0020_of_x0020_Investigation = trim(replace(Start_x0020_Date_x0020_and_x0020_Time_x0020_of_x0020_Investigation, '\\n', ' ')),",
+						"          End_x0020_Date_x0020_and_x0020_Time_x0020_of_x0020_Investigation = trim(replace(End_x0020_Date_x0020_and_x0020_Time_x0020_of_x0020_Investigation, '\\n', ' ')),",
+						"          Investigator = trim(replace(Investigator, '\\n', ' ')),",
+						"          Additional_x0020_Investigators = trim(replace(Additional_x0020_Investigators, '\\n', ' ')),",
+						"          HIPO_x003F_2 = trim(replace(HIPO_x003F_2, '\\n', ' ')),",
+						"          Incident_x0020_Owner = trim(replace(Incident_x0020_Owner, '\\n', ' ')),",
+						"          Total_x0020_Number_x0020_of_x0020_Days_x0020_Away = trim(replace(Total_x0020_Number_x0020_of_x0020_Days_x0020_Away, '\\n', ' ')),",
+						"          Total_x0020_Number_x0020_of_x0020_Job_x0020_Transfer = trim(replace(Total_x0020_Number_x0020_of_x0020_Job_x0020_Transfer, '\\n', ' ')),",
+						"          Total_x0020_Number_x0020_of_x0020_Restricted_x0020_Days = trim(replace(Total_x0020_Number_x0020_of_x0020_Restricted_x0020_Days, '\\n', ' ')),",
+						"          Total_x0020_Number_x0020_of_x0020_Restricted_x0020_or_x0020_Job_x0020_Transfer_x0020_Days = trim(replace(Total_x0020_Number_x0020_of_x0020_Restricted_x0020_or_x0020_Job_x0020_Transfer_x0020_Days, '\\n', ' ')),",
+						"          Date_x0020_Approved = trim(replace(Date_x0020_Approved, '\\n', ' ')),",
+						"          Approver_x0027_s_x0020_Comment = trim(replace(Approver_x0027_s_x0020_Comment, '\\n', ' ')),",
+						"          Approved_x0020_By = trim(replace(Approved_x0020_By, '\\n', ' ')),",
+						"          WorkflowCurrent_x0020_Stage = trim(replace(WorkflowCurrent_x0020_Stage, '\\n', ' ')),",
+						"          WorkflowWorkflow_x0020_Status = trim(replace(WorkflowWorkflow_x0020_Status, '\\n', ' ')),",
+						"          WorkflowStatus = trim(replace(WorkflowStatus, '\\n', ' ')),",
+						"          WorkflowCurrent_x0020_Person_x0020_Responsible = trim(replace(WorkflowCurrent_x0020_Person_x0020_Responsible, '\\n', ' ')),",
+						"          File_Path = concat(concat(trim(substringIndex(File_Path,'/',5),'/'),'/'),substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',split(substringIndex(File_Path,'/',-1),'.')[1],'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv')) ~> setFileName",
+						"setFileName sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     rowUrlColumn:'File_Path',",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> Sink"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_yardkpi_intelex_audit_findings_stage_to_raw')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/YARD KPI/Intelex"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_yardkpi_intelex_generic",
+								"type": "DatasetReference"
+							},
+							"name": "IntelexAuditFindSource"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_yardkpi_intelex_generic",
+								"type": "DatasetReference"
+							},
+							"name": "IntelexAuditFindSink"
+						}
+					],
+					"transformations": [
+						{
+							"name": "setFileName"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          RowNum as string,",
+						"          Audit_x0020_Record_x0020_No as string,",
+						"          Audit_x0020_Title as string,",
+						"          Location as string,",
+						"          Profile_x0020_Type as string,",
+						"          Profile as string,",
+						"          Product_x0020_Line as string,",
+						"          Checklist as string,",
+						"          Finding_x0020_Record_x0020_No as string,",
+						"          MDR_x0020_Finding_x0020_No as string,",
+						"          Question as string,",
+						"          Finding_x0020_Description as string,",
+						"          Finding_x0020_Severity as string,",
+						"          Finding_x0020_Creator as string,",
+						"          Finding_x0020_Due_x0020_Date as string,",
+						"          Person_x0020_Responsible as string,",
+						"          Auditee_x0020_Finding_x0020_Acceptance as string,",
+						"          Auditee_x0020_Finding_x0020_Comments as string,",
+						"          Completed_x0020_By as string,",
+						"          Completion_x0020_Date as string,",
+						"          Final_x0020_Approver as string,",
+						"          Date_x0020_of_x0020_Approval as string,",
+						"          Final_x0020_Approver_x0020_Notes as string,",
+						"          Workflow_x0020_Current_x0020_Stage as string,",
+						"          Workflow_x0020_Status as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: true,",
+						"     rowUrlColumn: 'File_Path') ~> IntelexAuditFindSource",
+						"IntelexAuditFindSource derive(RowNum = trim(replace(RowNum, '\\n', ' ')),",
+						"          Audit_x0020_Record_x0020_No = trim(replace(Audit_x0020_Record_x0020_No, '\\n', ' ')),",
+						"          Audit_x0020_Title = trim(replace(Audit_x0020_Title, '\\n', ' ')),",
+						"          Location = trim(replace(Location, '\\n', ' ')),",
+						"          Profile_x0020_Type = trim(replace(Profile_x0020_Type, '\\n', ' ')),",
+						"          Profile = trim(replace(Profile, '\\n', ' ')),",
+						"          Product_x0020_Line = trim(replace(Product_x0020_Line, '\\n', ' ')),",
+						"          Checklist = trim(replace(Checklist, '\\n', ' ')),",
+						"          Finding_x0020_Record_x0020_No = trim(replace(Finding_x0020_Record_x0020_No, '\\n', ' ')),",
+						"          MDR_x0020_Finding_x0020_No = trim(replace(MDR_x0020_Finding_x0020_No, '\\n', ' ')),",
+						"          Question = trim(replace(Question, '\\n', ' ')),",
+						"          Finding_x0020_Description = trim(replace(Finding_x0020_Description, '\\n', ' ')),",
+						"          Finding_x0020_Severity = trim(replace(Finding_x0020_Severity, '\\n', ' ')),",
+						"          Finding_x0020_Creator = trim(replace(Finding_x0020_Creator, '\\n', ' ')),",
+						"          Finding_x0020_Due_x0020_Date = trim(replace(Finding_x0020_Due_x0020_Date, '\\n', ' ')),",
+						"          Person_x0020_Responsible = trim(replace(Person_x0020_Responsible, '\\n', ' ')),",
+						"          Auditee_x0020_Finding_x0020_Acceptance = trim(replace(Auditee_x0020_Finding_x0020_Acceptance, '\\n', ' ')),",
+						"          Auditee_x0020_Finding_x0020_Comments = trim(replace(Auditee_x0020_Finding_x0020_Comments, '\\n', ' ')),",
+						"          Completed_x0020_By = trim(replace(Completed_x0020_By, '\\n', ' ')),",
+						"          Completion_x0020_Date = trim(replace(Completion_x0020_Date, '\\n', ' ')),",
+						"          Final_x0020_Approver = trim(replace(Final_x0020_Approver, '\\n', ' ')),",
+						"          Date_x0020_of_x0020_Approval = trim(replace(Date_x0020_of_x0020_Approval, '\\n', ' ')),",
+						"          Final_x0020_Approver_x0020_Notes = trim(replace(Final_x0020_Approver_x0020_Notes, '\\n', ' ')),",
+						"          Workflow_x0020_Current_x0020_Stage = trim(replace(Workflow_x0020_Current_x0020_Stage, '\\n', ' ')),",
+						"          Workflow_x0020_Status = trim(replace(Workflow_x0020_Status, '\\n', ' ')),",
+						"          File_Path = concat(concat(trim(substringIndex(File_Path,'/',5),'/'),'/'),substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',split(substringIndex(File_Path,'/',-1),'.')[1],'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv')) ~> setFileName",
+						"setFileName sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     rowUrlColumn:'File_Path',",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> IntelexAuditFindSink"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_yardkpi_intelex_audit_questn_stage_to_raw')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/YARD KPI/Intelex"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_yardkpi_intelex_generic",
+								"type": "DatasetReference"
+							},
+							"name": "IntelexAuditQustinSource"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_yardkpi_intelex_generic",
+								"type": "DatasetReference"
+							},
+							"name": "IntelexAuditQustinSink"
+						}
+					],
+					"transformations": [
+						{
+							"name": "setFileName"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          RowNum as string,",
+						"          Audit_x0020_Record_x0020_No as string,",
+						"          Audit_x0020_Title as string,",
+						"          Audit_x0020_Workflow_x0020_Status as string,",
+						"          Auditor as string,",
+						"          Questionnaire_x0020_Record_x0020_No_x0020_ as string,",
+						"          Checklist_x0020_Code as string,",
+						"          Checklist_x0020_Name as string,",
+						"          Checklist_x0020_Progress as string,",
+						"          Checklist_x0020_Status as string,",
+						"          Location as string,",
+						"          Checklist_x0020_Status2 as string,",
+						"          Button_x0020_Clicked as string,",
+						"          Date_x0020_Button_x0020_Clicked_x0020__x0028_Submit_x0029_ as string,",
+						"          Workflow_x0020_Status as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: true,",
+						"     rowUrlColumn: 'File_Path') ~> IntelexAuditQustinSource",
+						"IntelexAuditQustinSource derive(File_Path = concat(concat(trim(substringIndex(File_Path,'/',5),'/'),'/'),substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',split(substringIndex(File_Path,'/',-1),'.')[1],'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv'),",
+						"          Audit_x0020_Title = trim(replace(replace(replace(replace(replace(replace(replace(Audit_x0020_Title,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' '))) ~> setFileName",
+						"setFileName sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     rowUrlColumn:'File_Path',",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> IntelexAuditQustinSink"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_yardkpi_intelex_audit_stage_to_raw')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/YARD KPI/Intelex"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_yardkpi_intelex_generic",
+								"type": "DatasetReference"
+							},
+							"name": "IntelexAuditSource"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_yardkpi_intelex_generic",
+								"type": "DatasetReference"
+							},
+							"name": "IntelexAuditSink"
+						}
+					],
+					"transformations": [
+						{
+							"name": "setFileName"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          RowNum as string,",
+						"          Record_x0020_No as string,",
+						"          Date_x0020_Created as string,",
+						"          Location as string,",
+						"          Profile_x0020_Type as string,",
+						"          Profile as string,",
+						"          Type as string,",
+						"          Audit_x0020_Scope as string,",
+						"          Scope as string,",
+						"          Audit_x0020_Due_x0020_Date as string,",
+						"          Scheduled_x0020_Date as string,",
+						"          Audit_x0020_Start_x0020_Date as string,",
+						"          Projected_x0020_End_x0020_Date as string,",
+						"          End_x0020_Date as string,",
+						"          Lead_x0020_Auditor as string,",
+						"          Summary as string,",
+						"          b_x0023__x0020_of_x0020_Findings as string,",
+						"          b_x0023__x0020_Questionnaires as string,",
+						"          Current_x0020_Stage as string,",
+						"          Status as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: true,",
+						"     rowUrlColumn: 'File_Path') ~> IntelexAuditSource",
+						"IntelexAuditSource derive(Summary = trim(replace(Summary, '\\n', ' ')),",
+						"          File_Path = concat(concat(trim(substringIndex(File_Path,'/',5),'/'),'/'),substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',split(substringIndex(File_Path,'/',-1),'.')[1],'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv')) ~> setFileName",
+						"setFileName sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     rowUrlColumn:'File_Path',",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> IntelexAuditSink"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_yardkpi_intelex_hours_worked_stage_to_raw')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/YARD KPI/Intelex"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_yardkpi_intelex_generic",
+								"type": "DatasetReference"
+							},
+							"name": "IntelexHoursWrkdSource"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_yardkpi_intelex_generic",
+								"type": "DatasetReference"
+							},
+							"name": "IntelexHoursWrkdSink"
+						}
+					],
+					"transformations": [
+						{
+							"name": "setFileName"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          RowNum as string,",
+						"          Id as string,",
+						"          Display_x0020_Field as string,",
+						"          Location_x0020_Code as string,",
+						"          Location as string,",
+						"          Profile_x0020_No as string,",
+						"          Vessel as string,",
+						"          Other_x0020_Vessel as string,",
+						"          Profile as string,",
+						"          ProfileArea as string,",
+						"          Profile_x0020_Type as string,",
+						"          Business_x0020_Line as string,",
+						"          Project_x0020_Number as string,",
+						"          Project_x0020_Name as string,",
+						"          Month_x0020_Date as string,",
+						"          Month as string,",
+						"          Year as string,",
+						"          Employee_x0020_and_x0020_Supervised_x0020_Contractor_x0020_Hours as string,",
+						"          Subcontractor_x0020_Hours as string,",
+						"          Joint_x0020_Venture_x0020_Partner_x0020_Hours as string,",
+						"          Subcontractor_x0020_Vessel_x0020_Hours as string,",
+						"          Vessel_x0020_Hours_x0020_Helper as string,",
+						"          {Sub-Profile_x0020_Type} as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: true,",
+						"     rowUrlColumn: 'File_Path') ~> IntelexHoursWrkdSource",
+						"IntelexHoursWrkdSource derive(RowNum = trim(replace(RowNum,'\\n',' ')),",
+						"          Id = trim(replace(Id,'\\n',' ')),",
+						"          Display_x0020_Field = trim(replace(Display_x0020_Field,'\\n',' ')),",
+						"          Location_x0020_Code = trim(replace(Location_x0020_Code,'\\n',' ')),",
+						"          Location = trim(replace(Location,'\\n',' ')),",
+						"          Profile_x0020_No = trim(replace(Profile_x0020_No,'\\n',' ')),",
+						"          Vessel = trim(replace(Vessel,'\\n',' ')),",
+						"          Other_x0020_Vessel = trim(replace(Other_x0020_Vessel,'\\n',' ')),",
+						"          Profile = trim(replace(Profile,'\\n',' ')),",
+						"          ProfileArea = trim(replace(ProfileArea,'\\n',' ')),",
+						"          Profile_x0020_Type = trim(replace(Profile_x0020_Type,'\\n',' ')),",
+						"          Business_x0020_Line = trim(replace(Business_x0020_Line,'\\n',' ')),",
+						"          Project_x0020_Number = trim(replace(Project_x0020_Number,'\\n',' ')),",
+						"          Project_x0020_Name = trim(replace(Project_x0020_Name,'\\n',' ')),",
+						"          Month_x0020_Date = trim(replace(Month_x0020_Date,'\\n',' ')),",
+						"          Month = trim(replace(Month,'\\n',' ')),",
+						"          Year = trim(replace(Year,'\\n',' ')),",
+						"          Employee_x0020_and_x0020_Supervised_x0020_Contractor_x0020_Hours = trim(replace(Employee_x0020_and_x0020_Supervised_x0020_Contractor_x0020_Hours,'\\n',' ')),",
+						"          Subcontractor_x0020_Hours = trim(replace(Subcontractor_x0020_Hours,'\\n',' ')),",
+						"          Joint_x0020_Venture_x0020_Partner_x0020_Hours = trim(replace(Joint_x0020_Venture_x0020_Partner_x0020_Hours,'\\n',' ')),",
+						"          Subcontractor_x0020_Vessel_x0020_Hours = trim(replace(Subcontractor_x0020_Vessel_x0020_Hours,'\\n',' ')),",
+						"          Vessel_x0020_Hours_x0020_Helper = trim(replace(Vessel_x0020_Hours_x0020_Helper,'\\n',' ')),",
+						"          {Sub-Profile_x0020_Type} = trim(replace({Sub-Profile_x0020_Type},'\\n',' ')),",
+						"          File_Path = concat(concat(trim(substringIndex(File_Path,'/',5),'/'),'/'),substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',split(substringIndex(File_Path,'/',-1),'.')[1],'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv')) ~> setFileName",
+						"setFileName sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     rowUrlColumn:'File_Path',",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> IntelexHoursWrkdSink"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_yardkpi_intelex_nonconformance_stage_to_raw')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/YARD KPI/Intelex"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_yardkpi_intelex_generic",
+								"type": "DatasetReference"
+							},
+							"name": "Source"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_yardkpi_intelex_generic",
+								"type": "DatasetReference"
+							},
+							"name": "Sink"
+						}
+					],
+					"transformations": [
+						{
+							"name": "setFileName"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          RowNum as string,",
+						"          NCR_x0020_No as string,",
+						"          Date_x0020_Created as string,",
+						"          Date_x0020_Closed as string,",
+						"          Location as string,",
+						"          Profile_x0020_Type as string,",
+						"          Profile as string,",
+						"          Product_x0020_Line as string,",
+						"          NCR_x0020_Type as string,",
+						"          Issued_x0020_To as string,",
+						"          Specify_x0020_Regulatory_x0020_Agency_x0020_Issued_x0020_To as string,",
+						"          Issued_x0020_By as string,",
+						"          Specify_x0020_Regulatory_x0020_Agency_x0020_Issued_x0020_By as string,",
+						"          Client_x0020_NCR_x0020_No as string,",
+						"          Issue as string,",
+						"          Description as string,",
+						"          Requirement as string,",
+						"          Area_x0020_of_x0020_Project as string,",
+						"          Vessel as string,",
+						"          Function as string,",
+						"          Product_x0020__x002F__x0020_Activity as string,",
+						"          Defect_x0020_Code as string,",
+						"          Units_x0020_Affected as string,",
+						"          Serial_x002F_Lot_x0020_No as string,",
+						"          Immediate_x0020_Action as string,",
+						"          Recommended_x0020_Action as string,",
+						"          Identified_x0020_By as string,",
+						"          Reported_x0020_By as string,",
+						"          Date_x0020_Reported as string,",
+						"          Project_x0020_Phase as string,",
+						"          Supplier as string,",
+						"          Return_x0020_Material_x0020_Authorization_x0020_No as string,",
+						"          Is_x0020_this_x0020_a_x0020_recurrence_x003F_ as string,",
+						"          Suspected_x0020_Cause as string,",
+						"          Probability as string,",
+						"          Detection as string,",
+						"          Criticality as string,",
+						"          RPN as string,",
+						"          Responsible_x0020_for_x0020_Disposition as string,",
+						"          Disposition_x0020_Due_x0020_Date as string,",
+						"          Reviewer_x0020_Comments as string,",
+						"          Cancel_x0020_Comments as string,",
+						"          Disposition as string,",
+						"          Client_x0020_Approval_x0020_Required_x003F_ as string,",
+						"          Qty_x0020_Used_x0020_As_x0020_Is as string,",
+						"          Used_x0020_As_x0020_Is_x0020_Comments as string,",
+						"          Dispositioner_x0020_Action_x0020_Plan_x0020_Recommendations as string,",
+						"          Disposition_x0020_Completed_x0020_Date as string,",
+						"          Action_x0020__x0026__x0020_Verification_x0020_Due_x0020_Date as string,",
+						"          Dispositioner_x0020_Comments as string,",
+						"          Verification_x0020_Due_x0020_Date as string,",
+						"          Verification_x0020_By as string,",
+						"          Verification_x0020_Notes as string,",
+						"          Verification_x0020_Date as string,",
+						"          WorkflowCurrent_x0020_Stage as string,",
+						"          WorkflowStatus as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: true,",
+						"     rowUrlColumn: 'File_Path') ~> Source",
+						"Source derive(RowNum = trim(replace(RowNum, '\\n', ' ')),",
+						"          NCR_x0020_No = trim(replace(NCR_x0020_No, '\\n', ' ')),",
+						"          Date_x0020_Created = trim(replace(Date_x0020_Created, '\\n', ' ')),",
+						"          Date_x0020_Closed = trim(replace(Date_x0020_Closed, '\\n', ' ')),",
+						"          Location = trim(replace(Location, '\\n', ' ')),",
+						"          Profile_x0020_Type = trim(replace(Profile_x0020_Type, '\\n', ' ')),",
+						"          Profile = trim(replace(Profile, '\\n', ' ')),",
+						"          Product_x0020_Line = trim(replace(Product_x0020_Line, '\\n', ' ')),",
+						"          NCR_x0020_Type = trim(replace(NCR_x0020_Type, '\\n', ' ')),",
+						"          Issued_x0020_To = trim(replace(Issued_x0020_To, '\\n', ' ')),",
+						"          Specify_x0020_Regulatory_x0020_Agency_x0020_Issued_x0020_To = trim(replace(Specify_x0020_Regulatory_x0020_Agency_x0020_Issued_x0020_To, '\\n', ' ')),",
+						"          Issued_x0020_By = trim(replace(Issued_x0020_By, '\\n', ' ')),",
+						"          Specify_x0020_Regulatory_x0020_Agency_x0020_Issued_x0020_By = trim(replace(Specify_x0020_Regulatory_x0020_Agency_x0020_Issued_x0020_By, '\\n', ' ')),",
+						"          Client_x0020_NCR_x0020_No = trim(replace(Client_x0020_NCR_x0020_No, '\\n', ' ')),",
+						"          Issue = trim(replace(Issue, '\\n', ' ')),",
+						"          Description = trim(replace(Description, '\\n', ' ')),",
+						"          Requirement = trim(replace(Requirement, '\\n', ' ')),",
+						"          Area_x0020_of_x0020_Project = trim(replace(Area_x0020_of_x0020_Project, '\\n', ' ')),",
+						"          Vessel = trim(replace(Vessel, '\\n', ' ')),",
+						"          Function = trim(replace(Function, '\\n', ' ')),",
+						"          Product_x0020__x002F__x0020_Activity = trim(replace(Product_x0020__x002F__x0020_Activity, '\\n', ' ')),",
+						"          Defect_x0020_Code = trim(replace(Defect_x0020_Code, '\\n', ' ')),",
+						"          Units_x0020_Affected = trim(replace(Units_x0020_Affected, '\\n', ' ')),",
+						"          Serial_x002F_Lot_x0020_No = trim(replace(Serial_x002F_Lot_x0020_No, '\\n', ' ')),",
+						"          Immediate_x0020_Action = trim(replace(Immediate_x0020_Action, '\\n', ' ')),",
+						"          Recommended_x0020_Action = trim(replace(Recommended_x0020_Action, '\\n', ' ')),",
+						"          Identified_x0020_By = trim(replace(Identified_x0020_By, '\\n', ' ')),",
+						"          Reported_x0020_By = trim(replace(Reported_x0020_By, '\\n', ' ')),",
+						"          Date_x0020_Reported = trim(replace(Date_x0020_Reported, '\\n', ' ')),",
+						"          Project_x0020_Phase = trim(replace(Project_x0020_Phase, '\\n', ' ')),",
+						"          Supplier = trim(replace(Supplier, '\\n', ' ')),",
+						"          Return_x0020_Material_x0020_Authorization_x0020_No = trim(replace(Return_x0020_Material_x0020_Authorization_x0020_No, '\\n', ' ')),",
+						"          Is_x0020_this_x0020_a_x0020_recurrence_x003F_ = trim(replace(Is_x0020_this_x0020_a_x0020_recurrence_x003F_, '\\n', ' ')),",
+						"          Suspected_x0020_Cause = trim(replace(Suspected_x0020_Cause, '\\n', ' ')),",
+						"          Probability = trim(replace(Probability, '\\n', ' ')),",
+						"          Detection = trim(replace(Detection, '\\n', ' ')),",
+						"          Criticality = trim(replace(Criticality, '\\n', ' ')),",
+						"          RPN = trim(replace(RPN, '\\n', ' ')),",
+						"          Responsible_x0020_for_x0020_Disposition = trim(replace(Responsible_x0020_for_x0020_Disposition, '\\n', ' ')),",
+						"          Disposition_x0020_Due_x0020_Date = trim(replace(Disposition_x0020_Due_x0020_Date, '\\n', ' ')),",
+						"          Reviewer_x0020_Comments = trim(replace(Reviewer_x0020_Comments, '\\n', ' ')),",
+						"          Cancel_x0020_Comments = trim(replace(Cancel_x0020_Comments, '\\n', ' ')),",
+						"          Disposition = trim(replace(Disposition, '\\n', ' ')),",
+						"          Client_x0020_Approval_x0020_Required_x003F_ = trim(replace(Client_x0020_Approval_x0020_Required_x003F_, '\\n', ' ')),",
+						"          Qty_x0020_Used_x0020_As_x0020_Is = trim(replace(Qty_x0020_Used_x0020_As_x0020_Is, '\\n', ' ')),",
+						"          Used_x0020_As_x0020_Is_x0020_Comments = trim(replace(Used_x0020_As_x0020_Is_x0020_Comments, '\\n', ' ')),",
+						"          Dispositioner_x0020_Action_x0020_Plan_x0020_Recommendations = trim(replace(Dispositioner_x0020_Action_x0020_Plan_x0020_Recommendations, '\\n', ' ')),",
+						"          Disposition_x0020_Completed_x0020_Date = trim(replace(Disposition_x0020_Completed_x0020_Date, '\\n', ' ')),",
+						"          Action_x0020__x0026__x0020_Verification_x0020_Due_x0020_Date = trim(replace(Action_x0020__x0026__x0020_Verification_x0020_Due_x0020_Date, '\\n', ' ')),",
+						"          Dispositioner_x0020_Comments = trim(replace(Dispositioner_x0020_Comments, '\\n', ' ')),",
+						"          Verification_x0020_Due_x0020_Date = trim(replace(Verification_x0020_Due_x0020_Date, '\\n', ' ')),",
+						"          Verification_x0020_By = trim(replace(Verification_x0020_By, '\\n', ' ')),",
+						"          Verification_x0020_Notes = trim(replace(Verification_x0020_Notes, '\\n', ' ')),",
+						"          Verification_x0020_Date = trim(replace(Verification_x0020_Date, '\\n', ' ')),",
+						"          WorkflowCurrent_x0020_Stage = trim(replace(WorkflowCurrent_x0020_Stage, '\\n', ' ')),",
+						"          WorkflowStatus = trim(replace(WorkflowStatus, '\\n', ' ')),",
+						"          File_Path = concat(concat(trim(substringIndex(File_Path,'/',5),'/'),'/'),substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',split(substringIndex(File_Path,'/',-1),'.')[1],'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv')) ~> setFileName",
+						"setFileName sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     rowUrlColumn:'File_Path',",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> Sink"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_yardkpi_material_receiving_stage_to_raw')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_Src_snk_adgls2_src_ykpi_material_receiving",
+								"type": "DatasetReference"
+							},
+							"name": "Source1"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adgls2_yardkpi_material_register_generic",
+								"type": "DatasetReference"
+							},
+							"name": "Sink1"
+						}
+					],
+					"transformations": [
+						{
+							"name": "SetFileName"
+						}
+					],
+					"scriptLines": [
+						"parameters{",
+						"     FilePath as string,",
+						"     FileName as string",
+						"}",
+						"source(output(",
+						"          ContentTypeID as string,",
+						"          PROJECTNO as string,",
+						"          ColorTag as string,",
+						"          ComplianceAssetId as string,",
+						"          PROJECTDESCRIPTION as string,",
+						"          FABYARDLOCATION as string,",
+						"          LOGNO as string,",
+						"          PROJECTNONPROJECT as string,",
+						"          RECEIVEDDATE as string,",
+						"          RECEIPTMRR as string,",
+						"          BILLOFLADING as string,",
+						"          POSRN as string,",
+						"          REQUISITION as string,",
+						"          VENDOR as string,",
+						"          RECEIVEDQTY as string,",
+						"          UOM as string,",
+						"          DESCRIPTION as string,",
+						"          PERSONINCHARGE as string,",
+						"          OFFLOADEDBY as string,",
+						"          MRRCREATEDBY as string,",
+						"          CHECKOFFSTATUS as string,",
+						"          CHECKER as string,",
+						"          STARTCHECKOFF as string,",
+						"          FINISHCHECKOFF as string,",
+						"          COLORCODEMAN as string,",
+						"          STARTCOLORCODE as string,",
+						"          FINISHCOLORCODE as string,",
+						"          QCINSPECTABLE as string,",
+						"          DOCRECEIVEDQC as string,",
+						"          QCINSPECTOR as string,",
+						"          DocSubmitToReceivedByQC as string,",
+						"          RETURNTOWH as string,",
+						"          REMARKQC as string,",
+						"          STAMPMAN as string,",
+						"          STARTSTAMP as string,",
+						"          FINISHSTAMP as string,",
+						"          STACKINGPERSON as string,",
+						"          FINISHSTACKING as string,",
+						"          POSTEDBY as string,",
+						"          POSTEDPUTAWAYDATE as string,",
+						"          POSTEDDATEAFTEROSDCLOSED as string,",
+						"          OSDYESNO as string,",
+						"          REMARKSALL as string,",
+						"          CHECKOFFKPI as string,",
+						"          QCINSPECTKPI as string,",
+						"          BINNINGKPI as string,",
+						"          UNIQID as string,",
+						"          C__OldID as string,",
+						"          C__Path as string,",
+						"          Modified as string,",
+						"          Created as string,",
+						"          Id as string,",
+						"          ContentType as string,",
+						"          CreatedById as string,",
+						"          ModifiedById as string,",
+						"          Owshiddenversion as string,",
+						"          Version as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: true,",
+						"     purgeFiles: true,",
+						"     wildcardPaths:[(concat($FilePath,'/',$FileName,'_*.csv'))]) ~> Source1",
+						"Source1 derive(FileName = concat($FilePath,'/',substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',$FileName,'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv'),",
+						"          Id = trim(replace(replace(replace(replace(replace(replace(Id, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          ContentTypeID = trim(replace(replace(replace(replace(replace(replace(ContentTypeID, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          ContentType = trim(replace(replace(replace(replace(replace(replace(ContentType, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          BILLOFLADING = trim(replace(replace(replace(replace(replace(replace(BILLOFLADING, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          Modified = trim(replace(replace(replace(replace(replace(replace(Modified, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          Created = trim(replace(replace(replace(replace(replace(replace(Created, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          CreatedById = trim(replace(replace(replace(replace(replace(replace(CreatedById, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          ModifiedById = trim(replace(replace(replace(replace(replace(replace(ModifiedById, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          Owshiddenversion = trim(replace(replace(replace(replace(replace(replace(Owshiddenversion, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          Version = trim(replace(replace(replace(replace(replace(replace(Version, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          C__Path = trim(replace(replace(replace(replace(replace(replace(C__Path, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          ComplianceAssetId = trim(replace(replace(replace(replace(replace(replace(ComplianceAssetId, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          PROJECTNO = trim(replace(replace(replace(replace(replace(replace(PROJECTNO, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          PROJECTDESCRIPTION = trim(replace(replace(replace(replace(replace(replace(PROJECTDESCRIPTION, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          PROJECTNONPROJECT = trim(replace(replace(replace(replace(replace(replace(PROJECTNONPROJECT, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          RECEIVEDDATE = trim(replace(replace(replace(replace(replace(replace(RECEIVEDDATE, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          REQUISITION = trim(replace(replace(replace(replace(replace(replace(REQUISITION, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          VENDOR = trim(replace(replace(replace(replace(replace(replace(VENDOR, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          RECEIVEDQTY = trim(replace(replace(replace(replace(replace(replace(RECEIVEDQTY, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          UOM = trim(replace(replace(replace(replace(replace(replace(UOM, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          DESCRIPTION = trim(replace(replace(replace(replace(replace(replace(replace(DESCRIPTION, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \"),\"   \",\" \")),",
+						"          PERSONINCHARGE = trim(replace(replace(replace(replace(replace(replace(PERSONINCHARGE, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          MRRCREATEDBY = trim(replace(replace(replace(replace(replace(replace(MRRCREATEDBY, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          CHECKOFFSTATUS = trim(replace(replace(replace(replace(replace(replace(CHECKOFFSTATUS, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          CHECKER = trim(replace(replace(replace(replace(replace(replace(CHECKER, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          STARTCHECKOFF = trim(replace(replace(replace(replace(replace(replace(STARTCHECKOFF, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          FINISHCHECKOFF = trim(replace(replace(replace(replace(replace(replace(FINISHCHECKOFF, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          STAMPMAN = trim(replace(replace(replace(replace(replace(replace(STAMPMAN, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          STARTSTAMP = trim(replace(replace(replace(replace(replace(replace(STARTSTAMP, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          FINISHSTAMP = trim(replace(replace(replace(replace(replace(replace(FINISHSTAMP, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          COLORCODEMA = trim(replace(replace(replace(replace(replace(replace(COLORCODEMAN, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          STARTCOLORCODE = trim(replace(replace(replace(replace(replace(replace(STARTCOLORCODE, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          FINISHCOLORCODE = trim(replace(replace(replace(replace(replace(replace(FINISHCOLORCODE, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          DOCRECEIVEDQC = trim(replace(replace(replace(replace(replace(replace(DOCRECEIVEDQC, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          QCINSPECTOR = trim(replace(replace(replace(replace(replace(replace(QCINSPECTOR, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          DocSubmitToReceivedByQC = trim(replace(replace(replace(replace(replace(replace(DocSubmitToReceivedByQC, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          C__OldID = trim(replace(replace(replace(replace(replace(replace(C__OldID, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          RETURNTOWH = trim(replace(replace(replace(replace(replace(replace(RETURNTOWH, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          REMARKQC = trim(replace(replace(replace(replace(replace(replace(REMARKQC, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          STACKINGPERSON = trim(replace(replace(replace(replace(replace(replace(STACKINGPERSON, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          FINISHSTACKING = trim(replace(replace(replace(replace(replace(replace(FINISHSTACKING, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          POSTEDBY = trim(replace(replace(replace(replace(replace(replace(POSTEDBY, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          POSTEDPUTAWAYDATE = trim(replace(replace(replace(replace(replace(replace(POSTEDPUTAWAYDATE, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          POSTEDDATEAFTEROSDCLOSED = trim(replace(replace(replace(replace(replace(replace(POSTEDDATEAFTEROSDCLOSED, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          OSDYESNO = trim(replace(replace(replace(replace(replace(replace(OSDYESNO, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          REMARKSALL = trim(replace(replace(replace(replace(replace(replace(REMARKSALL, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          CHECKOFFKPI = trim(replace(replace(replace(replace(replace(replace(CHECKOFFKPI, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          BINNINGKPI = trim(replace(replace(replace(replace(replace(replace(BINNINGKPI, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          ColorTag = trim(replace(replace(replace(replace(replace(replace(ColorTag, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          OFFLOADEDBY = trim(replace(replace(replace(replace(replace(replace(OFFLOADEDBY, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          FABYARDLOCATION = trim(replace(replace(replace(replace(replace(replace(FABYARDLOCATION, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          POSRN = trim(replace(replace(replace(replace(replace(replace(POSRN, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          LOGNO = trim(replace(replace(replace(replace(replace(replace(LOGNO, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          QCINSPECTABLE = trim(replace(replace(replace(replace(replace(replace(QCINSPECTABLE, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          RECEIPTMRR = trim(replace(replace(replace(replace(replace(replace(RECEIPTMRR, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          UNIQID = trim(replace(replace(replace(replace(replace(replace(UNIQID, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \")),",
+						"          QCINSPECTKPI = trim(replace(replace(replace(replace(replace(replace(QCINSPECTKPI, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"\\\\\",\" \"),\"  \",\" \"))) ~> SetFileName",
+						"SetFileName sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     rowUrlColumn:'FileName',",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> Sink1"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_yardkpi_mwin_stage_to_raw')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/YARD KPI/MWIN"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_yardkpi_mwin_source",
+								"type": "DatasetReference"
+							},
+							"name": "stageMwin"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_yardkpi_mwin_default",
+								"type": "DatasetReference"
+							},
+							"name": "rawMwin"
+						}
+					],
+					"transformations": [
+						{
+							"name": "cleanColumns"
+						}
+					],
+					"scriptLines": [
+						"parameters{",
+						"     p_directory as string,",
+						"     p_filename as string",
+						"}",
+						"source(output(",
+						"          rbt_id as string,",
+						"          rbt_no_formtd as string,",
+						"          location as string,",
+						"          rbt_hdr_category as string,",
+						"          rbt_version as string,",
+						"          project_id as string,",
+						"          rbt_revision as string,",
+						"          qr_number as string,",
+						"          rbt_number as string,",
+						"          rbt_title as string,",
+						"          qc_inspector as string,",
+						"          qc_inspector_name as string,",
+						"          area_id as string,",
+						"          area_title as string,",
+						"          discipline_id as string,",
+						"          discipline_title as string,",
+						"          project_title as string,",
+						"          rbt_hdr_categoryname as string,",
+						"          drawing_no as string,",
+						"          qc_inspection_date as string,",
+						"          qc_inspection_time as string,",
+						"          qc_inspection_enddate as string,",
+						"          qc_inspection_endtime as string,",
+						"          submitted_date as string,",
+						"          inspection_date as string,",
+						"          remark as string,",
+						"          rbt_status as string,",
+						"          rbt_type as string,",
+						"          {Root Cause} as string,",
+						"          {Inspection Level Client} as string,",
+						"          {Inspection Level Contractor} as string,",
+						"          ProductionPersonal_title as string,",
+						"          ProductionPersonal_name as string,",
+						"          ProductionPersonal_Remarks as string,",
+						"          ProductionPersonal_appr_status as string,",
+						"          ProductionPersonal_approval_dt as string,",
+						"          Foremen as string,",
+						"          appr1_title as string,",
+						"          appr1_name as string,",
+						"          appr1_approval_dt as string,",
+						"          appr2_title as string,",
+						"          appr2_name as string,",
+						"          appr2_approval_dt as string,",
+						"          appr3_title as string,",
+						"          appr3_name as string,",
+						"          appr3_approval_dt as string,",
+						"          appr3_appr_status as string,",
+						"          appr4_title as string,",
+						"          appr4_name as string,",
+						"          appr4_approval_dt as string,",
+						"          appr4_appr_status as string,",
+						"          source_name as string,",
+						"          sub_source_name as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: true,",
+						"     purgeFiles: true,",
+						"     rowUrlColumn: 'File_Path',",
+						"     multiLineRow: true,",
+						"     wildcardPaths:[($p_directory+'/'+$p_filename+'_*.csv')]) ~> stageMwin",
+						"stageMwin derive(rbt_id = trim(replace(replace(replace(replace(replace(replace(rbt_id,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          rbt_no_formtd = trim(replace(replace(replace(replace(replace(replace(rbt_no_formtd,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          location = trim(replace(replace(replace(replace(replace(replace(location,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          rbt_hdr_category = trim(replace(replace(replace(replace(replace(replace(rbt_hdr_category,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          rbt_version = trim(replace(replace(replace(replace(replace(replace(rbt_version,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          project_id = trim(replace(replace(replace(replace(replace(replace(project_id,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          rbt_revision = trim(replace(replace(replace(replace(replace(replace(rbt_revision,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          qr_number = trim(replace(replace(replace(replace(replace(replace(qr_number,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          rbt_number = trim(replace(replace(replace(replace(replace(replace(rbt_number,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          rbt_title = trim(replace(replace(replace(replace(replace(replace(rbt_title,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          qc_inspector = trim(replace(replace(replace(replace(replace(replace(qc_inspector,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          qc_inspector_name = trim(replace(replace(replace(replace(replace(replace(qc_inspector_name,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          area_id = trim(replace(replace(replace(replace(replace(replace(area_id,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          area_title = trim(replace(replace(replace(replace(replace(replace(area_title,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          discipline_id = trim(replace(replace(replace(replace(replace(replace(discipline_id,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          discipline_title = trim(replace(replace(replace(replace(replace(replace(discipline_title,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          project_title = trim(replace(replace(replace(replace(replace(replace(project_title,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          rbt_hdr_categoryname = trim(replace(replace(replace(replace(replace(replace(rbt_hdr_categoryname,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          drawing_no = trim(replace(replace(replace(replace(replace(replace(drawing_no,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          qc_inspection_date = trim(replace(replace(replace(replace(replace(replace(qc_inspection_date,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          qc_inspection_time = trim(replace(replace(replace(replace(replace(replace(qc_inspection_time,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          qc_inspection_enddate = trim(replace(replace(replace(replace(replace(replace(qc_inspection_enddate,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          qc_inspection_endtime = trim(replace(replace(replace(replace(replace(replace(qc_inspection_endtime,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          submitted_date = trim(replace(replace(replace(replace(replace(replace(submitted_date,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          inspection_date = trim(replace(replace(replace(replace(replace(replace(inspection_date,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          remark = trim(replace(replace(replace(replace(replace(replace(remark,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          rbt_status = trim(replace(replace(replace(replace(replace(replace(rbt_status,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          rbt_type = trim(replace(replace(replace(replace(replace(replace(rbt_type,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          {Root Cause} = trim(replace(replace(replace(replace(replace(replace({Root Cause},'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          {Inspection Level Client} = trim(replace(replace(replace(replace(replace(replace({Inspection Level Client},'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          {Inspection Level Contractor} = trim(replace(replace(replace(replace(replace(replace({Inspection Level Contractor},'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          ProductionPersonal_title = trim(replace(replace(replace(replace(replace(replace(ProductionPersonal_title,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          ProductionPersonal_name = trim(replace(replace(replace(replace(replace(replace(ProductionPersonal_name,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          ProductionPersonal_Remarks = trim(replace(replace(replace(replace(replace(replace(ProductionPersonal_Remarks,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          ProductionPersonal_appr_status = trim(replace(replace(replace(replace(replace(replace(ProductionPersonal_appr_status,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          ProductionPersonal_approval_dt = trim(replace(replace(replace(replace(replace(replace(ProductionPersonal_approval_dt,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          Foremen = trim(replace(replace(replace(replace(replace(replace(Foremen,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          appr1_title = trim(replace(replace(replace(replace(replace(replace(appr1_title,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          appr1_name = trim(replace(replace(replace(replace(replace(replace(appr1_name,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          appr1_approval_dt = trim(replace(replace(replace(replace(replace(replace(appr1_approval_dt,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          appr2_title = trim(replace(replace(replace(replace(replace(replace(appr2_title,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          appr2_name = trim(replace(replace(replace(replace(replace(replace(appr2_name,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          appr2_approval_dt = trim(replace(replace(replace(replace(replace(replace(appr2_approval_dt,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          appr3_title = trim(replace(replace(replace(replace(replace(replace(appr3_title,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          appr3_name = trim(replace(replace(replace(replace(replace(replace(appr3_name,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          appr3_approval_dt = trim(replace(replace(replace(replace(replace(replace(appr3_approval_dt,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          appr3_appr_status = trim(replace(replace(replace(replace(replace(replace(appr3_appr_status,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          appr4_title = trim(replace(replace(replace(replace(replace(replace(appr4_title,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          appr4_name = trim(replace(replace(replace(replace(replace(replace(appr4_name,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          appr4_approval_dt = trim(replace(replace(replace(replace(replace(replace(appr4_approval_dt,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          appr4_appr_status = trim(replace(replace(replace(replace(replace(replace(appr4_appr_status,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          source_name = trim(replace(replace(replace(replace(replace(source_name, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"  \",\" \")),",
+						"          sub_source_name = trim(replace(replace(replace(replace(replace(sub_source_name, \"\\n\", \" \"),\"\\r\",\" \"),\",\",\" \"),'\"',\" \"),\"  \",\" \")),",
+						"          File_Path = concat(trim($p_directory),'/',substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',$p_filename,'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv')) ~> cleanColumns",
+						"cleanColumns sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     input(",
+						"          Column_1 as string,",
+						"          Column_2 as string,",
+						"          Column_3 as string,",
+						"          Column_4 as string,",
+						"          Column_5 as string,",
+						"          Column_6 as string,",
+						"          Column_7 as string,",
+						"          Column_8 as string,",
+						"          Column_9 as string,",
+						"          Column_10 as string,",
+						"          Column_11 as string,",
+						"          Column_12 as string,",
+						"          Column_13 as string,",
+						"          Column_14 as string,",
+						"          Column_15 as string,",
+						"          Column_16 as string,",
+						"          Column_17 as string,",
+						"          Column_18 as string,",
+						"          Column_19 as string,",
+						"          Column_20 as string,",
+						"          Column_21 as string,",
+						"          Column_22 as string,",
+						"          Column_23 as string,",
+						"          Column_24 as string",
+						"     ),",
+						"     rowUrlColumn:'File_Path',",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> rawMwin"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_yardkpi_pcm_dl_master_defect_stage_to_raw')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/YARD KPI/PCM"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_yardkpi_pcm_master_generic",
+								"type": "DatasetReference"
+							},
+							"name": "Source"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_yardkpi_pcm_master_generic",
+								"type": "DatasetReference"
+							},
+							"name": "Sink"
+						}
+					],
+					"transformations": [
+						{
+							"name": "setFileName"
+						}
+					],
+					"scriptLines": [
+						"parameters{",
+						"     p_df_folderpath as string,",
+						"     p_df_filename as string",
+						"}",
+						"source(output(",
+						"          fab_code as string,",
+						"          defect_type as string,",
+						"          defect_type_title as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: true,",
+						"     purgeFiles: true,",
+						"     rowUrlColumn: 'File_Path',",
+						"     wildcardPaths:[($p_df_folderpath+'/'+$p_df_filename+'_*.csv')]) ~> Source",
+						"Source derive(File_Path = concat(concat($p_df_folderpath,'/'),substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',$p_df_filename,'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv')) ~> setFileName",
+						"setFileName sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     input(",
+						"          trans_date as string,",
+						"          trans_type as string,",
+						"          fab_code as string,",
+						"          contract as string,",
+						"          contract_title as string,",
+						"          job as string,",
+						"          job_title as string,",
+						"          item as string,",
+						"          item_title as string,",
+						"          ndt_drawing as string,",
+						"          ndt_drawing_desc as string,",
+						"          wctrl as string,",
+						"          weld_suffix as string,",
+						"          stress_relief as string,",
+						"          weld_repair_ref as string,",
+						"          discipline as string,",
+						"          spool as string,",
+						"          weld as string,",
+						"          weld_location as string,",
+						"          weld_type as string,",
+						"          joint_type as string,",
+						"          material_type as string,",
+						"          material_grade as string,",
+						"          material_type2 as string,",
+						"          material_grade2 as string,",
+						"          fabrication_area as string,",
+						"          weld_attachment as string,",
+						"          weld_category as string,",
+						"          pipe_bore as string,",
+						"          pipe_schedule as string,",
+						"          thickness as string,",
+						"          diameter as string,",
+						"          weld_length as string,",
+						"          weld_date as string,",
+						"          weld_status as string,",
+						"          weld_clear_date as string,",
+						"          cutout as string,",
+						"          weldcount as string,",
+						"          weld_updated_on as string,",
+						"          recap as string,",
+						"          repair_gen as string,",
+						"          repair_status_code as string,",
+						"          weld_repair_date as string,",
+						"          mcd_inspector as string,",
+						"          client_inspector as string,",
+						"          vis_report_num as string,",
+						"          vis_date as string,",
+						"          clear_date as string,",
+						"          weld_machine as string,",
+						"          fitter1 as string,",
+						"          fitter2 as string,",
+						"          fitter3 as string,",
+						"          Fitup_insp_name as string,",
+						"          fitup_date as string,",
+						"          fitup_status as string,",
+						"          fitup_updated_on as string,",
+						"          fitup_inspection_date as string,",
+						"          fitup_inspector as string,",
+						"          fitup_rep_num as string,",
+						"          mtn1 as string,",
+						"          mtn2 as string,",
+						"          include_in_rr_calc as string",
+						"     ),",
+						"     rowUrlColumn:'File_Path',",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> Sink"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_yardkpi_pcm_dl_master_job_item_stage_to_raw')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/YARD KPI/PCM"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_yardkpi_pcm_master_generic",
+								"type": "DatasetReference"
+							},
+							"name": "Source"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_yardkpi_pcm_master_generic",
+								"type": "DatasetReference"
+							},
+							"name": "Sink"
+						}
+					],
+					"transformations": [
+						{
+							"name": "setFileName"
+						}
+					],
+					"scriptLines": [
+						"parameters{",
+						"     p_df_folderpath as string,",
+						"     p_df_filename as string",
+						"}",
+						"source(output(",
+						"          fab_code as string,",
+						"          client as string,",
+						"          client_title as string,",
+						"          client_type as string,",
+						"          job as string,",
+						"          job_title as string,",
+						"          project as string,",
+						"          project_title as string,",
+						"          include_in_rr_calc as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: true,",
+						"     purgeFiles: true,",
+						"     rowUrlColumn: 'File_Path',",
+						"     wildcardPaths:[($p_df_folderpath+'/'+$p_df_filename+'_*.csv')]) ~> Source",
+						"Source derive(File_Path = concat(concat($p_df_folderpath,'/'),substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',$p_df_filename,'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv')) ~> setFileName",
+						"setFileName sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     input(",
+						"          trans_date as string,",
+						"          trans_type as string,",
+						"          fab_code as string,",
+						"          contract as string,",
+						"          contract_title as string,",
+						"          job as string,",
+						"          job_title as string,",
+						"          item as string,",
+						"          item_title as string,",
+						"          ndt_drawing as string,",
+						"          ndt_drawing_desc as string,",
+						"          wctrl as string,",
+						"          weld_suffix as string,",
+						"          stress_relief as string,",
+						"          weld_repair_ref as string,",
+						"          discipline as string,",
+						"          spool as string,",
+						"          weld as string,",
+						"          weld_location as string,",
+						"          weld_type as string,",
+						"          joint_type as string,",
+						"          material_type as string,",
+						"          material_grade as string,",
+						"          material_type2 as string,",
+						"          material_grade2 as string,",
+						"          fabrication_area as string,",
+						"          weld_attachment as string,",
+						"          weld_category as string,",
+						"          pipe_bore as string,",
+						"          pipe_schedule as string,",
+						"          thickness as string,",
+						"          diameter as string,",
+						"          weld_length as string,",
+						"          weld_date as string,",
+						"          weld_status as string,",
+						"          weld_clear_date as string,",
+						"          cutout as string,",
+						"          weldcount as string,",
+						"          weld_updated_on as string,",
+						"          recap as string,",
+						"          repair_gen as string,",
+						"          repair_status_code as string,",
+						"          weld_repair_date as string,",
+						"          mcd_inspector as string,",
+						"          client_inspector as string,",
+						"          vis_report_num as string,",
+						"          vis_date as string,",
+						"          clear_date as string,",
+						"          weld_machine as string,",
+						"          fitter1 as string,",
+						"          fitter2 as string,",
+						"          fitter3 as string,",
+						"          Fitup_insp_name as string,",
+						"          fitup_date as string,",
+						"          fitup_status as string,",
+						"          fitup_updated_on as string,",
+						"          fitup_inspection_date as string,",
+						"          fitup_inspector as string,",
+						"          fitup_rep_num as string,",
+						"          mtn1 as string,",
+						"          mtn2 as string,",
+						"          include_in_rr_calc as string",
+						"     ),",
+						"     rowUrlColumn:'File_Path',",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> Sink"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_yardkpi_pcm_dl_master_weld_process_stage_to_raw')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/YARD KPI/PCM"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_yardkpi_pcm_master_generic",
+								"type": "DatasetReference"
+							},
+							"name": "Source"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_yardkpi_pcm_master_generic",
+								"type": "DatasetReference"
+							},
+							"name": "Sink"
+						}
+					],
+					"transformations": [
+						{
+							"name": "setFileName"
+						}
+					],
+					"scriptLines": [
+						"parameters{",
+						"     p_df_folderpath as string,",
+						"     p_df_filename as string",
+						"}",
+						"source(output(",
+						"          fab_code as string,",
+						"          process as string,",
+						"          process_title as string,",
+						"          discipline as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: true,",
+						"     purgeFiles: true,",
+						"     rowUrlColumn: 'File_Path',",
+						"     wildcardPaths:[($p_df_folderpath+'/'+$p_df_filename+'_*.csv')]) ~> Source",
+						"Source derive(File_Path = concat(concat($p_df_folderpath,'/'),substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',$p_df_filename,'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv')) ~> setFileName",
+						"setFileName sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     input(",
+						"          trans_date as string,",
+						"          trans_type as string,",
+						"          fab_code as string,",
+						"          contract as string,",
+						"          contract_title as string,",
+						"          job as string,",
+						"          job_title as string,",
+						"          item as string,",
+						"          item_title as string,",
+						"          ndt_drawing as string,",
+						"          ndt_drawing_desc as string,",
+						"          wctrl as string,",
+						"          weld_suffix as string,",
+						"          stress_relief as string,",
+						"          weld_repair_ref as string,",
+						"          discipline as string,",
+						"          spool as string,",
+						"          weld as string,",
+						"          weld_location as string,",
+						"          weld_type as string,",
+						"          joint_type as string,",
+						"          material_type as string,",
+						"          material_grade as string,",
+						"          material_type2 as string,",
+						"          material_grade2 as string,",
+						"          fabrication_area as string,",
+						"          weld_attachment as string,",
+						"          weld_category as string,",
+						"          pipe_bore as string,",
+						"          pipe_schedule as string,",
+						"          thickness as string,",
+						"          diameter as string,",
+						"          weld_length as string,",
+						"          weld_date as string,",
+						"          weld_status as string,",
+						"          weld_clear_date as string,",
+						"          cutout as string,",
+						"          weldcount as string,",
+						"          weld_updated_on as string,",
+						"          recap as string,",
+						"          repair_gen as string,",
+						"          repair_status_code as string,",
+						"          weld_repair_date as string,",
+						"          mcd_inspector as string,",
+						"          client_inspector as string,",
+						"          vis_report_num as string,",
+						"          vis_date as string,",
+						"          clear_date as string,",
+						"          weld_machine as string,",
+						"          fitter1 as string,",
+						"          fitter2 as string,",
+						"          fitter3 as string,",
+						"          Fitup_insp_name as string,",
+						"          fitup_date as string,",
+						"          fitup_status as string,",
+						"          fitup_updated_on as string,",
+						"          fitup_inspection_date as string,",
+						"          fitup_inspector as string,",
+						"          fitup_rep_num as string,",
+						"          mtn1 as string,",
+						"          mtn2 as string,",
+						"          include_in_rr_calc as string",
+						"     ),",
+						"     rowUrlColumn:'File_Path',",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> Sink"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_yardkpi_pcm_inprocess_inspection_stage_to_raw')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/YARD KPI/PCM"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adgl2_yardkpi_pcm_inprocess_inpsection_source",
+								"type": "DatasetReference"
+							},
+							"name": "PCMStage"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_yardkpi_pcm_default",
+								"type": "DatasetReference"
+							},
+							"name": "PCMRaw"
+						}
+					],
+					"transformations": [
+						{
+							"name": "SetFileName"
+						}
+					],
+					"script": "parameters{\n\tWildPath as string,\n\tFileName as string\n}\nsource(output(\n\t\ttrans_date as string,\n\t\ttrans_type as string,\n\t\tfab_code as string,\n\t\tcontract as string,\n\t\tcontract_title as string,\n\t\tjob as string,\n\t\tjob_title as string,\n\t\titem as string,\n\t\titem_title as string,\n\t\tndt_drawing as string,\n\t\tndt_drawing_desc as string,\n\t\twctrl as string,\n\t\tweld_suffix as string,\n\t\tstress_relief as string,\n\t\tweld_repair_ref as string,\n\t\tdiscipline as string,\n\t\tweld as string,\n\t\tactivity_type as string,\n\t\treport_type as string,\n\t\treport_num as string,\n\t\tinspector as string,\n\t\tremarks as string,\n\t\tactivity_done_by as string,\n\t\tactivity_done_on as string,\n\t\taction_taken as string,\n\t\taction_taken_on as string,\n\t\tother_remarks as string,\n\t\tinclude_in_rr_calc as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: true,\n\tpurgeFiles: true,\n\trowUrlColumn: 'File_Path',\n\tmultiLineRow: true,\n\twildcardPaths:[($WildPath+'/'+$FileName+'_*_*.csv')]) ~> PCMStage\nPCMStage derive(File_Path = concat(concat(trim(substringIndex(File_Path,'/',5),'/'),'/'),substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',substringIndex(split(substringIndex(File_Path,'/',-1),'.')[1],'_',3),'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv'),\n\t\ttrans_date = trim(replace(replace(replace(replace(replace(replace(replace(trans_date,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),\n\t\ttrans_type = trim(replace(replace(replace(replace(replace(replace(replace(trans_type,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),\n\t\tfab_code = trim(replace(replace(replace(replace(replace(replace(replace(fab_code,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),\n\t\tcontract = trim(replace(replace(replace(replace(replace(replace(replace(contract,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),\n\t\tcontract_title = trim(replace(replace(replace(replace(replace(replace(replace(contract_title,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),\n\t\tjob = trim(replace(replace(replace(replace(replace(replace(replace(job,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),\n\t\tjob_title = trim(replace(replace(replace(replace(replace(replace(replace(job_title,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),\n\t\titem = trim(replace(replace(replace(replace(replace(replace(replace(item,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),\n\t\titem_title = trim(replace(replace(replace(replace(replace(replace(replace(item_title,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),\n\t\tndt_drawing = trim(replace(replace(replace(replace(replace(replace(replace(ndt_drawing,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),\n\t\tndt_drawing_desc = trim(replace(replace(replace(replace(replace(replace(replace(ndt_drawing_desc,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),\n\t\tdiscipline = trim(replace(replace(replace(replace(replace(replace(replace(discipline,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),\n\t\tinspector = trim(replace(replace(replace(replace(replace(replace(replace(inspector,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' ')),\n\t\tinclude_in_rr_calc = trim(replace(replace(replace(replace(replace(replace(replace(include_in_rr_calc,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\"',' '),'\\\\',' '),'  ',' '))) ~> SetFileName\nSetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\trowUrlColumn:'File_Path',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> PCMRaw"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_yardkpi_pcm_welder_information_stage_to_raw')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/YARD KPI/PCM"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_yardkpi_pcm_weld_info_generic",
+								"type": "DatasetReference"
+							},
+							"name": "Source"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_yardkpi_pcm_weld_info_generic",
+								"type": "DatasetReference"
+							},
+							"name": "Sink"
+						}
+					],
+					"transformations": [
+						{
+							"name": "setFileName"
+						}
+					],
+					"scriptLines": [
+						"parameters{",
+						"     p_df_folderpath as string,",
+						"     p_df_filename as string",
+						"}",
+						"source(output(",
+						"          fab_code as string,",
+						"          welder as string,",
+						"          employee_name as string,",
+						"          employee_location as string,",
+						"          location_detail as string,",
+						"          employer as string,",
+						"          employer_detail as string,",
+						"          start_date as string,",
+						"          termination_date as string,",
+						"          welder_type as string,",
+						"          Welder_type_Description as string,",
+						"          emp_status as string,",
+						"          Badge_Id as string,",
+						"          SAP_Id as string,",
+						"          source_code as string,",
+						"          sub_source_code as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: true,",
+						"     purgeFiles: true,",
+						"     rowUrlColumn: 'File_Path',",
+						"     multiLineRow: true,",
+						"     wildcardPaths:[($p_df_folderpath+'/'+$p_df_filename+'_*.csv')]) ~> Source",
+						"Source derive(fab_code = trim(replace(replace(replace(replace(replace(replace(fab_code,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          welder = trim(replace(replace(replace(replace(replace(replace(welder,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          employee_name = trim(replace(replace(replace(replace(replace(replace(employee_name,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          employee_location = trim(replace(replace(replace(replace(replace(replace(employee_location,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          location_detail = trim(replace(replace(replace(replace(replace(replace(location_detail,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          employer = trim(replace(replace(replace(replace(replace(replace(employer,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          employer_detail = trim(replace(replace(replace(replace(replace(replace(employer_detail,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          start_date = trim(replace(replace(replace(replace(replace(replace(start_date,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          termination_date = trim(replace(replace(replace(replace(replace(replace(termination_date,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          welder_type = trim(replace(replace(replace(replace(replace(replace(welder_type,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          Welder_type_Description = trim(replace(replace(replace(replace(replace(replace(Welder_type_Description,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          emp_status = trim(replace(replace(replace(replace(replace(replace(emp_status,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          Badge_Id = trim(replace(replace(replace(replace(replace(replace(Badge_Id,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          SAP_Id = trim(replace(replace(replace(replace(replace(replace(SAP_Id,'\\n',' '),'\\r',' '),'\\r\\n',' '),',',' '),'\\\\',' '),'  ',' ')),",
+						"          File_Path = concat(concat($p_df_folderpath,'/'),substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',$p_df_filename,'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv')) ~> setFileName",
+						"setFileName sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     rowUrlColumn:'File_Path',",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> Sink"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_yardkpi_project_no_stage_to_raw')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_Src_snk_adgls2_src_ykpi",
+								"type": "DatasetReference"
+							},
+							"name": "source1"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_Src_snk_adgls2_src_ykpi",
+								"type": "DatasetReference"
+							},
+							"name": "sink1"
+						}
+					],
+					"transformations": [
+						{
+							"name": "derivedColumn1"
+						}
+					],
+					"scriptLines": [
+						"parameters{",
+						"     FilePath as string ('Project_Data/YARDKPI/Material_Register/project_no/'),",
+						"     FileName as string ('project_no')",
+						"}",
+						"source(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     purgeFiles: true,",
+						"     multiLineRow: true) ~> source1",
+						"source1 derive(FileName = concat($FilePath,substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',$FileName,replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv')) ~> derivedColumn1",
+						"derivedColumn1 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     rowUrlColumn:'FileName',",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> sink1"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_yardkpi_r2p_stage_data_decoding')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/YARD KPI/R2P"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_xml_yardkpi_r2p_source",
+								"type": "DatasetReference"
+							},
+							"name": "SrcEncodedXml"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_delimited_xml_yardkpi_r2p_stage",
+								"type": "DatasetReference"
+							},
+							"name": "SnkDecodedXml"
+						}
+					],
+					"transformations": [
+						{
+							"name": "Decoding"
+						},
+						{
+							"name": "SelectDecodedData"
+						}
+					],
+					"scriptLines": [
+						"parameters{",
+						"     decoded_file_name as string",
+						"}",
+						"source(output(",
+						"          {http://www.w3.org/2003/05/soap-envelope,Envelope} as ({http://www.w3.org/2003/05/soap-envelope,Body} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,runReportResponse} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,runReportReturn} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,metaDataList} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean), {http://xmlns.oracle.com/oxp/service/PublicReportService,reportBytes} as string, {http://xmlns.oracle.com/oxp/service/PublicReportService,reportContentType} as string, {http://xmlns.oracle.com/oxp/service/PublicReportService,reportFileID} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean), {http://xmlns.oracle.com/oxp/service/PublicReportService,reportLocale} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean)))), {http://www.w3.org/2003/05/soap-envelope,Header} as string)",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     purgeFiles: true,",
+						"     validationMode: 'none',",
+						"     namespaces: true) ~> SrcEncodedXml",
+						"SrcEncodedXml derive(ReportBytes = fromBase64(toString({http://www.w3.org/2003/05/soap-envelope,Envelope}.{http://www.w3.org/2003/05/soap-envelope,Body}.{http://xmlns.oracle.com/oxp/service/PublicReportService,runReportResponse}.{http://xmlns.oracle.com/oxp/service/PublicReportService,runReportReturn}.{http://xmlns.oracle.com/oxp/service/PublicReportService,reportBytes}))) ~> Decoding",
+						"Decoding select(mapColumn(",
+						"          ReportBytes",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> SelectDecodedData",
+						"SelectDecodedData sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     emptyLinesAsHeader: 1,",
+						"     partitionFileNames:[($decoded_file_name)],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SnkDecodedXml"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_yardkpi_r2p_stage_data_flattening')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/YARD KPI/R2P"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_xml_yardkpi_r2p_source",
+								"type": "DatasetReference"
+							},
+							"name": "SrcXMl"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_yardkpi_r2p_generic",
+								"type": "DatasetReference"
+							},
+							"name": "SnkCsv"
+						}
+					],
+					"transformations": [
+						{
+							"name": "XmlToCsvflatten"
+						},
+						{
+							"name": "addLoadDetails"
+						}
+					],
+					"scriptLines": [
+						"parameters{",
+						"     csv_file_name as string,",
+						"     source_name as string,",
+						"     sub_source_name as string",
+						"}",
+						"source(output(",
+						"          DATA_DS as (G_1 as (ACCOUNT_CODE_ITEM as string, AGREEMENT_NUMBER as string, BUYER as string, BUYER_EMAIL_ID as string, CATEGORY_ID as string, CURRENCY as string, END_DATE as string, FIRST_PO_VERSION_RECEIVE_DATE as string, FIRST_PO_VERSION_RECEIVE_DATE1 as string, FIRST_PO_VER_REC_DATE as string, INCOTERM as string, INIT_REV_LINE_AMT as string, LAST_UPDATE_DATE as string, MATERIAL_WORK_GROUP as string, MPP_PO as string, ORIGINALORDEREDAMOUNTDISPLAY as string, PAYMENT_MODE as string, PO_ACKNOWLEDGEMENT_DATE as string, PO_ACK_DATE_POV as string, PO_ACK_DATE_POV1 as string, PO_APPROVED_DATE as string, PO_APPROVER as string, PO_CLOSED_DATE as string, PO_CREATION_DATE as string, PO_DESCRIPTION as string, PO_NO as string, PO_REV as string, PO_REV_2 as string, PO_STATUS as string, PROJECT_ID as string, PROJECT_NAME as string, PURCHASER_REQUESTER as string, REQUESTER_EMAIL_ID as string, REQUISITION_BU as string, REQUISITION_DATE as string, REQUISITION_NO_ as string, REQUISITION_ORIGINATOR as string, REQ_RELEASED_TO_PROC as string, REVISED_DATE as string, SELECTION_CODE as string, SMAT_REV_NO as string, SOURCE_BASE_POH_ID as string, SOURCE_POH_ID as string, SPMAT_PO_NUMBER as string, START_DATE as string, SUPPLIER as string, SUPPLIER_COUNTRY as string, SUPPLIER_COUNTRY_CODE as string, SUPPLIER_LOCATION as string, SUPPLIER_NUM as string, SUPPLIER_TYPE as string, USD as string)[], PO_LAST_UPDATE_DATE_FROM as string, PO_LAST_UPDATE_DATE_TO as string)",
+						"     ),",
+						"     allowSchemaDrift: false,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     purgeFiles: true,",
+						"     validationMode: 'none',",
+						"     namespaces: true) ~> SrcXMl",
+						"SrcXMl foldDown(unroll(DATA_DS.G_1),",
+						"     mapColumn(",
+						"          ACCOUNT_CODE_ITEM = DATA_DS.G_1.ACCOUNT_CODE_ITEM,",
+						"          AGREEMENT_NUMBER = DATA_DS.G_1.AGREEMENT_NUMBER,",
+						"          BUYER = DATA_DS.G_1.BUYER,",
+						"          BUYER_EMAIL_ID = DATA_DS.G_1.BUYER_EMAIL_ID,",
+						"          CATEGORY_ID = DATA_DS.G_1.CATEGORY_ID,",
+						"          CURRENCY = DATA_DS.G_1.CURRENCY,",
+						"          END_DATE = DATA_DS.G_1.END_DATE,",
+						"          FIRST_PO_VERSION_RECEIVE_DATE = DATA_DS.G_1.FIRST_PO_VERSION_RECEIVE_DATE,",
+						"          FIRST_PO_VERSION_RECEIVE_DATE1 = DATA_DS.G_1.FIRST_PO_VERSION_RECEIVE_DATE1,",
+						"          FIRST_PO_VER_REC_DATE = DATA_DS.G_1.FIRST_PO_VER_REC_DATE,",
+						"          INCOTERM = DATA_DS.G_1.INCOTERM,",
+						"          INIT_REV_LINE_AMT = DATA_DS.G_1.INIT_REV_LINE_AMT,",
+						"          LAST_UPDATE_DATE = DATA_DS.G_1.LAST_UPDATE_DATE,",
+						"          MATERIAL_WORK_GROUP = DATA_DS.G_1.MATERIAL_WORK_GROUP,",
+						"          MPP_PO = DATA_DS.G_1.MPP_PO,",
+						"          ORIGINALORDEREDAMOUNTDISPLAY = DATA_DS.G_1.ORIGINALORDEREDAMOUNTDISPLAY,",
+						"          PAYMENT_MODE = DATA_DS.G_1.PAYMENT_MODE,",
+						"          PO_ACKNOWLEDGEMENT_DATE = DATA_DS.G_1.PO_ACKNOWLEDGEMENT_DATE,",
+						"          PO_ACK_DATE_POV = DATA_DS.G_1.PO_ACK_DATE_POV,",
+						"          PO_ACK_DATE_POV1 = DATA_DS.G_1.PO_ACK_DATE_POV1,",
+						"          PO_APPROVED_DATE = DATA_DS.G_1.PO_APPROVED_DATE,",
+						"          PO_APPROVER = DATA_DS.G_1.PO_APPROVER,",
+						"          PO_CLOSED_DATE = DATA_DS.G_1.PO_CLOSED_DATE,",
+						"          PO_CREATION_DATE = DATA_DS.G_1.PO_CREATION_DATE,",
+						"          PO_DESCRIPTION = DATA_DS.G_1.PO_DESCRIPTION,",
+						"          PO_NO = DATA_DS.G_1.PO_NO,",
+						"          PO_REV = DATA_DS.G_1.PO_REV,",
+						"          PO_REV_2 = DATA_DS.G_1.PO_REV_2,",
+						"          PO_STATUS = DATA_DS.G_1.PO_STATUS,",
+						"          PROJECT_ID = DATA_DS.G_1.PROJECT_ID,",
+						"          PROJECT_NAME = DATA_DS.G_1.PROJECT_NAME,",
+						"          PURCHASER_REQUESTER = DATA_DS.G_1.PURCHASER_REQUESTER,",
+						"          REQUESTER_EMAIL_ID = DATA_DS.G_1.REQUESTER_EMAIL_ID,",
+						"          REQUISITION_BU = DATA_DS.G_1.REQUISITION_BU,",
+						"          REQUISITION_DATE = DATA_DS.G_1.REQUISITION_DATE,",
+						"          REQUISITION_NO_ = DATA_DS.G_1.REQUISITION_NO_,",
+						"          REQUISITION_ORIGINATOR = DATA_DS.G_1.REQUISITION_ORIGINATOR,",
+						"          REQ_RELEASED_TO_PROC = DATA_DS.G_1.REQ_RELEASED_TO_PROC,",
+						"          REVISED_DATE = DATA_DS.G_1.REVISED_DATE,",
+						"          SELECTION_CODE = DATA_DS.G_1.SELECTION_CODE,",
+						"          SMAT_REV_NO = DATA_DS.G_1.SMAT_REV_NO,",
+						"          SOURCE_BASE_POH_ID = DATA_DS.G_1.SOURCE_BASE_POH_ID,",
+						"          SOURCE_POH_ID = DATA_DS.G_1.SOURCE_POH_ID,",
+						"          SPMAT_PO_NUMBER = DATA_DS.G_1.SPMAT_PO_NUMBER,",
+						"          START_DATE = DATA_DS.G_1.START_DATE,",
+						"          SUPPLIER = DATA_DS.G_1.SUPPLIER,",
+						"          SUPPLIER_COUNTRY = DATA_DS.G_1.SUPPLIER_COUNTRY,",
+						"          SUPPLIER_COUNTRY_CODE = DATA_DS.G_1.SUPPLIER_COUNTRY_CODE,",
+						"          SUPPLIER_LOCATION = DATA_DS.G_1.SUPPLIER_LOCATION,",
+						"          SUPPLIER_NUM = DATA_DS.G_1.SUPPLIER_NUM,",
+						"          SUPPLIER_TYPE = DATA_DS.G_1.SUPPLIER_TYPE,",
+						"          USD = DATA_DS.G_1.USD",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> XmlToCsvflatten",
+						"XmlToCsvflatten derive(source_name = $source_name,",
+						"          sub_source_name = $sub_source_name) ~> addLoadDetails",
+						"addLoadDetails sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     partitionFileNames:[($csv_file_name)],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SnkCsv"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_yardkpi_rbt_stage_to_raw')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_Src_snk_adgls2_src_ykpi",
+								"type": "DatasetReference"
+							},
+							"name": "srcYardKPIMwinRBT"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_Src_snk_adgls2_src_ykpi",
+								"type": "DatasetReference"
+							},
+							"name": "snkYardKPIMwinRBT"
+						}
+					],
+					"transformations": [
+						{
+							"name": "derivedColumn1"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          rbt_id as short,",
+						"          rbt_no_formtd as string,",
+						"          location as string,",
+						"          rbt_hdr_category as string,",
+						"          rbt_version as double,",
+						"          project_id as string,",
+						"          rbt_revision as boolean,",
+						"          qr_number as short,",
+						"          rbt_number as string,",
+						"          rbt_title as string,",
+						"          qc_inspector as string,",
+						"          qc_inspector_name as string,",
+						"          area_id as string,",
+						"          area_title as string,",
+						"          discipline_id as string,",
+						"          discipline_title as string,",
+						"          project_title as string,",
+						"          rbt_hdr_categoryname as string,",
+						"          drawing_no as string,",
+						"          qc_inspection_date as string,",
+						"          qc_inspection_time as string,",
+						"          qc_inspection_enddate as string,",
+						"          qc_inspection_endtime as string,",
+						"          submitted_date as string,",
+						"          inspection_date as string,",
+						"          remark as string,",
+						"          rbt_status as string,",
+						"          rbt_type as string,",
+						"          appr1_title as string,",
+						"          appr1_name as string,",
+						"          appr1_approval_dt as string,",
+						"          appr2_title as string,",
+						"          appr2_name as string,",
+						"          appr2_approval_dt as string,",
+						"          appr3_title as string,",
+						"          appr3_name as string,",
+						"          appr3_approval_dt as string,",
+						"          appr3_appr_status as string,",
+						"          appr4_title as string,",
+						"          appr4_name as string,",
+						"          appr4_approval_dt as string,",
+						"          appr4_appr_status as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     purgeFiles: true,",
+						"     multiLineRow: true) ~> srcYardKPIMwinRBT",
+						"srcYardKPIMwinRBT derive(FileName = concat('Project_Data/YARDKPI/MWIN/',substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/','MWIN_RBT',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv'),",
+						"          rbt_title_new = regexReplace(regexReplace(replace(rbt_title,' ',''),`[\\n]`,''),`[\\r]`,'')) ~> derivedColumn1",
+						"derivedColumn1 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     rowUrlColumn:'FileName',",
+						"     truncate: true,",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     mapColumn(",
+						"          each(match(true()))",
+						"     )) ~> snkYardKPIMwinRBT"
+					]
+				}
+			},
+			"dependsOn": []
+		}
+	]
+}

@@ -1,0 +1,1356 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "McD-GPD"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/EUT_Vendor')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_network_file_share",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"path": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "Excel",
+				"typeProperties": {
+					"sheetName": {
+						"value": "Sheet1",
+						"type": "Expression"
+					},
+					"location": {
+						"type": "FileServerLocation",
+						"folderPath": "Development/EUT"
+					},
+					"firstRowAsHeader": true
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/Excel_test')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_network_file_share",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "Excel",
+				"typeProperties": {
+					"location": {
+						"type": "FileServerLocation",
+						"fileName": "NOC RUYA - ENGINEERING MANPOWER.xlsx",
+						"folderPath": "Development/NCSA Operational/Manual/Test"
+					},
+					"sheetIndex": 0,
+					"range": "B5:BN500000",
+					"firstRowAsHeader": true
+				},
+				"schema": [
+					{
+						"type": "String"
+					},
+					{
+						"type": "String"
+					},
+					{
+						"type": "String"
+					},
+					{
+						"type": "String"
+					},
+					{
+						"type": "String"
+					},
+					{
+						"type": "String"
+					},
+					{
+						"type": "String"
+					},
+					{
+						"type": "String"
+					},
+					{
+						"type": "String"
+					},
+					{
+						"type": "String"
+					},
+					{
+						"type": "String"
+					},
+					{
+						"type": "String"
+					},
+					{
+						"type": "String"
+					},
+					{
+						"type": "String"
+					},
+					{
+						"type": "String"
+					},
+					{
+						"type": "String"
+					},
+					{
+						"type": "String"
+					},
+					{
+						"type": "String"
+					},
+					{
+						"type": "String"
+					},
+					{
+						"type": "String"
+					},
+					{
+						"type": "String"
+					},
+					{
+						"type": "String"
+					},
+					{
+						"type": "String"
+					},
+					{
+						"type": "String"
+					},
+					{
+						"type": "String"
+					},
+					{
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/OracleTable1')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_pmcs_oracle",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"ls_p_hostname": "DALPOR17",
+						"ls_p_port": "1521",
+						"ls_p_database": "PMCSPLP"
+					}
+				},
+				"annotations": [],
+				"type": "OracleTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": "GPS",
+					"table": "ACCOUNTBALANCE_OUT"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/SourceDataset_trk')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "AzureSqlDWTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": "dbo",
+					"table": "dim_ent_employee"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_AzureSynapseAnalytics_generic_StageJSON_v')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "AzureSqlDWTable",
+				"schema": [],
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_CED_tennet_2gw_hag_oracledb02_spf09nlp')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_ced_oracle",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"ls_p_hostname": {
+							"value": "@dataset().server_name",
+							"type": "Expression"
+						},
+						"ls_p_port": {
+							"value": "@dataset().port",
+							"type": "Expression"
+						},
+						"ls_p_database": {
+							"value": "@dataset().database_name",
+							"type": "Expression"
+						}
+					}
+				},
+				"parameters": {
+					"table_schema": {
+						"type": "string"
+					},
+					"table_name": {
+						"type": "string"
+					},
+					"server_name": {
+						"type": "string"
+					},
+					"port": {
+						"type": "string"
+					},
+					"database_name": {
+						"type": "string"
+					}
+				},
+				"folder": {
+					"name": "Projects/Central Engineering Database"
+				},
+				"annotations": [],
+				"type": "OracleTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": {
+						"value": "@dataset().table_schema",
+						"type": "Expression"
+					},
+					"table": {
+						"value": "@dataset().table_name",
+						"type": "Expression"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_CED_tennet_2gw_hag_oracledb02_spp5nlp')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_ced_oracle",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"ls_p_hostname": {
+							"value": "@dataset().server_name",
+							"type": "Expression"
+						},
+						"ls_p_port": {
+							"value": "@dataset().port",
+							"type": "Expression"
+						},
+						"ls_p_database": {
+							"value": "@dataset().database_name",
+							"type": "Expression"
+						}
+					}
+				},
+				"parameters": {
+					"schema": {
+						"type": "string"
+					},
+					"table_name": {
+						"type": "string"
+					},
+					"server_name": {
+						"type": "string"
+					},
+					"port": {
+						"type": "string"
+					},
+					"database_name": {
+						"type": "string"
+					}
+				},
+				"folder": {
+					"name": "Projects/Central Engineering Database"
+				},
+				"annotations": [],
+				"type": "OracleTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": {
+						"value": "@dataset().schema",
+						"type": "Expression"
+					},
+					"table": {
+						"value": "@dataset().table_name",
+						"type": "Expression"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_Fabrication_PARS_get_Parentfolders')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_network_file_timesheet_epr",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "FileServerLocation"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_Fabrication_PARS_get_Subfiles')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_network_file_timesheet_epr",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"path": {
+						"type": "string"
+					},
+					"file_name": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "FileServerLocation",
+						"fileName": {
+							"value": "@dataset().file_name",
+							"type": "Expression"
+						},
+						"folderPath": {
+							"value": "@dataset().path",
+							"type": "Expression"
+						}
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_Fabrication_PARS_get_Subfolders')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_network_file_timesheet_epr",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"path": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "FileServerLocation",
+						"folderPath": {
+							"value": "@dataset().path",
+							"type": "Expression"
+						}
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_csv_generic')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureDataLakeStorage1LinkedService",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"p_ds_filesystem": {
+						"type": "string"
+					},
+					"p_ds_directory": {
+						"type": "string"
+					},
+					"p_ds_filename": {
+						"type": "string"
+					},
+					"p_ds_first_row_header": {
+						"type": "bool"
+					}
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": {
+							"value": "@dataset().p_ds_filename",
+							"type": "Expression"
+						},
+						"folderPath": {
+							"value": "@dataset().p_ds_directory",
+							"type": "Expression"
+						},
+						"fileSystem": {
+							"value": "@dataset().p_ds_filesystem",
+							"type": "Expression"
+						}
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": {
+						"value": "@dataset().p_ds_first_row_header",
+						"type": "Expression"
+					},
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_idocs_master_csv_generic')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureDataLakeStorage1LinkedService",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"p_ds_filesystem": {
+						"type": "string"
+					},
+					"p_ds_directory": {
+						"type": "string"
+					},
+					"p_ds_filename": {
+						"type": "string"
+					},
+					"p_ds_delimiter": {
+						"type": "string",
+						"defaultValue": ","
+					},
+					"p_ds_first_row_header": {
+						"type": "bool",
+						"defaultValue": true
+					}
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": {
+							"value": "@dataset().p_ds_filename",
+							"type": "Expression"
+						},
+						"folderPath": {
+							"value": "@dataset().p_ds_directory",
+							"type": "Expression"
+						},
+						"fileSystem": {
+							"value": "@dataset().p_ds_filesystem",
+							"type": "Expression"
+						}
+					},
+					"columnDelimiter": "\u0001",
+					"escapeChar": "\\",
+					"firstRowAsHeader": {
+						"value": "@dataset().p_ds_first_row_header",
+						"type": "Expression"
+					},
+					"quoteChar": "^"
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_azure_synapse_parameter')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "AzureSqlDWTable",
+				"schema": [],
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_azuresynapse_dev')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseDB_DEV",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [],
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_clinic_fab_automation_source')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "linkedservice_FAB_Automation_clinic",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/NCSA/FAB Automation/Clinic"
+				},
+				"annotations": [],
+				"type": "SqlServerTable",
+				"schema": [],
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_csv_ruya_project')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_network_file_share_epr",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"Directory": {
+						"type": "string"
+					},
+					"File_name": {
+						"type": "string"
+					},
+					"First_row_header": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "FileServerLocation",
+						"fileName": {
+							"value": "@dataset().File_name",
+							"type": "Expression"
+						},
+						"folderPath": {
+							"value": "@dataset().Directory",
+							"type": "Expression"
+						}
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\"",
+					"firstRowAsHeader": {
+						"value": "@bool(dataset().First_row_header)",
+						"type": "Expression"
+					},
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "Project",
+						"type": "String"
+					},
+					{
+						"name": "Discipline",
+						"type": "String"
+					},
+					{
+						"name": "Requisition No",
+						"type": "String"
+					},
+					{
+						"name": "Req Supp",
+						"type": "String"
+					},
+					{
+						"name": "Req LI",
+						"type": "String"
+					},
+					{
+						"name": "Req Sub LI",
+						"type": "String"
+					},
+					{
+						"name": "PO No",
+						"type": "String"
+					},
+					{
+						"name": "PO Rev No",
+						"type": "String"
+					},
+					{
+						"name": "Description",
+						"type": "String"
+					},
+					{
+						"name": "Issued",
+						"type": "String"
+					},
+					{
+						"name": "Approved Date",
+						"type": "String"
+					},
+					{
+						"name": "PO Status",
+						"type": "String"
+					},
+					{
+						"name": "Supplier",
+						"type": "String"
+					},
+					{
+						"name": "Supplier Name",
+						"type": "String"
+					},
+					{
+						"name": "Supplier City",
+						"type": "String"
+					},
+					{
+						"name": "Country of Origin",
+						"type": "String"
+					},
+					{
+						"name": "Supplier Country",
+						"type": "String"
+					},
+					{
+						"name": "Expediting Level",
+						"type": "String"
+					},
+					{
+						"name": "Inspection Level",
+						"type": "String"
+					},
+					{
+						"name": "Pos",
+						"type": "String"
+					},
+					{
+						"name": "Sub",
+						"type": "String"
+					},
+					{
+						"name": "IS Pos",
+						"type": "String"
+					},
+					{
+						"name": "IS Sub",
+						"type": "String"
+					},
+					{
+						"name": "Ident Short Description",
+						"type": "String"
+					},
+					{
+						"name": "Ident Code",
+						"type": "String"
+					},
+					{
+						"name": "Client Ident Code",
+						"type": "String"
+					},
+					{
+						"name": "Tag Number",
+						"type": "String"
+					},
+					{
+						"name": "Commodity Code",
+						"type": "String"
+					},
+					{
+						"name": "Size1",
+						"type": "String"
+					},
+					{
+						"name": "Size2",
+						"type": "String"
+					},
+					{
+						"name": "Size3",
+						"type": "String"
+					},
+					{
+						"name": "Size4",
+						"type": "String"
+					},
+					{
+						"name": "Order Qty",
+						"type": "String"
+					},
+					{
+						"name": "Item Ship Qty",
+						"type": "String"
+					},
+					{
+						"name": "Received Qty",
+						"type": "String"
+					},
+					{
+						"name": "Balance MRR Qty",
+						"type": "String"
+					},
+					{
+						"name": "Qty Unit",
+						"type": "String"
+					},
+					{
+						"name": "Item Ship Weight",
+						"type": "String"
+					},
+					{
+						"name": "Total ISH Weight",
+						"type": "String"
+					},
+					{
+						"name": "Weight Unit",
+						"type": "String"
+					},
+					{
+						"name": "Unit Price",
+						"type": "String"
+					},
+					{
+						"name": "Extended Price",
+						"type": "String"
+					},
+					{
+						"name": "Currency",
+						"type": "String"
+					},
+					{
+						"name": "(Charge) Account Code",
+						"type": "String"
+					},
+					{
+						"name": "Delivery Designation",
+						"type": "String"
+					},
+					{
+						"name": "Routing Method",
+						"type": "String"
+					},
+					{
+						"name": "Transit Days",
+						"type": "String"
+					},
+					{
+						"name": "Incoterm",
+						"type": "String"
+					},
+					{
+						"name": "Delivery Place",
+						"type": "String"
+					},
+					{
+						"name": "Prom Contract",
+						"type": "String"
+					},
+					{
+						"name": "Forecasted Delivery Date",
+						"type": "String"
+					},
+					{
+						"name": "Contractual Float",
+						"type": "String"
+					},
+					{
+						"name": "Pred On Site",
+						"type": "String"
+					},
+					{
+						"name": "Req On Site",
+						"type": "String"
+					},
+					{
+						"name": "ROS Float",
+						"type": "String"
+					},
+					{
+						"name": "NOI Nr",
+						"type": "String"
+					},
+					{
+						"name": "NOI Date",
+						"type": "String"
+					},
+					{
+						"name": "NOI Qty",
+						"type": "String"
+					},
+					{
+						"name": "NOI Destination",
+						"type": "String"
+					},
+					{
+						"name": "NOI Plan",
+						"type": "String"
+					},
+					{
+						"name": "NOI Fcst",
+						"type": "String"
+					},
+					{
+						"name": "NOI Act",
+						"type": "String"
+					},
+					{
+						"name": "IRC Nr",
+						"type": "String"
+					},
+					{
+						"name": "IRC Approved Date",
+						"type": "String"
+					},
+					{
+						"name": "IRC Qty",
+						"type": "String"
+					},
+					{
+						"name": "Balance IRC Qty",
+						"type": "String"
+					},
+					{
+						"name": "Act Insp Date",
+						"type": "String"
+					},
+					{
+						"name": "IRC Destination",
+						"type": "String"
+					},
+					{
+						"name": "IRC Plan",
+						"type": "String"
+					},
+					{
+						"name": "IRC Fcst",
+						"type": "String"
+					},
+					{
+						"name": "IRC Act",
+						"type": "String"
+					},
+					{
+						"name": "Release Note Nr",
+						"type": "String"
+					},
+					{
+						"name": "RN Date",
+						"type": "String"
+					},
+					{
+						"name": "RN Qty",
+						"type": "String"
+					},
+					{
+						"name": "Balance RN Qty",
+						"type": "String"
+					},
+					{
+						"name": "RN Approved Date",
+						"type": "String"
+					},
+					{
+						"name": "RN Delivery Date",
+						"type": "String"
+					},
+					{
+						"name": "RN Ready Date",
+						"type": "String"
+					},
+					{
+						"name": "Hand Over Destination",
+						"type": "String"
+					},
+					{
+						"name": "Hand Over Plan",
+						"type": "String"
+					},
+					{
+						"name": "Hand Over Fcst",
+						"type": "String"
+					},
+					{
+						"name": "Hand Over Act",
+						"type": "String"
+					},
+					{
+						"name": "1ST Ship Destination",
+						"type": "String"
+					},
+					{
+						"name": "1ST Ship Plan",
+						"type": "String"
+					},
+					{
+						"name": "1ST Ship Fcst",
+						"type": "String"
+					},
+					{
+						"name": "1ST Ship Act",
+						"type": "String"
+					},
+					{
+						"name": "2ND Ship Destination",
+						"type": "String"
+					},
+					{
+						"name": "2ND Ship Plan",
+						"type": "String"
+					},
+					{
+						"name": "2ND Ship Fcst",
+						"type": "String"
+					},
+					{
+						"name": "2ND Ship Act",
+						"type": "String"
+					},
+					{
+						"name": "3RD Ship Destination",
+						"type": "String"
+					},
+					{
+						"name": "3RD Ship Plan",
+						"type": "String"
+					},
+					{
+						"name": "3RD Ship Fcst",
+						"type": "String"
+					},
+					{
+						"name": "3RD Ship Act",
+						"type": "String"
+					},
+					{
+						"name": "Traffic Arr Destination",
+						"type": "String"
+					},
+					{
+						"name": "Traffic Arr Plan",
+						"type": "String"
+					},
+					{
+						"name": "Traffic Arr Fcst",
+						"type": "String"
+					},
+					{
+						"name": "Traffic Arr Act",
+						"type": "String"
+					},
+					{
+						"name": "Arr On Site Destination",
+						"type": "String"
+					},
+					{
+						"name": "Arr On Site Plan",
+						"type": "String"
+					},
+					{
+						"name": "Arr On Site Fcst",
+						"type": "String"
+					},
+					{
+						"name": "Arr On Site Act",
+						"type": "String"
+					},
+					{
+						"name": "Shipment Number",
+						"type": "String"
+					},
+					{
+						"name": "MOC",
+						"type": "String"
+					},
+					{
+						"name": "Transport No",
+						"type": "String"
+					},
+					{
+						"name": "Departure Point",
+						"type": "String"
+					},
+					{
+						"name": "Arrival Point",
+						"type": "String"
+					},
+					{
+						"name": "Shipment ETD",
+						"type": "String"
+					},
+					{
+						"name": "Shipment ATD",
+						"type": "String"
+					},
+					{
+						"name": "Shipment ETA",
+						"type": "String"
+					},
+					{
+						"name": "Shipment ATA",
+						"type": "String"
+					},
+					{
+						"name": "No of Cont",
+						"type": "String"
+					},
+					{
+						"name": "Pre-Ship MOC",
+						"type": "String"
+					},
+					{
+						"name": "Pre-Ship Transport No",
+						"type": "String"
+					},
+					{
+						"name": "Pre-Ship Dept Point",
+						"type": "String"
+					},
+					{
+						"name": "Pre-Ship Arr Point",
+						"type": "String"
+					},
+					{
+						"name": "Pre-Ship ETD",
+						"type": "String"
+					},
+					{
+						"name": "Pre-Ship ATD",
+						"type": "String"
+					},
+					{
+						"name": "Pre-Ship ETA",
+						"type": "String"
+					},
+					{
+						"name": "Pre-Ship ATA",
+						"type": "String"
+					},
+					{
+						"name": "Pre-Ship Freight Ton",
+						"type": "String"
+					},
+					{
+						"name": "Pre-Ship No of Pack",
+						"type": "String"
+					},
+					{
+						"name": "Post-Ship MOC",
+						"type": "String"
+					},
+					{
+						"name": "Post-Ship Transport No",
+						"type": "String"
+					},
+					{
+						"name": "Post-Ship Dept Point",
+						"type": "String"
+					},
+					{
+						"name": "Post-Ship Arr Point",
+						"type": "String"
+					},
+					{
+						"name": "Post-Ship ETD",
+						"type": "String"
+					},
+					{
+						"name": "Post-Ship ATD",
+						"type": "String"
+					},
+					{
+						"name": "Post-Ship ETA",
+						"type": "String"
+					},
+					{
+						"name": "Post-Ship ATA",
+						"type": "String"
+					},
+					{
+						"name": "Post-Ship Freight Ton",
+						"type": "String"
+					},
+					{
+						"name": "Post-Ship No of Pack",
+						"type": "String"
+					},
+					{
+						"name": "MRR Number",
+						"type": "String"
+					},
+					{
+						"name": "MRR Rev Nr",
+						"type": "String"
+					},
+					{
+						"name": "(1st of) MRR Created Date(s)",
+						"type": "String"
+					},
+					{
+						"name": "(Earliest) Matl Recv Date",
+						"type": "String"
+					},
+					{
+						"name": "MRR Posted Date",
+						"type": "String"
+					},
+					{
+						"name": "MRR Quantity",
+						"type": "String"
+					},
+					{
+						"name": "OSD Number",
+						"type": "String"
+					},
+					{
+						"name": "OSD Created Date",
+						"type": "String"
+					},
+					{
+						"name": "OSD Qty",
+						"type": "String"
+					},
+					{
+						"name": "OSD Type",
+						"type": "String"
+					},
+					{
+						"name": "OSD Request Action",
+						"type": "String"
+					},
+					{
+						"name": "OSD Action Taken",
+						"type": "String"
+					},
+					{
+						"name": "OSD Closed Date",
+						"type": "String"
+					},
+					{
+						"name": "Buyer",
+						"type": "String"
+					},
+					{
+						"name": "Expeditor",
+						"type": "String"
+					},
+					{
+						"name": "Package Manager",
+						"type": "String"
+					},
+					{
+						"name": "Item Comments",
+						"type": "String"
+					},
+					{
+						"name": "Header Comment",
+						"type": "String"
+					},
+					{
+						"name": "Color",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_ecm_restapi')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_ecm_restapi",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "RestResource",
+				"typeProperties": {},
+				"schema": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_ecm_user_roles_groups_restapi_source')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_ecm_user_roles_groups_restapi",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/ECM User Roles Groups"
+				},
+				"annotations": [],
+				"type": "RestResource",
+				"typeProperties": {},
+				"schema": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_eut_synapse')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "AzureSqlDWTable",
+				"schema": [
+					{
+						"name": "rssk",
+						"type": "bigint",
+						"precision": 19
+					},
+					{
+						"name": "Usage_DT",
+						"type": "varchar"
+					},
+					{
+						"name": "Vendor",
+						"type": "varchar"
+					},
+					{
+						"name": "Application",
+						"type": "varchar"
+					},
+					{
+						"name": "User_Name",
+						"type": "varchar"
+					},
+					{
+						"name": "CreatedDateTime",
+						"type": "varchar"
+					},
+					{
+						"name": "File_Name",
+						"type": "varchar"
+					}
+				],
+				"typeProperties": {
+					"schema": "eud",
+					"table": "EUT_txt_Aveva"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_excel_eut')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_network_file_share",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"path": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "Excel",
+				"typeProperties": {
+					"sheetName": {
+						"value": "Sheet1",
+						"type": "Expression"
+					},
+					"location": {
+						"type": "FileServerLocation",
+						"folderPath": {
+							"value": "@dataset().path",
+							"type": "Expression"
+						}
+					},
+					"firstRowAsHeader": true
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		}
+	]
+}

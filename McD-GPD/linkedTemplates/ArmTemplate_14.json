@@ -1,0 +1,1235 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "McD-GPD"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_coconsole_csv_gen')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ADLSG2 TimeAnalytics DEV",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"p_ds_filesystem": {
+						"type": "string"
+					},
+					"p_ds_directory": {
+						"type": "string"
+					},
+					"p_ds_filename": {
+						"type": "string"
+					},
+					"p_ds_first_row_header": {
+						"type": "bool"
+					}
+				},
+				"folder": {
+					"name": "Projects/NCSA/Co Console"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": {
+							"value": "@dataset().p_ds_filename",
+							"type": "Expression"
+						},
+						"folderPath": {
+							"value": "@dataset().p_ds_directory",
+							"type": "Expression"
+						},
+						"fileSystem": {
+							"value": "@dataset().p_ds_filesystem",
+							"type": "Expression"
+						}
+					},
+					"columnDelimiter": "\u0001",
+					"escapeChar": "\\",
+					"firstRowAsHeader": {
+						"value": "@dataset().p_ds_first_row_header",
+						"type": "Expression"
+					},
+					"quoteChar": "^"
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_coconsole_punchitem_raw')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ADLSG2 TimeAnalytics DEV",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/NCSA/Co Console"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "Project_Data/NCSA/CoConsole/PunchItem",
+						"fileSystem": "mdr-raw-data"
+					},
+					"columnDelimiter": "\u0001",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "^"
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_coconsole_punchitem_raw_latest')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Data set for the latest combined RAW .CSV file.",
+				"linkedServiceName": {
+					"referenceName": "ADLSG2 TimeAnalytics DEV",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/NCSA/Co Console"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": "Latest_PunchItem.csv",
+						"folderPath": "Project_Data/NCSA/CoConsole/PunchItem",
+						"fileSystem": "mdr-raw-data"
+					},
+					"columnDelimiter": "\u0001",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "^"
+				},
+				"schema": [
+					{
+						"name": "Project",
+						"type": "String"
+					},
+					{
+						"name": "System",
+						"type": "String"
+					},
+					{
+						"name": "System Description",
+						"type": "String"
+					},
+					{
+						"name": "Sub System",
+						"type": "String"
+					},
+					{
+						"name": "Sub System Description",
+						"type": "String"
+					},
+					{
+						"name": "Tag Number",
+						"type": "String"
+					},
+					{
+						"name": "Tag Description",
+						"type": "String"
+					},
+					{
+						"name": "Tag Type",
+						"type": "String"
+					},
+					{
+						"name": "Punch Item",
+						"type": "String"
+					},
+					{
+						"name": "Description",
+						"type": "String"
+					},
+					{
+						"name": "Discipline",
+						"type": "String"
+					},
+					{
+						"name": "Discipline Desc.",
+						"type": "String"
+					},
+					{
+						"name": "Category",
+						"type": "String"
+					},
+					{
+						"name": "Raised By",
+						"type": "String"
+					},
+					{
+						"name": "Raised Date",
+						"type": "String"
+					},
+					{
+						"name": "Action By",
+						"type": "String"
+					},
+					{
+						"name": "Notes",
+						"type": "String"
+					},
+					{
+						"name": "Status",
+						"type": "String"
+					},
+					{
+						"name": "Cleared By",
+						"type": "String"
+					},
+					{
+						"name": "Cleared Date",
+						"type": "String"
+					},
+					{
+						"name": "Verified By",
+						"type": "String"
+					},
+					{
+						"name": "Verified Date",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_coconsole_punchitem_stg')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ADLSG2 TimeAnalytics DEV",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/NCSA/Co Console"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "Project_Data/NCSA/CoConsole/PunchItem",
+						"fileSystem": "mdr-staging-data"
+					},
+					"columnDelimiter": "\u0001",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "^"
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_csv_CoA_raw')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ADLSG2 TimeAnalytics DEV",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/NCSA/CoA"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": "CoA_MCPM*.csv",
+						"folderPath": "Project_Data/NCSA/MCPM/CoA",
+						"fileSystem": "mdr-raw-data"
+					},
+					"columnDelimiter": "|",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_csv_CoA_staging')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ADLSG2 TimeAnalytics DEV",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "Project_Data/NCSA/MCPM/CoA",
+						"fileSystem": "mdr-staging-data"
+					},
+					"columnDelimiter": "|",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "Domain|CoA|Coa_Title|CostCode|CostCode_Title|CostType|SCT|WBS|WBS_Title|WBSLevel2|WBSLevel2_Title|WBSLevel3|WBSLevel3_Title|WBSLevel4|WBSLevel4_Title|KeyUoMImperial|KeyUoMMetric|PSRLevel1|PSRLevel2|PSRLevel1_Title|PSRLevel2_Title|Phase|Phase_Title|domain_code_ct|Source",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_csv_Cost_Types_raw')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ADLSG2 TimeAnalytics DEV",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/NCSA/CostTypes"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "Project_Data/NCSA/MCPM/CostTypes",
+						"fileSystem": "mdr-raw-data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_csv_InboxTask_StageJSON')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Initial CSV file for P6 Engineering Man Hours Histogram",
+				"linkedServiceName": {
+					"referenceName": "ADLSG2 TimeAnalytics DEV",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"p_ds_snkstgpath": {
+						"type": "string"
+					}
+				},
+				"folder": {
+					"name": "Projects/NCSA/PLM"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": {
+							"value": "@dataset().p_ds_snkstgpath",
+							"type": "Expression"
+						},
+						"fileSystem": "mdr-staging-data"
+					},
+					"columnDelimiter": "\u0001",
+					"escapeChar": "|",
+					"firstRowAsHeader": true,
+					"quoteChar": "^"
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_csv_P6_resource_spread_direct_raw')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ADLSG2 TimeAnalytics DEV",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/NCSA/Resource Spread Direct"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "Project_Data/NCSA/P6/Resource_Spread_Direct",
+						"fileSystem": "mdr-raw-data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_csv_P6_resource_spread_direct_raw_latest')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Data set for the latest combined RAW .CSV file.",
+				"linkedServiceName": {
+					"referenceName": "ADLSG2 TimeAnalytics DEV",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/NCSA/Resource Spread Direct"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": "Latest_p6_resource_spread_direct.csv",
+						"folderPath": "Project_Data/NCSA/P6/Resource_Spread_Direct",
+						"fileSystem": "mdr-raw-data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "hid",
+						"type": "String"
+					},
+					{
+						"name": "project no",
+						"type": "String"
+					},
+					{
+						"name": "project description",
+						"type": "String"
+					},
+					{
+						"name": "Activity ID",
+						"type": "String"
+					},
+					{
+						"name": "Activity Name",
+						"type": "String"
+					},
+					{
+						"name": "Original Duration",
+						"type": "String"
+					},
+					{
+						"name": "Actual Duration",
+						"type": "String"
+					},
+					{
+						"name": "Remaining Duration",
+						"type": "String"
+					},
+					{
+						"name": "Start",
+						"type": "String"
+					},
+					{
+						"name": "Finish",
+						"type": "String"
+					},
+					{
+						"name": "Actual Start",
+						"type": "String"
+					},
+					{
+						"name": "Actual Finish",
+						"type": "String"
+					},
+					{
+						"name": "Calendar",
+						"type": "String"
+					},
+					{
+						"name": "Budgeted Units",
+						"type": "String"
+					},
+					{
+						"name": "Actual Units",
+						"type": "String"
+					},
+					{
+						"name": "Remaining Units",
+						"type": "String"
+					},
+					{
+						"name": "WBS",
+						"type": "String"
+					},
+					{
+						"name": "WBS Name",
+						"type": "String"
+					},
+					{
+						"name": "Cost Account",
+						"type": "String"
+					},
+					{
+						"name": "Role",
+						"type": "String"
+					},
+					{
+						"name": "Resource ID",
+						"type": "String"
+					},
+					{
+						"name": "Resource ID Name",
+						"type": "String"
+					},
+					{
+						"name": "Resource Name",
+						"type": "String"
+					},
+					{
+						"name": "Resource Type",
+						"type": "String"
+					},
+					{
+						"name": "Total Float",
+						"type": "String"
+					},
+					{
+						"name": "Free Float",
+						"type": "String"
+					},
+					{
+						"name": "BL Project Start",
+						"type": "String"
+					},
+					{
+						"name": "BL Project Finish",
+						"type": "String"
+					},
+					{
+						"name": "Critical",
+						"type": "String"
+					},
+					{
+						"name": "Activity Type",
+						"type": "String"
+					},
+					{
+						"name": "Longest Path",
+						"type": "String"
+					},
+					{
+						"name": "Primary Constraint Date",
+						"type": "String"
+					},
+					{
+						"name": "Secondary Constraint Date",
+						"type": "String"
+					},
+					{
+						"name": "Primary Constraint",
+						"type": "String"
+					},
+					{
+						"name": "Secondary Constraint",
+						"type": "String"
+					},
+					{
+						"name": "Expected Finish",
+						"type": "String"
+					},
+					{
+						"name": "Suspend Date",
+						"type": "String"
+					},
+					{
+						"name": "Resume Date",
+						"type": "String"
+					},
+					{
+						"name": "BL Project Labor Units",
+						"type": "String"
+					},
+					{
+						"name": "Earned Value Labor Units",
+						"type": "String"
+					},
+					{
+						"name": "Planned Value Labor Units",
+						"type": "String"
+					},
+					{
+						"name": "BL Project Duration",
+						"type": "String"
+					},
+					{
+						"name": "Physical Percent Complete",
+						"type": "String"
+					},
+					{
+						"name": "Predecessors",
+						"type": "String"
+					},
+					{
+						"name": "Successors",
+						"type": "String"
+					},
+					{
+						"name": "Predecessor Details",
+						"type": "String"
+					},
+					{
+						"name": "Successors Details",
+						"type": "String"
+					},
+					{
+						"name": "Late Start",
+						"type": "String"
+					},
+					{
+						"name": "Late Finish",
+						"type": "String"
+					},
+					{
+						"name": "GLOBAL - CHANGE MANAGEMENT",
+						"type": "String"
+					},
+					{
+						"name": "GLOBAL - EXECUTED BY TYPE",
+						"type": "String"
+					},
+					{
+						"name": "GLOBAL - FUNCTION",
+						"type": "String"
+					},
+					{
+						"name": "GLOBAL - MILESTONES",
+						"type": "String"
+					},
+					{
+						"name": "GLOBAL - OFFICE",
+						"type": "String"
+					},
+					{
+						"name": "GLOBAL - PHASE",
+						"type": "String"
+					},
+					{
+						"name": "GLOBAL - PRIME (GCOA V11)",
+						"type": "String"
+					},
+					{
+						"name": "GLOBAL - PRIME (GCOA V13)",
+						"type": "String"
+					},
+					{
+						"name": "GLOBAL - REGION",
+						"type": "String"
+					},
+					{
+						"name": "GLOBAL - SCHEDULE RISK ASSESSMENT",
+						"type": "String"
+					},
+					{
+						"name": "GLOBAL - STORAGE SOLUTIONS",
+						"type": "String"
+					},
+					{
+						"name": "GLOBAL - SUBPRIME (GCOA V11)",
+						"type": "String"
+					},
+					{
+						"name": "GLOBAL - SUBPRIME (GCOA V13)",
+						"type": "String"
+					},
+					{
+						"name": "GLOBAL - SUPPLY CHAIN",
+						"type": "String"
+					},
+					{
+						"name": "Spreadsheet Field",
+						"type": "String"
+					},
+					{
+						"name": "Period",
+						"type": "String"
+					},
+					{
+						"name": "Period Value",
+						"type": "String"
+					},
+					{
+						"name": "created date time",
+						"type": "String"
+					},
+					{
+						"name": "PRIME",
+						"type": "String"
+					},
+					{
+						"name": "SUBPRIME",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_csv_P6_resource_spread_direct_stage')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ADLSG2 TimeAnalytics DEV",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/NCSA/Resource Spread Direct"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "Project_Data/NCSA/P6/Resource_Spread_Direct",
+						"fileSystem": "mdr-staging-data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_csv_P6_resource_spread_raw')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ADLSG2 TimeAnalytics DEV",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/NCSA/Resource Spread"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "Project_Data/NCSA/P6/Resource_Spread",
+						"fileSystem": "mdr-raw-data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_csv_P6_resource_spread_raw_latest')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Data set for the latest combined RAW .CSV file.",
+				"linkedServiceName": {
+					"referenceName": "ADLSG2 TimeAnalytics DEV",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/NCSA/Resource Spread"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": "Latest_p6_resource_spread.csv",
+						"folderPath": "Project_Data/NCSA/P6/Resource_Spread",
+						"fileSystem": "mdr-raw-data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_csv_P6_resource_spread_stage')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ADLSG2 TimeAnalytics DEV",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/NCSA/Resource Spread"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "Project_Data/NCSA/P6/Resource_Spread",
+						"fileSystem": "mdr-staging-data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_csv_P6engr_hc_fcst_raw')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ADLSG2 TimeAnalytics DEV",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/NCSA/P6 Engineering"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "Project_Data/NCSA/P6/Engineering_Headcount",
+						"fileSystem": "mdr-raw-data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_csv_P6engr_hc_fcst_raw_latest')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Data set for the latest combined RAW .CSV file.",
+				"linkedServiceName": {
+					"referenceName": "ADLSG2 TimeAnalytics DEV",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/NCSA/P6 Engineering"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": "Latest_p6_engr_hc_fcst.csv",
+						"folderPath": "Project_Data/NCSA/P6/Engineering_Headcount",
+						"fileSystem": "mdr-raw-data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_csv_P6engr_hc_fcst_stage')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ADLSG2 TimeAnalytics DEV",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/NCSA/P6 Engineering"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "Project_Data/NCSA/P6/Engineering_Headcount",
+						"fileSystem": "mdr-staging-data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_csv_P6engr_mhrs_histo_stage')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ADLSG2 TimeAnalytics DEV",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/NCSA/P6 Engr Histogram"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "Project_Data/NCSA/P6/Engineering_Histogram",
+						"fileSystem": "mdr-staging-data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_csv_R2P_PO_Commitment_Details_source_stage_final_csv')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_src_snk_adgls2_ykpi",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/R2P_PO_Commitment_Details"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "Project_Data/NCSA/R2P_PO_Commitment_Details",
+						"fileSystem": "mdr-staging-data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adlsg2_csv_R2P_PO_Commitment_Details_source_stage_final_flatten_csv')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_src_snk_adgls2_ykpi",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/R2P_PO_Commitment_Details"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": "R2P_PO_Commitment_Details_Report.csv",
+						"folderPath": "Project_Data/NCSA/R2P_PO_Commitment_Details",
+						"fileSystem": "mdr-staging-data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "AMOUNT_ORDERED",
+						"type": "String"
+					},
+					{
+						"name": "AREA",
+						"type": "String"
+					},
+					{
+						"name": "CONTRACTID",
+						"type": "String"
+					},
+					{
+						"name": "CONVERSION_RATE",
+						"type": "String"
+					},
+					{
+						"name": "COSTOBJECTID",
+						"type": "String"
+					},
+					{
+						"name": "DISTRIBUTION_NUM",
+						"type": "String"
+					},
+					{
+						"name": "ENTITYID",
+						"type": "String"
+					},
+					{
+						"name": "EXPENDITURETYPE",
+						"type": "String"
+					},
+					{
+						"name": "FEATURECODE",
+						"type": "String"
+					},
+					{
+						"name": "ITEM_DESCRIPTION",
+						"type": "String"
+					},
+					{
+						"name": "ITEM_ID",
+						"type": "String"
+					},
+					{
+						"name": "ITEM_NUMBER",
+						"type": "String"
+					},
+					{
+						"name": "JOBNUMBERID",
+						"type": "String"
+					},
+					{
+						"name": "LATEST_STATUS",
+						"type": "String"
+					},
+					{
+						"name": "LEDGERAMOUNTINVOICED",
+						"type": "String"
+					},
+					{
+						"name": "LEDGERAMOUNTOPEN",
+						"type": "String"
+					},
+					{
+						"name": "LEDGERCURRENCY",
+						"type": "String"
+					},
+					{
+						"name": "LEDGERCURRENCYAMOUNT",
+						"type": "String"
+					},
+					{
+						"name": "LINE_AMOUNT_RECEIVED",
+						"type": "String"
+					},
+					{
+						"name": "MPP_PO",
+						"type": "String"
+					},
+					{
+						"name": "MRRINVOICEAMOUNT",
+						"type": "String"
+					},
+					{
+						"name": "ONEMDRCOSTTYPE",
+						"type": "String"
+					},
+					{
+						"name": "OPENCOMMITMENTAMOUNT",
+						"type": "String"
+					},
+					{
+						"name": "POCLOSEDDATE",
+						"type": "String"
+					},
+					{
+						"name": "PODESCRIPTION",
+						"type": "String"
+					},
+					{
+						"name": "PONUMBER",
+						"type": "String"
+					},
+					{
+						"name": "POPROJECT",
+						"type": "String"
+					},
+					{
+						"name": "POREV",
+						"type": "String"
+					},
+					{
+						"name": "POREVCOUNT",
+						"type": "String"
+					},
+					{
+						"name": "POTITLE",
+						"type": "String"
+					},
+					{
+						"name": "POVENDOR1",
+						"type": "String"
+					},
+					{
+						"name": "PO_LINE_NUM",
+						"type": "String"
+					},
+					{
+						"name": "PO_MATCH_APPROVAL_LEVEL",
+						"type": "String"
+					},
+					{
+						"name": "PURCHASE_BASIS",
+						"type": "String"
+					},
+					{
+						"name": "QUANTITY",
+						"type": "String"
+					},
+					{
+						"name": "RATE",
+						"type": "String"
+					},
+					{
+						"name": "REFERENCE",
+						"type": "String"
+					},
+					{
+						"name": "REQUISTIONNUMBER",
+						"type": "String"
+					},
+					{
+						"name": "STATUS",
+						"type": "String"
+					},
+					{
+						"name": "SUBFUNCTIONID",
+						"type": "String"
+					},
+					{
+						"name": "TASKNAME",
+						"type": "String"
+					},
+					{
+						"name": "TASKNUMBER",
+						"type": "String"
+					},
+					{
+						"name": "TASKORGAREA",
+						"type": "String"
+					},
+					{
+						"name": "TASKORGLE",
+						"type": "String"
+					},
+					{
+						"name": "TRANSACTIONAMOUNT",
+						"type": "String"
+					},
+					{
+						"name": "TRANSACTIONAMOUNTUSD",
+						"type": "String"
+					},
+					{
+						"name": "TRANSACTIONCURRENCY",
+						"type": "String"
+					},
+					{
+						"name": "UNITOFMEASUREID",
+						"type": "String"
+					},
+					{
+						"name": "USD_RATE",
+						"type": "String"
+					},
+					{
+						"name": "CURRDATE",
+						"type": "String"
+					},
+					{
+						"name": "PO",
+						"type": "String"
+					},
+					{
+						"name": "P_PROJECT",
+						"type": "String"
+					},
+					{
+						"name": "P_RUN_DATE",
+						"type": "String"
+					},
+					{
+						"name": "P_START_DATE",
+						"type": "String"
+					},
+					{
+						"name": "source_name",
+						"type": "String"
+					},
+					{
+						"name": "sub_source_name",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": []
+		}
+	]
+}

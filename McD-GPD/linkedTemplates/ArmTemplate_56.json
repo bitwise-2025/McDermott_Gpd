@@ -1,0 +1,1376 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "McD-GPD"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/df_activity_cwp_sitepro_stage_to_raw')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_sitepro_cwp_stage",
+								"type": "DatasetReference"
+							},
+							"name": "sourceCWPSiteproStage"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_cwp_sitepro_raw",
+								"type": "DatasetReference"
+							},
+							"name": "snkCWPSiteproRaw"
+						}
+					],
+					"transformations": [
+						{
+							"name": "setFileName"
+						}
+					],
+					"script": "source(output(\n\t\tstage_ncsa_activity_id as string,\n\t\tProjectID as string,\n\t\tProject as string,\n\t\tProjectDescription as string,\n\t\tActivity as string,\n\t\tDescription as string,\n\t\tScheduleUnit as string,\n\t\tScheduleResource as string,\n\t\tActivityStatus as string,\n\t\tOriginalDuration as string,\n\t\tRemainingDuration as string,\n\t\tActualStart as date,\n\t\tActualFinish as date,\n\t\tBudgetLaborUnit as string,\n\t\tPercentCompleteType as string,\n\t\tExecutedByType as string,\n\t\tPrime as string,\n\t\tSubPrime as string,\n\t\tScheduleWorkArea as string,\n\t\tExecutedBy as string,\n\t\tEarlyStartDate as string,\n\t\tEarlyFinishDate as string,\n\t\tIsOnCriticalPath as boolean,\n\t\tTotalFloat as string,\n\t\tStagingReference as string,\n\t\tCWP as string,\n\t\tCWPDescription as string,\n\t\tEWP as string,\n\t\tEWPDescription as string,\n\t\tdim_entp_project_nk as string,\n\t\tS_WorkArea as string,\n\t\tPlannedStart as string,\n\t\tPlannedFinish as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\twildcardPaths:['Project_Data/NCSA/SitePro/CWP/sitepro_cwp.csv']) ~> sourceCWPSiteproStage\nsourceCWPSiteproStage derive(FileName = concat( 'Project_Data/NCSA/SitePro/CWP/',        substring(toString(currentTimestamp()),1,4),        '/',substring(toString(currentTimestamp()),6,2),        '/',substring(toString(currentTimestamp()),9,2),        '/',        'sitepro_cwp_',        replace(replace(toString(currentTimestamp()),'.',''),':',''),        '.csv')) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\trowUrlColumn:'FileName',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tmapColumn(\n\t\tstage_ncsa_activity_id,\n\t\tProjectID,\n\t\tProject,\n\t\tProjectDescription,\n\t\tActivity,\n\t\tDescription,\n\t\tScheduleUnit,\n\t\tScheduleResource,\n\t\tActivityStatus,\n\t\tOriginalDuration,\n\t\tRemainingDuration,\n\t\tActualStart,\n\t\tActualFinish,\n\t\tBudgetLaborUnit,\n\t\tPercentCompleteType,\n\t\tExecutedByType,\n\t\tPrime,\n\t\tSubPrime,\n\t\tScheduleWorkArea,\n\t\tExecutedBy,\n\t\tEarlyStartDate,\n\t\tEarlyFinishDate,\n\t\tIsOnCriticalPath,\n\t\tTotalFloat,\n\t\tStagingReference,\n\t\tCWP,\n\t\tCWPDescription,\n\t\tEWP,\n\t\tEWPDescription,\n\t\tdim_entp_project_nk,\n\t\tS_WorkArea,\n\t\tPlannedStart,\n\t\tPlannedFinish,\n\t\tFileName\n\t)) ~> snkCWPSiteproRaw"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_coconsole_cert_status_src_to_stg')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/NCSA/Co Console"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_coconsole_certstatus_stg",
+								"type": "DatasetReference"
+							},
+							"name": "SrcCertStatus"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_coconsole_certstatus_stg",
+								"type": "DatasetReference"
+							},
+							"name": "sinkCertStatus"
+						}
+					],
+					"transformations": [
+						{
+							"name": "dcGetProjectPrime"
+						},
+						{
+							"name": "unpivotCertificate"
+						}
+					],
+					"scriptLines": [
+						"parameters{",
+						"     p_df_path as string,",
+						"     p_df_wild_file as string",
+						"}",
+						"source(output(",
+						"          Project as string,",
+						"          System as string,",
+						"          {Sub System} as string,",
+						"          {Sub System Description} as string,",
+						"          SrcFileNam as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     purgeFiles: true,",
+						"     wildcardPaths:[($p_df_path + '/' + $p_df_wild_file)]) ~> SrcCertStatus",
+						"SrcCertStatus derive(Project = iif(length(trim(Project))>5,concat('99',trim(Project)),trim(Project)),",
+						"          each(match(not(in(['PROJECT','SYSTEM','SUB SYSTEM','SUB SYSTEM DESCRIPTION','SRCFILENAM'],upper(name)))), $$ = iif(length(rtrim($$,'-'))==0,toString(null()),rtrim($$,'-')))) ~> dcGetProjectPrime",
+						"dcGetProjectPrime unpivot(output(",
+						"          Certificate as string,",
+						"          Value as string",
+						"     ),",
+						"     ungroupBy(Project,",
+						"          System,",
+						"          {Sub System},",
+						"          {Sub System Description},",
+						"          SrcFileNam),",
+						"     lateral: false,",
+						"     ignoreNullPivots: true) ~> unpivotCertificate",
+						"unpivotCertificate sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     partitionFileNames:[(concat('Inter_', toString(currentUTC()),'.csv'))],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> sinkCertStatus"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_coconsole_certifcates_stage_to_raw')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Data Flow to pull data from ADLS Stg to ADLS Raw.\nNo schema defined in source or Target, Schema drift was used along with column rules to direct data into Sink.",
+				"folder": {
+					"name": "Projects/NCSA/Co Console"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_coconsole_certstatus_stg",
+								"type": "DatasetReference"
+							},
+							"name": "srcCertStatusReportStage"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_coconsole_certstatus_raw",
+								"type": "DatasetReference"
+							},
+							"name": "snkCertStatusRaw"
+						}
+					],
+					"transformations": [
+						{
+							"name": "setFileName"
+						}
+					],
+					"script": "parameters{\n\tWildPath as string,\n\tFileName as string\n}\nsource(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\trowUrlColumn: 'Filename',\n\twildcardPaths:[($WildPath + $FileName + '.csv')]) ~> srcCertStatusReportStage\nsrcCertStatusReportStage derive(Filename = concat($WildPath,substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',$FileName,'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv'),\n\t\teach(match(name=='Project'), $$ = iif(length($$)>5,concat('99',$$),toString($$))),\n\t\teach(match((in(['SSMCC Issue Date','SSMCC Acceptance Date'],name))), $$ = rtrim($$,'-'))) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\trowUrlColumn:'Filename',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: []) ~> snkCertStatusRaw"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_coconsole_checksheet_raw_to_synp')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Data Flow to pull data from ADLS RAW to Synapse database\nData Transformation used to update PROJECT  and perform other ETL activities",
+				"folder": {
+					"name": "Projects/NCSA/Co Console"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_coconsole_cs_raw_latest",
+								"type": "DatasetReference"
+							},
+							"name": "srcCheckSheetRAWLatest"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_AzureSynapseAnalytics_coconsole_checksheet",
+								"type": "DatasetReference"
+							},
+							"name": "snkChekSheetRptSynapse"
+						}
+					],
+					"transformations": [
+						{
+							"name": "DataTransformation"
+						},
+						{
+							"name": "FltNULL"
+						}
+					],
+					"script": "source(output(\n\t\tProject as string,\n\t\t{System No} as string,\n\t\t{System Description} as string,\n\t\t{Sub System} as string,\n\t\t{Sub System Descr.} as string,\n\t\tObject as string,\n\t\t{Object Description} as string,\n\t\tType as string,\n\t\tDisc as string,\n\t\t{Discipline Description} as string,\n\t\tSheet as string,\n\t\t{Sheet Des} as string,\n\t\t{Sheet Status} as string,\n\t\t{Ok Y/N} as string,\n\t\tApprover as string,\n\t\t{Status date} as string,\n\t\tA as string,\n\t\tB as string,\n\t\tC as string,\n\t\tD as string,\n\t\tBarcode as string,\n\t\t{Phase No} as string,\n\t\tSrcFileNam as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false) ~> srcCheckSheetRAWLatest\nsrcCheckSheetRAWLatest derive(Project = iif(length(Project)>5,concat('99',Project),Project)) ~> DataTransformation\nDataTransformation filter(!isNull(Project) && !isNull({System No}) && !isNull({Sub System})) ~> FltNULL\nFltNULL sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tinput(\n\t\tstage_coconsole_checksheet_id as integer,\n\t\tProject as string,\n\t\tSystem_No as string,\n\t\tSystem_Description as string,\n\t\tSub_System as string,\n\t\tSub_System_Descr as string,\n\t\tObject as string,\n\t\tObject_Description as string,\n\t\tType as string,\n\t\tDisc as string,\n\t\tDiscipline_Description as string,\n\t\tSheet as string,\n\t\tSheet_Des as string,\n\t\tSheet_Status as string,\n\t\tOk as string,\n\t\tApprover as string,\n\t\tStatus_date as string,\n\t\tA as string,\n\t\tB as string,\n\t\tC as string,\n\t\tD as string,\n\t\tBarcode as string,\n\t\tPhase_No as string,\n\t\tSrcFileName as string\n\t),\n\tdeletable:false,\n\tinsertable:true,\n\tupdateable:false,\n\tupsertable:false,\n\ttruncate:true,\n\tformat: 'table',\n\tstaged: true,\n\tallowCopyCommand: true,\n\terrorHandlingOption: 'stopOnFirstError',\n\tmapColumn(\n\t\tProject,\n\t\tSystem_No = {System No},\n\t\tSystem_Description = {System Description},\n\t\tSub_System = {Sub System},\n\t\tSub_System_Descr = {Sub System Descr.},\n\t\tObject,\n\t\tObject_Description = {Object Description},\n\t\tType,\n\t\tDisc,\n\t\tDiscipline_Description = {Discipline Description},\n\t\tSheet,\n\t\tSheet_Des = {Sheet Des},\n\t\tSheet_Status = {Sheet Status},\n\t\tOk = {Ok Y/N},\n\t\tApprover,\n\t\tStatus_date = {Status date},\n\t\tA,\n\t\tB,\n\t\tC,\n\t\tD,\n\t\tBarcode,\n\t\tPhase_No = {Phase No},\n\t\tSrcFileName = SrcFileNam\n\t)) ~> snkChekSheetRptSynapse"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_coconsole_checksheet_stage_to_raw')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Data Flow to pull data from ADLS Stg to ADLS Raw.\nNo schema defined in source or Target, Schema drift was used along with column rules to direct data into Sink.",
+				"folder": {
+					"name": "Projects/NCSA/Co Console"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_coconsole_checksheet_stg",
+								"type": "DatasetReference"
+							},
+							"name": "srcCheckSheetReportStage"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_coconsole_checksheet_raw",
+								"type": "DatasetReference"
+							},
+							"name": "snkCheckSheetRptRaw"
+						}
+					],
+					"transformations": [
+						{
+							"name": "setFileName"
+						}
+					],
+					"script": "parameters{\n\tWildPath as string,\n\tFileName as string\n}\nsource(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\trowUrlColumn: 'Filename',\n\twildcardPaths:[($WildPath + $FileName + '.csv')]) ~> srcCheckSheetReportStage\nsrcCheckSheetReportStage derive(Filename = concat($WildPath,substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',$FileName,'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv')) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\trowUrlColumn:'Filename',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: []) ~> snkCheckSheetRptRaw"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_coconsole_punchitem_raw_to_synp')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Data Flow to pull data from ADLS RAW to Synapse database\nData Transformation used to update PROJECT  and perform other ETL activities",
+				"folder": {
+					"name": "Projects/NCSA/Co Console"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_coconsole_punchitem_raw_latest",
+								"type": "DatasetReference"
+							},
+							"name": "srcPunchItemRAWLatest"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_AzureSynapseAnalytics_coconsole_punchitem",
+								"type": "DatasetReference"
+							},
+							"name": "snkPunchItemRptSynapse"
+						}
+					],
+					"transformations": [
+						{
+							"name": "DataTransformation"
+						}
+					],
+					"script": "source(output(\n\t\tProject as string,\n\t\tSystem as string,\n\t\t{System Description} as string,\n\t\t{Sub System} as string,\n\t\t{Sub System Description} as string,\n\t\t{Tag Number} as string,\n\t\t{Tag Description} as string,\n\t\t{Tag Type} as string,\n\t\t{Punch Item} as string,\n\t\tDescription as string,\n\t\tDiscipline as string,\n\t\t{Discipline Desc.} as string,\n\t\tCategory as string,\n\t\t{Raised By} as string,\n\t\t{Raised Date} as string,\n\t\t{Action By} as string,\n\t\tNotes as string,\n\t\tStatus as string,\n\t\t{Cleared By} as string,\n\t\t{Cleared Date} as string,\n\t\t{Verified By} as string,\n\t\t{Verified Date} as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true) ~> srcPunchItemRAWLatest\nsrcPunchItemRAWLatest derive(Project = iif(length(Project)>5,concat('99',Project),Project)) ~> DataTransformation\nDataTransformation sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tdeletable:false,\n\tinsertable:true,\n\tupdateable:false,\n\tupsertable:false,\n\ttruncate:true,\n\tformat: 'table',\n\tstaged: true,\n\tallowCopyCommand: true,\n\terrorHandlingOption: 'stopOnFirstError',\n\tmapColumn(\n\t\tProject,\n\t\tSystem,\n\t\tSystem_Description = {System Description},\n\t\tSub_System = {Sub System},\n\t\tSub_System_Description = {Sub System Description},\n\t\tTag_Number = {Tag Number},\n\t\tTag_Description = {Tag Description},\n\t\tTag_Type = {Tag Type},\n\t\tPunch_Item = {Punch Item},\n\t\tPunch_Item_Description = Description,\n\t\tDiscipline,\n\t\tDiscipline_Desc = {Discipline Desc.},\n\t\tCategory,\n\t\tRaised_By = {Raised By},\n\t\tRaised_Date = {Raised Date},\n\t\tAction_By = {Action By},\n\t\tNotes,\n\t\tStatus,\n\t\tCleared_By = {Cleared By},\n\t\tCleared_Date = {Cleared Date},\n\t\tVerified_By = {Verified By},\n\t\tVerified_Date = {Verified Date}\n\t)) ~> snkPunchItemRptSynapse"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_coconsole_punchitem_stage_to_raw')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Data Flow to pull data from ADLS Stg to ADLS Raw.\nNo schema defined in source or Target, Schema drift was used along with column rules to direct data into Sink.",
+				"folder": {
+					"name": "Projects/NCSA/Co Console"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_coconsole_punchitem_stg",
+								"type": "DatasetReference"
+							},
+							"name": "srcPunchItemReportStage"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_coconsole_punchitem_raw",
+								"type": "DatasetReference"
+							},
+							"name": "snkPunchItemRptRaw"
+						}
+					],
+					"transformations": [
+						{
+							"name": "setFileName"
+						}
+					],
+					"script": "parameters{\n\tWildPath as string,\n\tFileName as string\n}\nsource(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\trowUrlColumn: 'Filename',\n\twildcardPaths:[($WildPath + $FileName + '.csv')]) ~> srcPunchItemReportStage\nsrcPunchItemReportStage derive(Filename = concat($WildPath,substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',$FileName,'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv')) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\trowUrlColumn:'Filename',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: []) ~> snkPunchItemRptRaw"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_contracts_mcpm_stage_to_raw')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/NCSA/Phases"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_MCPM_Contracts_Stage",
+								"type": "DatasetReference"
+							},
+							"name": "srcStage"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_contracts_mcpm_raw",
+								"type": "DatasetReference"
+							},
+							"name": "snkRaw"
+						}
+					],
+					"transformations": [
+						{
+							"name": "setFileName"
+						}
+					],
+					"script": "source(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\trowUrlColumn: 'FileName',\n\twildcardPaths:['Project_Data/NCSA/MCPM/Contracts/contracts_mcpm.csv']) ~> srcStage\nsrcStage derive(FileName = concat('Project_Data/NCSA/MCPM/Contracts/',substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/','contracts_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv')) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tinput(\n\t\tproject_id as string,\n\t\tcontractno as string,\n\t\tlocation as string,\n\t\tEntity as string\n\t),\n\trowUrlColumn:'FileName',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> snkRaw"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_csv')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "DelimitedText1",
+								"type": "DatasetReference"
+							},
+							"name": "source1"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "df_sink",
+								"type": "DatasetReference"
+							},
+							"name": "sink1"
+						}
+					],
+					"transformations": [
+						{
+							"name": "select1"
+						},
+						{
+							"name": "filter1"
+						},
+						{
+							"name": "split1"
+						},
+						{
+							"name": "derivedColumn1"
+						},
+						{
+							"name": "aggregate1"
+						},
+						{
+							"name": "alterRow1"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          employee_id as string,",
+						"          first_name as string,",
+						"          last_name as string,",
+						"          email as string,",
+						"          gender as string,",
+						"          department as string,",
+						"          job_title as string,",
+						"          hire_date as date,",
+						"          salary_inr as integer,",
+						"          city as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false) ~> source1",
+						"source1 select(mapColumn(",
+						"          employee_id,",
+						"          first_name,",
+						"          last_name,",
+						"          email,",
+						"          gender,",
+						"          department,",
+						"          job_title,",
+						"          hire_date,",
+						"          salary_inr,",
+						"          city",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> select1",
+						"select1 filter(salary_inr!=852000) ~> filter1",
+						"filter1 split(city == 'Pune',",
+						"     disjoint: false) ~> split1@(pune, cityotherthanpune)",
+						"split1@cityotherthanpune derive(department = coalesce(department, 'Newteam')) ~> derivedColumn1",
+						"split1@pune aggregate(groupBy(employee_id),",
+						"     salary_inr = max(salary_inr)) ~> aggregate1",
+						"aggregate1 alterRow(insertIf(1==1)) ~> alterRow1",
+						"alterRow1 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> sink1"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_dashboard_data_security_decoding')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/Payment Dashboard/Dashboard Data Security"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_xml_dashboard_data_security_source_stage_encoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SrcEncodedXml"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_delimited_xml_dashboard_data_security_source_stage_decoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SnkDecodedXml"
+						}
+					],
+					"transformations": [
+						{
+							"name": "Decoding"
+						},
+						{
+							"name": "SelectDecodedData"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          {http://www.w3.org/2003/05/soap-envelope,Envelope} as ({http://www.w3.org/2003/05/soap-envelope,Body} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,runReportResponse} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,runReportReturn} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,metaDataList} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean), {http://xmlns.oracle.com/oxp/service/PublicReportService,reportBytes} as string, {http://xmlns.oracle.com/oxp/service/PublicReportService,reportContentType} as string, {http://xmlns.oracle.com/oxp/service/PublicReportService,reportFileID} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean), {http://xmlns.oracle.com/oxp/service/PublicReportService,reportLocale} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean)))), {http://www.w3.org/2003/05/soap-envelope,Header} as string)",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     validationMode: 'none',",
+						"     namespaces: true) ~> SrcEncodedXml",
+						"SrcEncodedXml derive(ReportBytes = fromBase64(toString({http://www.w3.org/2003/05/soap-envelope,Envelope}.{http://www.w3.org/2003/05/soap-envelope,Body}.{http://xmlns.oracle.com/oxp/service/PublicReportService,runReportResponse}.{http://xmlns.oracle.com/oxp/service/PublicReportService,runReportReturn}.{http://xmlns.oracle.com/oxp/service/PublicReportService,reportBytes}))) ~> Decoding",
+						"Decoding select(mapColumn(",
+						"          ReportBytes",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> SelectDecodedData",
+						"SelectDecodedData sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     emptyLinesAsHeader: 1,",
+						"     partitionFileNames:['source_data_decoded.xml'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SnkDecodedXml"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_dashboard_data_security_flattening')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/Payment Dashboard/Dashboard Data Security"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_xml_dashboard_data_security_source_stage_decoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SrcXMl"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_dashboard_data_security_source_stage_final_csv",
+								"type": "DatasetReference"
+							},
+							"name": "SnkCsv"
+						}
+					],
+					"transformations": [
+						{
+							"name": "XmlToCsvflatten"
+						},
+						{
+							"name": "addLoadDetails"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          DATA_DS as (G_1 as (CREATION_DATE as string, EMAIL_ADDRESS as string, IS_DATA_ACCESS_ACTIVE as string, JOB_ROLE_NAME as string, LAST_UPDATE_DATE as string, SECURITY_CONTEXT as string, SECURITY_CONTEXT_VALUE as string, USERNAME as string, USER_ROLE_DATA_ASSIGNMENT_ID as string)[])",
+						"     ),",
+						"     allowSchemaDrift: false,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     validationMode: 'none',",
+						"     namespaces: true) ~> SrcXMl",
+						"SrcXMl foldDown(unroll(DATA_DS.G_1),",
+						"     mapColumn(",
+						"          CREATION_DATE = DATA_DS.G_1.CREATION_DATE,",
+						"          EMAIL_ADDRESS = DATA_DS.G_1.EMAIL_ADDRESS,",
+						"          IS_DATA_ACCESS_ACTIVE = DATA_DS.G_1.IS_DATA_ACCESS_ACTIVE,",
+						"          JOB_ROLE_NAME = DATA_DS.G_1.JOB_ROLE_NAME,",
+						"          LAST_UPDATE_DATE = DATA_DS.G_1.LAST_UPDATE_DATE,",
+						"          SECURITY_CONTEXT = DATA_DS.G_1.SECURITY_CONTEXT,",
+						"          SECURITY_CONTEXT_VALUE = DATA_DS.G_1.SECURITY_CONTEXT_VALUE,",
+						"          USERNAME = DATA_DS.G_1.USERNAME,",
+						"          USER_ROLE_DATA_ASSIGNMENT_ID = DATA_DS.G_1.USER_ROLE_DATA_ASSIGNMENT_ID",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> XmlToCsvflatten",
+						"XmlToCsvflatten derive(source_name = 'SYSTEM',",
+						"          sub_source_name = 'R2P',",
+						"          created_date_time = currentUTC()) ~> addLoadDetails",
+						"addLoadDetails sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     partitionFileNames:['Dashboard_Data_Security.csv'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SnkCsv"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_ecm_restapi')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/ECM"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_ecm_restapi_json",
+								"type": "DatasetReference"
+							},
+							"name": "RestAPISource"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_employeesdata_api_stage",
+								"type": "DatasetReference"
+							},
+							"name": "sink"
+						}
+					],
+					"transformations": [
+						{
+							"name": "FlattenRestApiData"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          status as integer,",
+						"          message as string,",
+						"          total as integer,",
+						"          employeesdata as (country as string, missingfolders as string, modifiedAt as string, oracleID as string, employeeStatus as string, terminationDate as string, createdAt as string, sitename as string, siteid as string, noderef as string, modifiedBy as string, businesslinetwo as string, area as string, documentCreationDate as string, allowTermination as string, hireDate as string, author as string, isExecutive as string, businesslineone as string, planInactiveDate as string, createdBy as string, legacyID as string, location as string, subfolders as (documents as (recorddetails as (identifier as string, recordSearchDispositionAuthority as string, recordSearchDispositionActionAsOf as string, recordOriginatingLocation as string, rootNodeRef as string, recordSearchDispositionEventsEligible as string, recordOriginatingCreationDate as string, recordSearchDispositionInstructions as string, holddetails as string, recordSearchDispositionPeriod as string, recordSearchHasDispositionSchedule as string, recordOriginatingUserId as string, recordSearchVitalRecordReviewPeriod as string, recordSearchDispositionEvents as string, frozenBy as string, recordSearchDispositionActionName as string, recordSearchVitalRecordReviewPeriodExpression as string, recordSearchDispositionPeriodExpression as string, frozenAt as string, origionalName as string, cutoffdate as string), name as string, noofpages as string, noderef as string)[], name as string, noderef as string)[], directdocuments as string, employeename as string)[]",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     documentForm: 'documentPerLine') ~> RestAPISource",
+						"RestAPISource foldDown(unroll(employeesdata.subfolders.documents, employeesdata),",
+						"     mapColumn(",
+						"          employeesdata_country = employeesdata.country,",
+						"          missingfolders = employeesdata.missingfolders,",
+						"          employeesdata_modifiedAt = employeesdata.modifiedAt,",
+						"          employeesdata_oracleID = employeesdata.oracleID,",
+						"          employeesdata_employeeStatus = employeesdata.employeeStatus,",
+						"          employeesdata_terminationDate = employeesdata.terminationDate,",
+						"          employeesdata_createdAt = employeesdata.createdAt,",
+						"          employeesdata_sitename = employeesdata.sitename,",
+						"          employeesdata_siteid = employeesdata.siteid,",
+						"          employeesdata_noderef = employeesdata.noderef,",
+						"          employeesdata_modifiedBy = employeesdata.modifiedBy,",
+						"          employeesdata_businesslinetwo = employeesdata.businesslinetwo,",
+						"          employeesdata_area = employeesdata.area,",
+						"          employeesdata_documentCreationDate = employeesdata.documentCreationDate,",
+						"          employeesdata_allowTermination = employeesdata.allowTermination,",
+						"          employeesdata_hireDate = employeesdata.hireDate,",
+						"          employeesdata_author = employeesdata.author,",
+						"          employeesdata_isExecutive = employeesdata.isExecutive,",
+						"          employeesdata_businesslineone = employeesdata.businesslineone,",
+						"          employeesdata_planInactiveDate = employeesdata.planInactiveDate,",
+						"          employeesdata_createdBy = employeesdata.createdBy,",
+						"          employeesdata_legacyID = employeesdata.legacyID,",
+						"          employeesdata_location = employeesdata.location,",
+						"          recorddetails_identifier = employeesdata.subfolders.documents.recorddetails.identifier,",
+						"          recorddetails_recordSearchDispositionAuthority = employeesdata.subfolders.documents.recorddetails.recordSearchDispositionAuthority,",
+						"          recorddetails_recordSearchDispositionActionAsOf = employeesdata.subfolders.documents.recorddetails.recordSearchDispositionActionAsOf,",
+						"          recorddetails_recordOriginatingLocation = employeesdata.subfolders.documents.recorddetails.recordOriginatingLocation,",
+						"          recorddetails_rootNodeRef = employeesdata.subfolders.documents.recorddetails.rootNodeRef,",
+						"          recorddetails_recordSearchDispositionEventsEligible = employeesdata.subfolders.documents.recorddetails.recordSearchDispositionEventsEligible,",
+						"          recorddetails_recordOriginatingCreationDate = employeesdata.subfolders.documents.recorddetails.recordOriginatingCreationDate,",
+						"          recorddetails_recordSearchDispositionInstructions = employeesdata.subfolders.documents.recorddetails.recordSearchDispositionInstructions,",
+						"          recorddetails_holddetails = employeesdata.subfolders.documents.recorddetails.holddetails,",
+						"          recorddetails_recordSearchDispositionPeriod = employeesdata.subfolders.documents.recorddetails.recordSearchDispositionPeriod,",
+						"          recorddetails_recordSearchHasDispositionSchedule = employeesdata.subfolders.documents.recorddetails.recordSearchHasDispositionSchedule,",
+						"          recorddetails_recordOriginatingUserId = employeesdata.subfolders.documents.recorddetails.recordOriginatingUserId,",
+						"          recorddetails_recordSearchVitalRecordReviewPeriod = employeesdata.subfolders.documents.recorddetails.recordSearchVitalRecordReviewPeriod,",
+						"          recorddetails_recordSearchDispositionEvents = employeesdata.subfolders.documents.recorddetails.recordSearchDispositionEvents,",
+						"          recorddetails_frozenBy = employeesdata.subfolders.documents.recorddetails.frozenBy,",
+						"          recorddetails_recordSearchDispositionActionName = employeesdata.subfolders.documents.recorddetails.recordSearchDispositionActionName,",
+						"          recorddetails_recordSearchVitalRecordReviewPeriodExpression = employeesdata.subfolders.documents.recorddetails.recordSearchVitalRecordReviewPeriodExpression,",
+						"          recorddetails_recordSearchDispositionPeriodExpression = employeesdata.subfolders.documents.recorddetails.recordSearchDispositionPeriodExpression,",
+						"          recorddetails_frozenAt = employeesdata.subfolders.documents.recorddetails.frozenAt,",
+						"          recorddetails_origionalName = employeesdata.subfolders.documents.recorddetails.origionalName,",
+						"          recorddetails_cutoffdate = employeesdata.subfolders.documents.recorddetails.cutoffdate,",
+						"          documents_name = employeesdata.subfolders.documents.name,",
+						"          documents_noofpages = employeesdata.subfolders.documents.noofpages,",
+						"          documents_noderef = employeesdata.subfolders.documents.noderef,",
+						"          subfolders_name = employeesdata.subfolders.name,",
+						"          subfolders_noderef = employeesdata.subfolders.noderef,",
+						"          employeesdata_directdocuments = employeesdata.directdocuments,",
+						"          employeesdata_employeename = employeesdata.employeename",
+						"     ),",
+						"     skipDuplicateMapInputs: false,",
+						"     skipDuplicateMapOutputs: false) ~> FlattenRestApiData",
+						"FlattenRestApiData sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     partitionFileNames:['EmployeesData.csv'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> sink"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_ecm_user_roles_groups_restapi')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/ECM User Roles Groups"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_ecm_user_roles_groups_restapi_source_json",
+								"type": "DatasetReference"
+							},
+							"name": "RestAPISource"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_ecm_user_roles_groups_api_stage",
+								"type": "DatasetReference"
+							},
+							"name": "sink"
+						}
+					],
+					"transformations": [
+						{
+							"name": "FlattenRestApiData"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          hasmore as boolean,",
+						"          details as (username as string, email as string, firstname as string, lastname as string, organization as string, groups as string, sitedetails as (shortname as string, name as string, role as string)[])[]",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     documentForm: 'documentPerLine') ~> RestAPISource",
+						"RestAPISource foldDown(unroll(details.sitedetails, details),",
+						"     mapColumn(",
+						"          username = details.username,",
+						"          email = details.email,",
+						"          firstname = details.firstname,",
+						"          lastname = details.lastname,",
+						"          organization = details.organization,",
+						"          groups = details.groups,",
+						"          sitedetails_shortname = details.sitedetails.shortname,",
+						"          sitedetails_name = details.sitedetails.name,",
+						"          sitedetails_role = details.sitedetails.role",
+						"     ),",
+						"     skipDuplicateMapInputs: false,",
+						"     skipDuplicateMapOutputs: false) ~> FlattenRestApiData",
+						"FlattenRestApiData sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     partitionFileNames:['ECM_User_Roles_Groups.csv'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> sink"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_egp_categories_b_decoding')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/Payment Dashboard/Egp Categories B"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_xml_egp_categories_b_source_stage_encoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SrcEncodedXml"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_delimited_xml_egp_categories_b_source_stage_decoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SnkDecodedXml"
+						}
+					],
+					"transformations": [
+						{
+							"name": "Decoding"
+						},
+						{
+							"name": "SelectDecodedData"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          {http://www.w3.org/2003/05/soap-envelope,Envelope} as ({http://www.w3.org/2003/05/soap-envelope,Body} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,runReportResponse} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,runReportReturn} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,metaDataList} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean), {http://xmlns.oracle.com/oxp/service/PublicReportService,reportBytes} as string, {http://xmlns.oracle.com/oxp/service/PublicReportService,reportContentType} as string, {http://xmlns.oracle.com/oxp/service/PublicReportService,reportFileID} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean), {http://xmlns.oracle.com/oxp/service/PublicReportService,reportLocale} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean)))), {http://www.w3.org/2003/05/soap-envelope,Header} as string)",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     validationMode: 'none',",
+						"     namespaces: true) ~> SrcEncodedXml",
+						"SrcEncodedXml derive(ReportBytes = fromBase64(toString({http://www.w3.org/2003/05/soap-envelope,Envelope}.{http://www.w3.org/2003/05/soap-envelope,Body}.{http://xmlns.oracle.com/oxp/service/PublicReportService,runReportResponse}.{http://xmlns.oracle.com/oxp/service/PublicReportService,runReportReturn}.{http://xmlns.oracle.com/oxp/service/PublicReportService,reportBytes}))) ~> Decoding",
+						"Decoding select(mapColumn(",
+						"          ReportBytes",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> SelectDecodedData",
+						"SelectDecodedData sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     emptyLinesAsHeader: 1,",
+						"     partitionFileNames:['source_data_decoded.xml'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SnkDecodedXml"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_egp_categories_b_flattening')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/Payment Dashboard/Egp Categories B"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_xml_egp_categories_b_source_stage_decoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SrcXMl"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_egp_categories_b_source_stage_final_csv",
+								"type": "DatasetReference"
+							},
+							"name": "SnkCsv"
+						}
+					],
+					"transformations": [
+						{
+							"name": "XmlToCsvflatten"
+						},
+						{
+							"name": "addLoadDetails"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          DATA_DS as (G_1 as (ATTRIBUTE1 as string, ATTRIBUTE10 as string, ATTRIBUTE11 as string, ATTRIBUTE12 as string, ATTRIBUTE13 as string, ATTRIBUTE14 as string, ATTRIBUTE15 as string, ATTRIBUTE2 as string, ATTRIBUTE3 as string, ATTRIBUTE4 as string, ATTRIBUTE5 as string, ATTRIBUTE6 as string, ATTRIBUTE7 as string, ATTRIBUTE8 as string, ATTRIBUTE9 as string, ATTRIBUTE_CATEGORY as string, ATTRIBUTE_DATE1 as string, ATTRIBUTE_DATE2 as string, ATTRIBUTE_DATE3 as string, ATTRIBUTE_DATE4 as string, ATTRIBUTE_DATE5 as string, ATTRIBUTE_NUMBER1 as string, ATTRIBUTE_NUMBER10 as string, ATTRIBUTE_NUMBER2 as string, ATTRIBUTE_NUMBER3 as string, ATTRIBUTE_NUMBER4 as string, ATTRIBUTE_NUMBER5 as string, ATTRIBUTE_NUMBER6 as string, ATTRIBUTE_NUMBER7 as string, ATTRIBUTE_NUMBER8 as string, ATTRIBUTE_NUMBER9 as string, ATTRIBUTE_TIMESTAMP1 as string, ATTRIBUTE_TIMESTAMP2 as string, ATTRIBUTE_TIMESTAMP3 as string, ATTRIBUTE_TIMESTAMP4 as string, ATTRIBUTE_TIMESTAMP5 as string, CATEGORY_CODE as string, CATEGORY_CONTENT_CODE as string, CATEGORY_ID as long, CREATED_BY as string, CREATION_DATE as string, DESCRIPTION as string, DISABLE_DATE as string, ENABLED_FLAG as boolean, END_DATE_ACTIVE as string, JOB_DEFINITION_NAME as string, JOB_DEFINITION_PACKAGE as string, LAST_UPDATED_BY as string, LAST_UPDATE_DATE as string, LAST_UPDATE_LOGIN as string, OBJECT_VERSION_NUMBER as short, PROGRAM_APP_NAME as string, PROGRAM_NAME as string, REQUEST_ID as string, SEGMENT1 as string, SEGMENT10 as string, SEGMENT11 as string, SEGMENT12 as string, SEGMENT13 as string, SEGMENT14 as string, SEGMENT15 as string, SEGMENT16 as string, SEGMENT17 as string, SEGMENT18 as string, SEGMENT19 as string, SEGMENT2 as string, SEGMENT20 as string, SEGMENT3 as string, SEGMENT4 as string, SEGMENT5 as string, SEGMENT6 as string, SEGMENT7 as string, SEGMENT8 as string, SEGMENT9 as string, SEGMENT_NUMBER1 as string, SEGMENT_NUMBER10 as string, SEGMENT_NUMBER11 as string, SEGMENT_NUMBER12 as string, SEGMENT_NUMBER13 as string, SEGMENT_NUMBER14 as string, SEGMENT_NUMBER15 as string, SEGMENT_NUMBER16 as string, SEGMENT_NUMBER17 as string, SEGMENT_NUMBER18 as string, SEGMENT_NUMBER19 as string, SEGMENT_NUMBER2 as string, SEGMENT_NUMBER20 as string, SEGMENT_NUMBER3 as string, SEGMENT_NUMBER4 as string, SEGMENT_NUMBER5 as string, SEGMENT_NUMBER6 as string, SEGMENT_NUMBER7 as string, SEGMENT_NUMBER8 as string, SEGMENT_NUMBER9 as string, START_DATE_ACTIVE as string, STRUCTURE_ID as string, STRUCTURE_INSTANCE_NUMBER as short, SUMMARY_FLAG as boolean, SUPPLIER_ENABLED_FLAG as boolean, TOTAL_PROD_ID as string, WEB_STATUS as boolean, WH_UPDATE_DATE as string)[])",
+						"     ),",
+						"     allowSchemaDrift: false,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     validationMode: 'none',",
+						"     namespaces: true) ~> SrcXMl",
+						"SrcXMl foldDown(unroll(DATA_DS.G_1),",
+						"     mapColumn(",
+						"          ATTRIBUTE1 = DATA_DS.G_1.ATTRIBUTE1,",
+						"          ATTRIBUTE10 = DATA_DS.G_1.ATTRIBUTE10,",
+						"          ATTRIBUTE11 = DATA_DS.G_1.ATTRIBUTE11,",
+						"          ATTRIBUTE12 = DATA_DS.G_1.ATTRIBUTE12,",
+						"          ATTRIBUTE13 = DATA_DS.G_1.ATTRIBUTE13,",
+						"          ATTRIBUTE14 = DATA_DS.G_1.ATTRIBUTE14,",
+						"          ATTRIBUTE15 = DATA_DS.G_1.ATTRIBUTE15,",
+						"          ATTRIBUTE2 = DATA_DS.G_1.ATTRIBUTE2,",
+						"          ATTRIBUTE3 = DATA_DS.G_1.ATTRIBUTE3,",
+						"          ATTRIBUTE4 = DATA_DS.G_1.ATTRIBUTE4,",
+						"          ATTRIBUTE5 = DATA_DS.G_1.ATTRIBUTE5,",
+						"          ATTRIBUTE6 = DATA_DS.G_1.ATTRIBUTE6,",
+						"          ATTRIBUTE7 = DATA_DS.G_1.ATTRIBUTE7,",
+						"          ATTRIBUTE8 = DATA_DS.G_1.ATTRIBUTE8,",
+						"          ATTRIBUTE9 = DATA_DS.G_1.ATTRIBUTE9,",
+						"          ATTRIBUTE_CATEGORY = DATA_DS.G_1.ATTRIBUTE_CATEGORY,",
+						"          ATTRIBUTE_DATE1 = DATA_DS.G_1.ATTRIBUTE_DATE1,",
+						"          ATTRIBUTE_DATE2 = DATA_DS.G_1.ATTRIBUTE_DATE2,",
+						"          ATTRIBUTE_DATE3 = DATA_DS.G_1.ATTRIBUTE_DATE3,",
+						"          ATTRIBUTE_DATE4 = DATA_DS.G_1.ATTRIBUTE_DATE4,",
+						"          ATTRIBUTE_DATE5 = DATA_DS.G_1.ATTRIBUTE_DATE5,",
+						"          ATTRIBUTE_NUMBER1 = DATA_DS.G_1.ATTRIBUTE_NUMBER1,",
+						"          ATTRIBUTE_NUMBER10 = DATA_DS.G_1.ATTRIBUTE_NUMBER10,",
+						"          ATTRIBUTE_NUMBER2 = DATA_DS.G_1.ATTRIBUTE_NUMBER2,",
+						"          ATTRIBUTE_NUMBER3 = DATA_DS.G_1.ATTRIBUTE_NUMBER3,",
+						"          ATTRIBUTE_NUMBER4 = DATA_DS.G_1.ATTRIBUTE_NUMBER4,",
+						"          ATTRIBUTE_NUMBER5 = DATA_DS.G_1.ATTRIBUTE_NUMBER5,",
+						"          ATTRIBUTE_NUMBER6 = DATA_DS.G_1.ATTRIBUTE_NUMBER6,",
+						"          ATTRIBUTE_NUMBER7 = DATA_DS.G_1.ATTRIBUTE_NUMBER7,",
+						"          ATTRIBUTE_NUMBER8 = DATA_DS.G_1.ATTRIBUTE_NUMBER8,",
+						"          ATTRIBUTE_NUMBER9 = DATA_DS.G_1.ATTRIBUTE_NUMBER9,",
+						"          ATTRIBUTE_TIMESTAMP1 = DATA_DS.G_1.ATTRIBUTE_TIMESTAMP1,",
+						"          ATTRIBUTE_TIMESTAMP2 = DATA_DS.G_1.ATTRIBUTE_TIMESTAMP2,",
+						"          ATTRIBUTE_TIMESTAMP3 = DATA_DS.G_1.ATTRIBUTE_TIMESTAMP3,",
+						"          ATTRIBUTE_TIMESTAMP4 = DATA_DS.G_1.ATTRIBUTE_TIMESTAMP4,",
+						"          ATTRIBUTE_TIMESTAMP5 = DATA_DS.G_1.ATTRIBUTE_TIMESTAMP5,",
+						"          CATEGORY_CODE = DATA_DS.G_1.CATEGORY_CODE,",
+						"          CATEGORY_CONTENT_CODE = DATA_DS.G_1.CATEGORY_CONTENT_CODE,",
+						"          CATEGORY_ID = DATA_DS.G_1.CATEGORY_ID,",
+						"          CREATED_BY = DATA_DS.G_1.CREATED_BY,",
+						"          CREATION_DATE = DATA_DS.G_1.CREATION_DATE,",
+						"          DESCRIPTION = DATA_DS.G_1.DESCRIPTION,",
+						"          DISABLE_DATE = DATA_DS.G_1.DISABLE_DATE,",
+						"          ENABLED_FLAG = DATA_DS.G_1.ENABLED_FLAG,",
+						"          END_DATE_ACTIVE = DATA_DS.G_1.END_DATE_ACTIVE,",
+						"          JOB_DEFINITION_NAME = DATA_DS.G_1.JOB_DEFINITION_NAME,",
+						"          JOB_DEFINITION_PACKAGE = DATA_DS.G_1.JOB_DEFINITION_PACKAGE,",
+						"          LAST_UPDATED_BY = DATA_DS.G_1.LAST_UPDATED_BY,",
+						"          LAST_UPDATE_DATE = DATA_DS.G_1.LAST_UPDATE_DATE,",
+						"          LAST_UPDATE_LOGIN = DATA_DS.G_1.LAST_UPDATE_LOGIN,",
+						"          OBJECT_VERSION_NUMBER = DATA_DS.G_1.OBJECT_VERSION_NUMBER,",
+						"          PROGRAM_APP_NAME = DATA_DS.G_1.PROGRAM_APP_NAME,",
+						"          PROGRAM_NAME = DATA_DS.G_1.PROGRAM_NAME,",
+						"          REQUEST_ID = DATA_DS.G_1.REQUEST_ID,",
+						"          SEGMENT1 = DATA_DS.G_1.SEGMENT1,",
+						"          SEGMENT10 = DATA_DS.G_1.SEGMENT10,",
+						"          SEGMENT11 = DATA_DS.G_1.SEGMENT11,",
+						"          SEGMENT12 = DATA_DS.G_1.SEGMENT12,",
+						"          SEGMENT13 = DATA_DS.G_1.SEGMENT13,",
+						"          SEGMENT14 = DATA_DS.G_1.SEGMENT14,",
+						"          SEGMENT15 = DATA_DS.G_1.SEGMENT15,",
+						"          SEGMENT16 = DATA_DS.G_1.SEGMENT16,",
+						"          SEGMENT17 = DATA_DS.G_1.SEGMENT17,",
+						"          SEGMENT18 = DATA_DS.G_1.SEGMENT18,",
+						"          SEGMENT19 = DATA_DS.G_1.SEGMENT19,",
+						"          SEGMENT2 = DATA_DS.G_1.SEGMENT2,",
+						"          SEGMENT20 = DATA_DS.G_1.SEGMENT20,",
+						"          SEGMENT3 = DATA_DS.G_1.SEGMENT3,",
+						"          SEGMENT4 = DATA_DS.G_1.SEGMENT4,",
+						"          SEGMENT5 = DATA_DS.G_1.SEGMENT5,",
+						"          SEGMENT6 = DATA_DS.G_1.SEGMENT6,",
+						"          SEGMENT7 = DATA_DS.G_1.SEGMENT7,",
+						"          SEGMENT8 = DATA_DS.G_1.SEGMENT8,",
+						"          SEGMENT9 = DATA_DS.G_1.SEGMENT9,",
+						"          SEGMENT_NUMBER1 = DATA_DS.G_1.SEGMENT_NUMBER1,",
+						"          SEGMENT_NUMBER10 = DATA_DS.G_1.SEGMENT_NUMBER10,",
+						"          SEGMENT_NUMBER11 = DATA_DS.G_1.SEGMENT_NUMBER11,",
+						"          SEGMENT_NUMBER12 = DATA_DS.G_1.SEGMENT_NUMBER12,",
+						"          SEGMENT_NUMBER13 = DATA_DS.G_1.SEGMENT_NUMBER13,",
+						"          SEGMENT_NUMBER14 = DATA_DS.G_1.SEGMENT_NUMBER14,",
+						"          SEGMENT_NUMBER15 = DATA_DS.G_1.SEGMENT_NUMBER15,",
+						"          SEGMENT_NUMBER16 = DATA_DS.G_1.SEGMENT_NUMBER16,",
+						"          SEGMENT_NUMBER17 = DATA_DS.G_1.SEGMENT_NUMBER17,",
+						"          SEGMENT_NUMBER18 = DATA_DS.G_1.SEGMENT_NUMBER18,",
+						"          SEGMENT_NUMBER19 = DATA_DS.G_1.SEGMENT_NUMBER19,",
+						"          SEGMENT_NUMBER2 = DATA_DS.G_1.SEGMENT_NUMBER2,",
+						"          SEGMENT_NUMBER20 = DATA_DS.G_1.SEGMENT_NUMBER20,",
+						"          SEGMENT_NUMBER3 = DATA_DS.G_1.SEGMENT_NUMBER3,",
+						"          SEGMENT_NUMBER4 = DATA_DS.G_1.SEGMENT_NUMBER4,",
+						"          SEGMENT_NUMBER5 = DATA_DS.G_1.SEGMENT_NUMBER5,",
+						"          SEGMENT_NUMBER6 = DATA_DS.G_1.SEGMENT_NUMBER6,",
+						"          SEGMENT_NUMBER7 = DATA_DS.G_1.SEGMENT_NUMBER7,",
+						"          SEGMENT_NUMBER8 = DATA_DS.G_1.SEGMENT_NUMBER8,",
+						"          SEGMENT_NUMBER9 = DATA_DS.G_1.SEGMENT_NUMBER9,",
+						"          START_DATE_ACTIVE = DATA_DS.G_1.START_DATE_ACTIVE,",
+						"          STRUCTURE_ID = DATA_DS.G_1.STRUCTURE_ID,",
+						"          STRUCTURE_INSTANCE_NUMBER = DATA_DS.G_1.STRUCTURE_INSTANCE_NUMBER,",
+						"          SUMMARY_FLAG = DATA_DS.G_1.SUMMARY_FLAG,",
+						"          SUPPLIER_ENABLED_FLAG = DATA_DS.G_1.SUPPLIER_ENABLED_FLAG,",
+						"          TOTAL_PROD_ID = DATA_DS.G_1.TOTAL_PROD_ID,",
+						"          WEB_STATUS = DATA_DS.G_1.WEB_STATUS,",
+						"          WH_UPDATE_DATE = DATA_DS.G_1.WH_UPDATE_DATE",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> XmlToCsvflatten",
+						"XmlToCsvflatten derive(source_name = 'SYSTEM',",
+						"          sub_source_name = 'R2P',",
+						"          created_date_time = currentUTC()) ~> addLoadDetails",
+						"addLoadDetails sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     partitionFileNames:['Egp_Categories_B.csv'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SnkCsv"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_egp_categories_tl_decoding')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/Payment Dashboard/Egp Categories Tl"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_xml_egp_categories_tl_source_stage_encoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SrcEncodedXml"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_delimited_xml_egp_categories_tl_source_stage_decoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SnkDecodedXml"
+						}
+					],
+					"transformations": [
+						{
+							"name": "Decoding"
+						},
+						{
+							"name": "SelectDecodedData"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          {http://www.w3.org/2003/05/soap-envelope,Envelope} as ({http://www.w3.org/2003/05/soap-envelope,Body} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,runReportResponse} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,runReportReturn} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,metaDataList} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean), {http://xmlns.oracle.com/oxp/service/PublicReportService,reportBytes} as string, {http://xmlns.oracle.com/oxp/service/PublicReportService,reportContentType} as string, {http://xmlns.oracle.com/oxp/service/PublicReportService,reportFileID} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean), {http://xmlns.oracle.com/oxp/service/PublicReportService,reportLocale} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean)))), {http://www.w3.org/2003/05/soap-envelope,Header} as string)",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     validationMode: 'none',",
+						"     namespaces: true) ~> SrcEncodedXml",
+						"SrcEncodedXml derive(ReportBytes = fromBase64(toString({http://www.w3.org/2003/05/soap-envelope,Envelope}.{http://www.w3.org/2003/05/soap-envelope,Body}.{http://xmlns.oracle.com/oxp/service/PublicReportService,runReportResponse}.{http://xmlns.oracle.com/oxp/service/PublicReportService,runReportReturn}.{http://xmlns.oracle.com/oxp/service/PublicReportService,reportBytes}))) ~> Decoding",
+						"Decoding select(mapColumn(",
+						"          ReportBytes",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> SelectDecodedData",
+						"SelectDecodedData sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     emptyLinesAsHeader: 1,",
+						"     partitionFileNames:['source_data_decoded.xml'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SnkDecodedXml"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_egp_categories_tl_flattening')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/Payment Dashboard/Egp Categories Tl"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_xml_egp_categories_tl_source_stage_decoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SrcXMl"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_egp_categories_tl_source_stage_final_csv",
+								"type": "DatasetReference"
+							},
+							"name": "SnkCsv"
+						}
+					],
+					"transformations": [
+						{
+							"name": "XmlToCsvflatten"
+						},
+						{
+							"name": "addLoadDetails"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          DATA_DS as (G_1 as (CATEGORY_ID as long, CATEGORY_NAME as string, CREATED_BY as string, CREATION_DATE as string, DESCRIPTION as string, LANGUAGE as string, LAST_UPDATED_BY as string, LAST_UPDATE_DATE as string, LAST_UPDATE_LOGIN as string, OBJECT_VERSION_NUMBER as boolean, SOURCE_LANG as string)[])",
+						"     ),",
+						"     allowSchemaDrift: false,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     validationMode: 'none',",
+						"     namespaces: true) ~> SrcXMl",
+						"SrcXMl foldDown(unroll(DATA_DS.G_1),",
+						"     mapColumn(",
+						"          CATEGORY_ID = DATA_DS.G_1.CATEGORY_ID,",
+						"          CATEGORY_NAME = DATA_DS.G_1.CATEGORY_NAME,",
+						"          CREATED_BY = DATA_DS.G_1.CREATED_BY,",
+						"          CREATION_DATE = DATA_DS.G_1.CREATION_DATE,",
+						"          DESCRIPTION = DATA_DS.G_1.DESCRIPTION,",
+						"          LANGUAGE = DATA_DS.G_1.LANGUAGE,",
+						"          LAST_UPDATED_BY = DATA_DS.G_1.LAST_UPDATED_BY,",
+						"          LAST_UPDATE_DATE = DATA_DS.G_1.LAST_UPDATE_DATE,",
+						"          LAST_UPDATE_LOGIN = DATA_DS.G_1.LAST_UPDATE_LOGIN,",
+						"          OBJECT_VERSION_NUMBER = DATA_DS.G_1.OBJECT_VERSION_NUMBER,",
+						"          SOURCE_LANG = DATA_DS.G_1.SOURCE_LANG",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> XmlToCsvflatten",
+						"XmlToCsvflatten derive(source_name = 'SYSTEM',",
+						"          sub_source_name = 'R2P',",
+						"          created_date_time = currentUTC()) ~> addLoadDetails",
+						"addLoadDetails sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     partitionFileNames:['Egp_Categories_Tl.csv'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SnkCsv"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_egp_system_items_b_decoding')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/Payment Dashboard/Egp System Items B"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_xml_egp_system_items_b_source_stage_encoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SrcEncodedXml"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_delimited_xml_egp_system_items_b_source_stage_decoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SnkDecodedXml"
+						}
+					],
+					"transformations": [
+						{
+							"name": "Decoding"
+						},
+						{
+							"name": "SelectDecodedData"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          {http://www.w3.org/2003/05/soap-envelope,Envelope} as ({http://www.w3.org/2003/05/soap-envelope,Body} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,runReportResponse} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,runReportReturn} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,metaDataList} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean), {http://xmlns.oracle.com/oxp/service/PublicReportService,reportBytes} as string, {http://xmlns.oracle.com/oxp/service/PublicReportService,reportContentType} as string, {http://xmlns.oracle.com/oxp/service/PublicReportService,reportFileID} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean), {http://xmlns.oracle.com/oxp/service/PublicReportService,reportLocale} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean)))), {http://www.w3.org/2003/05/soap-envelope,Header} as string)",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     validationMode: 'none',",
+						"     namespaces: true) ~> SrcEncodedXml",
+						"SrcEncodedXml derive(ReportBytes = fromBase64(toString({http://www.w3.org/2003/05/soap-envelope,Envelope}.{http://www.w3.org/2003/05/soap-envelope,Body}.{http://xmlns.oracle.com/oxp/service/PublicReportService,runReportResponse}.{http://xmlns.oracle.com/oxp/service/PublicReportService,runReportReturn}.{http://xmlns.oracle.com/oxp/service/PublicReportService,reportBytes}))) ~> Decoding",
+						"Decoding select(mapColumn(",
+						"          ReportBytes",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> SelectDecodedData",
+						"SelectDecodedData sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     emptyLinesAsHeader: 1,",
+						"     partitionFileNames:['source_data_decoded.xml'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SnkDecodedXml"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_egp_system_items_b_flattening')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/Payment Dashboard/Egp System Items B"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_xml_egp_system_items_b_source_stage_decoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SrcXMl"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_egp_system_items_b_source_stage_final_csv",
+								"type": "DatasetReference"
+							},
+							"name": "SnkCsv"
+						}
+					],
+					"transformations": [
+						{
+							"name": "XmlToCsvflatten"
+						},
+						{
+							"name": "addLoadDetails"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          DATA_DS as (G_1 as (APPROVAL_STATUS as string, CREATED_BY as string, CREATION_DATE as string, DESCRIPTION as string, INVENTORY_ITEM_ID as long, INVENTORY_ITEM_STATUS_CODE as string, ITEM_NUMBER as string, LAST_UPDATED_BY as string, LAST_UPDATE_DATE as string, LAST_UPDATE_LOGIN as string, PRIMARY_UOM_CODE as string)[])",
+						"     ),",
+						"     allowSchemaDrift: false,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     validationMode: 'none',",
+						"     namespaces: true) ~> SrcXMl",
+						"SrcXMl foldDown(unroll(DATA_DS.G_1),",
+						"     mapColumn(",
+						"          APPROVAL_STATUS = DATA_DS.G_1.APPROVAL_STATUS,",
+						"          CREATED_BY = DATA_DS.G_1.CREATED_BY,",
+						"          CREATION_DATE = DATA_DS.G_1.CREATION_DATE,",
+						"          DESCRIPTION = DATA_DS.G_1.DESCRIPTION,",
+						"          INVENTORY_ITEM_ID = DATA_DS.G_1.INVENTORY_ITEM_ID,",
+						"          INVENTORY_ITEM_STATUS_CODE = DATA_DS.G_1.INVENTORY_ITEM_STATUS_CODE,",
+						"          ITEM_NUMBER = DATA_DS.G_1.ITEM_NUMBER,",
+						"          LAST_UPDATED_BY = DATA_DS.G_1.LAST_UPDATED_BY,",
+						"          LAST_UPDATE_DATE = DATA_DS.G_1.LAST_UPDATE_DATE,",
+						"          LAST_UPDATE_LOGIN = DATA_DS.G_1.LAST_UPDATE_LOGIN,",
+						"          PRIMARY_UOM_CODE = DATA_DS.G_1.PRIMARY_UOM_CODE",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> XmlToCsvflatten",
+						"XmlToCsvflatten derive(source_name = 'SYSTEM',",
+						"          sub_source_name = 'R2P',",
+						"          created_date_time = currentUTC()) ~> addLoadDetails",
+						"addLoadDetails sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     partitionFileNames:['Egp_System_Items_B.csv'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SnkCsv"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_exchange_rates_data_decoding')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/Payment Dashboard/Exchange Rates Data"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_xml_exchange_rates_data_source_stage_encoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SrcEncodedXml"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_delimited_xml_exchange_rates_data_source_stage_decoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SnkDecodedXml"
+						}
+					],
+					"transformations": [
+						{
+							"name": "Decoding"
+						},
+						{
+							"name": "SelectDecodedData"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          {http://www.w3.org/2003/05/soap-envelope,Envelope} as ({http://www.w3.org/2003/05/soap-envelope,Body} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,runReportResponse} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,runReportReturn} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,metaDataList} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean), {http://xmlns.oracle.com/oxp/service/PublicReportService,reportBytes} as string, {http://xmlns.oracle.com/oxp/service/PublicReportService,reportContentType} as string, {http://xmlns.oracle.com/oxp/service/PublicReportService,reportFileID} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean), {http://xmlns.oracle.com/oxp/service/PublicReportService,reportLocale} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean)))), {http://www.w3.org/2003/05/soap-envelope,Header} as string)",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     validationMode: 'none',",
+						"     namespaces: true) ~> SrcEncodedXml",
+						"SrcEncodedXml derive(ReportBytes = fromBase64(toString({http://www.w3.org/2003/05/soap-envelope,Envelope}.{http://www.w3.org/2003/05/soap-envelope,Body}.{http://xmlns.oracle.com/oxp/service/PublicReportService,runReportResponse}.{http://xmlns.oracle.com/oxp/service/PublicReportService,runReportReturn}.{http://xmlns.oracle.com/oxp/service/PublicReportService,reportBytes}))) ~> Decoding",
+						"Decoding select(mapColumn(",
+						"          ReportBytes",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> SelectDecodedData",
+						"SelectDecodedData sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     emptyLinesAsHeader: 1,",
+						"     partitionFileNames:['source_data_decoded.xml'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SnkDecodedXml"
+					]
+				}
+			},
+			"dependsOn": []
+		}
+	]
+}

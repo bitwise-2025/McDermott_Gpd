@@ -1,0 +1,1035 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "McD-GPD"
+		},
+		"AzureSynapseDB_DEV_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'AzureSynapseDB_DEV'",
+			"defaultValue": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=mdrdeventerpriseanalyticssql.database.windows.net;Initial Catalog=MDR-DEV-EntAnalytics-SynapseSQLPool01"
+		},
+		"Azure_Dev_SynapseAnalyticsPool_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'Azure_Dev_SynapseAnalyticsPool'",
+			"defaultValue": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=mdrdeventerpriseanalyticssql.database.windows.net;Initial Catalog=MDR-DEV-EntAnalytics-SynapseSQLPool01"
+		},
+		"Linkedservice_FAB_Automation_daily_time_punch_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'Linkedservice_FAB_Automation_daily_time_punch'",
+			"defaultValue": "Integrated Security=True;Data Source=DALQSQL13;Initial Catalog=ACDs"
+		},
+		"Linkedservice_MCPM_Offshore_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'Linkedservice_MCPM_Offshore'",
+			"defaultValue": "Integrated Security=True;Data Source=DALPSQL28;Initial Catalog=pims_offshore"
+		},
+		"Linkedservice_MCPM_Onshore_prod_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'Linkedservice_MCPM_Onshore_prod'",
+			"defaultValue": "Integrated Security=True;Data Source=DALPSQL28;Initial Catalog=pims_onshore"
+		},
+		"AzureDataLakeStorage1LinkedService_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://mdrdevententanalytics01.dfs.core.windows.net"
+		},
+		"Linkedservice_FAB_Automation_daily_time_punch_properties_typeProperties_userName": {
+			"type": "string",
+			"defaultValue": "MCDCORP\\SVC-GLB-AZURADF_QA"
+		},
+		"Linkedservice_MCPM_Offshore_properties_typeProperties_userName": {
+			"type": "string",
+			"defaultValue": "mcdcorp\\SVC-GLB-AZURADF_PROD"
+		},
+		"Linkedservice_MCPM_Onshore_prod_properties_typeProperties_userName": {
+			"type": "string",
+			"defaultValue": "mcdcorp\\SVC-GLB-AZURADF_PROD"
+		},
+		"Linkedservice_fileshare_iDocs_properties_typeProperties_host": {
+			"type": "string",
+			"defaultValue": "\\\\mcdcorp\\share\\Houston\\Apps\\AppData\\iDocs\\Prod\\NCSA_Analytics"
+		},
+		"Linkedservice_fileshare_iDocs_properties_typeProperties_userId": {
+			"type": "string",
+			"defaultValue": "mcdcorp\\SVC-GLB-AZURADF_DEV"
+		},
+		"Linkedservice_fileshare_iDocsExtracts_properties_typeProperties_host": {
+			"type": "string",
+			"defaultValue": "\\\\mcdcorp\\share\\Houston\\Apps\\AppData\\iDocs\\Prod\\Data-Lake_PowerBI"
+		},
+		"Linkedservice_fileshare_iDocsExtracts_properties_typeProperties_userId": {
+			"type": "string",
+			"defaultValue": "mcdcorp\\SVC-GLB-AZURADF_QA"
+		},
+		"Linkedservice_fileshare_yardkpi_properties_typeProperties_host": {
+			"type": "string",
+			"defaultValue": "\\\\mcdcorp\\share\\Dubai\\Group\\DataLake\\Development\\YARDKPI"
+		},
+		"Linkedservice_fileshare_yardkpi_properties_typeProperties_userId": {
+			"type": "string",
+			"defaultValue": "mcdcorp\\SVC-GLB-AZURADF_DEV"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_http_oneview_getreferencedatacountries')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_http_oneview_to_synapse",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/OneView/GetReferenceDataCountries"
+				},
+				"annotations": [],
+				"type": "Binary",
+				"typeProperties": {
+					"location": {
+						"type": "HttpServerLocation"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_projectsxd_azsql_source')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_projectsxd_azsql",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/NCSA/Resource Spread Direct"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [
+					{
+						"name": "hid",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "project no",
+						"type": "varchar"
+					},
+					{
+						"name": "project description",
+						"type": "varchar"
+					},
+					{
+						"name": "Activity ID",
+						"type": "varchar"
+					},
+					{
+						"name": "Activity Name",
+						"type": "varchar"
+					},
+					{
+						"name": "Original Duration",
+						"type": "varchar"
+					},
+					{
+						"name": "Actual Duration",
+						"type": "varchar"
+					},
+					{
+						"name": "Remaining Duration",
+						"type": "varchar"
+					},
+					{
+						"name": "Start",
+						"type": "varchar"
+					},
+					{
+						"name": "Finish",
+						"type": "varchar"
+					},
+					{
+						"name": "Actual Start",
+						"type": "varchar"
+					},
+					{
+						"name": "Actual Finish",
+						"type": "varchar"
+					},
+					{
+						"name": "Calendar",
+						"type": "varchar"
+					},
+					{
+						"name": "Budgeted Units",
+						"type": "varchar"
+					},
+					{
+						"name": "Actual Units",
+						"type": "varchar"
+					},
+					{
+						"name": "Remaining Units",
+						"type": "varchar"
+					},
+					{
+						"name": "WBS",
+						"type": "varchar"
+					},
+					{
+						"name": "WBS Name",
+						"type": "varchar"
+					},
+					{
+						"name": "Cost Account",
+						"type": "varchar"
+					},
+					{
+						"name": "Role",
+						"type": "varchar"
+					},
+					{
+						"name": "Resource ID",
+						"type": "varchar"
+					},
+					{
+						"name": "Resource ID Name",
+						"type": "varchar"
+					},
+					{
+						"name": "Resource Name",
+						"type": "varchar"
+					},
+					{
+						"name": "Resource Type",
+						"type": "varchar"
+					},
+					{
+						"name": "Total Float",
+						"type": "varchar"
+					},
+					{
+						"name": "Free Float",
+						"type": "varchar"
+					},
+					{
+						"name": "BL Project Start",
+						"type": "varchar"
+					},
+					{
+						"name": "BL Project Finish",
+						"type": "varchar"
+					},
+					{
+						"name": "Critical",
+						"type": "varchar"
+					},
+					{
+						"name": "Activity Type",
+						"type": "varchar"
+					},
+					{
+						"name": "Longest Path",
+						"type": "varchar"
+					},
+					{
+						"name": "Primary Constraint Date",
+						"type": "varchar"
+					},
+					{
+						"name": "Secondary Constraint Date",
+						"type": "varchar"
+					},
+					{
+						"name": "Primary Constraint",
+						"type": "varchar"
+					},
+					{
+						"name": "Secondary Constraint",
+						"type": "varchar"
+					},
+					{
+						"name": "Expected Finish",
+						"type": "varchar"
+					},
+					{
+						"name": "Suspend Date",
+						"type": "varchar"
+					},
+					{
+						"name": "Resume Date",
+						"type": "varchar"
+					},
+					{
+						"name": "BL Project Labor Units",
+						"type": "varchar"
+					},
+					{
+						"name": "Earned Value Labor Units",
+						"type": "varchar"
+					},
+					{
+						"name": "Planned Value Labor Units",
+						"type": "varchar"
+					},
+					{
+						"name": "BL Project Duration",
+						"type": "varchar"
+					},
+					{
+						"name": "Physical Percent Complete",
+						"type": "varchar"
+					},
+					{
+						"name": "Predecessors",
+						"type": "varchar"
+					},
+					{
+						"name": "Successors",
+						"type": "varchar"
+					},
+					{
+						"name": "Predecessor Details",
+						"type": "varchar"
+					},
+					{
+						"name": "Successors Details",
+						"type": "varchar"
+					},
+					{
+						"name": "Late Start",
+						"type": "varchar"
+					},
+					{
+						"name": "Late Finish",
+						"type": "varchar"
+					},
+					{
+						"name": "GLOBAL - CHANGE MANAGEMENT",
+						"type": "varchar"
+					},
+					{
+						"name": "GLOBAL - EXECUTED BY TYPE",
+						"type": "varchar"
+					},
+					{
+						"name": "GLOBAL - FUNCTION",
+						"type": "varchar"
+					},
+					{
+						"name": "GLOBAL - MILESTONES",
+						"type": "varchar"
+					},
+					{
+						"name": "GLOBAL - OFFICE",
+						"type": "varchar"
+					},
+					{
+						"name": "GLOBAL - PHASE",
+						"type": "varchar"
+					},
+					{
+						"name": "GLOBAL - PRIME (GCOA V11)",
+						"type": "varchar"
+					},
+					{
+						"name": "GLOBAL - PRIME (GCOA V13)",
+						"type": "varchar"
+					},
+					{
+						"name": "GLOBAL - REGION",
+						"type": "varchar"
+					},
+					{
+						"name": "GLOBAL - SCHEDULE RISK ASSESSMENT",
+						"type": "varchar"
+					},
+					{
+						"name": "GLOBAL - STORAGE SOLUTIONS",
+						"type": "varchar"
+					},
+					{
+						"name": "GLOBAL - SUBPRIME (GCOA V11)",
+						"type": "varchar"
+					},
+					{
+						"name": "GLOBAL - SUBPRIME (GCOA V13)",
+						"type": "varchar"
+					},
+					{
+						"name": "GLOBAL - SUPPLY CHAIN",
+						"type": "varchar"
+					},
+					{
+						"name": "Spreadsheet Field",
+						"type": "varchar"
+					},
+					{
+						"name": "Period",
+						"type": "varchar"
+					},
+					{
+						"name": "Period Value",
+						"type": "varchar"
+					},
+					{
+						"name": "created date time",
+						"type": "datetime",
+						"precision": 23,
+						"scale": 3
+					}
+				],
+				"typeProperties": {
+					"schema": "dbo",
+					"table": "p6_v"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_promt_datalake_export_contingency_source_azure_sql')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "linkedservice_PROMT_azure_sql",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/PROMT/Contingency"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [],
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_promt_datalake_export_opportunity_snapshot_source_azure_sql')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "linkedservice_PROMT_azure_sql",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/PROMT/Opportunity Snapshot"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [],
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_promt_datalake_export_opportunity_source_azure_sql')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "linkedservice_PROMT_azure_sql",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/PROMT/Opportunity"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [],
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_promt_datalake_export_risk_snapshot_source_azure_sql')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "linkedservice_PROMT_azure_sql",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/PROMT/Risk Snapshot"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [],
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_promt_datalake_export_risk_source_azure_sql')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "linkedservice_PROMT_azure_sql",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/PROMT/Risk"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [],
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_promt_datalake_export_simulationresult_source_azure_sql')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "linkedservice_PROMT_azure_sql",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/PROMT/Datalake Export Simulationresult"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [],
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_source_RIM_Final')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ADLSG2 TimeAnalytics DEV",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": "RIM_Final.csv",
+						"folderPath": "Project_Data/RIM",
+						"fileSystem": "mdr-staging-data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_synapse_ecm_employeesdata')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseAnalytics",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/ECM"
+				},
+				"annotations": [],
+				"type": "AzureSqlDWTable",
+				"schema": [
+					{
+						"name": "employeesdata_country",
+						"type": "varchar"
+					},
+					{
+						"name": "missingfolders",
+						"type": "varchar"
+					},
+					{
+						"name": "employeesdata_modifiedAt",
+						"type": "varchar"
+					},
+					{
+						"name": "employeesdata_oracleID",
+						"type": "varchar"
+					},
+					{
+						"name": "employeesdata_employeeStatus",
+						"type": "varchar"
+					},
+					{
+						"name": "employeesdata_terminationDate",
+						"type": "varchar"
+					},
+					{
+						"name": "employeesdata_createdAt",
+						"type": "varchar"
+					},
+					{
+						"name": "employeesdata_sitename",
+						"type": "varchar"
+					},
+					{
+						"name": "employeesdata_siteid",
+						"type": "varchar"
+					},
+					{
+						"name": "employeesdata_noderef",
+						"type": "varchar"
+					},
+					{
+						"name": "employeesdata_modifiedBy",
+						"type": "varchar"
+					},
+					{
+						"name": "employeesdata_businesslinetwo",
+						"type": "varchar"
+					},
+					{
+						"name": "employeesdata_area",
+						"type": "varchar"
+					},
+					{
+						"name": "employeesdata_documentCreationDate",
+						"type": "varchar"
+					},
+					{
+						"name": "employeesdata_allowTermination",
+						"type": "varchar"
+					},
+					{
+						"name": "employeesdata_hireDate",
+						"type": "varchar"
+					},
+					{
+						"name": "employeesdata_author",
+						"type": "varchar"
+					},
+					{
+						"name": "employeesdata_isExecutive",
+						"type": "varchar"
+					},
+					{
+						"name": "employeesdata_businesslineone",
+						"type": "varchar"
+					},
+					{
+						"name": "employeesdata_planInactiveDate",
+						"type": "varchar"
+					},
+					{
+						"name": "employeesdata_createdBy",
+						"type": "varchar"
+					},
+					{
+						"name": "employeesdata_legacyID",
+						"type": "varchar"
+					},
+					{
+						"name": "employeesdata_location",
+						"type": "varchar"
+					},
+					{
+						"name": "recorddetails_identifier",
+						"type": "varchar"
+					},
+					{
+						"name": "recorddetails_recordSearchDispositionAuthority",
+						"type": "varchar"
+					},
+					{
+						"name": "recorddetails_recordSearchDispositionActionAsOf",
+						"type": "varchar"
+					},
+					{
+						"name": "recorddetails_recordOriginatingLocation",
+						"type": "varchar"
+					},
+					{
+						"name": "recorddetails_rootNodeRef",
+						"type": "varchar"
+					},
+					{
+						"name": "recorddetails_recordSearchDispositionEventsEligible",
+						"type": "varchar"
+					},
+					{
+						"name": "recorddetails_recordOriginatingCreationDate",
+						"type": "varchar"
+					},
+					{
+						"name": "recorddetails_recordSearchDispositionInstructions",
+						"type": "varchar"
+					},
+					{
+						"name": "recorddetails_holddetails",
+						"type": "varchar"
+					},
+					{
+						"name": "recorddetails_recordSearchDispositionPeriod",
+						"type": "varchar"
+					},
+					{
+						"name": "recorddetails_recordSearchHasDispositionSchedule",
+						"type": "varchar"
+					},
+					{
+						"name": "recorddetails_recordOriginatingUserId",
+						"type": "varchar"
+					},
+					{
+						"name": "recorddetails_recordSearchVitalRecordReviewPeriod",
+						"type": "varchar"
+					},
+					{
+						"name": "recorddetails_recordSearchDispositionEvents",
+						"type": "varchar"
+					},
+					{
+						"name": "recorddetails_frozenBy",
+						"type": "varchar"
+					},
+					{
+						"name": "recorddetails_recordSearchDispositionActionName",
+						"type": "varchar"
+					},
+					{
+						"name": "recorddetails_recordSearchVitalRecordReviewPeriodExpression",
+						"type": "varchar"
+					},
+					{
+						"name": "recorddetails_recordSearchDispositionPeriodExpression",
+						"type": "varchar"
+					},
+					{
+						"name": "recorddetails_frozenAt",
+						"type": "varchar"
+					},
+					{
+						"name": "recorddetails_origionalName",
+						"type": "varchar"
+					},
+					{
+						"name": "recorddetails_cutoffdate",
+						"type": "varchar"
+					},
+					{
+						"name": "documents_name",
+						"type": "varchar"
+					},
+					{
+						"name": "documents_noofpages",
+						"type": "varchar"
+					},
+					{
+						"name": "documents_noderef",
+						"type": "varchar"
+					},
+					{
+						"name": "subfolders_name",
+						"type": "varchar"
+					},
+					{
+						"name": "subfolders_noderef",
+						"type": "varchar"
+					},
+					{
+						"name": "employeesdata_directdocuments",
+						"type": "varchar"
+					},
+					{
+						"name": "employeesdata_employeename",
+						"type": "varchar"
+					}
+				],
+				"typeProperties": {
+					"schema": "gpd",
+					"table": "ECM_EmployeesData"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_synapse_ecm_user_roles_groups')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseAnalytics",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/ECM User Roles Groups"
+				},
+				"annotations": [],
+				"type": "AzureSqlDWTable",
+				"schema": [
+					{
+						"name": "username",
+						"type": "varchar"
+					},
+					{
+						"name": "email",
+						"type": "varchar"
+					},
+					{
+						"name": "firstname",
+						"type": "varchar"
+					},
+					{
+						"name": "lastname",
+						"type": "varchar"
+					},
+					{
+						"name": "organization",
+						"type": "varchar"
+					},
+					{
+						"name": "groups",
+						"type": "varchar"
+					},
+					{
+						"name": "sitedetails_shortname",
+						"type": "varchar"
+					},
+					{
+						"name": "sitedetails_name",
+						"type": "varchar"
+					},
+					{
+						"name": "sitedetails_role",
+						"type": "varchar"
+					}
+				],
+				"typeProperties": {
+					"schema": "gpd",
+					"table": "ecm_user_roles_groups"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/AzureDataLakeStorage1LinkedService')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('AzureDataLakeStorage1LinkedService_properties_typeProperties_url')]"
+				},
+				"connectVia": {
+					"referenceName": "mdrdevshir",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/AzureSynapseDB_DEV')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureSqlDatabase",
+				"typeProperties": {
+					"connectionString": "[parameters('AzureSynapseDB_DEV_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "mdrdevshir",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/Azure_Dev_SynapseAnalyticsPool')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureSqlDW",
+				"typeProperties": {
+					"connectionString": "[parameters('Azure_Dev_SynapseAnalyticsPool_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "mdrdevshir",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/Linkedservice_FAB_Automation_daily_time_punch')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "SqlServer",
+				"typeProperties": {
+					"connectionString": "[parameters('Linkedservice_FAB_Automation_daily_time_punch_connectionString')]",
+					"userName": "[parameters('Linkedservice_FAB_Automation_daily_time_punch_properties_typeProperties_userName')]",
+					"password": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "MDREntAnltxAzureKeyVault1",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "AZURE-ADF-SVC-ACCT-QA-NW-PWD"
+					}
+				},
+				"connectVia": {
+					"referenceName": "mdrdevshir",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/Linkedservice_MCPM_Offshore')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Linkedservice_MCPM_Offshore",
+				"annotations": [],
+				"type": "SqlServer",
+				"typeProperties": {
+					"connectionString": "[parameters('Linkedservice_MCPM_Offshore_connectionString')]",
+					"userName": "[parameters('Linkedservice_MCPM_Offshore_properties_typeProperties_userName')]",
+					"password": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "MDREntAnltxAzureKeyVault1",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "AZURE-ADF-SVC-ACCT-PROD-NW-PWD"
+					}
+				},
+				"connectVia": {
+					"referenceName": "mdrdevshir",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/Linkedservice_MCPM_Onshore_prod')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Linkedservice_MCPM_Onshore_prod",
+				"annotations": [],
+				"type": "SqlServer",
+				"typeProperties": {
+					"connectionString": "[parameters('Linkedservice_MCPM_Onshore_prod_connectionString')]",
+					"userName": "[parameters('Linkedservice_MCPM_Onshore_prod_properties_typeProperties_userName')]",
+					"password": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "MDREntAnltxAzureKeyVault1",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "AZURE-ADF-SVC-ACCT-PROD-NW-PWD"
+					}
+				},
+				"connectVia": {
+					"referenceName": "mdrdevshir",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/Linkedservice_fileshare_iDocs')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Linked service to connect to the server hosting the iDocs Files",
+				"annotations": [],
+				"type": "FileServer",
+				"typeProperties": {
+					"host": "[parameters('Linkedservice_fileshare_iDocs_properties_typeProperties_host')]",
+					"userId": "[parameters('Linkedservice_fileshare_iDocs_properties_typeProperties_userId')]",
+					"password": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "MDREntAnltxAzureKeyVault1",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "AZURE-ADF-SVC-ACCT-NW-PWD"
+					}
+				},
+				"connectVia": {
+					"referenceName": "mdrdevshir",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/Linkedservice_fileshare_iDocsExtracts')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "FileServer",
+				"typeProperties": {
+					"host": "[parameters('Linkedservice_fileshare_iDocsExtracts_properties_typeProperties_host')]",
+					"userId": "[parameters('Linkedservice_fileshare_iDocsExtracts_properties_typeProperties_userId')]",
+					"password": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "MDREntAnltxAzureKeyVault1",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "AZURE-ADF-SVC-ACCT-QA-NW-PWD"
+					}
+				},
+				"connectVia": {
+					"referenceName": "mdrdevshir",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/Linkedservice_fileshare_yardkpi')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Linked service for YARDKPI file share Network folder",
+				"annotations": [],
+				"type": "FileServer",
+				"typeProperties": {
+					"host": "[parameters('Linkedservice_fileshare_yardkpi_properties_typeProperties_host')]",
+					"userId": "[parameters('Linkedservice_fileshare_yardkpi_properties_typeProperties_userId')]",
+					"password": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "MDREntAnltxAzureKeyVault1",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "AZURE-ADF-SVC-ACCT-NW-PWD"
+					}
+				},
+				"connectVia": {
+					"referenceName": "mdrdevshir",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": []
+		}
+	]
+}
