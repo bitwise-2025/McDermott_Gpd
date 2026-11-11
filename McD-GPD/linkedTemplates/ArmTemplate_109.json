@@ -10,10 +10,6 @@
 		"MTOSMAT_Trigger_Schedule_Weekly_xxxxxFx_properties_pl_MTO_SPMAT_All_Projects_D7264_parameters_proj_id": {
 			"type": "string",
 			"defaultValue": "D7264"
-		},
-		"storagetrigger_properties_typeProperties_scope": {
-			"type": "string",
-			"defaultValue": "/subscriptions/47d04dc4-e091-4d13-a3b6-e53e2647177a/resourceGroups/rg-databricks-foundation/providers/Microsoft.Storage/storageAccounts/dnadatabricksxtdl"
 		}
 	},
 	"variables": {
@@ -452,12 +448,12 @@
 			"dependsOn": []
 		},
 		{
-			"name": "[concat(parameters('factoryName'), '/storagetrigger')]",
+			"name": "[concat(parameters('factoryName'), '/trigger_mcd')]",
 			"type": "Microsoft.DataFactory/factories/triggers",
 			"apiVersion": "2018-06-01",
 			"properties": {
 				"annotations": [],
-				"runtimeState": "Stopped",
+				"runtimeState": "Started",
 				"pipelines": [
 					{
 						"pipelineReference": {
@@ -467,14 +463,15 @@
 						"parameters": {}
 					}
 				],
-				"type": "BlobEventsTrigger",
+				"type": "ScheduleTrigger",
 				"typeProperties": {
-					"blobPathBeginsWith": "/mcd-adls/blobs/mcd-emp-test/employees.csv",
-					"ignoreEmptyBlobs": true,
-					"scope": "[parameters('storagetrigger_properties_typeProperties_scope')]",
-					"events": [
-						"Microsoft.Storage.BlobCreated"
-					]
+					"recurrence": {
+						"frequency": "Hour",
+						"interval": 10,
+						"startTime": "2026-11-11T13:27:00",
+						"endTime": "2026-11-12T07:50:00",
+						"timeZone": "India Standard Time"
+					}
 				}
 			},
 			"dependsOn": []

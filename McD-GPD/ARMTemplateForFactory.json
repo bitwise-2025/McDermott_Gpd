@@ -642,10 +642,6 @@
 			"type": "string",
 			"defaultValue": "QFY"
 		},
-		"storagetrigger_properties_typeProperties_scope": {
-			"type": "string",
-			"defaultValue": "/subscriptions/47d04dc4-e091-4d13-a3b6-e53e2647177a/resourceGroups/rg-databricks-foundation/providers/Microsoft.Storage/storageAccounts/dnadatabricksxtdl"
-		},
 		"mdrdevshir_properties_typeProperties_linkedInfo_resourceId": {
 			"type": "string",
 			"defaultValue": "/subscriptions/dd387ca2-0af6-49fc-8849-a235d2763be1/resourcegroups/MDR-DEV-EnterpriseAnalytics-DEV-RG01/providers/Microsoft.DataFactory/factories/MDR-DEV-EnterpriseAnalytics-DF01/integrationruntimes/mdrdevshir"
@@ -634976,36 +634972,6 @@
 			]
 		},
 		{
-			"name": "[concat(parameters('factoryName'), '/storagetrigger')]",
-			"type": "Microsoft.DataFactory/factories/triggers",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"annotations": [],
-				"runtimeState": "Stopped",
-				"pipelines": [
-					{
-						"pipelineReference": {
-							"referenceName": "ppl_test",
-							"type": "PipelineReference"
-						},
-						"parameters": {}
-					}
-				],
-				"type": "BlobEventsTrigger",
-				"typeProperties": {
-					"blobPathBeginsWith": "/mcd-adls/blobs/mcd-emp-test/employees.csv",
-					"ignoreEmptyBlobs": true,
-					"scope": "[parameters('storagetrigger_properties_typeProperties_scope')]",
-					"events": [
-						"Microsoft.Storage.BlobCreated"
-					]
-				}
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/pipelines/ppl_test')]"
-			]
-		},
-		{
 			"name": "[concat(parameters('factoryName'), '/integrationRuntime1')]",
 			"type": "Microsoft.DataFactory/factories/integrationRuntimes",
 			"apiVersion": "2018-06-01",
@@ -656855,6 +656821,37 @@
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/managedVirtualNetworks/default')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/trigger_mcd')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Started",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "ppl_test",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Hour",
+						"interval": 10,
+						"startTime": "2026-11-11T13:27:00",
+						"endTime": "2026-11-12T07:50:00",
+						"timeZone": "India Standard Time"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/pipelines/ppl_test')]"
 			]
 		}
 	]
