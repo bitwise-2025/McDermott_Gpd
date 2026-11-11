@@ -13,6 +13,150 @@
 	},
 	"resources": [
 		{
+			"name": "[concat(parameters('factoryName'), '/df_egp_system_items_b_flattening')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/Payment Dashboard/Egp System Items B"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_xml_egp_system_items_b_source_stage_decoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SrcXMl"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_egp_system_items_b_source_stage_final_csv",
+								"type": "DatasetReference"
+							},
+							"name": "SnkCsv"
+						}
+					],
+					"transformations": [
+						{
+							"name": "XmlToCsvflatten"
+						},
+						{
+							"name": "addLoadDetails"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          DATA_DS as (G_1 as (APPROVAL_STATUS as string, CREATED_BY as string, CREATION_DATE as string, DESCRIPTION as string, INVENTORY_ITEM_ID as long, INVENTORY_ITEM_STATUS_CODE as string, ITEM_NUMBER as string, LAST_UPDATED_BY as string, LAST_UPDATE_DATE as string, LAST_UPDATE_LOGIN as string, PRIMARY_UOM_CODE as string)[])",
+						"     ),",
+						"     allowSchemaDrift: false,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     validationMode: 'none',",
+						"     namespaces: true) ~> SrcXMl",
+						"SrcXMl foldDown(unroll(DATA_DS.G_1),",
+						"     mapColumn(",
+						"          APPROVAL_STATUS = DATA_DS.G_1.APPROVAL_STATUS,",
+						"          CREATED_BY = DATA_DS.G_1.CREATED_BY,",
+						"          CREATION_DATE = DATA_DS.G_1.CREATION_DATE,",
+						"          DESCRIPTION = DATA_DS.G_1.DESCRIPTION,",
+						"          INVENTORY_ITEM_ID = DATA_DS.G_1.INVENTORY_ITEM_ID,",
+						"          INVENTORY_ITEM_STATUS_CODE = DATA_DS.G_1.INVENTORY_ITEM_STATUS_CODE,",
+						"          ITEM_NUMBER = DATA_DS.G_1.ITEM_NUMBER,",
+						"          LAST_UPDATED_BY = DATA_DS.G_1.LAST_UPDATED_BY,",
+						"          LAST_UPDATE_DATE = DATA_DS.G_1.LAST_UPDATE_DATE,",
+						"          LAST_UPDATE_LOGIN = DATA_DS.G_1.LAST_UPDATE_LOGIN,",
+						"          PRIMARY_UOM_CODE = DATA_DS.G_1.PRIMARY_UOM_CODE",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> XmlToCsvflatten",
+						"XmlToCsvflatten derive(source_name = 'SYSTEM',",
+						"          sub_source_name = 'R2P',",
+						"          created_date_time = currentUTC()) ~> addLoadDetails",
+						"addLoadDetails sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     partitionFileNames:['Egp_System_Items_B.csv'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SnkCsv"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_exchange_rates_data_decoding')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/Payment Dashboard/Exchange Rates Data"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_xml_exchange_rates_data_source_stage_encoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SrcEncodedXml"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_delimited_xml_exchange_rates_data_source_stage_decoded_xml",
+								"type": "DatasetReference"
+							},
+							"name": "SnkDecodedXml"
+						}
+					],
+					"transformations": [
+						{
+							"name": "Decoding"
+						},
+						{
+							"name": "SelectDecodedData"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          {http://www.w3.org/2003/05/soap-envelope,Envelope} as ({http://www.w3.org/2003/05/soap-envelope,Body} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,runReportResponse} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,runReportReturn} as ({http://xmlns.oracle.com/oxp/service/PublicReportService,metaDataList} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean), {http://xmlns.oracle.com/oxp/service/PublicReportService,reportBytes} as string, {http://xmlns.oracle.com/oxp/service/PublicReportService,reportContentType} as string, {http://xmlns.oracle.com/oxp/service/PublicReportService,reportFileID} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean), {http://xmlns.oracle.com/oxp/service/PublicReportService,reportLocale} as ({http://www.w3.org/2001/XMLSchema-instance,@nil} as boolean)))), {http://www.w3.org/2003/05/soap-envelope,Header} as string)",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     validationMode: 'none',",
+						"     namespaces: true) ~> SrcEncodedXml",
+						"SrcEncodedXml derive(ReportBytes = fromBase64(toString({http://www.w3.org/2003/05/soap-envelope,Envelope}.{http://www.w3.org/2003/05/soap-envelope,Body}.{http://xmlns.oracle.com/oxp/service/PublicReportService,runReportResponse}.{http://xmlns.oracle.com/oxp/service/PublicReportService,runReportReturn}.{http://xmlns.oracle.com/oxp/service/PublicReportService,reportBytes}))) ~> Decoding",
+						"Decoding select(mapColumn(",
+						"          ReportBytes",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> SelectDecodedData",
+						"SelectDecodedData sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     emptyLinesAsHeader: 1,",
+						"     partitionFileNames:['source_data_decoded.xml'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SnkDecodedXml"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/df_exchange_rates_data_flattening')]",
 			"type": "Microsoft.DataFactory/factories/dataflows",
 			"apiVersion": "2018-06-01",
@@ -1127,83 +1271,6 @@
 						}
 					],
 					"script": "parameters{\n\tWildPath as string,\n\tFileName as string\n}\nsource(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\trowUrlColumn: 'Filename',\n\twildcardPaths:[($WildPath + $FileName + '.csv')]) ~> srcClosedMStage\nsrcClosedMStage derive(Filename = concat($WildPath,substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',$FileName,'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv')) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\trowUrlColumn:'Filename',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: []) ~> snkClosedMRaw"
-				}
-			},
-			"dependsOn": []
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/df_iDocs_EngVen_MSMaster_stage_to_raw')]",
-			"type": "Microsoft.DataFactory/factories/dataflows",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"folder": {
-					"name": "Projects/NCSA/iDocs/Milestone Master"
-				},
-				"type": "MappingDataFlow",
-				"typeProperties": {
-					"sources": [
-						{
-							"dataset": {
-								"referenceName": "ds_adlsg2_idocs_ev_msmaster_stg",
-								"type": "DatasetReference"
-							},
-							"name": "srcMSMasterStage"
-						}
-					],
-					"sinks": [
-						{
-							"dataset": {
-								"referenceName": "ds_adlsg2_idocs_ev_msmaster_raw",
-								"type": "DatasetReference"
-							},
-							"name": "snkMSMastertRaw"
-						}
-					],
-					"transformations": [
-						{
-							"name": "setFileName"
-						}
-					],
-					"script": "parameters{\n\tWildPath as string,\n\tFileName as string\n}\nsource(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\trowUrlColumn: 'Filename',\n\twildcardPaths:[($WildPath+$FileName+'.csv')]) ~> srcMSMasterStage\nsrcMSMasterStage derive(Filename = concat($WildPath,substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',$FileName,'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv'),\n\t\teach(match(name=='PROJECT NO.'), $$ = iif(length(regexSplit($$,'[-]')[1])>5,concat('99',regexSplit($$,'[-]')[1]),regexSplit($$,'[-]')[1]))) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\trowUrlColumn:'Filename',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> snkMSMastertRaw"
-				}
-			},
-			"dependsOn": []
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/df_iDocs_P21A_SpoolStatus_raw_to_synapse')]",
-			"type": "Microsoft.DataFactory/factories/dataflows",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"description": "Data Flow to pull data from ADLS RAW to Synapse database\nData Transformation used to update PROJECTNO and create SPOOLNUMBER",
-				"folder": {
-					"name": "Projects/iDocs"
-				},
-				"type": "MappingDataFlow",
-				"typeProperties": {
-					"sources": [
-						{
-							"dataset": {
-								"referenceName": "ds_adlsg2_iDocs_P21A_raw_latest_file",
-								"type": "DatasetReference"
-							},
-							"name": "srcSpoolStatusReportRAWLatest"
-						}
-					],
-					"sinks": [
-						{
-							"dataset": {
-								"referenceName": "ds_AzureSynapseAnalytics_iDocs_P21A_SpoolStatus",
-								"type": "DatasetReference"
-							},
-							"name": "snkSpoolStatusRptSynapse"
-						}
-					],
-					"transformations": [
-						{
-							"name": "DataTransformation"
-						}
-					],
-					"script": "source(output(\n\t\tPROJNAME as string,\n\t\tPROJNO as string,\n\t\tDOC_ID as string,\n\t\t{DOCUMENT NUMBER} as string,\n\t\tREVISION as string,\n\t\t{REVISION DATE} as string,\n\t\tTITLE as string,\n\t\t{ISSUE STATE} as string,\n\t\t{TRANSMITTAL NUMBER} as string,\n\t\t{TRANSMITTAL DATE} as string,\n\t\tDELIVERABLE as string,\n\t\t{IDOCS FOLDER} as string,\n\t\t{REF DOC} as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false) ~> srcSpoolStatusReportRAWLatest\nsrcSpoolStatusReportRAWLatest derive(PROJNO = concat('99',PROJNO),\n\t\tISONumber = (regexExtract({DOCUMENT NUMBER}, '[\\\\d]{3}-PI[\\\\d]{2}-[A-Z]{1,3}[0-9]{0,2}-[A-Z0-9]*-[\\\\d]{2}',0))) ~> DataTransformation\nDataTransformation sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tinput(\n\t\tstage_idoc_P21A_SpoolStatus_id as integer,\n\t\tPROJNAME as string,\n\t\tPROJNO as string,\n\t\tDOC_ID as string,\n\t\tDocumentNumber as string,\n\t\tRevision as string,\n\t\tRevisionDate as string,\n\t\tTitle as string,\n\t\tIssueState as string,\n\t\tTransmittalNumber as string,\n\t\tTransmittalDate as string,\n\t\tDeliverable as string,\n\t\tISONumber as string,\n\t\tiDocsFolder as string,\n\t\tRefDoc as string\n\t),\n\tdeletable:false,\n\tinsertable:true,\n\tupdateable:false,\n\tupsertable:false,\n\ttruncate:true,\n\tformat: 'table',\n\tstaged: true,\n\tallowCopyCommand: true,\n\terrorHandlingOption: 'stopOnFirstError',\n\tmapColumn(\n\t\tPROJNAME,\n\t\tPROJNO,\n\t\tDOC_ID,\n\t\tDocumentNumber = {DOCUMENT NUMBER},\n\t\tRevision = REVISION,\n\t\tRevisionDate = {REVISION DATE},\n\t\tTitle = TITLE,\n\t\tIssueState = {ISSUE STATE},\n\t\tTransmittalNumber = {TRANSMITTAL NUMBER},\n\t\tTransmittalDate = {TRANSMITTAL DATE},\n\t\tDeliverable = DELIVERABLE,\n\t\tISONumber,\n\t\tiDocsFolder = {IDOCS FOLDER},\n\t\tRefDoc = {REF DOC}\n\t)) ~> snkSpoolStatusRptSynapse"
 				}
 			},
 			"dependsOn": []

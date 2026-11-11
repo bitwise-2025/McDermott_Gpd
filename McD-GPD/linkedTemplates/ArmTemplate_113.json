@@ -14,16 +14,400 @@
 		"YARDKPI_Trigger_schedule_PCM_JAY_SMTWTFS_2130_GST_properties_pl_yardkpi_pcm_master_of_master_parameters_p_pcm_fab_code": {
 			"type": "string",
 			"defaultValue": "JAY"
-		},
-		"YARDKPI_Trigger_schedule_PCM_QFY_SMTWTFS_2030_AST_properties_pl_yardkpi_pcm_master_of_master_parameters_p_pcm_fab_code": {
-			"type": "string",
-			"defaultValue": "QFY"
 		}
 	},
 	"variables": {
 		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
 	},
 	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/mrr_consumables_all_projects_Trigger_schedule_Monthly')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pl_Master_pipeline_Mrr_Monthly_Runs",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Month",
+						"interval": 1,
+						"startTime": "2025-11-25T09:15:00",
+						"timeZone": "Arabian Standard Time",
+						"schedule": {
+							"minutes": [
+								0
+							],
+							"hours": [
+								15
+							],
+							"monthDays": [
+								-1
+							]
+						}
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pl_ced_master_pipeline')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "pl_ced_excel_P6_master",
+						"type": "ExecutePipeline",
+						"dependsOn": [],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_ced_excel_P6_master",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "pl_ced_excel_roombook_master",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "pl_ced_excel_P6_master",
+								"dependencyConditions": [
+									"Completed"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_ced_excel_roombook_master",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "pl_ced_idocs_master",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "pl_ced_excel_roombook_master",
+								"dependencyConditions": [
+									"Completed"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_ced_idocs_master",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "pl_ced_oracle_edw_document_tag_comparison",
+						"type": "ExecutePipeline",
+						"dependsOn": [],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_ced_oracle_edw_document_tag_comparison",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "pl_ced_oracle_edw_eqa_data",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "pl_ced_oracle_edw_document_tag_comparison",
+								"dependencyConditions": [
+									"Completed"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_ced_oracle_edw_eqa_data",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "pl_ced_oracle_edw_source_dates",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "pl_ced_oracle_edw_eqa_data",
+								"dependencyConditions": [
+									"Completed"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_ced_oracle_edw_source_dates",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "pl_ced_oracle_edw_tag_document_comparison",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "pl_ced_oracle_edw_source_dates",
+								"dependencyConditions": [
+									"Completed"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_ced_oracle_edw_tag_document_comparison",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "pl_ced_oracle_edw_tags_reconstructed_done",
+						"type": "ExecutePipeline",
+						"dependsOn": [],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_ced_oracle_edw_tags_reconstructed_done",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "pl_ced_oracle_edw_tags_reconstructed_error",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "pl_ced_oracle_edw_tags_reconstructed_done",
+								"dependencyConditions": [
+									"Completed"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_ced_oracle_edw_tags_reconstructed_error",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "pl_ced_oracle_ro_user_sppid_equip",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "pl_ced_oracle_edw_tags_reconstructed_error",
+								"dependencyConditions": [
+									"Completed"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_ced_oracle_ro_user_sppid_equip",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "pl_ced_oracle_ro_user_sppid_piperun_list",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "pl_ced_oracle_ro_user_sppid_equip",
+								"dependencyConditions": [
+									"Completed"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_ced_oracle_ro_user_sppid_piperun_list",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "pl_ced_oracle_ro_user_sppid_rdspp",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "pl_ced_idocs_master",
+								"dependencyConditions": [
+									"Completed"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_ced_oracle_ro_user_sppid_rdspp",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "pl_ced_oracle_spi_bal_spi_equip",
+						"type": "ExecutePipeline",
+						"dependsOn": [],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_ced_oracle_spi_bal_spi_equip",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "pl_ced_smat_po_details_master",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "pl_ced_oracle_spi_bal_spi_equip",
+								"dependencyConditions": [
+									"Completed"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_ced_smat_po_details_master",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "pl_ced_excel_Aveva_E3D_master",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "pl_ced_smat_po_details_master",
+								"dependencyConditions": [
+									"Completed"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_ced_excel_Aveva_E3D_master",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"folder": {
+					"name": "Projects/Central Engineering Database"
+				},
+				"annotations": []
+			},
+			"dependsOn": []
+		},
 		{
 			"name": "[concat(parameters('factoryName'), '/pl_master_pipeline_dimension')]",
 			"type": "Microsoft.DataFactory/factories/pipelines",
@@ -2384,7 +2768,9 @@
 					}
 				}
 			},
-			"dependsOn": []
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/pipelines/pl_ced_master_pipeline')]"
+			]
 		},
 		{
 			"name": "[concat(parameters('factoryName'), '/PROMT_Trigger_schedule_SMTWTFS')]",
@@ -2602,162 +2988,6 @@
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/pipelines/pl_yardkpi_pcm_master_of_master')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/YARDKPI_Trigger_schedule_PCM_QFY_SMTWTFS_2030_AST')]",
-			"type": "Microsoft.DataFactory/factories/triggers",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"description": "Trigger for YARDKPI PCM Qatar Yard",
-				"annotations": [
-					"PCM_QFY"
-				],
-				"runtimeState": "Stopped",
-				"pipelines": [
-					{
-						"pipelineReference": {
-							"referenceName": "pl_yardkpi_pcm_master_of_master",
-							"type": "PipelineReference"
-						},
-						"parameters": {
-							"p_pcm_fab_code": "[parameters('YARDKPI_Trigger_schedule_PCM_QFY_SMTWTFS_2030_AST_properties_pl_yardkpi_pcm_master_of_master_parameters_p_pcm_fab_code')]"
-						}
-					}
-				],
-				"type": "ScheduleTrigger",
-				"typeProperties": {
-					"recurrence": {
-						"frequency": "Week",
-						"interval": 1,
-						"startTime": "2025-03-20T10:07:00",
-						"timeZone": "India Standard Time",
-						"schedule": {
-							"minutes": [
-								0
-							],
-							"hours": [
-								4
-							],
-							"weekDays": [
-								"Sunday",
-								"Monday",
-								"Tuesday",
-								"Wednesday",
-								"Thursday",
-								"Friday",
-								"Saturday"
-							]
-						}
-					}
-				}
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/pipelines/pl_yardkpi_pcm_master_of_master')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/YARDKPI_Trigger_schedule_xMTWTFx_1400CST')]",
-			"type": "Microsoft.DataFactory/factories/triggers",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"description": "YARDKPI_Trigger_schedule FOR Every week days 1400CST (1:30 am ist)",
-				"annotations": [],
-				"runtimeState": "Stopped",
-				"pipelines": [
-					{
-						"pipelineReference": {
-							"referenceName": "pl_yardkpi_idocs_loop_project",
-							"type": "PipelineReference"
-						},
-						"parameters": {}
-					},
-					{
-						"pipelineReference": {
-							"referenceName": "pl_yardkpi_tabware_master_pipeline",
-							"type": "PipelineReference"
-						},
-						"parameters": {}
-					},
-					{
-						"pipelineReference": {
-							"referenceName": "pl_yardkpi_servicenow_master_pipelines",
-							"type": "PipelineReference"
-						},
-						"parameters": {}
-					},
-					{
-						"pipelineReference": {
-							"referenceName": "pl_yardkpi_toolhound_transaction_master_pipeline",
-							"type": "PipelineReference"
-						},
-						"parameters": {}
-					},
-					{
-						"pipelineReference": {
-							"referenceName": "pl_yardkpi_toolhound_inventory_master_pipeline",
-							"type": "PipelineReference"
-						},
-						"parameters": {}
-					},
-					{
-						"pipelineReference": {
-							"referenceName": "pl_yardkpi_spc_master",
-							"type": "PipelineReference"
-						},
-						"parameters": {}
-					},
-					{
-						"pipelineReference": {
-							"referenceName": "pl_yardkpi_R2P_master_pipeline",
-							"type": "PipelineReference"
-						},
-						"parameters": {}
-					},
-					{
-						"pipelineReference": {
-							"referenceName": "pl_yardkpi_smat_master_pipeline",
-							"type": "PipelineReference"
-						},
-						"parameters": {}
-					},
-					{
-						"pipelineReference": {
-							"referenceName": "pl_yardkpi_mwin_master",
-							"type": "PipelineReference"
-						},
-						"parameters": {}
-					}
-				],
-				"type": "ScheduleTrigger",
-				"typeProperties": {
-					"recurrence": {
-						"frequency": "Week",
-						"interval": 1,
-						"startTime": "2023-12-05T05:41:00",
-						"timeZone": "Central Standard Time",
-						"schedule": {
-							"minutes": [
-								30
-							],
-							"hours": [
-								14
-							],
-							"weekDays": [
-								"Monday",
-								"Tuesday",
-								"Wednesday",
-								"Thursday",
-								"Friday",
-								"Saturday",
-								"Sunday"
-							]
-						}
-					}
-				}
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/pipelines/pl_yardkpi_idocs_loop_project')]"
 			]
 		}
 	]

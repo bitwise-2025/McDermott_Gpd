@@ -47,36 +47,78 @@
 		"Linkedservice_MCPM_Onshore_prod_properties_typeProperties_userName": {
 			"type": "string",
 			"defaultValue": "mcdcorp\\SVC-GLB-AZURADF_PROD"
-		},
-		"Linkedservice_fileshare_iDocs_properties_typeProperties_host": {
-			"type": "string",
-			"defaultValue": "\\\\mcdcorp\\share\\Houston\\Apps\\AppData\\iDocs\\Prod\\NCSA_Analytics"
-		},
-		"Linkedservice_fileshare_iDocs_properties_typeProperties_userId": {
-			"type": "string",
-			"defaultValue": "mcdcorp\\SVC-GLB-AZURADF_DEV"
-		},
-		"Linkedservice_fileshare_iDocsExtracts_properties_typeProperties_host": {
-			"type": "string",
-			"defaultValue": "\\\\mcdcorp\\share\\Houston\\Apps\\AppData\\iDocs\\Prod\\Data-Lake_PowerBI"
-		},
-		"Linkedservice_fileshare_iDocsExtracts_properties_typeProperties_userId": {
-			"type": "string",
-			"defaultValue": "mcdcorp\\SVC-GLB-AZURADF_QA"
-		},
-		"Linkedservice_fileshare_yardkpi_properties_typeProperties_host": {
-			"type": "string",
-			"defaultValue": "\\\\mcdcorp\\share\\Dubai\\Group\\DataLake\\Development\\YARDKPI"
-		},
-		"Linkedservice_fileshare_yardkpi_properties_typeProperties_userId": {
-			"type": "string",
-			"defaultValue": "mcdcorp\\SVC-GLB-AZURADF_DEV"
 		}
 	},
 	"variables": {
 		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
 	},
 	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_http_binary_supplier_site_data_source')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_oauth_oracle_payment_dashboard_HttpServer",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/Payment Dashboard/Supplier Site Data"
+				},
+				"annotations": [],
+				"type": "Binary",
+				"typeProperties": {
+					"location": {
+						"type": "HttpServerLocation"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_http_binary_xle_entity_profiles_source')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_oauth_oracle_payment_dashboard_HttpServer",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/Payment Dashboard/Xle Entity Profiles"
+				},
+				"annotations": [],
+				"type": "Binary",
+				"typeProperties": {
+					"location": {
+						"type": "HttpServerLocation"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_http_binary_yardkpi_r2p_source')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_oracle_r2p_HttpServer",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/YARD KPI/R2P"
+				},
+				"annotations": [],
+				"type": "Binary",
+				"typeProperties": {
+					"location": {
+						"type": "HttpServerLocation"
+					}
+				}
+			},
+			"dependsOn": []
+		},
 		{
 			"name": "[concat(parameters('factoryName'), '/ds_http_oneview_getreferencedatacountries')]",
 			"type": "Microsoft.DataFactory/factories/datasets",
@@ -942,86 +984,6 @@
 							"type": "LinkedServiceReference"
 						},
 						"secretName": "AZURE-ADF-SVC-ACCT-PROD-NW-PWD"
-					}
-				},
-				"connectVia": {
-					"referenceName": "mdrdevshir",
-					"type": "IntegrationRuntimeReference"
-				}
-			},
-			"dependsOn": []
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/Linkedservice_fileshare_iDocs')]",
-			"type": "Microsoft.DataFactory/factories/linkedServices",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"description": "Linked service to connect to the server hosting the iDocs Files",
-				"annotations": [],
-				"type": "FileServer",
-				"typeProperties": {
-					"host": "[parameters('Linkedservice_fileshare_iDocs_properties_typeProperties_host')]",
-					"userId": "[parameters('Linkedservice_fileshare_iDocs_properties_typeProperties_userId')]",
-					"password": {
-						"type": "AzureKeyVaultSecret",
-						"store": {
-							"referenceName": "MDREntAnltxAzureKeyVault1",
-							"type": "LinkedServiceReference"
-						},
-						"secretName": "AZURE-ADF-SVC-ACCT-NW-PWD"
-					}
-				},
-				"connectVia": {
-					"referenceName": "mdrdevshir",
-					"type": "IntegrationRuntimeReference"
-				}
-			},
-			"dependsOn": []
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/Linkedservice_fileshare_iDocsExtracts')]",
-			"type": "Microsoft.DataFactory/factories/linkedServices",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"annotations": [],
-				"type": "FileServer",
-				"typeProperties": {
-					"host": "[parameters('Linkedservice_fileshare_iDocsExtracts_properties_typeProperties_host')]",
-					"userId": "[parameters('Linkedservice_fileshare_iDocsExtracts_properties_typeProperties_userId')]",
-					"password": {
-						"type": "AzureKeyVaultSecret",
-						"store": {
-							"referenceName": "MDREntAnltxAzureKeyVault1",
-							"type": "LinkedServiceReference"
-						},
-						"secretName": "AZURE-ADF-SVC-ACCT-QA-NW-PWD"
-					}
-				},
-				"connectVia": {
-					"referenceName": "mdrdevshir",
-					"type": "IntegrationRuntimeReference"
-				}
-			},
-			"dependsOn": []
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/Linkedservice_fileshare_yardkpi')]",
-			"type": "Microsoft.DataFactory/factories/linkedServices",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"description": "Linked service for YARDKPI file share Network folder",
-				"annotations": [],
-				"type": "FileServer",
-				"typeProperties": {
-					"host": "[parameters('Linkedservice_fileshare_yardkpi_properties_typeProperties_host')]",
-					"userId": "[parameters('Linkedservice_fileshare_yardkpi_properties_typeProperties_userId')]",
-					"password": {
-						"type": "AzureKeyVaultSecret",
-						"store": {
-							"referenceName": "MDREntAnltxAzureKeyVault1",
-							"type": "LinkedServiceReference"
-						},
-						"secretName": "AZURE-ADF-SVC-ACCT-NW-PWD"
 					}
 				},
 				"connectVia": {

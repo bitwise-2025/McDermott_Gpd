@@ -13,6 +13,89 @@
 	},
 	"resources": [
 		{
+			"name": "[concat(parameters('factoryName'), '/ds_eut_synapse')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "AzureSqlDWTable",
+				"schema": [
+					{
+						"name": "rssk",
+						"type": "bigint",
+						"precision": 19
+					},
+					{
+						"name": "Usage_DT",
+						"type": "varchar"
+					},
+					{
+						"name": "Vendor",
+						"type": "varchar"
+					},
+					{
+						"name": "Application",
+						"type": "varchar"
+					},
+					{
+						"name": "User_Name",
+						"type": "varchar"
+					},
+					{
+						"name": "CreatedDateTime",
+						"type": "varchar"
+					},
+					{
+						"name": "File_Name",
+						"type": "varchar"
+					}
+				],
+				"typeProperties": {
+					"schema": "eud",
+					"table": "EUT_txt_Aveva"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_excel_eut')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_network_file_share",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"path": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "Excel",
+				"typeProperties": {
+					"sheetName": {
+						"value": "Sheet1",
+						"type": "Expression"
+					},
+					"location": {
+						"type": "FileServerLocation",
+						"folderPath": {
+							"value": "@dataset().path",
+							"type": "Expression"
+						}
+					},
+					"firstRowAsHeader": true
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/ds_excel_rim')]",
 			"type": "Microsoft.DataFactory/factories/datasets",
 			"apiVersion": "2018-06-01",
@@ -735,100 +818,6 @@
 						"type": "Expression"
 					},
 					"firstRowAsHeader": true
-				},
-				"schema": []
-			},
-			"dependsOn": []
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/ds_filesystem_network_excel_get_subfolders')]",
-			"type": "Microsoft.DataFactory/factories/datasets",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"linkedServiceName": {
-					"referenceName": "ls_network_file_share_epr",
-					"type": "LinkedServiceReference"
-				},
-				"parameters": {
-					"path": {
-						"type": "string"
-					},
-					"file_name": {
-						"type": "string"
-					},
-					"sheetindex": {
-						"type": "int"
-					}
-				},
-				"annotations": [],
-				"type": "Excel",
-				"typeProperties": {
-					"location": {
-						"type": "FileServerLocation",
-						"fileName": {
-							"value": "@dataset().file_name",
-							"type": "Expression"
-						},
-						"folderPath": {
-							"value": "@dataset().path",
-							"type": "Expression"
-						}
-					},
-					"sheetIndex": {
-						"value": "@dataset().sheetindex",
-						"type": "Expression"
-					},
-					"firstRowAsHeader": true
-				},
-				"schema": []
-			},
-			"dependsOn": []
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/ds_filesystem_network_excel_get_subfolders_Sheetname1')]",
-			"type": "Microsoft.DataFactory/factories/datasets",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"linkedServiceName": {
-					"referenceName": "ls_network_file_share_epr",
-					"type": "LinkedServiceReference"
-				},
-				"parameters": {
-					"range": {
-						"type": "string"
-					},
-					"sheetindex": {
-						"type": "int"
-					},
-					"file_name": {
-						"type": "string"
-					},
-					"path": {
-						"type": "string"
-					}
-				},
-				"annotations": [],
-				"type": "Excel",
-				"typeProperties": {
-					"location": {
-						"type": "FileServerLocation",
-						"fileName": {
-							"value": "@dataset().file_name",
-							"type": "Expression"
-						},
-						"folderPath": {
-							"value": "@dataset().path",
-							"type": "Expression"
-						}
-					},
-					"sheetIndex": {
-						"value": "@dataset().sheetindex",
-						"type": "Expression"
-					},
-					"range": {
-						"value": "@dataset().range",
-						"type": "Expression"
-					}
 				},
 				"schema": []
 			},

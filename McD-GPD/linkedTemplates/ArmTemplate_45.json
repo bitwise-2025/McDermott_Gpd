@@ -65,19 +65,29 @@
 			"type": "secureString",
 			"metadata": "Secure string for 'connectionString' of 'ls_DB2_Zycus_JDE_CBIADHOC'"
 		},
-		"ls_ODBC_DB2_Zycus_JDE_connectionString": {
-			"type": "secureString",
-			"metadata": "Secure string for 'connectionString' of 'ls_ODBC_DB2_Zycus_JDE'"
+		"Linkedservice_fileshare_iDocs_properties_typeProperties_host": {
+			"type": "string",
+			"defaultValue": "\\\\mcdcorp\\share\\Houston\\Apps\\AppData\\iDocs\\Prod\\NCSA_Analytics"
 		},
-		"ls_SQL_Zycus_Datamart_connectionString": {
-			"type": "secureString",
-			"metadata": "Secure string for 'connectionString' of 'ls_SQL_Zycus_Datamart'",
-			"defaultValue": "Integrated Security=True;Data Source=CLDDSQL14;Initial Catalog=EnterpriseAnalytics"
+		"Linkedservice_fileshare_iDocs_properties_typeProperties_userId": {
+			"type": "string",
+			"defaultValue": "mcdcorp\\SVC-GLB-AZURADF_DEV"
 		},
-		"ls_SQL_Zycus_Datamart_Staging_connectionString": {
-			"type": "secureString",
-			"metadata": "Secure string for 'connectionString' of 'ls_SQL_Zycus_Datamart_Staging'",
-			"defaultValue": "Integrated Security=True;Data Source=DALDSQL03;Initial Catalog=EnterpriseAnalyticsStaging_Zycus"
+		"Linkedservice_fileshare_iDocsExtracts_properties_typeProperties_host": {
+			"type": "string",
+			"defaultValue": "\\\\mcdcorp\\share\\Houston\\Apps\\AppData\\iDocs\\Prod\\Data-Lake_PowerBI"
+		},
+		"Linkedservice_fileshare_iDocsExtracts_properties_typeProperties_userId": {
+			"type": "string",
+			"defaultValue": "mcdcorp\\SVC-GLB-AZURADF_QA"
+		},
+		"Linkedservice_fileshare_yardkpi_properties_typeProperties_host": {
+			"type": "string",
+			"defaultValue": "\\\\mcdcorp\\share\\Dubai\\Group\\DataLake\\Development\\YARDKPI"
+		},
+		"Linkedservice_fileshare_yardkpi_properties_typeProperties_userId": {
+			"type": "string",
+			"defaultValue": "mcdcorp\\SVC-GLB-AZURADF_DEV"
 		},
 		"Linkedservice_fileshare_yardkpi_L_od_properties_typeProperties_host": {
 			"type": "string",
@@ -170,24 +180,92 @@
 		"ls_DB2_Zycus_JDE_CBIADHOC_properties_typeProperties_userName": {
 			"type": "string",
 			"defaultValue": "CBITABLEAU"
-		},
-		"ls_ODBC_DB2_Zycus_JDE_properties_typeProperties_userName": {
-			"type": "string",
-			"defaultValue": "CBITableau"
-		},
-		"ls_SQL_Zycus_Datamart_properties_typeProperties_userName": {
-			"type": "string",
-			"defaultValue": "mcdcorp\\SVC-GLB-AZURADF_QA"
-		},
-		"ls_SQL_Zycus_Datamart_Staging_properties_typeProperties_userName": {
-			"type": "string",
-			"defaultValue": "mcdcorp\\SVC-GLB-AZURADF_DEV"
 		}
 	},
 	"variables": {
 		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
 	},
 	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/Linkedservice_fileshare_iDocs')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Linked service to connect to the server hosting the iDocs Files",
+				"annotations": [],
+				"type": "FileServer",
+				"typeProperties": {
+					"host": "[parameters('Linkedservice_fileshare_iDocs_properties_typeProperties_host')]",
+					"userId": "[parameters('Linkedservice_fileshare_iDocs_properties_typeProperties_userId')]",
+					"password": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "MDREntAnltxAzureKeyVault1",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "AZURE-ADF-SVC-ACCT-NW-PWD"
+					}
+				},
+				"connectVia": {
+					"referenceName": "mdrdevshir",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/Linkedservice_fileshare_iDocsExtracts')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "FileServer",
+				"typeProperties": {
+					"host": "[parameters('Linkedservice_fileshare_iDocsExtracts_properties_typeProperties_host')]",
+					"userId": "[parameters('Linkedservice_fileshare_iDocsExtracts_properties_typeProperties_userId')]",
+					"password": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "MDREntAnltxAzureKeyVault1",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "AZURE-ADF-SVC-ACCT-QA-NW-PWD"
+					}
+				},
+				"connectVia": {
+					"referenceName": "mdrdevshir",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/Linkedservice_fileshare_yardkpi')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Linked service for YARDKPI file share Network folder",
+				"annotations": [],
+				"type": "FileServer",
+				"typeProperties": {
+					"host": "[parameters('Linkedservice_fileshare_yardkpi_properties_typeProperties_host')]",
+					"userId": "[parameters('Linkedservice_fileshare_yardkpi_properties_typeProperties_userId')]",
+					"password": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "MDREntAnltxAzureKeyVault1",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "AZURE-ADF-SVC-ACCT-NW-PWD"
+					}
+				},
+				"connectVia": {
+					"referenceName": "mdrdevshir",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": []
+		},
 		{
 			"name": "[concat(parameters('factoryName'), '/Linkedservice_fileshare_yardkpi_L_od')]",
 			"type": "Microsoft.DataFactory/factories/linkedServices",
@@ -657,91 +735,6 @@
 							"type": "LinkedServiceReference"
 						},
 						"secretName": "MRD-JDE-ZYCUS-DB2"
-					}
-				},
-				"connectVia": {
-					"referenceName": "mdrdevshir",
-					"type": "IntegrationRuntimeReference"
-				}
-			},
-			"dependsOn": []
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/ls_ODBC_DB2_Zycus_JDE')]",
-			"type": "Microsoft.DataFactory/factories/linkedServices",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"description": "Linked service for Zycus ODBC for JDE connection.",
-				"annotations": [],
-				"type": "Odbc",
-				"typeProperties": {
-					"connectionString": {
-						"type": "SecureString",
-						"value": "[parameters('ls_ODBC_DB2_Zycus_JDE_connectionString')]"
-					},
-					"authenticationType": "Basic",
-					"userName": "[parameters('ls_ODBC_DB2_Zycus_JDE_properties_typeProperties_userName')]",
-					"password": {
-						"type": "AzureKeyVaultSecret",
-						"store": {
-							"referenceName": "MDREntAnltxAzureKeyVault1",
-							"type": "LinkedServiceReference"
-						},
-						"secretName": "MRD-JDE-ZYCUS-DB2"
-					}
-				},
-				"connectVia": {
-					"referenceName": "mdrdevshir",
-					"type": "IntegrationRuntimeReference"
-				}
-			},
-			"dependsOn": []
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/ls_SQL_Zycus_Datamart')]",
-			"type": "Microsoft.DataFactory/factories/linkedServices",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"description": "Linked service for Zycus Datamart connection. (DM)",
-				"annotations": [],
-				"type": "SqlServer",
-				"typeProperties": {
-					"connectionString": "[parameters('ls_SQL_Zycus_Datamart_connectionString')]",
-					"userName": "[parameters('ls_SQL_Zycus_Datamart_properties_typeProperties_userName')]",
-					"password": {
-						"type": "AzureKeyVaultSecret",
-						"store": {
-							"referenceName": "MDREntAnltxAzureKeyVault1",
-							"type": "LinkedServiceReference"
-						},
-						"secretName": "AZURE-ADF-SVC-ACCT-QA-NW-PWD"
-					}
-				},
-				"connectVia": {
-					"referenceName": "mdrdevshir",
-					"type": "IntegrationRuntimeReference"
-				}
-			},
-			"dependsOn": []
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/ls_SQL_Zycus_Datamart_Staging')]",
-			"type": "Microsoft.DataFactory/factories/linkedServices",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"description": "Linked service for Zycus Datamart Staging connection. (DM_staging)",
-				"annotations": [],
-				"type": "SqlServer",
-				"typeProperties": {
-					"connectionString": "[parameters('ls_SQL_Zycus_Datamart_Staging_connectionString')]",
-					"userName": "[parameters('ls_SQL_Zycus_Datamart_Staging_properties_typeProperties_userName')]",
-					"password": {
-						"type": "AzureKeyVaultSecret",
-						"store": {
-							"referenceName": "MDREntAnltxAzureKeyVault1",
-							"type": "LinkedServiceReference"
-						},
-						"secretName": "AZURE-ADF-SVC-ACCT-NW-PWD"
 					}
 				},
 				"connectVia": {

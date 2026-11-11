@@ -23,6 +23,44 @@
 	},
 	"resources": [
 		{
+			"name": "[concat(parameters('factoryName'), '/ds_sql_query_yardkpi_toolhound_source')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_yardkpi_sql_toolhound",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Projects/YARD KPI/Toolhound"
+				},
+				"annotations": [],
+				"type": "SqlServerTable",
+				"schema": [],
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_time_works_db')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "linkedservice_timeworksDB",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "1.Enterprise Data Sets/General/COA"
+				},
+				"annotations": [],
+				"type": "SqlServerTable",
+				"schema": [],
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/ds_yardkpi_excel_load_and_training')]",
 			"type": "Microsoft.DataFactory/factories/datasets",
 			"apiVersion": "2018-06-01",
@@ -2827,138 +2865,6 @@
 						"     skipDuplicateMapInputs: true,",
 						"     skipDuplicateMapOutputs: true,",
 						"     partitionBy('hash', 1)) ~> SnkCsv"
-					]
-				}
-			},
-			"dependsOn": []
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/df_SR_Stage_To_Raw')]",
-			"type": "Microsoft.DataFactory/factories/dataflows",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"type": "MappingDataFlow",
-				"typeProperties": {
-					"sources": [
-						{
-							"dataset": {
-								"referenceName": "ds_adls2_sitepro_stagetoraw_SR",
-								"type": "DatasetReference"
-							},
-							"name": "srcStageToRawSR"
-						}
-					],
-					"sinks": [
-						{
-							"dataset": {
-								"referenceName": "ds_adls2_sp_sr_raw",
-								"type": "DatasetReference"
-							},
-							"name": "destSRRAW"
-						}
-					],
-					"transformations": [
-						{
-							"name": "setFileName"
-						}
-					],
-					"script": "source(output(\n\t\tproject_id as string,\n\t\tID as string,\n\t\tProjectID as boolean,\n\t\tCode as string,\n\t\tName as string,\n\t\tDefaultCrewSize as string,\n\t\tPF_Planned as string,\n\t\tPF_Actual as string,\n\t\tPF_RollingPeriods as string,\n\t\tMaxWorkPackThreshold as string,\n\t\tMinWorkPackThreshold as string,\n\t\tCreatedByID as string,\n\t\tCreatedDate as string,\n\t\tModifiedByID as string,\n\t\tModifiedDate as string,\n\t\tFirstImportID as string,\n\t\tLastImportID as string,\n\t\tSubPrime as string,\n\t\tIsActive as boolean,\n\t\tSPMDiscipline as string,\n\t\tMaterialCategoryID as string,\n\t\ttemp_id as boolean\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpurgeFiles: true,\n\twildcardPaths:['Project_Data/NCSA/SitePro/SR/sitepro_sr.csv']) ~> srcStageToRawSR\nsrcStageToRawSR derive(FileName = concat( 'Project_Data/NCSA/SitePro/SR/',        \r\n        substring(toString(currentTimestamp()),1,4),        \r\n        '/',substring(toString(currentTimestamp()),6,2),        \r\n        '/',substring(toString(currentTimestamp()),9,2),        \r\n        '/',        'sr_sitepro_',        \r\n        replace(replace(toString(currentTimestamp()),'.',''),':',''),        \r\n        '.csv')) ~> setFileName\nsetFileName sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\trowUrlColumn:'FileName',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: [],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tmapColumn(\n\t\tproject_id,\n\t\tID,\n\t\tProjectID,\n\t\tCode,\n\t\tName,\n\t\tDefaultCrewSize,\n\t\tPF_Planned,\n\t\tPF_Actual,\n\t\tPF_RollingPeriods,\n\t\tMaxWorkPackThreshold,\n\t\tMinWorkPackThreshold,\n\t\tCreatedByID,\n\t\tCreatedDate,\n\t\tModifiedByID,\n\t\tModifiedDate,\n\t\tFirstImportID,\n\t\tLastImportID,\n\t\tSubPrime,\n\t\tIsActive,\n\t\tSPMDiscipline,\n\t\tMaterialCategoryID,\n\t\ttemp_id,\n\t\tFileName\n\t)) ~> destSRRAW"
-				}
-			},
-			"dependsOn": []
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/df_Toolhound_inventory_stage_to_raw')]",
-			"type": "Microsoft.DataFactory/factories/dataflows",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"description": "Import data from ds_adlsg2_csv_yardkpi_toolhound_generic",
-				"folder": {
-					"name": "Projects/YARD KPI/Toolhound"
-				},
-				"type": "MappingDataFlow",
-				"typeProperties": {
-					"sources": [
-						{
-							"dataset": {
-								"referenceName": "ds_adlsg2_csv_yardkpi_toolhound_inventory",
-								"type": "DatasetReference"
-							},
-							"name": "SrcToolhoundStage",
-							"description": "Import data from ds_adlsg2_csv_yardkpi_toolhound_generic"
-						}
-					],
-					"sinks": [
-						{
-							"dataset": {
-								"referenceName": "ds_adlsg2_csv_yardkpi_toolhound_inventory_wildcard",
-								"type": "DatasetReference"
-							},
-							"name": "SinkToolhoundRaw"
-						}
-					],
-					"transformations": [
-						{
-							"name": "SetFileName"
-						}
-					],
-					"scriptLines": [
-						"source(output(",
-						"          partNo as string,",
-						"          Description as string,",
-						"          ident as string,",
-						"          ItemID as string,",
-						"          category as string,",
-						"          subcategory as string,",
-						"          InventoryType as string,",
-						"          LocationName as string,",
-						"          BinShelf as string,",
-						"          MinOnHand as string,",
-						"          MaxOnHand as string,",
-						"          QtyOnHand as string,",
-						"          Issued as string,",
-						"          TransitInBound as string,",
-						"          Reserved as string,",
-						"          InKit as string,",
-						"          Total as string,",
-						"          InTransitOutBound as string,",
-						"          OnPurchaseOrder as string",
-						"     ),",
-						"     allowSchemaDrift: true,",
-						"     validateSchema: false,",
-						"     ignoreNoFilesFound: false,",
-						"     rowUrlColumn: 'file_path') ~> SrcToolhoundStage",
-						"SrcToolhoundStage derive(file_path = concat(concat(trim(substringIndex(file_path,'/',5),'/'),'/'),substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/',split(split(file_path,'/')[6],'.')[1],'_',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv'),",
-						"          Description = trim(replace(Description,\"\\n\",\" \"))) ~> SetFileName",
-						"SetFileName sink(allowSchemaDrift: true,",
-						"     validateSchema: false,",
-						"     input(",
-						"          partNo as string,",
-						"          Description as string,",
-						"          ident as string,",
-						"          ItemID as string,",
-						"          category as string,",
-						"          subcategory as string,",
-						"          InventoryType as string,",
-						"          LocationName as string,",
-						"          BinShelf as string,",
-						"          MinOnHand as string,",
-						"          MaxOnHand as string,",
-						"          QtyOnHand as string,",
-						"          Issued as string,",
-						"          TransitInBound as string,",
-						"          Reserved as string,",
-						"          InKit as string,",
-						"          Total as string,",
-						"          InTransitOutBound as string,",
-						"          OnPurchaseOrder as string",
-						"     ),",
-						"     rowUrlColumn:'file_path',",
-						"     umask: 0022,",
-						"     preCommands: [],",
-						"     postCommands: [],",
-						"     skipDuplicateMapInputs: true,",
-						"     skipDuplicateMapOutputs: true) ~> SinkToolhoundRaw"
 					]
 				}
 			},

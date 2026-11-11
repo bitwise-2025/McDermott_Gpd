@@ -13,6 +13,229 @@
 	},
 	"resources": [
 		{
+			"name": "[concat(parameters('factoryName'), '/df_yardkpi_r2p_stage_data_flattening')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "Projects/YARD KPI/R2P"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_xml_yardkpi_r2p_source",
+								"type": "DatasetReference"
+							},
+							"name": "SrcXMl"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_yardkpi_r2p_generic",
+								"type": "DatasetReference"
+							},
+							"name": "SnkCsv"
+						}
+					],
+					"transformations": [
+						{
+							"name": "XmlToCsvflatten"
+						},
+						{
+							"name": "addLoadDetails"
+						}
+					],
+					"scriptLines": [
+						"parameters{",
+						"     csv_file_name as string,",
+						"     source_name as string,",
+						"     sub_source_name as string",
+						"}",
+						"source(output(",
+						"          DATA_DS as (G_1 as (ACCOUNT_CODE_ITEM as string, AGREEMENT_NUMBER as string, BUYER as string, BUYER_EMAIL_ID as string, CATEGORY_ID as string, CURRENCY as string, END_DATE as string, FIRST_PO_VERSION_RECEIVE_DATE as string, FIRST_PO_VERSION_RECEIVE_DATE1 as string, FIRST_PO_VER_REC_DATE as string, INCOTERM as string, INIT_REV_LINE_AMT as string, LAST_UPDATE_DATE as string, MATERIAL_WORK_GROUP as string, MPP_PO as string, ORIGINALORDEREDAMOUNTDISPLAY as string, PAYMENT_MODE as string, PO_ACKNOWLEDGEMENT_DATE as string, PO_ACK_DATE_POV as string, PO_ACK_DATE_POV1 as string, PO_APPROVED_DATE as string, PO_APPROVER as string, PO_CLOSED_DATE as string, PO_CREATION_DATE as string, PO_DESCRIPTION as string, PO_NO as string, PO_REV as string, PO_REV_2 as string, PO_STATUS as string, PROJECT_ID as string, PROJECT_NAME as string, PURCHASER_REQUESTER as string, REQUESTER_EMAIL_ID as string, REQUISITION_BU as string, REQUISITION_DATE as string, REQUISITION_NO_ as string, REQUISITION_ORIGINATOR as string, REQ_RELEASED_TO_PROC as string, REVISED_DATE as string, SELECTION_CODE as string, SMAT_REV_NO as string, SOURCE_BASE_POH_ID as string, SOURCE_POH_ID as string, SPMAT_PO_NUMBER as string, START_DATE as string, SUPPLIER as string, SUPPLIER_COUNTRY as string, SUPPLIER_COUNTRY_CODE as string, SUPPLIER_LOCATION as string, SUPPLIER_NUM as string, SUPPLIER_TYPE as string, USD as string)[], PO_LAST_UPDATE_DATE_FROM as string, PO_LAST_UPDATE_DATE_TO as string)",
+						"     ),",
+						"     allowSchemaDrift: false,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     purgeFiles: true,",
+						"     validationMode: 'none',",
+						"     namespaces: true) ~> SrcXMl",
+						"SrcXMl foldDown(unroll(DATA_DS.G_1),",
+						"     mapColumn(",
+						"          ACCOUNT_CODE_ITEM = DATA_DS.G_1.ACCOUNT_CODE_ITEM,",
+						"          AGREEMENT_NUMBER = DATA_DS.G_1.AGREEMENT_NUMBER,",
+						"          BUYER = DATA_DS.G_1.BUYER,",
+						"          BUYER_EMAIL_ID = DATA_DS.G_1.BUYER_EMAIL_ID,",
+						"          CATEGORY_ID = DATA_DS.G_1.CATEGORY_ID,",
+						"          CURRENCY = DATA_DS.G_1.CURRENCY,",
+						"          END_DATE = DATA_DS.G_1.END_DATE,",
+						"          FIRST_PO_VERSION_RECEIVE_DATE = DATA_DS.G_1.FIRST_PO_VERSION_RECEIVE_DATE,",
+						"          FIRST_PO_VERSION_RECEIVE_DATE1 = DATA_DS.G_1.FIRST_PO_VERSION_RECEIVE_DATE1,",
+						"          FIRST_PO_VER_REC_DATE = DATA_DS.G_1.FIRST_PO_VER_REC_DATE,",
+						"          INCOTERM = DATA_DS.G_1.INCOTERM,",
+						"          INIT_REV_LINE_AMT = DATA_DS.G_1.INIT_REV_LINE_AMT,",
+						"          LAST_UPDATE_DATE = DATA_DS.G_1.LAST_UPDATE_DATE,",
+						"          MATERIAL_WORK_GROUP = DATA_DS.G_1.MATERIAL_WORK_GROUP,",
+						"          MPP_PO = DATA_DS.G_1.MPP_PO,",
+						"          ORIGINALORDEREDAMOUNTDISPLAY = DATA_DS.G_1.ORIGINALORDEREDAMOUNTDISPLAY,",
+						"          PAYMENT_MODE = DATA_DS.G_1.PAYMENT_MODE,",
+						"          PO_ACKNOWLEDGEMENT_DATE = DATA_DS.G_1.PO_ACKNOWLEDGEMENT_DATE,",
+						"          PO_ACK_DATE_POV = DATA_DS.G_1.PO_ACK_DATE_POV,",
+						"          PO_ACK_DATE_POV1 = DATA_DS.G_1.PO_ACK_DATE_POV1,",
+						"          PO_APPROVED_DATE = DATA_DS.G_1.PO_APPROVED_DATE,",
+						"          PO_APPROVER = DATA_DS.G_1.PO_APPROVER,",
+						"          PO_CLOSED_DATE = DATA_DS.G_1.PO_CLOSED_DATE,",
+						"          PO_CREATION_DATE = DATA_DS.G_1.PO_CREATION_DATE,",
+						"          PO_DESCRIPTION = DATA_DS.G_1.PO_DESCRIPTION,",
+						"          PO_NO = DATA_DS.G_1.PO_NO,",
+						"          PO_REV = DATA_DS.G_1.PO_REV,",
+						"          PO_REV_2 = DATA_DS.G_1.PO_REV_2,",
+						"          PO_STATUS = DATA_DS.G_1.PO_STATUS,",
+						"          PROJECT_ID = DATA_DS.G_1.PROJECT_ID,",
+						"          PROJECT_NAME = DATA_DS.G_1.PROJECT_NAME,",
+						"          PURCHASER_REQUESTER = DATA_DS.G_1.PURCHASER_REQUESTER,",
+						"          REQUESTER_EMAIL_ID = DATA_DS.G_1.REQUESTER_EMAIL_ID,",
+						"          REQUISITION_BU = DATA_DS.G_1.REQUISITION_BU,",
+						"          REQUISITION_DATE = DATA_DS.G_1.REQUISITION_DATE,",
+						"          REQUISITION_NO_ = DATA_DS.G_1.REQUISITION_NO_,",
+						"          REQUISITION_ORIGINATOR = DATA_DS.G_1.REQUISITION_ORIGINATOR,",
+						"          REQ_RELEASED_TO_PROC = DATA_DS.G_1.REQ_RELEASED_TO_PROC,",
+						"          REVISED_DATE = DATA_DS.G_1.REVISED_DATE,",
+						"          SELECTION_CODE = DATA_DS.G_1.SELECTION_CODE,",
+						"          SMAT_REV_NO = DATA_DS.G_1.SMAT_REV_NO,",
+						"          SOURCE_BASE_POH_ID = DATA_DS.G_1.SOURCE_BASE_POH_ID,",
+						"          SOURCE_POH_ID = DATA_DS.G_1.SOURCE_POH_ID,",
+						"          SPMAT_PO_NUMBER = DATA_DS.G_1.SPMAT_PO_NUMBER,",
+						"          START_DATE = DATA_DS.G_1.START_DATE,",
+						"          SUPPLIER = DATA_DS.G_1.SUPPLIER,",
+						"          SUPPLIER_COUNTRY = DATA_DS.G_1.SUPPLIER_COUNTRY,",
+						"          SUPPLIER_COUNTRY_CODE = DATA_DS.G_1.SUPPLIER_COUNTRY_CODE,",
+						"          SUPPLIER_LOCATION = DATA_DS.G_1.SUPPLIER_LOCATION,",
+						"          SUPPLIER_NUM = DATA_DS.G_1.SUPPLIER_NUM,",
+						"          SUPPLIER_TYPE = DATA_DS.G_1.SUPPLIER_TYPE,",
+						"          USD = DATA_DS.G_1.USD",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> XmlToCsvflatten",
+						"XmlToCsvflatten derive(source_name = $source_name,",
+						"          sub_source_name = $sub_source_name) ~> addLoadDetails",
+						"addLoadDetails sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     partitionFileNames:[($csv_file_name)],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> SnkCsv"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_yardkpi_rbt_stage_to_raw')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_Src_snk_adgls2_src_ykpi",
+								"type": "DatasetReference"
+							},
+							"name": "srcYardKPIMwinRBT"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_Src_snk_adgls2_src_ykpi",
+								"type": "DatasetReference"
+							},
+							"name": "snkYardKPIMwinRBT"
+						}
+					],
+					"transformations": [
+						{
+							"name": "derivedColumn1"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          rbt_id as short,",
+						"          rbt_no_formtd as string,",
+						"          location as string,",
+						"          rbt_hdr_category as string,",
+						"          rbt_version as double,",
+						"          project_id as string,",
+						"          rbt_revision as boolean,",
+						"          qr_number as short,",
+						"          rbt_number as string,",
+						"          rbt_title as string,",
+						"          qc_inspector as string,",
+						"          qc_inspector_name as string,",
+						"          area_id as string,",
+						"          area_title as string,",
+						"          discipline_id as string,",
+						"          discipline_title as string,",
+						"          project_title as string,",
+						"          rbt_hdr_categoryname as string,",
+						"          drawing_no as string,",
+						"          qc_inspection_date as string,",
+						"          qc_inspection_time as string,",
+						"          qc_inspection_enddate as string,",
+						"          qc_inspection_endtime as string,",
+						"          submitted_date as string,",
+						"          inspection_date as string,",
+						"          remark as string,",
+						"          rbt_status as string,",
+						"          rbt_type as string,",
+						"          appr1_title as string,",
+						"          appr1_name as string,",
+						"          appr1_approval_dt as string,",
+						"          appr2_title as string,",
+						"          appr2_name as string,",
+						"          appr2_approval_dt as string,",
+						"          appr3_title as string,",
+						"          appr3_name as string,",
+						"          appr3_approval_dt as string,",
+						"          appr3_appr_status as string,",
+						"          appr4_title as string,",
+						"          appr4_name as string,",
+						"          appr4_approval_dt as string,",
+						"          appr4_appr_status as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     purgeFiles: true,",
+						"     multiLineRow: true) ~> srcYardKPIMwinRBT",
+						"srcYardKPIMwinRBT derive(FileName = concat('Project_Data/YARDKPI/MWIN/',substring(toString(currentTimestamp()),1,4),'/',substring(toString(currentTimestamp()),6,2),'/',substring(toString(currentTimestamp()),9,2),'/','MWIN_RBT',replace(replace(toString(currentTimestamp()),'.',''),':',''),'.csv'),",
+						"          rbt_title_new = regexReplace(regexReplace(replace(rbt_title,' ',''),`[\\n]`,''),`[\\r]`,'')) ~> derivedColumn1",
+						"derivedColumn1 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     rowUrlColumn:'FileName',",
+						"     truncate: true,",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     mapColumn(",
+						"          each(match(true()))",
+						"     )) ~> snkYardKPIMwinRBT"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/df_yardkpi_servicenow_stage_to_raw')]",
 			"type": "Microsoft.DataFactory/factories/dataflows",
 			"apiVersion": "2018-06-01",
@@ -7053,1092 +7276,6 @@
 				},
 				"folder": {
 					"name": "Projects/NCSA/Ruya_D7507"
-				},
-				"annotations": [],
-				"lastPublishTime": "2024-04-30T07:33:42Z"
-			},
-			"dependsOn": []
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/pl_BIR_Global_Expediting_Report_Ummshaif_D7650')]",
-			"type": "Microsoft.DataFactory/factories/pipelines",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"activities": [
-					{
-						"name": "lk_get_pipeline_parameters",
-						"description": "Get the parameters to be used in this pipeline",
-						"type": "Lookup",
-						"dependsOn": [],
-						"policy": {
-							"timeout": "7.00:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"source": {
-								"type": "SqlDWSource",
-								"sqlReaderStoredProcedureName": "getPipelineParametersValues",
-								"storedProcedureParameters": {
-									"pPipelineCode": {
-										"type": "String",
-										"value": "pl_ncsa_master_pipelines"
-									},
-									"pPipeLineSubCode": {
-										"type": "String",
-										"value": "EMAIL"
-									}
-								},
-								"queryTimeout": "02:00:00",
-								"partitionOption": "None"
-							},
-							"dataset": {
-								"referenceName": "ds_azure_synapse_parameter",
-								"type": "DatasetReference",
-								"parameters": {}
-							}
-						}
-					},
-					{
-						"name": "lk_get_pipeline_parameters_2",
-						"type": "Lookup",
-						"dependsOn": [],
-						"policy": {
-							"timeout": "7.00:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"source": {
-								"type": "SqlDWSource",
-								"sqlReaderStoredProcedureName": "getPipelineParametersValues",
-								"storedProcedureParameters": {
-									"pPipelineCode": {
-										"type": "String",
-										"value": {
-											"value": "@pipeline().Pipeline",
-											"type": "Expression"
-										}
-									},
-									"pPipeLineSubCode": {
-										"type": "String",
-										"value": "NetworkFolder"
-									}
-								},
-								"queryTimeout": "02:00:00",
-								"partitionOption": "None"
-							},
-							"dataset": {
-								"referenceName": "ds_azure_synapse_parameter",
-								"type": "DatasetReference",
-								"parameters": {}
-							}
-						}
-					},
-					{
-						"name": "SP Update Control Table Last Run Date",
-						"type": "SqlServerStoredProcedure",
-						"dependsOn": [
-							{
-								"activity": "If Condition1",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "7.00:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"storedProcedureName": "[[dbo].[updateIncrementPipelineParameterValue]",
-							"storedProcedureParameters": {
-								"pParameterCode": {
-									"value": "start_date",
-									"type": "String"
-								},
-								"pParameterValue": {
-									"value": {
-										"value": "@formatDateTime(activity('lk_get_pipeline_parameters_2').output.firstRow.run_start_datetime,'yyyy-MM-dd HH:mm:ss')",
-										"type": "Expression"
-									},
-									"type": "String"
-								},
-								"pPipelineCode": {
-									"value": {
-										"value": "@pipeline().Pipeline",
-										"type": "Expression"
-									},
-									"type": "String"
-								},
-								"pPipelineSubCode": {
-									"value": "NetworkFolder",
-									"type": "String"
-								}
-							}
-						},
-						"linkedServiceName": {
-							"referenceName": "linkedservice_DEV_entanalytics_synapse",
-							"type": "LinkedServiceReference"
-						}
-					},
-					{
-						"name": "val_Check_SourceFile_Availablity",
-						"description": "Check if the source file is available at the Dataset location. If not wait for the timeout period.",
-						"type": "Validation",
-						"dependsOn": [
-							{
-								"activity": "lk_get_pipeline_parameters",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							},
-							{
-								"activity": "lk_get_pipeline_parameters_2",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"userProperties": [],
-						"typeProperties": {
-							"dataset": {
-								"referenceName": "ds_csv_ruya_project",
-								"type": "DatasetReference",
-								"parameters": {
-									"Directory": {
-										"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.source_directory",
-										"type": "Expression"
-									},
-									"File_name": {
-										"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.file_name",
-										"type": "Expression"
-									},
-									"First_row_header": "False"
-								}
-							},
-							"timeout": "0.00:05:00",
-							"sleep": 90
-						}
-					},
-					{
-						"name": "Delete Second row Data",
-						"type": "Script",
-						"dependsOn": [
-							{
-								"activity": "SP Update Control Table Last Run Date",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "0.12:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"linkedServiceName": {
-							"referenceName": "AzureSynapseAnalytics",
-							"type": "LinkedServiceReference"
-						},
-						"typeProperties": {
-							"scripts": [
-								{
-									"type": "Query",
-									"text": "delete from [epr].[BIR_Global_Expediting_Report_Ummshaif_D7650]\nwhere project = 'Project'"
-								}
-							],
-							"scriptBlockExecutionTimeout": "02:00:00"
-						}
-					},
-					{
-						"name": "Send Email On Failure",
-						"type": "WebActivity",
-						"dependsOn": [
-							{
-								"activity": "If Condition1",
-								"dependencyConditions": [
-									"Failed"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "7.00:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"method": "POST",
-							"headers": {
-								"Content-Type": "application/json"
-							},
-							"url": "https://prod-31.eastus.logic.azure.com:443/workflows/03d7da5abbab4215a05aeaceae3b96fa/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=asuyutHtoSxGFURsj1-A6AKRiNLdXZ4mTnZvZ17_8hI",
-							"connectVia": {
-								"referenceName": "integrationRuntimeEast2",
-								"type": "IntegrationRuntimeReference"
-							},
-							"body": {
-								"value": "{\n    \"DataFactoryName\": \"@{pipeline().DataFactory}\",\n    \"PipelineName\": \"@{pipeline().Pipeline}\",\n    \"ErrorMessage\": \"Pipeline Failed\",\n    \"EmailTo\": \"@{activity('lk_get_pipeline_parameters').output.firstRow.ncsa_master_pipeline_email_to}\",\n    \"Activity\":  \"pl_BIR_Global_Expediting_Report_Ruya11_D7507\"\n}",
-								"type": "Expression"
-							}
-						}
-					},
-					{
-						"name": "Send Email On Source File Validation Failure",
-						"type": "WebActivity",
-						"dependsOn": [
-							{
-								"activity": "val_Check_SourceFile_Availablity",
-								"dependencyConditions": [
-									"Failed"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "7.00:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"method": "POST",
-							"headers": {
-								"Content-Type": "application/json"
-							},
-							"url": "https://prod-31.eastus.logic.azure.com:443/workflows/03d7da5abbab4215a05aeaceae3b96fa/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=asuyutHtoSxGFURsj1-A6AKRiNLdXZ4mTnZvZ17_8hI",
-							"connectVia": {
-								"referenceName": "integrationRuntimeEast2",
-								"type": "IntegrationRuntimeReference"
-							},
-							"body": {
-								"value": "{\n    \"DataFactoryName\": \"@{pipeline().DataFactory}\",\n    \"PipelineName\": \"@{pipeline().Pipeline}\",\n    \"ErrorMessage\": \"Pipeline Failed - Source File Validation Error\",\n    \"EmailTo\": \"@{activity('lk_get_pipeline_parameters').output.firstRow.ncsa_master_pipeline_email_to}\",\n    \"Activity\":  \"pl_BIR_Global_Expediting_Report_Ruya11_D7507\"\n}",
-								"type": "Expression"
-							}
-						}
-					},
-					{
-						"name": "Get Metadata1",
-						"type": "GetMetadata",
-						"dependsOn": [
-							{
-								"activity": "val_Check_SourceFile_Availablity",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "0.12:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"dataset": {
-								"referenceName": "ds_csv_ruya_project",
-								"type": "DatasetReference",
-								"parameters": {
-									"Directory": {
-										"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.source_directory",
-										"type": "Expression"
-									},
-									"File_name": {
-										"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.file_name",
-										"type": "Expression"
-									},
-									"First_row_header": "True"
-								}
-							},
-							"fieldList": [
-								"lastModified"
-							],
-							"storeSettings": {
-								"type": "FileServerReadSettings",
-								"recursive": true,
-								"enablePartitionDiscovery": false
-							},
-							"formatSettings": {
-								"type": "DelimitedTextReadSettings"
-							}
-						}
-					},
-					{
-						"name": "If Condition1",
-						"type": "IfCondition",
-						"dependsOn": [
-							{
-								"activity": "Get Metadata1",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"userProperties": [],
-						"typeProperties": {
-							"expression": {
-								"value": "@greater(activity('Get Metadata1').output.lastModified,activity('lk_get_pipeline_parameters_2').output.firstRow.start_date )",
-								"type": "Expression"
-							},
-							"ifTrueActivities": [
-								{
-									"name": "cp_copy_first_sheet_from_source_to_synapse",
-									"type": "Copy",
-									"dependsOn": [],
-									"policy": {
-										"timeout": "0.07:00:00",
-										"retry": 0,
-										"retryIntervalInSeconds": 30,
-										"secureOutput": false,
-										"secureInput": false
-									},
-									"userProperties": [],
-									"typeProperties": {
-										"source": {
-											"type": "DelimitedTextSource",
-											"additionalColumns": [
-												{
-													"name": "project_number",
-													"value": {
-														"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.project_number",
-														"type": "Expression"
-													}
-												},
-												{
-													"name": "CreatedDateTime",
-													"value": {
-														"value": "@addHours(utcNow(),4)",
-														"type": "Expression"
-													}
-												},
-												{
-													"name": "file_name",
-													"value": "$$FILEPATH"
-												}
-											],
-											"storeSettings": {
-												"type": "FileServerReadSettings",
-												"recursive": false,
-												"modifiedDatetimeStart": {
-													"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.start_date",
-													"type": "Expression"
-												},
-												"modifiedDatetimeEnd": "2050-11-30T00:00:00.000Z",
-												"enablePartitionDiscovery": false
-											},
-											"formatSettings": {
-												"type": "DelimitedTextReadSettings"
-											}
-										},
-										"sink": {
-											"type": "SqlDWSink",
-											"preCopyScript": {
-												"value": "@{concat('truncate table',' ','epr.',activity('lk_get_pipeline_parameters_2').output.firstRow.table_name)}",
-												"type": "Expression"
-											},
-											"allowCopyCommand": true,
-											"copyCommandSettings": {},
-											"disableMetricsCollection": false
-										},
-										"enableStaging": true,
-										"stagingSettings": {
-											"linkedServiceName": {
-												"referenceName": "ADLSG2 TimeAnalytics DEV",
-												"type": "LinkedServiceReference"
-											},
-											"path": "mdr-staging-data/Ruya11"
-										}
-									},
-									"inputs": [
-										{
-											"referenceName": "ds_csv_ruya_project",
-											"type": "DatasetReference",
-											"parameters": {
-												"Directory": {
-													"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.source_directory",
-													"type": "Expression"
-												},
-												"File_name": {
-													"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.file_name",
-													"type": "Expression"
-												},
-												"First_row_header": "True"
-											}
-										}
-									],
-									"outputs": [
-										{
-											"referenceName": "ds_excel_loads_AzureSynapseAnalytics",
-											"type": "DatasetReference",
-											"parameters": {
-												"TableName": {
-													"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.table_name",
-													"type": "Expression"
-												}
-											}
-										}
-									]
-								}
-							]
-						}
-					}
-				],
-				"policy": {
-					"elapsedTimeMetric": {}
-				},
-				"variables": {
-					"v_error_message": {
-						"type": "Array"
-					},
-					"v_pipelinedetails": {
-						"type": "Array"
-					},
-					"date": {
-						"type": "String"
-					}
-				},
-				"folder": {
-					"name": "Projects/NCSA/Ummshaif_D7650"
-				},
-				"annotations": [],
-				"lastPublishTime": "2024-04-30T07:33:42Z"
-			},
-			"dependsOn": []
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/pl_Change_Management_Woodfibre_99350106')]",
-			"type": "Microsoft.DataFactory/factories/pipelines",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"activities": [
-					{
-						"name": "lk_get_pipeline_parameters",
-						"description": "Get the parameters to be used in this pipeline",
-						"type": "Lookup",
-						"dependsOn": [],
-						"policy": {
-							"timeout": "7.00:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"source": {
-								"type": "SqlDWSource",
-								"sqlReaderStoredProcedureName": "getPipelineParametersValues",
-								"storedProcedureParameters": {
-									"pPipelineCode": {
-										"type": "String",
-										"value": "pl_ncsa_master_pipelines"
-									},
-									"pPipeLineSubCode": {
-										"type": "String",
-										"value": "EMAIL"
-									}
-								},
-								"queryTimeout": "02:00:00",
-								"partitionOption": "None"
-							},
-							"dataset": {
-								"referenceName": "ds_azure_synapse_parameter",
-								"type": "DatasetReference",
-								"parameters": {}
-							}
-						}
-					},
-					{
-						"name": "lk_get_pipeline_parameters_2",
-						"type": "Lookup",
-						"dependsOn": [
-							{
-								"activity": "lk_get_pipeline_parameters",
-								"dependencyConditions": [
-									"Completed"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "7.00:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"source": {
-								"type": "SqlDWSource",
-								"sqlReaderStoredProcedureName": "getPipelineParametersValues",
-								"storedProcedureParameters": {
-									"pPipelineCode": {
-										"type": "String",
-										"value": {
-											"value": "@pipeline().Pipeline",
-											"type": "Expression"
-										}
-									},
-									"pPipeLineSubCode": {
-										"type": "String",
-										"value": "NetworkFolder"
-									}
-								},
-								"queryTimeout": "02:00:00",
-								"partitionOption": "None"
-							},
-							"dataset": {
-								"referenceName": "ds_azure_synapse_parameter",
-								"type": "DatasetReference",
-								"parameters": {}
-							}
-						}
-					},
-					{
-						"name": "SP Update Control Table Last Run Date",
-						"type": "SqlServerStoredProcedure",
-						"dependsOn": [
-							{
-								"activity": "If Condition1",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "7.00:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"storedProcedureName": "[[dbo].[updateIncrementPipelineParameterValue]",
-							"storedProcedureParameters": {
-								"pParameterCode": {
-									"value": "start_date",
-									"type": "String"
-								},
-								"pParameterValue": {
-									"value": {
-										"value": "@formatDateTime(activity('lk_get_pipeline_parameters_2').output.firstRow.run_start_datetime,'yyyy-MM-dd HH:mm:ss')",
-										"type": "Expression"
-									},
-									"type": "String"
-								},
-								"pPipelineCode": {
-									"value": {
-										"value": "@pipeline().Pipeline",
-										"type": "Expression"
-									},
-									"type": "String"
-								},
-								"pPipelineSubCode": {
-									"value": "NetworkFolder",
-									"type": "String"
-								}
-							}
-						},
-						"linkedServiceName": {
-							"referenceName": "linkedservice_DEV_entanalytics_synapse",
-							"type": "LinkedServiceReference"
-						}
-					},
-					{
-						"name": "val_Check_SourceFile_Availablity",
-						"description": "Check if the source file is available at the Dataset location. If not wait for the timeout period.",
-						"type": "Validation",
-						"dependsOn": [
-							{
-								"activity": "lk_get_pipeline_parameters",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							},
-							{
-								"activity": "lk_get_pipeline_parameters_2",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"userProperties": [],
-						"typeProperties": {
-							"dataset": {
-								"referenceName": "ds_filesystem_network_excel_get_subfolders_sheetindex_range_ncsa",
-								"type": "DatasetReference",
-								"parameters": {
-									"path": {
-										"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.source_directory",
-										"type": "Expression"
-									},
-									"sheetindex": 0,
-									"range": {
-										"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.range",
-										"type": "Expression"
-									},
-									"file_name": {
-										"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.file_name",
-										"type": "Expression"
-									}
-								}
-							},
-							"timeout": "0.00:05:00",
-							"sleep": 90
-						}
-					},
-					{
-						"name": "Send Email On Failure",
-						"type": "WebActivity",
-						"dependsOn": [
-							{
-								"activity": "If Condition1",
-								"dependencyConditions": [
-									"Failed"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "7.00:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"method": "POST",
-							"headers": {
-								"Content-Type": "application/json"
-							},
-							"url": "https://prod-31.eastus.logic.azure.com:443/workflows/03d7da5abbab4215a05aeaceae3b96fa/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=asuyutHtoSxGFURsj1-A6AKRiNLdXZ4mTnZvZ17_8hI",
-							"connectVia": {
-								"referenceName": "integrationRuntimeEast2",
-								"type": "IntegrationRuntimeReference"
-							},
-							"body": {
-								"value": "{\n    \"DataFactoryName\": \"@{pipeline().DataFactory}\",\n    \"PipelineName\": \"@{pipeline().Pipeline}\",\n    \"ErrorMessage\": \"Pipeline Failed\",\n    \"EmailTo\": \"@{activity('lk_get_pipeline_parameters').output.firstRow.ncsa_master_pipeline_email_to}\",\n    \"Activity\":  \"pl_Landing_page_woodfibre_lng_99350106\"\n}",
-								"type": "Expression"
-							}
-						}
-					},
-					{
-						"name": "Send Email On Source File Validation Failure",
-						"type": "WebActivity",
-						"dependsOn": [
-							{
-								"activity": "val_Check_SourceFile_Availablity",
-								"dependencyConditions": [
-									"Failed"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "7.00:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"method": "POST",
-							"headers": {
-								"Content-Type": "application/json"
-							},
-							"url": "https://prod-31.eastus.logic.azure.com:443/workflows/03d7da5abbab4215a05aeaceae3b96fa/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=asuyutHtoSxGFURsj1-A6AKRiNLdXZ4mTnZvZ17_8hI",
-							"connectVia": {
-								"referenceName": "integrationRuntimeEast2",
-								"type": "IntegrationRuntimeReference"
-							},
-							"body": {
-								"value": "{\n    \"DataFactoryName\": \"@{pipeline().DataFactory}\",\n    \"PipelineName\": \"@{pipeline().Pipeline}\",\n    \"ErrorMessage\": \"Pipeline Failed - Source File Validation Error\",\n    \"EmailTo\": \"@{activity('lk_get_pipeline_parameters').output.firstRow.ncsa_master_pipeline_email_to}\",\n    \"Activity\":  \"pl_Landing_page_woodfibre_lng_99350106\"\n}",
-								"type": "Expression"
-							}
-						}
-					},
-					{
-						"name": "Get Metadata1",
-						"type": "GetMetadata",
-						"dependsOn": [
-							{
-								"activity": "val_Check_SourceFile_Availablity",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "0.12:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"dataset": {
-								"referenceName": "ds_filesystem_network_excel_get_subfolders_sheetindex_range_ncsa",
-								"type": "DatasetReference",
-								"parameters": {
-									"path": {
-										"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.source_directory",
-										"type": "Expression"
-									},
-									"sheetindex": 0,
-									"range": {
-										"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.range",
-										"type": "Expression"
-									},
-									"file_name": {
-										"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.file_name",
-										"type": "Expression"
-									}
-								}
-							},
-							"fieldList": [
-								"lastModified"
-							],
-							"storeSettings": {
-								"type": "FileServerReadSettings",
-								"recursive": true,
-								"modifiedDatetimeEnd": null,
-								"enablePartitionDiscovery": false
-							}
-						}
-					},
-					{
-						"name": "If Condition1",
-						"type": "IfCondition",
-						"dependsOn": [
-							{
-								"activity": "Get Metadata1",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"userProperties": [],
-						"typeProperties": {
-							"expression": {
-								"value": "@greater(activity('Get Metadata1').output.lastModified,activity('lk_get_pipeline_parameters_2').output.firstRow.start_date )\n",
-								"type": "Expression"
-							},
-							"ifTrueActivities": [
-								{
-									"name": "cp_copy_first_sheet_from_source_to_synapse",
-									"type": "Copy",
-									"dependsOn": [],
-									"policy": {
-										"timeout": "0.07:00:00",
-										"retry": 0,
-										"retryIntervalInSeconds": 30,
-										"secureOutput": false,
-										"secureInput": false
-									},
-									"userProperties": [],
-									"typeProperties": {
-										"source": {
-											"type": "ExcelSource",
-											"additionalColumns": [
-												{
-													"name": "project_number",
-													"value": {
-														"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.project_number",
-														"type": "Expression"
-													}
-												},
-												{
-													"name": "CreatedDateTime",
-													"value": {
-														"value": "@addHours(utcNow(),4)",
-														"type": "Expression"
-													}
-												},
-												{
-													"name": "SourceFileName",
-													"value": "$$FILEPATH"
-												}
-											],
-											"storeSettings": {
-												"type": "FileServerReadSettings",
-												"recursive": true,
-												"modifiedDatetimeStart": {
-													"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.start_date",
-													"type": "Expression"
-												},
-												"modifiedDatetimeEnd": null,
-												"enablePartitionDiscovery": false
-											}
-										},
-										"sink": {
-											"type": "SqlDWSink",
-											"preCopyScript": {
-												"value": "@{concat('truncate table',' ','epr.',activity('lk_get_pipeline_parameters_2').output.firstRow.table_name)} ",
-												"type": "Expression"
-											},
-											"allowCopyCommand": true,
-											"copyCommandSettings": {},
-											"disableMetricsCollection": false
-										},
-										"enableStaging": true,
-										"stagingSettings": {
-											"linkedServiceName": {
-												"referenceName": "ADLSG2 TimeAnalytics DEV",
-												"type": "LinkedServiceReference"
-											},
-											"path": "mdr-staging-data/Ruya11"
-										}
-									},
-									"inputs": [
-										{
-											"referenceName": "ds_filesystem_network_excel_get_subfolders_sheetindex_range_ncsa",
-											"type": "DatasetReference",
-											"parameters": {
-												"path": {
-													"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.source_directory",
-													"type": "Expression"
-												},
-												"sheetindex": 0,
-												"range": {
-													"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.range",
-													"type": "Expression"
-												},
-												"file_name": {
-													"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.file_name",
-													"type": "Expression"
-												}
-											}
-										}
-									],
-									"outputs": [
-										{
-											"referenceName": "ds_excel_loads_AzureSynapseAnalytics",
-											"type": "DatasetReference",
-											"parameters": {
-												"TableName": {
-													"value": "@activity('lk_get_pipeline_parameters_2').output.firstRow.table_name",
-													"type": "Expression"
-												}
-											}
-										}
-									]
-								},
-								{
-									"name": "Send Email On Copy Data Failure",
-									"type": "WebActivity",
-									"dependsOn": [
-										{
-											"activity": "cp_copy_first_sheet_from_source_to_synapse",
-											"dependencyConditions": [
-												"Failed"
-											]
-										}
-									],
-									"policy": {
-										"timeout": "7.00:00:00",
-										"retry": 0,
-										"retryIntervalInSeconds": 30,
-										"secureOutput": false,
-										"secureInput": false
-									},
-									"userProperties": [],
-									"typeProperties": {
-										"method": "POST",
-										"headers": {
-											"Content-Type": "application/json"
-										},
-										"url": "https://prod-31.eastus.logic.azure.com:443/workflows/03d7da5abbab4215a05aeaceae3b96fa/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=asuyutHtoSxGFURsj1-A6AKRiNLdXZ4mTnZvZ17_8hI",
-										"connectVia": {
-											"referenceName": "integrationRuntimeEast2",
-											"type": "IntegrationRuntimeReference"
-										},
-										"body": {
-											"value": "{\n    \"DataFactoryName\": \"@{pipeline().DataFactory}\",\n    \"PipelineName\": \"@{pipeline().Pipeline}\",\n    \"ErrorMessage\": \"Pipeline Failed\",\n    \"EmailTo\": \"@{activity('lk_get_pipeline_parameters').output.firstRow.ncsa_master_pipeline_email_to}\",\n    \"Activity\":  \"pl_Landing_page_woodfibre_lng_99350106\"\n}",
-											"type": "Expression"
-										}
-									}
-								}
-							]
-						}
-					},
-					{
-						"name": "Send Email On Lookup 2 Failure",
-						"type": "WebActivity",
-						"dependsOn": [
-							{
-								"activity": "lk_get_pipeline_parameters_2",
-								"dependencyConditions": [
-									"Failed"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "7.00:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"method": "POST",
-							"headers": {
-								"Content-Type": "application/json"
-							},
-							"url": "https://prod-31.eastus.logic.azure.com:443/workflows/03d7da5abbab4215a05aeaceae3b96fa/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=asuyutHtoSxGFURsj1-A6AKRiNLdXZ4mTnZvZ17_8hI",
-							"connectVia": {
-								"referenceName": "integrationRuntimeEast2",
-								"type": "IntegrationRuntimeReference"
-							},
-							"body": {
-								"value": "{\n    \"DataFactoryName\": \"@{pipeline().DataFactory}\",\n    \"PipelineName\": \"@{pipeline().Pipeline}\",\n    \"ErrorMessage\": \"Pipeline Failed - Source File Validation Error\",\n    \"EmailTo\": \"@{activity('lk_get_pipeline_parameters').output.firstRow.ncsa_master_pipeline_email_to}\",\n    \"Activity\":  \"pl_Landing_page_woodfibre_lng_99350106\"\n}",
-								"type": "Expression"
-							}
-						}
-					},
-					{
-						"name": "Send Email On Lookup 1 Failure",
-						"type": "WebActivity",
-						"dependsOn": [
-							{
-								"activity": "lk_get_pipeline_parameters",
-								"dependencyConditions": [
-									"Failed"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "7.00:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"method": "POST",
-							"headers": {
-								"Content-Type": "application/json"
-							},
-							"url": "https://prod-31.eastus.logic.azure.com:443/workflows/03d7da5abbab4215a05aeaceae3b96fa/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=asuyutHtoSxGFURsj1-A6AKRiNLdXZ4mTnZvZ17_8hI",
-							"connectVia": {
-								"referenceName": "integrationRuntimeEast2",
-								"type": "IntegrationRuntimeReference"
-							},
-							"body": {
-								"value": "{\n    \"DataFactoryName\": \"@{pipeline().DataFactory}\",\n    \"PipelineName\": \"@{pipeline().Pipeline}\",\n    \"ErrorMessage\": \"Pipeline Failed - Source File Validation Error\",\n    \"EmailTo\": \"@{activity('lk_get_pipeline_parameters').output.firstRow.ncsa_master_pipeline_email_to}\",\n    \"Activity\":  \"pl_Landing_page_woodfibre_lng_99350106\"\n}",
-								"type": "Expression"
-							}
-						}
-					},
-					{
-						"name": "Send Email On Getmetadata Failure",
-						"type": "WebActivity",
-						"dependsOn": [
-							{
-								"activity": "Get Metadata1",
-								"dependencyConditions": [
-									"Failed"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "7.00:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"method": "POST",
-							"headers": {
-								"Content-Type": "application/json"
-							},
-							"url": "https://prod-31.eastus.logic.azure.com:443/workflows/03d7da5abbab4215a05aeaceae3b96fa/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=asuyutHtoSxGFURsj1-A6AKRiNLdXZ4mTnZvZ17_8hI",
-							"connectVia": {
-								"referenceName": "integrationRuntimeEast2",
-								"type": "IntegrationRuntimeReference"
-							},
-							"body": {
-								"value": "{\n    \"DataFactoryName\": \"@{pipeline().DataFactory}\",\n    \"PipelineName\": \"@{pipeline().Pipeline}\",\n    \"ErrorMessage\": \"Pipeline Failed\",\n    \"EmailTo\": \"@{activity('lk_get_pipeline_parameters').output.firstRow.ncsa_master_pipeline_email_to}\",\n    \"Activity\":  \"pl_Landing_page_woodfibre_lng_99350106\"\n}",
-								"type": "Expression"
-							}
-						}
-					},
-					{
-						"name": "Send Email On Sp Failure",
-						"type": "WebActivity",
-						"dependsOn": [
-							{
-								"activity": "SP Update Control Table Last Run Date",
-								"dependencyConditions": [
-									"Failed"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "7.00:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"method": "POST",
-							"headers": {
-								"Content-Type": "application/json"
-							},
-							"url": "https://prod-31.eastus.logic.azure.com:443/workflows/03d7da5abbab4215a05aeaceae3b96fa/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=asuyutHtoSxGFURsj1-A6AKRiNLdXZ4mTnZvZ17_8hI",
-							"connectVia": {
-								"referenceName": "integrationRuntimeEast2",
-								"type": "IntegrationRuntimeReference"
-							},
-							"body": {
-								"value": "{\n    \"DataFactoryName\": \"@{pipeline().DataFactory}\",\n    \"PipelineName\": \"@{pipeline().Pipeline}\",\n    \"ErrorMessage\": \"Pipeline Failed\",\n    \"EmailTo\": \"@{activity('lk_get_pipeline_parameters').output.firstRow.ncsa_master_pipeline_email_to}\",\n    \"Activity\":  \"pl_Landing_page_woodfibre_lng_99350106\"\n}",
-								"type": "Expression"
-							}
-						}
-					}
-				],
-				"policy": {
-					"elapsedTimeMetric": {}
-				},
-				"variables": {
-					"v_error_message": {
-						"type": "Array"
-					},
-					"v_pipelinedetails": {
-						"type": "Array"
-					},
-					"date": {
-						"type": "String"
-					}
-				},
-				"folder": {
-					"name": "Projects/NCSA/Woodfibre_99350106"
 				},
 				"annotations": [],
 				"lastPublishTime": "2024-04-30T07:33:42Z"

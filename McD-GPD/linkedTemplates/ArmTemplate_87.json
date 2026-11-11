@@ -13,6 +13,921 @@
 	},
 	"resources": [
 		{
+			"name": "[concat(parameters('factoryName'), '/pl_roc_sitepro_raw_to_synapse_stage')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Check Combined File non zero Bytes",
+						"type": "GetMetadata",
+						"dependsOn": [
+							{
+								"activity": "cp_Get_Latest_File",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_sitepro_roc_raw_ltest_file",
+								"type": "DatasetReference",
+								"parameters": {}
+							},
+							"fieldList": [
+								"size",
+								"exists"
+							],
+							"storeSettings": {
+								"type": "AzureBlobFSReadSettings",
+								"recursive": true
+							},
+							"formatSettings": {
+								"type": "DelimitedTextReadSettings"
+							}
+						}
+					},
+					{
+						"name": "lkup_Get_Pipeline_parameters_getlrd",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlDWSource",
+								"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+								"storedProcedureParameters": {
+									"pPipelineCode": {
+										"type": "String",
+										"value": {
+											"value": "@pipeline().Pipeline",
+											"type": "Expression"
+										}
+									},
+									"pPipeLineSubCode": {
+										"type": "String",
+										"value": "Sitepro"
+									}
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "ds_azure_synapse_parameter",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						}
+					},
+					{
+						"name": "Set start date",
+						"type": "SetVariable",
+						"dependsOn": [
+							{
+								"activity": "lkup_Get_Pipeline_parameters_getlrd",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "v_lrd_raw_to_synp",
+							"value": {
+								"value": "@activity('lkup_Get_Pipeline_parameters_getlrd').output.firstRow.lastrundate",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "cp_Get_Latest_File",
+						"type": "Copy",
+						"dependsOn": [
+							{
+								"activity": "Set start date",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "DelimitedTextSource",
+								"storeSettings": {
+									"type": "AzureBlobFSReadSettings",
+									"recursive": true,
+									"modifiedDatetimeStart": {
+										"value": "@variables('v_lrd_raw_to_synp')",
+										"type": "Expression"
+									},
+									"wildcardFolderPath": "Project_Data/NCSA/SitePro/ROC/*/*/*",
+									"wildcardFileName": "roc_sitepro*.csv"
+								},
+								"formatSettings": {
+									"type": "DelimitedTextReadSettings"
+								}
+							},
+							"sink": {
+								"type": "DelimitedTextSink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings",
+									"copyBehavior": "MergeFiles"
+								},
+								"formatSettings": {
+									"type": "DelimitedTextWriteSettings",
+									"quoteAllText": true,
+									"fileExtension": "ts_itime_combined.csv"
+								}
+							},
+							"enableStaging": false,
+							"translator": {
+								"type": "TabularTranslator",
+								"mappings": [
+									{
+										"source": {
+											"name": "Project ID",
+											"type": "Int16"
+										},
+										"sink": {
+											"name": "Project ID",
+											"type": "Int16"
+										}
+									},
+									{
+										"source": {
+											"name": "ROC ID",
+											"type": "Int16"
+										},
+										"sink": {
+											"name": "ROC ID",
+											"type": "Int16"
+										}
+									},
+									{
+										"source": {
+											"name": "ROCS ID",
+											"type": "Int16"
+										},
+										"sink": {
+											"name": "ROCS ID",
+											"type": "Int16"
+										}
+									},
+									{
+										"source": {
+											"name": "Project Number",
+											"type": "String"
+										},
+										"sink": {
+											"name": "Project Number",
+											"type": "String"
+										}
+									},
+									{
+										"source": {
+											"name": "Project Description",
+											"type": "String"
+										},
+										"sink": {
+											"name": "Project Description",
+											"type": "String"
+										}
+									},
+									{
+										"source": {
+											"name": "Code",
+											"type": "String"
+										},
+										"sink": {
+											"name": "Code",
+											"type": "String"
+										}
+									},
+									{
+										"source": {
+											"name": "Name",
+											"type": "String"
+										},
+										"sink": {
+											"name": "Name",
+											"type": "String"
+										}
+									},
+									{
+										"source": {
+											"name": "Sub Prime",
+											"type": "String"
+										},
+										"sink": {
+											"name": "Sub Prime",
+											"type": "String"
+										}
+									},
+									{
+										"source": {
+											"name": "ROCS Name",
+											"type": "String"
+										},
+										"sink": {
+											"name": "ROCS Name",
+											"type": "String"
+										}
+									},
+									{
+										"source": {
+											"name": "ROCS Step",
+											"type": "String"
+										},
+										"sink": {
+											"name": "ROCS Step",
+											"type": "String"
+										}
+									},
+									{
+										"source": {
+											"name": "ROCS Percentage",
+											"type": "String"
+										},
+										"sink": {
+											"name": "ROCS Percentage",
+											"type": "String"
+										}
+									},
+									{
+										"source": {
+											"name": "Driving?",
+											"type": "String"
+										},
+										"sink": {
+											"name": "Driving?",
+											"type": "String"
+										}
+									},
+									{
+										"source": {
+											"name": "Quantity",
+											"type": "String"
+										},
+										"sink": {
+											"name": "Quantity",
+											"type": "String"
+										}
+									},
+									{
+										"source": {
+											"name": "Quantity Description",
+											"type": "String"
+										},
+										"sink": {
+											"name": "Quantity Description",
+											"type": "String"
+										}
+									}
+								]
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "ds_adlsg2_csv_sitepro_roc_raw",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "ds_adlsg2_csv_sitepro_roc_raw_ltest_file",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						]
+					},
+					{
+						"name": "if_File_Exists_Copy_to_Synapse",
+						"type": "IfCondition",
+						"dependsOn": [
+							{
+								"activity": "Check Combined File non zero Bytes",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"expression": {
+								"value": "@greater(activity('Check Combined File non zero Bytes').output.size, 2)",
+								"type": "Expression"
+							},
+							"ifTrueActivities": [
+								{
+									"name": "Copy Latest Data To Synapse Stage Table",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "DelimitedTextSource",
+											"storeSettings": {
+												"type": "AzureBlobFSReadSettings",
+												"recursive": false
+											},
+											"formatSettings": {
+												"type": "DelimitedTextReadSettings"
+											}
+										},
+										"sink": {
+											"type": "SqlDWSink",
+											"preCopyScript": "truncate table gpd.NCSA_Rules_of_Credit",
+											"allowPolyBase": true,
+											"polyBaseSettings": {
+												"rejectValue": 0,
+												"rejectType": "value",
+												"useTypeDefault": true
+											},
+											"disableMetricsCollection": false
+										},
+										"enableStaging": true,
+										"stagingSettings": {
+											"linkedServiceName": {
+												"referenceName": "ADLSG2 TimeAnalytics DEV",
+												"type": "LinkedServiceReference"
+											},
+											"path": "mdr-raw-data/Polybase_Staging_Space"
+										},
+										"translator": {
+											"type": "TabularTranslator",
+											"mappings": [
+												{
+													"source": {
+														"name": "Project ID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "Project_ID",
+														"type": "Int32"
+													}
+												},
+												{
+													"source": {
+														"name": "ROC ID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "ROC_ID",
+														"type": "Int32"
+													}
+												},
+												{
+													"source": {
+														"name": "ROCS ID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "ROCS_ID",
+														"type": "Int32"
+													}
+												},
+												{
+													"source": {
+														"name": "Project Number",
+														"type": "String"
+													},
+													"sink": {
+														"name": "Project_Number",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "Project Description",
+														"type": "String"
+													},
+													"sink": {
+														"name": "Project_Description",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "Code",
+														"type": "String"
+													},
+													"sink": {
+														"name": "Code",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "Name",
+														"type": "String"
+													},
+													"sink": {
+														"name": "Name",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "Sub Prime",
+														"type": "String"
+													},
+													"sink": {
+														"name": "Sub_Prime",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ROCS Name",
+														"type": "String"
+													},
+													"sink": {
+														"name": "ROCS_Name",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ROCS Step",
+														"type": "String"
+													},
+													"sink": {
+														"name": "ROCS_Step",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ROCS Percentage",
+														"type": "String"
+													},
+													"sink": {
+														"name": "ROCS_Percentage",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "Driving?",
+														"type": "String"
+													},
+													"sink": {
+														"name": "Driving",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "Quantity",
+														"type": "String"
+													},
+													"sink": {
+														"name": "Quantity",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "Quantity Description",
+														"type": "String"
+													},
+													"sink": {
+														"name": "Quantity_Description ",
+														"type": "String"
+													}
+												}
+											]
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_adlsg2_csv_sitepro_roc_raw_ltest_file",
+											"type": "DatasetReference",
+											"parameters": {}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_AzureSynapseAnalytics_sitepro_ncsa_roc",
+											"type": "DatasetReference",
+											"parameters": {}
+										}
+									]
+								},
+								{
+									"name": "SP Update Control Table Last Run Date",
+									"type": "SqlServerStoredProcedure",
+									"dependsOn": [
+										{
+											"activity": "Copy Latest Data To Synapse Stage Table",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"storedProcedureName": "[[dbo].[updateIncrementPipelineParameterValue]",
+										"storedProcedureParameters": {
+											"pParameterCode": {
+												"value": "lastrundate",
+												"type": "String"
+											},
+											"pParameterValue": {
+												"value": {
+													"value": "@formatDateTime(utcnow(),'yyyy-MM-dd HH:mm:ss')",
+													"type": "Expression"
+												},
+												"type": "String"
+											},
+											"pPipelineCode": {
+												"value": {
+													"value": "@pipeline().Pipeline",
+													"type": "Expression"
+												},
+												"type": "String"
+											},
+											"pPipelineSubCode": {
+												"value": "Sitepro",
+												"type": "String"
+											}
+										}
+									},
+									"linkedServiceName": {
+										"referenceName": "linkedservice_DEV_entanalytics_synapse",
+										"type": "LinkedServiceReference"
+									}
+								}
+							]
+						}
+					},
+					{
+						"name": "sp_generic_procedure_dim_load",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "Delete Temp combined File",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[dbo].[generic_load_dim_v2]",
+							"storedProcedureParameters": {
+								"load_name": {
+									"value": "dim_entp_roc",
+									"type": "String"
+								},
+								"rkValidationRequired": {
+									"value": "Y",
+									"type": "String"
+								},
+								"debug_flag": {
+									"value": "N",
+									"type": "String"
+								},
+								"execute_flag": {
+									"value": "Y",
+									"type": "String"
+								}
+							}
+						},
+						"linkedServiceName": {
+							"referenceName": "Azure_Dev_SynapseAnalyticsPool",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "Delete Temp combined File",
+						"type": "Delete",
+						"dependsOn": [
+							{
+								"activity": "if_File_Exists_Copy_to_Synapse",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_sitepro_roc_raw_ltest_file",
+								"type": "DatasetReference",
+								"parameters": {}
+							},
+							"enableLogging": false,
+							"storeSettings": {
+								"type": "AzureBlobFSReadSettings",
+								"recursive": true
+							}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"variables": {
+					"v_lrd_raw_to_synp": {
+						"type": "String"
+					}
+				},
+				"folder": {
+					"name": "Projects/NCSA/8.Rules of Credit"
+				},
+				"annotations": [],
+				"lastPublishTime": "2021-04-16T07:11:05Z"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pl_roc_sitepro_source_to_stage')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "cp_getsiteprorocdata",
+						"type": "Copy",
+						"dependsOn": [
+							{
+								"activity": "Set data pull date time",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlServerSource",
+								"sqlReaderQuery": {
+									"value": "@concat('select prj.ID as [Project ID],\n\t   roc.ID as [ROC ID],\n\t   rocs.ID as [ROCS ID],\n\t   ',pipeline().parameters.p_pl_projectid,' [Project Number],\n       prj.ProjectDescription as [Project Description],\n\t   roc.Code as [Code],\n\t   roc.Name as [Name],\n\t   roc.SubPrime as [Sub Prime],\n\t   rocs.Name as [ROCS Name],\n\t   rocs.Step as [ROCS Step],\n\t   rocs.Percentage as [ROCS Percentage],\n\t   rocs.IsDriving as [Driving?],\n\t   rocs.Qty as [Quantity],\n\t   rocs.QuantityDescription as [Quantity Description]\nfrom [dbo].[PM_ROC] roc\njoin [dbo].[PM_ROCS] rocs\non rocs.rocid = roc.id\njoin [dbo].[PM_ProjectMasterData] prj\non roc.projectid = prj.ID')",
+									"type": "Expression"
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"sink": {
+								"type": "DelimitedTextSink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings"
+								},
+								"formatSettings": {
+									"type": "DelimitedTextWriteSettings",
+									"quoteAllText": true,
+									"fileExtension": ".txt"
+								}
+							},
+							"enableStaging": false,
+							"translator": {
+								"type": "TabularTranslator",
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": true,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "ds_sitepro_prod",
+								"type": "DatasetReference",
+								"parameters": {
+									"p_ds_dbname": {
+										"value": "@pipeline().parameters.p_pl_dbname",
+										"type": "Expression"
+									}
+								}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "ds_adlsg2_csv_generic",
+								"type": "DatasetReference",
+								"parameters": {
+									"p_ds_filesystem": {
+										"value": "@activity('lk_get_pipeline_parameters').output.firstRow.file_system",
+										"type": "Expression"
+									},
+									"p_ds_directory": {
+										"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+										"type": "Expression"
+									},
+									"p_ds_filename": {
+										"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+										"type": "Expression"
+									},
+									"p_ds_first_row_header": true
+								}
+							}
+						]
+					},
+					{
+						"name": "lk_get_pipeline_parameters",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlDWSource",
+								"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+								"storedProcedureParameters": {
+									"pPipelineCode": {
+										"type": "String",
+										"value": {
+											"value": "@pipeline().Pipeline",
+											"type": "Expression"
+										}
+									},
+									"pPipeLineSubCode": {
+										"type": "String",
+										"value": "Sitepro"
+									}
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "ds_azure_synapse_parameter",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						}
+					},
+					{
+						"name": "Set data pull date time",
+						"type": "SetVariable",
+						"dependsOn": [
+							{
+								"activity": "lk_get_pipeline_parameters",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "v_run_start",
+							"value": {
+								"value": "@utcnow()",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "sp_Update_Parameter",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "cp_getsiteprorocdata",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[dbo].[updateIncrementPipelineParameterValue]",
+							"storedProcedureParameters": {
+								"pParameterValue": {
+									"value": {
+										"value": "@formatDateTime(utcnow(),'yyyy-MM-dd HH:mm:ss')",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"pPipelineCode": {
+									"value": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"pPipelineSubCode": {
+									"value": "Sitepro",
+									"type": "String"
+								},
+								"pParameterCode": {
+									"value": "last_run_start_date",
+									"type": "String"
+								}
+							}
+						},
+						"linkedServiceName": {
+							"referenceName": "AzureSynapseDB_DEV",
+							"type": "LinkedServiceReference"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"parameters": {
+					"p_pl_dbname": {
+						"type": "string"
+					},
+					"p_pl_projectid": {
+						"type": "string"
+					}
+				},
+				"variables": {
+					"v_run_start": {
+						"type": "String"
+					}
+				},
+				"folder": {
+					"name": "Projects/NCSA/8.Rules of Credit"
+				},
+				"annotations": [],
+				"lastPublishTime": "2021-12-15T07:13:48Z"
+			},
+			"dependsOn": []
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/pl_roc_sitepro_stage_to_raw')]",
 			"type": "Microsoft.DataFactory/factories/pipelines",
 			"apiVersion": "2018-06-01",
@@ -5246,727 +6161,6 @@
 				},
 				"annotations": [],
 				"lastPublishTime": "2021-04-27T11:20:35Z"
-			},
-			"dependsOn": []
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/pl_subcontract_status_synstg_to_dim')]",
-			"type": "Microsoft.DataFactory/factories/pipelines",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"description": "Global Procurement Status Load from Synapse Stage into Dimension table.",
-				"activities": [
-					{
-						"name": "St_cleanup_project_null_values",
-						"description": "Do the Project Number check to add '99'.\nReplace NULL values for sub_plan_type",
-						"type": "Script",
-						"dependsOn": [
-							{
-								"activity": "lk_get_pipeline_parameters",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "0.01:00:00",
-							"retry": 1,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"linkedServiceName": {
-							"referenceName": "Azure_Dev_SynapseAnalyticsPool",
-							"type": "LinkedServiceReference"
-						},
-						"typeProperties": {
-							"scripts": [
-								{
-									"type": "NonQuery",
-									"text": {
-										"value": "@activity('lk_get_pipeline_parameters').output.firstRow.sql_script",
-										"type": "Expression"
-									}
-								}
-							]
-						}
-					},
-					{
-						"name": "lk_get_pipeline_parameters",
-						"description": "Use the lookup procedure to get the last run details to be used in the next steps",
-						"type": "Lookup",
-						"dependsOn": [],
-						"policy": {
-							"timeout": "0.01:00:00",
-							"retry": 1,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"source": {
-								"type": "SqlDWSource",
-								"sqlReaderStoredProcedureName": "getPipelineParametersValues",
-								"storedProcedureParameters": {
-									"pPipelineCode": {
-										"type": "String",
-										"value": {
-											"value": "@pipeline().parameters.p_pl_pipelineCode",
-											"type": "Expression"
-										}
-									},
-									"pPipeLineSubCode": {
-										"type": "String",
-										"value": {
-											"value": "@pipeline().parameters.p_pl_pipelineSubCode",
-											"type": "Expression"
-										}
-									}
-								},
-								"queryTimeout": "02:00:00",
-								"partitionOption": "None"
-							},
-							"dataset": {
-								"referenceName": "ds_azure_synapse_parameter",
-								"type": "DatasetReference",
-								"parameters": {}
-							}
-						}
-					},
-					{
-						"name": "sp_Update_Parameter",
-						"type": "SqlServerStoredProcedure",
-						"dependsOn": [
-							{
-								"activity": "sp_generic_procedure_dim_load_procurement_service",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "0.01:00:00",
-							"retry": 1,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"storedProcedureName": "[[dbo].[updateIncrementPipelineParameterValue]",
-							"storedProcedureParameters": {
-								"pParameterValue": {
-									"value": {
-										"value": "@formatDateTime(utcnow(),'yyyy-MM-dd HH:mm:ss.fff')",
-										"type": "Expression"
-									},
-									"type": "String"
-								},
-								"pPipelineCode": {
-									"value": {
-										"value": "@pipeline().parameters.p_pl_pipelineCode",
-										"type": "Expression"
-									},
-									"type": "String"
-								},
-								"pPipelineSubCode": {
-									"value": {
-										"value": "@pipeline().parameters.p_pl_pipelineSubCode",
-										"type": "Expression"
-									},
-									"type": "String"
-								},
-								"pParameterCode": {
-									"value": "last_run_start_date",
-									"type": "String"
-								}
-							}
-						},
-						"linkedServiceName": {
-							"referenceName": "AzureSynapseDB_DEV",
-							"type": "LinkedServiceReference"
-						}
-					},
-					{
-						"name": "sp_generic_procedure_dim_load_subcontract",
-						"description": "dim_ent_subcontract",
-						"type": "SqlServerStoredProcedure",
-						"dependsOn": [
-							{
-								"activity": "St_cleanup_project_null_values",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "0.03:00:00",
-							"retry": 1,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"storedProcedureName": "[[dbo].[generic_load_dim_v2]",
-							"storedProcedureParameters": {
-								"debug_flag": {
-									"value": "N",
-									"type": "String"
-								},
-								"execute_flag": {
-									"value": "Y",
-									"type": "String"
-								},
-								"load_name": {
-									"value": "dim_ent_subcontract",
-									"type": "String"
-								},
-								"rkValidationRequired": {
-									"value": "Y",
-									"type": "String"
-								}
-							}
-						},
-						"linkedServiceName": {
-							"referenceName": "Azure_Dev_SynapseAnalyticsPool",
-							"type": "LinkedServiceReference"
-						}
-					},
-					{
-						"name": "sp_generic_procedure_dim_load_procurement_service",
-						"description": "dim_entp_procurement_service_status",
-						"type": "SqlServerStoredProcedure",
-						"dependsOn": [
-							{
-								"activity": "sp_generic_procedure_dim_load_subcontract",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "0.03:00:00",
-							"retry": 1,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"storedProcedureName": "[[dbo].[generic_load_dim_v2]",
-							"storedProcedureParameters": {
-								"debug_flag": {
-									"value": "N",
-									"type": "String"
-								},
-								"execute_flag": {
-									"value": "Y",
-									"type": "String"
-								},
-								"load_name": {
-									"value": "dim_entp_procurement_service_status",
-									"type": "String"
-								},
-								"rkValidationRequired": {
-									"value": "Y",
-									"type": "String"
-								}
-							}
-						},
-						"linkedServiceName": {
-							"referenceName": "Azure_Dev_SynapseAnalyticsPool",
-							"type": "LinkedServiceReference"
-						}
-					}
-				],
-				"policy": {
-					"elapsedTimeMetric": {}
-				},
-				"parameters": {
-					"p_pl_pipelineCode": {
-						"type": "string"
-					},
-					"p_pl_pipelineSubCode": {
-						"type": "string",
-						"defaultValue": "NetworkFolder"
-					}
-				},
-				"folder": {
-					"name": "Projects/NCSA/SCM/Global Subcontract Status"
-				},
-				"annotations": [],
-				"lastPublishTime": "2022-08-12T05:23:48Z"
-			},
-			"dependsOn": []
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/pl_summary_cost_type_mcpm_raw_to_synapse_stage')]",
-			"type": "Microsoft.DataFactory/factories/pipelines",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"activities": [
-					{
-						"name": "Check Combined File non zero Bytes",
-						"type": "GetMetadata",
-						"dependsOn": [
-							{
-								"activity": "cp_Get_Latest_File",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "7.00:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"dataset": {
-								"referenceName": "ds_adlsg2_csv_summary_cost_type_raw_ltest_file",
-								"type": "DatasetReference",
-								"parameters": {}
-							},
-							"fieldList": [
-								"size",
-								"exists"
-							],
-							"storeSettings": {
-								"type": "AzureBlobFSReadSettings",
-								"recursive": true
-							},
-							"formatSettings": {
-								"type": "DelimitedTextReadSettings"
-							}
-						}
-					},
-					{
-						"name": "Set start date",
-						"type": "SetVariable",
-						"dependsOn": [
-							{
-								"activity": "lkup_Get_Pipeline_parameters_getlrd",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"variableName": "v_lrd_src_to_stage",
-							"value": {
-								"value": "@activity('lkup_Get_Pipeline_parameters_getlrd').output.firstRow.start_date",
-								"type": "Expression"
-							}
-						}
-					},
-					{
-						"name": "cp_Get_Latest_File",
-						"type": "Copy",
-						"dependsOn": [
-							{
-								"activity": "Set start date",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "7.00:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"source": {
-								"type": "DelimitedTextSource",
-								"storeSettings": {
-									"type": "AzureBlobFSReadSettings",
-									"recursive": true,
-									"modifiedDatetimeStart": {
-										"value": "@variables('v_lrd_src_to_stage')",
-										"type": "Expression"
-									},
-									"wildcardFolderPath": "Project_Data/NCSA/MCPM/Summary_Cost_Type/*/*/*",
-									"wildcardFileName": "Summary_Cost_Type*.csv"
-								},
-								"formatSettings": {
-									"type": "DelimitedTextReadSettings"
-								}
-							},
-							"sink": {
-								"type": "DelimitedTextSink",
-								"storeSettings": {
-									"type": "AzureBlobFSWriteSettings",
-									"copyBehavior": "MergeFiles"
-								},
-								"formatSettings": {
-									"type": "DelimitedTextWriteSettings",
-									"quoteAllText": true,
-									"fileExtension": "ts_itime_combined.csv"
-								}
-							},
-							"enableStaging": false,
-							"translator": {
-								"type": "TabularTranslator",
-								"mappings": [
-									{
-										"source": {
-											"name": "Domain",
-											"type": "String"
-										},
-										"sink": {
-											"name": "Domain",
-											"type": "String"
-										}
-									},
-									{
-										"source": {
-											"name": "SummaryCostType",
-											"type": "String"
-										},
-										"sink": {
-											"name": "SummaryCostType",
-											"type": "String"
-										}
-									},
-									{
-										"source": {
-											"name": "Title",
-											"type": "String"
-										},
-										"sink": {
-											"name": "Title",
-											"type": "String"
-										}
-									}
-								]
-							}
-						},
-						"inputs": [
-							{
-								"referenceName": "ds_adlsg2_csv_summary_cost_type_raw",
-								"type": "DatasetReference",
-								"parameters": {}
-							}
-						],
-						"outputs": [
-							{
-								"referenceName": "ds_adlsg2_csv_summary_cost_type_raw_ltest_file",
-								"type": "DatasetReference",
-								"parameters": {}
-							}
-						]
-					},
-					{
-						"name": "if_File_Exists_Copy_to_Synapse",
-						"type": "IfCondition",
-						"dependsOn": [
-							{
-								"activity": "Check Combined File non zero Bytes",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"userProperties": [],
-						"typeProperties": {
-							"expression": {
-								"value": "@greater(activity('Check Combined File non zero Bytes').output.size, 2)",
-								"type": "Expression"
-							},
-							"ifTrueActivities": [
-								{
-									"name": "Copy Latest Data To Synapse Stage Table",
-									"type": "Copy",
-									"dependsOn": [],
-									"policy": {
-										"timeout": "7.00:00:00",
-										"retry": 0,
-										"retryIntervalInSeconds": 30,
-										"secureOutput": false,
-										"secureInput": false
-									},
-									"userProperties": [],
-									"typeProperties": {
-										"source": {
-											"type": "DelimitedTextSource",
-											"storeSettings": {
-												"type": "AzureBlobFSReadSettings",
-												"recursive": false
-											},
-											"formatSettings": {
-												"type": "DelimitedTextReadSettings"
-											}
-										},
-										"sink": {
-											"type": "SqlDWSink",
-											"preCopyScript": "truncate table gpd.NCSA_Summary_Cost_Type",
-											"allowPolyBase": true,
-											"polyBaseSettings": {
-												"rejectValue": 0,
-												"rejectType": "value",
-												"useTypeDefault": true
-											},
-											"disableMetricsCollection": false
-										},
-										"enableStaging": true,
-										"stagingSettings": {
-											"linkedServiceName": {
-												"referenceName": "ADLSG2 TimeAnalytics DEV",
-												"type": "LinkedServiceReference"
-											},
-											"path": "mdr-raw-data/Polybase_Staging_Space"
-										},
-										"translator": {
-											"type": "TabularTranslator",
-											"mappings": [
-												{
-													"source": {
-														"name": "Domain",
-														"type": "String"
-													},
-													"sink": {
-														"name": "Domain",
-														"type": "String"
-													}
-												},
-												{
-													"source": {
-														"name": "SummaryCostType",
-														"type": "String"
-													},
-													"sink": {
-														"name": "SummaryCostType",
-														"type": "String"
-													}
-												},
-												{
-													"source": {
-														"name": "Title",
-														"type": "String"
-													},
-													"sink": {
-														"name": "Title",
-														"type": "String"
-													}
-												}
-											]
-										}
-									},
-									"inputs": [
-										{
-											"referenceName": "ds_adlsg2_csv_summary_cost_type_raw_ltest_file",
-											"type": "DatasetReference",
-											"parameters": {}
-										}
-									],
-									"outputs": [
-										{
-											"referenceName": "ds_AzureSynapseAnalytics_MCPM_NCSA_Summary_Cost_Type",
-											"type": "DatasetReference",
-											"parameters": {}
-										}
-									]
-								},
-								{
-									"name": "sp_Update_Parameter",
-									"description": "Update the appropriate parameter in the parameter table",
-									"type": "SqlServerStoredProcedure",
-									"dependsOn": [
-										{
-											"activity": "Copy Latest Data To Synapse Stage Table",
-											"dependencyConditions": [
-												"Succeeded"
-											]
-										}
-									],
-									"policy": {
-										"timeout": "7.00:00:00",
-										"retry": 0,
-										"retryIntervalInSeconds": 30,
-										"secureOutput": false,
-										"secureInput": false
-									},
-									"userProperties": [],
-									"typeProperties": {
-										"storedProcedureName": "[[dbo].[updateIncrementPipelineParameterValue]",
-										"storedProcedureParameters": {
-											"pParameterValue": {
-												"value": {
-													"value": "@formatDateTime(utcnow(),'yyyy-MM-dd HH:mm:ss.fff')",
-													"type": "Expression"
-												},
-												"type": "String"
-											},
-											"pPipelineCode": {
-												"value": {
-													"value": "@pipeline().Pipeline",
-													"type": "Expression"
-												},
-												"type": "String"
-											},
-											"pPipelineSubCode": {
-												"value": "MCPM",
-												"type": "String"
-											},
-											"pParameterCode": {
-												"value": "start_date",
-												"type": "String"
-											}
-										}
-									},
-									"linkedServiceName": {
-										"referenceName": "Azure_Dev_SynapseAnalyticsPool",
-										"type": "LinkedServiceReference"
-									}
-								}
-							]
-						}
-					},
-					{
-						"name": "sp_generic_procedure_dim_load",
-						"type": "SqlServerStoredProcedure",
-						"dependsOn": [
-							{
-								"activity": "Delete Temp combined File",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "7.00:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"storedProcedureName": "[[dbo].[generic_load_dim_v2]",
-							"storedProcedureParameters": {
-								"debug_flag": {
-									"value": "N",
-									"type": "String"
-								},
-								"execute_flag": {
-									"value": "Y",
-									"type": "String"
-								},
-								"load_name": {
-									"value": "dim_ent_summary_cost_type",
-									"type": "String"
-								},
-								"rkValidationRequired": {
-									"value": "Y",
-									"type": "String"
-								}
-							}
-						},
-						"linkedServiceName": {
-							"referenceName": "Azure_Dev_SynapseAnalyticsPool",
-							"type": "LinkedServiceReference"
-						}
-					},
-					{
-						"name": "Delete Temp combined File",
-						"type": "Delete",
-						"dependsOn": [
-							{
-								"activity": "if_File_Exists_Copy_to_Synapse",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "7.00:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"dataset": {
-								"referenceName": "ds_adlsg2_csv_summary_cost_type_raw_ltest_file",
-								"type": "DatasetReference",
-								"parameters": {}
-							},
-							"enableLogging": false,
-							"storeSettings": {
-								"type": "AzureBlobFSReadSettings",
-								"recursive": true
-							}
-						}
-					},
-					{
-						"name": "lkup_Get_Pipeline_parameters_getlrd",
-						"description": "Use the lookup procedure to get the last run details to be used in the next steps",
-						"type": "Lookup",
-						"dependsOn": [],
-						"policy": {
-							"timeout": "7.00:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"source": {
-								"type": "SqlDWSource",
-								"sqlReaderStoredProcedureName": "getPipelineParametersValues",
-								"storedProcedureParameters": {
-									"pPipelineCode": {
-										"type": "String",
-										"value": {
-											"value": "@pipeline().Pipeline",
-											"type": "Expression"
-										}
-									},
-									"pPipeLineSubCode": {
-										"type": "String",
-										"value": "MCPM"
-									}
-								},
-								"queryTimeout": "02:00:00",
-								"partitionOption": "None"
-							},
-							"dataset": {
-								"referenceName": "ds_azure_synapse_parameter",
-								"type": "DatasetReference",
-								"parameters": {}
-							}
-						}
-					}
-				],
-				"policy": {
-					"elapsedTimeMetric": {}
-				},
-				"variables": {
-					"v_lrd_src_to_stage": {
-						"type": "String"
-					}
-				},
-				"folder": {
-					"name": "Projects/NCSA/13.Summary Cost Type"
-				},
-				"annotations": [],
-				"lastPublishTime": "2021-04-16T07:11:29Z"
 			},
 			"dependsOn": []
 		}

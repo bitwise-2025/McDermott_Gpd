@@ -7,6 +7,20 @@
 			"metadata": "Data Factory name",
 			"defaultValue": "McD-GPD"
 		},
+		"ls_ODBC_DB2_Zycus_JDE_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'ls_ODBC_DB2_Zycus_JDE'"
+		},
+		"ls_SQL_Zycus_Datamart_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'ls_SQL_Zycus_Datamart'",
+			"defaultValue": "Integrated Security=True;Data Source=CLDDSQL14;Initial Catalog=EnterpriseAnalytics"
+		},
+		"ls_SQL_Zycus_Datamart_Staging_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'ls_SQL_Zycus_Datamart_Staging'",
+			"defaultValue": "Integrated Security=True;Data Source=DALDSQL03;Initial Catalog=EnterpriseAnalyticsStaging_Zycus"
+		},
 		"ls_ced_oracle_password": {
 			"type": "secureString",
 			"metadata": "Secure string for 'password' of 'ls_ced_oracle'"
@@ -15,9 +29,17 @@
 			"type": "secureString",
 			"metadata": "Secure string for 'password' of 'ls_ecm_restapi_pagination'"
 		},
-		"ls_pmcs_oracle_password": {
-			"type": "secureString",
-			"metadata": "Secure string for 'password' of 'ls_pmcs_oracle'"
+		"ls_ODBC_DB2_Zycus_JDE_properties_typeProperties_userName": {
+			"type": "string",
+			"defaultValue": "CBITableau"
+		},
+		"ls_SQL_Zycus_Datamart_properties_typeProperties_userName": {
+			"type": "string",
+			"defaultValue": "mcdcorp\\SVC-GLB-AZURADF_QA"
+		},
+		"ls_SQL_Zycus_Datamart_Staging_properties_typeProperties_userName": {
+			"type": "string",
+			"defaultValue": "mcdcorp\\SVC-GLB-AZURADF_DEV"
 		},
 		"ls_ced_oracle_properties_typeProperties_server": {
 			"type": "string",
@@ -150,32 +172,97 @@
 		"ls_network_file_timesheet_epr_properties_typeProperties_userId": {
 			"type": "string",
 			"defaultValue": "mcdcorp\\SVC-GLB-AZURADF_DEV"
-		},
-		"ls_oneview_oci_properties_typeProperties_server": {
-			"type": "string",
-			"defaultValue": "(DESCRIPTION=(ADDRESS=(PROTOCOL=tcp)(HOST=https://edsv-dev2.fa.us2.oraclecloud.com)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=edsv)))"
-		},
-		"ls_oneview_oci_properties_typeProperties_username": {
-			"type": "string",
-			"defaultValue": "SVC-GLB-AZURADF_DEV"
-		},
-		"ls_oracle_fusion_api_rest_properties_typeProperties_url": {
-			"type": "string",
-			"defaultValue": "https://edsv-dev2.fa.us2.oraclecloud.com/Oneview-ApiServiceUser/resources/latest/"
-		},
-		"ls_pmcs_oracle_properties_typeProperties_server": {
-			"type": "string",
-			"defaultValue": "(DESCRIPTION = (ADDRESS_LIST = (ADDRESS = (PROTOCOL = TCP)(HOST = @{linkedService().ls_p_hostname})(PORT = @{linkedService().ls_p_port})))(CONNECT_DATA = (SID = @{linkedService().ls_p_database})))"
-		},
-		"ls_pmcs_oracle_properties_typeProperties_username": {
-			"type": "string",
-			"defaultValue": "SVC_GLB_AZURADF"
 		}
 	},
 	"variables": {
 		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
 	},
 	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_ODBC_DB2_Zycus_JDE')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Linked service for Zycus ODBC for JDE connection.",
+				"annotations": [],
+				"type": "Odbc",
+				"typeProperties": {
+					"connectionString": {
+						"type": "SecureString",
+						"value": "[parameters('ls_ODBC_DB2_Zycus_JDE_connectionString')]"
+					},
+					"authenticationType": "Basic",
+					"userName": "[parameters('ls_ODBC_DB2_Zycus_JDE_properties_typeProperties_userName')]",
+					"password": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "MDREntAnltxAzureKeyVault1",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "MRD-JDE-ZYCUS-DB2"
+					}
+				},
+				"connectVia": {
+					"referenceName": "mdrdevshir",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_SQL_Zycus_Datamart')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Linked service for Zycus Datamart connection. (DM)",
+				"annotations": [],
+				"type": "SqlServer",
+				"typeProperties": {
+					"connectionString": "[parameters('ls_SQL_Zycus_Datamart_connectionString')]",
+					"userName": "[parameters('ls_SQL_Zycus_Datamart_properties_typeProperties_userName')]",
+					"password": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "MDREntAnltxAzureKeyVault1",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "AZURE-ADF-SVC-ACCT-QA-NW-PWD"
+					}
+				},
+				"connectVia": {
+					"referenceName": "mdrdevshir",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_SQL_Zycus_Datamart_Staging')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Linked service for Zycus Datamart Staging connection. (DM_staging)",
+				"annotations": [],
+				"type": "SqlServer",
+				"typeProperties": {
+					"connectionString": "[parameters('ls_SQL_Zycus_Datamart_Staging_connectionString')]",
+					"userName": "[parameters('ls_SQL_Zycus_Datamart_Staging_properties_typeProperties_userName')]",
+					"password": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "MDREntAnltxAzureKeyVault1",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "AZURE-ADF-SVC-ACCT-NW-PWD"
+					}
+				},
+				"connectVia": {
+					"referenceName": "mdrdevshir",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": []
+		},
 		{
 			"name": "[concat(parameters('factoryName'), '/ls_ced_oracle')]",
 			"type": "Microsoft.DataFactory/factories/linkedServices",
@@ -651,96 +738,6 @@
 							"type": "LinkedServiceReference"
 						},
 						"secretName": "AZURE-ADF-SVC-ACCT-NW-PWD"
-					}
-				},
-				"connectVia": {
-					"referenceName": "mdrdevshir",
-					"type": "IntegrationRuntimeReference"
-				}
-			},
-			"dependsOn": []
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/ls_oneview_oci')]",
-			"type": "Microsoft.DataFactory/factories/linkedServices",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"annotations": [],
-				"type": "Oracle",
-				"version": "2.0",
-				"typeProperties": {
-					"server": "[parameters('ls_oneview_oci_properties_typeProperties_server')]",
-					"authenticationType": "Basic",
-					"username": "[parameters('ls_oneview_oci_properties_typeProperties_username')]",
-					"password": {
-						"type": "AzureKeyVaultSecret",
-						"store": {
-							"referenceName": "MDREntAnltxAzureKeyVault1",
-							"type": "LinkedServiceReference"
-						},
-						"secretName": "Oneview-ApiServiceUser"
-					},
-					"encryptionClient": "accepted",
-					"encryptionTypesClient": "(AES128, AES192, AES256, 3DES112, 3DES168)",
-					"cryptoChecksumClient": "accepted",
-					"cryptoChecksumTypesClient": "(SHA1, SHA256, SHA384, SHA512)"
-				},
-				"connectVia": {
-					"referenceName": "mdrdevshir",
-					"type": "IntegrationRuntimeReference"
-				}
-			},
-			"dependsOn": []
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/ls_oracle_fusion_api_rest')]",
-			"type": "Microsoft.DataFactory/factories/linkedServices",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"annotations": [],
-				"type": "RestService",
-				"typeProperties": {
-					"url": "[parameters('ls_oracle_fusion_api_rest_properties_typeProperties_url')]",
-					"enableServerCertificateValidation": true,
-					"authenticationType": "Anonymous"
-				},
-				"connectVia": {
-					"referenceName": "mdrdevshir",
-					"type": "IntegrationRuntimeReference"
-				}
-			},
-			"dependsOn": []
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/ls_pmcs_oracle')]",
-			"type": "Microsoft.DataFactory/factories/linkedServices",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"description": "Oracle Linked Service for PMCS",
-				"parameters": {
-					"ls_p_hostname": {
-						"type": "string",
-						"defaultValue": "DALPOR17"
-					},
-					"ls_p_port": {
-						"type": "string",
-						"defaultValue": "1521"
-					},
-					"ls_p_database": {
-						"type": "string",
-						"defaultValue": "PMCSPLP"
-					}
-				},
-				"annotations": [],
-				"type": "Oracle",
-				"version": "2.0",
-				"typeProperties": {
-					"server": "[parameters('ls_pmcs_oracle_properties_typeProperties_server')]",
-					"authenticationType": "Basic",
-					"username": "[parameters('ls_pmcs_oracle_properties_typeProperties_username')]",
-					"password": {
-						"type": "SecureString",
-						"value": "[parameters('ls_pmcs_oracle_password')]"
 					}
 				},
 				"connectVia": {

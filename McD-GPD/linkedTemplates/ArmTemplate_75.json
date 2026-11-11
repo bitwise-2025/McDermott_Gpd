@@ -13,6 +13,668 @@
 	},
 	"resources": [
 		{
+			"name": "[concat(parameters('factoryName'), '/pl_facility_excel_stage_to_raw')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "WeeklyPlan Report ADLS Stage to ADLS Raw Folder",
+				"activities": [
+					{
+						"name": "Check File Exists",
+						"type": "GetMetadata",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_facility_stg",
+								"type": "DatasetReference",
+								"parameters": {}
+							},
+							"fieldList": [
+								"childItems"
+							],
+							"storeSettings": {
+								"type": "AzureBlobFSReadSettings",
+								"recursive": true
+							},
+							"formatSettings": {
+								"type": "DelimitedTextReadSettings"
+							}
+						}
+					},
+					{
+						"name": "Set_File_Exists_status",
+						"type": "SetVariable",
+						"dependsOn": [
+							{
+								"activity": "Check File Exists",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "lk_get_pipeline_parameters",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "p_pl_fileexists",
+							"value": {
+								"value": "@greaterOrEquals(indexof(string(activity('Check File Exists').output.childItems),activity('lk_get_pipeline_parameters').output.firstRow.file_name),0)",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "Run Data Flow if File Exists",
+						"type": "IfCondition",
+						"dependsOn": [
+							{
+								"activity": "Set_File_Exists_status",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"expression": {
+								"value": "@variables('p_pl_fileexists')",
+								"type": "Expression"
+							},
+							"ifTrueActivities": [
+								{
+									"name": "df_facility_stage_to_raw",
+									"type": "ExecuteDataFlow",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataflow": {
+											"referenceName": "df_facility_stage_to_raw",
+											"type": "DataFlowReference",
+											"parameters": {
+												"WildPath": {
+													"value": "'@{concat(activity('lk_get_pipeline_parameters').output.firstRow.folder_path, '/')}'",
+													"type": "Expression"
+												},
+												"FileName": {
+													"value": "'@{activity('lk_get_pipeline_parameters').output.firstRow.file_name}'",
+													"type": "Expression"
+												}
+											},
+											"datasetParameters": {
+												"srcFacilityStage": {},
+												"snkFacilityRaw": {}
+											}
+										},
+										"staging": {},
+										"integrationRuntime": {
+											"referenceName": "integrationRuntimeEast2",
+											"type": "IntegrationRuntimeReference"
+										},
+										"traceLevel": "Fine"
+									}
+								}
+							]
+						}
+					},
+					{
+						"name": "lk_get_pipeline_parameters",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlDWSource",
+								"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+								"storedProcedureParameters": {
+									"pPipelineCode": {
+										"type": "String",
+										"value": {
+											"value": "@pipeline().Pipeline",
+											"type": "Expression"
+										}
+									},
+									"pPipeLineSubCode": {
+										"type": "String",
+										"value": "NetworkFolder"
+									}
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "ds_azure_synapse_parameter",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						}
+					},
+					{
+						"name": "sp_Update_Parameter",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "Run Data Flow if File Exists",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[dbo].[updateIncrementPipelineParameterValue]",
+							"storedProcedureParameters": {
+								"pParameterValue": {
+									"value": {
+										"value": "@formatDateTime(utcnow(),'yyyy-MM-dd HH:mm:ss.fff')",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"pPipelineCode": {
+									"value": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"pPipelineSubCode": {
+									"value": "NetworkFolder",
+									"type": "String"
+								},
+								"pParameterCode": {
+									"value": "lastrundate",
+									"type": "String"
+								}
+							}
+						},
+						"linkedServiceName": {
+							"referenceName": "AzureSynapseDB_DEV",
+							"type": "LinkedServiceReference"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"variables": {
+					"p_pl_fileexists": {
+						"type": "Boolean"
+					}
+				},
+				"folder": {
+					"name": "Projects/NCSA/16. P6 Facility"
+				},
+				"annotations": [],
+				"lastPublishTime": "2022-02-04T12:22:33Z"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pl_generic_Excel_to_JSONstage')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Excel File to ADLS Stage Folder",
+				"activities": [
+					{
+						"name": "lk_get_pipeline_parameters",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.01:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlDWSource",
+								"sqlReaderStoredProcedureName": "getPipelineParametersValues",
+								"storedProcedureParameters": {
+									"pPipelineCode": {
+										"type": "String",
+										"value": {
+											"value": "@pipeline().parameters.p_pl_parent_pipeline",
+											"type": "Expression"
+										}
+									},
+									"pPipeLineSubCode": {
+										"type": "String",
+										"value": "NetworkFolder"
+									}
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "ds_azure_synapse_parameter",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						}
+					},
+					{
+						"name": "SP Update Control Table Last Run Date",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "Create_Dynamic_JSON_view",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[dbo].[updateIncrementPipelineParameterValue]",
+							"storedProcedureParameters": {
+								"pParameterCode": {
+									"value": "lastrundate",
+									"type": "String"
+								},
+								"pParameterValue": {
+									"value": {
+										"value": "@formatDateTime(activity('lk_get_pipeline_parameters').output.firstRow.run_start_datetime,'yyyy-MM-dd HH:mm:ss')",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"pPipelineCode": {
+									"value": {
+										"value": "@pipeline().parameters.p_pl_parent_pipeline",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"pPipelineSubCode": {
+									"value": "NetworkFolder",
+									"type": "String"
+								}
+							}
+						},
+						"linkedServiceName": {
+							"referenceName": "linkedservice_DEV_entanalytics_synapse",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "Create_Dynamic_JSON_view",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "Delete the initial staging file",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[dbo].[generic_json_validator]",
+							"storedProcedureParameters": {
+								"p_load_name": {
+									"value": {
+										"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.load_name)",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"p_debug_flag": {
+									"value": "Y",
+									"type": "String"
+								},
+								"p_delete_source_when_no_errors_flag": {
+									"value": "N",
+									"type": "String"
+								},
+								"p_error_message": {
+									"value": null,
+									"type": "String"
+								},
+								"p_error_id": {
+									"value": null,
+									"type": "String"
+								}
+							}
+						},
+						"linkedServiceName": {
+							"referenceName": "linkedservice_DEV_entanalytics_synapse",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "Check Zero File Size",
+						"type": "GetMetadata",
+						"dependsOn": [
+							{
+								"activity": "lk_get_pipeline_parameters",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_generic_File_StageJSON",
+								"type": "DatasetReference",
+								"parameters": {
+									"p_ds_filename": {
+										"value": "@concat('Initial_',activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+										"type": "Expression"
+									},
+									"p_ds_folder": {
+										"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+										"type": "Expression"
+									}
+								}
+							},
+							"fieldList": [
+								"size",
+								"exists"
+							],
+							"storeSettings": {
+								"type": "AzureBlobFSReadSettings",
+								"recursive": true,
+								"enablePartitionDiscovery": false
+							},
+							"formatSettings": {
+								"type": "DelimitedTextReadSettings"
+							}
+						}
+					},
+					{
+						"name": "If Condition",
+						"type": "IfCondition",
+						"dependsOn": [
+							{
+								"activity": "Check Zero File Size",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"expression": {
+								"value": "@greater(activity('Check Zero File Size').output.size, 2)",
+								"type": "Expression"
+							},
+							"ifTrueActivities": [
+								{
+									"name": "df_generic_specCSV_to_JSONCSV",
+									"description": "Dataflow to convert special characters CSV file data into Dynamic JSONCSV",
+									"type": "ExecuteDataFlow",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "1.00:00:00",
+										"retry": 1,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataflow": {
+											"referenceName": "df_generic_specCSV_to_JSONCSV",
+											"type": "DataFlowReference",
+											"parameters": {
+												"p_df_tgt_filename": {
+													"value": "'@{activity('lk_get_pipeline_parameters').output.firstRow.file_name}'",
+													"type": "Expression"
+												}
+											},
+											"datasetParameters": {
+												"SrcFile": {
+													"p_ds_filename": {
+														"value": "@concat('Initial_',activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+														"type": "Expression"
+													},
+													"p_ds_folder": {
+														"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+														"type": "Expression"
+													}
+												},
+												"SnkJSON": {
+													"p_ds_folder": {
+														"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+														"type": "Expression"
+													}
+												}
+											}
+										},
+										"staging": {},
+										"integrationRuntime": {
+											"referenceName": "integrationRuntimeEast2",
+											"type": "IntegrationRuntimeReference"
+										},
+										"traceLevel": "Fine"
+									}
+								}
+							]
+						}
+					},
+					{
+						"name": "If Condition1",
+						"type": "IfCondition",
+						"dependsOn": [
+							{
+								"activity": "If Condition",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"expression": {
+								"value": "@greater(activity('Check Zero File Size').output.size, 2)",
+								"type": "Expression"
+							},
+							"ifTrueActivities": [
+								{
+									"name": "cp_copy_from_adlsg2_to_Synapse",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.07:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "DelimitedTextSource",
+											"storeSettings": {
+												"type": "AzureBlobFSReadSettings",
+												"recursive": true,
+												"wildcardFolderPath": {
+													"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+													"type": "Expression"
+												},
+												"wildcardFileName": {
+													"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
+													"type": "Expression"
+												},
+												"enablePartitionDiscovery": false
+											},
+											"formatSettings": {
+												"type": "DelimitedTextReadSettings"
+											}
+										},
+										"sink": {
+											"type": "SqlDWSink",
+											"writeBehavior": "Insert",
+											"sqlWriterUseTableLock": true
+										},
+										"enableStaging": false,
+										"translator": {
+											"type": "TabularTranslator",
+											"mappings": [
+												{
+													"source": {
+														"name": "JSON_Attribute",
+														"type": "String"
+													},
+													"sink": {
+														"name": "JSON_Attribute",
+														"type": "String"
+													}
+												}
+											]
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_adlsg2_csv_generic_StageJSON",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_ds_folder": {
+													"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+													"type": "Expression"
+												}
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_AzureSynapseAnalytics_generic_StageJSON",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_ds_tablename": {
+													"value": "@split(activity('lk_get_pipeline_parameters').output.firstRow.stage_table,'.')[1]",
+													"type": "Expression"
+												},
+												"p_ds_dbschema": {
+													"value": "@split(activity('lk_get_pipeline_parameters').output.firstRow.stage_table,'.')[0]",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								}
+							]
+						}
+					},
+					{
+						"name": "Delete the initial staging file",
+						"type": "Delete",
+						"dependsOn": [
+							{
+								"activity": "If Condition1",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataset": {
+								"referenceName": "ds_adlsg2_csv_generic_stage_file_load",
+								"type": "DatasetReference",
+								"parameters": {
+									"p_ds_folder": {
+										"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
+										"type": "Expression"
+									}
+								}
+							},
+							"enableLogging": false,
+							"storeSettings": {
+								"type": "AzureBlobFSReadSettings",
+								"recursive": true,
+								"wildcardFileName": "Initial_*.csv",
+								"enablePartitionDiscovery": false
+							}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"parameters": {
+					"p_pl_parent_pipeline": {
+						"type": "string"
+					}
+				},
+				"folder": {
+					"name": "Projects/NCSA/Generic Reuse Pipeline/Generic Excel to StageJSON"
+				},
+				"annotations": [],
+				"lastPublishTime": "2024-07-16T13:08:14Z"
+			},
+			"dependsOn": []
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/pl_generic_Excel_to_JSONstage_EUT')]",
 			"type": "Microsoft.DataFactory/factories/pipelines",
 			"apiVersion": "2018-06-01",
@@ -9988,587 +10650,6 @@
 				},
 				"annotations": [],
 				"lastPublishTime": "2024-04-30T07:33:42Z"
-			},
-			"dependsOn": []
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/pl_idocs_closed_m_raw_to_synapse_stage')]",
-			"type": "Microsoft.DataFactory/factories/pipelines",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"description": "Closed Master - ADLS Raw to Synapse Stage table",
-				"activities": [
-					{
-						"name": "Check Combined File non zero Bytes",
-						"description": "Check if the combined file has any data to be loaded.",
-						"type": "GetMetadata",
-						"dependsOn": [
-							{
-								"activity": "cp_Get_Latest_File",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "7.00:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"dataset": {
-								"referenceName": "ds_adlsg2_idocs_closed_m_raw_latest",
-								"type": "DatasetReference",
-								"parameters": {}
-							},
-							"fieldList": [
-								"size",
-								"exists"
-							],
-							"storeSettings": {
-								"type": "AzureBlobFSReadSettings",
-								"recursive": true
-							},
-							"formatSettings": {
-								"type": "DelimitedTextReadSettings"
-							}
-						}
-					},
-					{
-						"name": "lkup_Get_Pipeline_parameters_getlrd",
-						"description": "Use the lookup procedure to get the last run details to be used in the next steps.",
-						"type": "Lookup",
-						"dependsOn": [],
-						"policy": {
-							"timeout": "7.00:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"source": {
-								"type": "SqlDWSource",
-								"sqlReaderStoredProcedureName": "getPipelineParametersValues",
-								"storedProcedureParameters": {
-									"pPipelineCode": {
-										"type": "String",
-										"value": {
-											"value": "@pipeline().Pipeline",
-											"type": "Expression"
-										}
-									},
-									"pPipeLineSubCode": {
-										"type": "String",
-										"value": "iDocs"
-									}
-								},
-								"queryTimeout": "02:00:00",
-								"partitionOption": "None"
-							},
-							"dataset": {
-								"referenceName": "ds_azure_synapse_parameter",
-								"type": "DatasetReference",
-								"parameters": {}
-							}
-						}
-					},
-					{
-						"name": "Set start date",
-						"description": "Set the last stage run date to the variable as start date.",
-						"type": "SetVariable",
-						"dependsOn": [
-							{
-								"activity": "lkup_Get_Pipeline_parameters_getlrd",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"variableName": "v_lrd_src_to_stage",
-							"value": {
-								"value": "@activity('lkup_Get_Pipeline_parameters_getlrd').output.firstRow.last_run_start_date",
-								"type": "Expression"
-							}
-						}
-					},
-					{
-						"name": "cp_Get_Latest_File",
-						"description": "Copy all the files created since the last start date and combine them into one file to be processed into Synapse.",
-						"type": "Copy",
-						"dependsOn": [
-							{
-								"activity": "Set start date",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "7.00:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"source": {
-								"type": "DelimitedTextSource",
-								"storeSettings": {
-									"type": "AzureBlobFSReadSettings",
-									"recursive": true,
-									"modifiedDatetimeStart": {
-										"value": "@variables('v_lrd_src_to_stage')",
-										"type": "Expression"
-									},
-									"wildcardFolderPath": "Project_Data/NCSA/iDocs/Closed_M/*/*/*",
-									"wildcardFileName": "Closed_M*.csv"
-								},
-								"formatSettings": {
-									"type": "DelimitedTextReadSettings"
-								}
-							},
-							"sink": {
-								"type": "DelimitedTextSink",
-								"storeSettings": {
-									"type": "AzureBlobFSWriteSettings",
-									"copyBehavior": "MergeFiles"
-								},
-								"formatSettings": {
-									"type": "DelimitedTextWriteSettings",
-									"quoteAllText": true,
-									"fileExtension": "ts_itime_combined.csv"
-								}
-							},
-							"enableStaging": false
-						},
-						"inputs": [
-							{
-								"referenceName": "ds_adlsg2_iDocs_ClosedM_raw",
-								"type": "DatasetReference",
-								"parameters": {}
-							}
-						],
-						"outputs": [
-							{
-								"referenceName": "ds_adlsg2_idocs_closed_m_raw_latest",
-								"type": "DatasetReference",
-								"parameters": {}
-							}
-						]
-					},
-					{
-						"name": "Run Data Flow if File Exists",
-						"type": "IfCondition",
-						"dependsOn": [
-							{
-								"activity": "Check Combined File non zero Bytes",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"userProperties": [],
-						"typeProperties": {
-							"expression": {
-								"value": "@greater(activity('Check Combined File non zero Bytes').output.size, 2)",
-								"type": "Expression"
-							},
-							"ifTrueActivities": [
-								{
-									"name": "df_iDocs_closed_m_raw_to_synapse",
-									"type": "ExecuteDataFlow",
-									"dependsOn": [],
-									"policy": {
-										"timeout": "1.00:00:00",
-										"retry": 0,
-										"retryIntervalInSeconds": 30,
-										"secureOutput": false,
-										"secureInput": false
-									},
-									"userProperties": [],
-									"typeProperties": {
-										"dataflow": {
-											"referenceName": "df_iDocs_closed_m_raw_to_synapse",
-											"type": "DataFlowReference",
-											"parameters": {},
-											"datasetParameters": {
-												"srcClosedMasterRAWLatest": {},
-												"snkClosedMSynapse": {}
-											}
-										},
-										"staging": {
-											"linkedService": {
-												"referenceName": "ADLSG2 TimeAnalytics DEV",
-												"type": "LinkedServiceReference"
-											},
-											"folderPath": {
-												"value": "mdr-raw-data/Project_Data/NCSA/iDocs/Closed_M",
-												"type": "Expression"
-											}
-										},
-										"integrationRuntime": {
-											"referenceName": "integrationRuntimeEast2",
-											"type": "IntegrationRuntimeReference"
-										},
-										"traceLevel": "Fine"
-									}
-								}
-							]
-						}
-					},
-					{
-						"name": "SP Update Control Table Last Run Date",
-						"type": "SqlServerStoredProcedure",
-						"dependsOn": [
-							{
-								"activity": "Run Data Flow if File Exists",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "7.00:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"storedProcedureName": "[[dbo].[updateIncrementPipelineParameterValue]",
-							"storedProcedureParameters": {
-								"pParameterCode": {
-									"value": "last_run_start_date",
-									"type": "String"
-								},
-								"pParameterValue": {
-									"value": {
-										"value": "@formatDateTime(utcnow(),'yyyy-MM-dd HH:mm:ss')",
-										"type": "Expression"
-									},
-									"type": "String"
-								},
-								"pPipelineCode": {
-									"value": {
-										"value": "@pipeline().Pipeline",
-										"type": "Expression"
-									},
-									"type": "String"
-								},
-								"pPipelineSubCode": {
-									"value": "iDocs",
-									"type": "String"
-								}
-							}
-						},
-						"linkedServiceName": {
-							"referenceName": "linkedservice_DEV_entanalytics_synapse",
-							"type": "LinkedServiceReference"
-						}
-					},
-					{
-						"name": "SP load DIM CLOSE TASK",
-						"description": "Use the SPU generic_load_dim_v2 to populate the dim_entp_eng_ven_close_task dimension table.",
-						"type": "SqlServerStoredProcedure",
-						"dependsOn": [
-							{
-								"activity": "SP Update Control Table Last Run Date",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "7.00:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"storedProcedureName": "[[dbo].[generic_load_dim_v2]",
-							"storedProcedureParameters": {
-								"debug_flag": {
-									"value": "N",
-									"type": "String"
-								},
-								"execute_flag": {
-									"value": "Y",
-									"type": "String"
-								},
-								"load_name": {
-									"value": "dim_entp_eng_ven_close_task",
-									"type": "String"
-								},
-								"rkValidationRequired": {
-									"value": "Y",
-									"type": "String"
-								}
-							}
-						},
-						"linkedServiceName": {
-							"referenceName": "Azure_Dev_SynapseAnalyticsPool",
-							"type": "LinkedServiceReference"
-						}
-					}
-				],
-				"policy": {
-					"elapsedTimeMetric": {}
-				},
-				"variables": {
-					"v_lrd_src_to_stage": {
-						"type": "String"
-					}
-				},
-				"folder": {
-					"name": "Projects/NCSA/iDocs/Exp Closed Master"
-				},
-				"annotations": [],
-				"lastPublishTime": "2021-08-12T09:11:53Z"
-			},
-			"dependsOn": []
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/pl_idocs_closed_m_source_to_stage')]",
-			"type": "Microsoft.DataFactory/factories/pipelines",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"description": "To pull iDocs Exp Closed Master from the source into the stage ADLS2",
-				"activities": [
-					{
-						"name": "lk_get_pipeline_parameters",
-						"type": "Lookup",
-						"dependsOn": [],
-						"policy": {
-							"timeout": "7.00:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"source": {
-								"type": "SqlDWSource",
-								"sqlReaderStoredProcedureName": "getPipelineParametersValues",
-								"storedProcedureParameters": {
-									"pPipelineCode": {
-										"type": "String",
-										"value": {
-											"value": "@pipeline().Pipeline",
-											"type": "Expression"
-										}
-									},
-									"pPipeLineSubCode": {
-										"type": "String",
-										"value": {
-											"value": "@pipeline().parameters.p_pl_s_sourcefolder",
-											"type": "Expression"
-										}
-									}
-								},
-								"queryTimeout": "02:00:00",
-								"partitionOption": "None"
-							},
-							"dataset": {
-								"referenceName": "ds_azure_synapse_parameter",
-								"type": "DatasetReference",
-								"parameters": {}
-							}
-						}
-					},
-					{
-						"name": "cp_getiDocsClosedMaster",
-						"description": "Copy the Idoc Source files 'Exp Closed Master' from the source location to the Stage ADLS2.",
-						"type": "Copy",
-						"dependsOn": [
-							{
-								"activity": "lk_get_pipeline_parameters",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "7.00:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [
-							{
-								"name": "Source",
-								"value": "OG-236910_BORSTAR_BAY3/@activity('lk_get_pipeline_parameters').output.firstRow.input_file_name"
-							},
-							{
-								"name": "Destination",
-								"value": "@{activity('lk_get_pipeline_parameters').output.firstRow.file_system}/@{activity('lk_get_pipeline_parameters').output.firstRow.folder_path}/@{concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')}"
-							}
-						],
-						"typeProperties": {
-							"source": {
-								"type": "DelimitedTextSource",
-								"storeSettings": {
-									"type": "FileServerReadSettings",
-									"recursive": true,
-									"modifiedDatetimeStart": {
-										"value": "@activity('lk_get_pipeline_parameters').output.firstRow.last_run_start_date",
-										"type": "Expression"
-									},
-									"wildcardFileName": {
-										"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_file_name",
-										"type": "Expression"
-									},
-									"enablePartitionDiscovery": false
-								},
-								"formatSettings": {
-									"type": "DelimitedTextReadSettings"
-								}
-							},
-							"sink": {
-								"type": "DelimitedTextSink",
-								"storeSettings": {
-									"type": "AzureBlobFSWriteSettings",
-									"copyBehavior": "MergeFiles"
-								},
-								"formatSettings": {
-									"type": "DelimitedTextWriteSettings",
-									"quoteAllText": true,
-									"fileExtension": ".txt"
-								}
-							},
-							"enableStaging": false,
-							"translator": {
-								"type": "TabularTranslator",
-								"typeConversion": true,
-								"typeConversionSettings": {
-									"allowDataTruncation": true,
-									"treatBooleanAsNumber": false
-								}
-							}
-						},
-						"inputs": [
-							{
-								"referenceName": "ds_fs_idoc_closed_m_csv_file",
-								"type": "DatasetReference",
-								"parameters": {
-									"p_Path": {
-										"value": "@activity('lk_get_pipeline_parameters').output.firstRow.input_folder_path",
-										"type": "Expression"
-									}
-								}
-							}
-						],
-						"outputs": [
-							{
-								"referenceName": "ds_adlsg2_csv_generic",
-								"type": "DatasetReference",
-								"parameters": {
-									"p_ds_filesystem": {
-										"value": "@activity('lk_get_pipeline_parameters').output.firstRow.file_system",
-										"type": "Expression"
-									},
-									"p_ds_directory": {
-										"value": "@activity('lk_get_pipeline_parameters').output.firstRow.folder_path",
-										"type": "Expression"
-									},
-									"p_ds_filename": {
-										"value": "@concat(activity('lk_get_pipeline_parameters').output.firstRow.file_name,'.csv')",
-										"type": "Expression"
-									},
-									"p_ds_first_row_header": true
-								}
-							}
-						]
-					},
-					{
-						"name": "sp_Update_Parameter",
-						"type": "SqlServerStoredProcedure",
-						"dependsOn": [
-							{
-								"activity": "cp_getiDocsClosedMaster",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "7.00:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"storedProcedureName": "[[dbo].[updateIncrementPipelineParameterValue]",
-							"storedProcedureParameters": {
-								"pParameterValue": {
-									"value": {
-										"value": "@formatDateTime(activity('lk_get_pipeline_parameters').output.firstRow.run_start_datetime,'yyyy-MM-dd HH:mm:ss')",
-										"type": "Expression"
-									},
-									"type": "String"
-								},
-								"pPipelineCode": {
-									"value": {
-										"value": "@pipeline().Pipeline",
-										"type": "Expression"
-									},
-									"type": "String"
-								},
-								"pPipelineSubCode": {
-									"value": {
-										"value": "@pipeline().parameters.p_pl_s_sourcefolder",
-										"type": "Expression"
-									},
-									"type": "String"
-								},
-								"pParameterCode": {
-									"value": "last_run_start_date",
-									"type": "String"
-								}
-							}
-						},
-						"linkedServiceName": {
-							"referenceName": "AzureSynapseDB_DEV",
-							"type": "LinkedServiceReference"
-						}
-					}
-				],
-				"policy": {
-					"elapsedTimeMetric": {}
-				},
-				"parameters": {
-					"p_pl_s_sourcefolder": {
-						"type": "string"
-					}
-				},
-				"variables": {
-					"v_run_start_time": {
-						"type": "String"
-					}
-				},
-				"folder": {
-					"name": "Projects/NCSA/iDocs/Exp Closed Master"
-				},
-				"annotations": [],
-				"lastPublishTime": "2021-08-12T09:11:52Z"
 			},
 			"dependsOn": []
 		}
